@@ -30,6 +30,7 @@
 #include "util/timer.h"
 #include "util/valuetransformer.h"
 #include "util/xml.h"
+#include "waveform/overviews/waveformoverviewrenderer.h"
 #include "waveform/vsyncthread.h"
 #include "waveform/waveformwidgetfactory.h"
 #include "widget/controlwidgetconnection.h"
