@@ -2244,12 +2244,12 @@ QPushButton {
   }
 
   /* BPM lock icon in the library "BPM" column. */
-  #LibraryBPMButton::indicator:checked {
-    image: url(skin:/graphics/bpm_locked.png);
+    #LibraryBPMButton::indicator:checked {
+      image: url(:/images/library/ic_library_checked.png);
     }
     #LibraryBPMButton::indicator:unchecked {
-      image: url(skin:/graphics/bpm_unlocked.png);
-      }
+      image: url(:/images/library/ic_library_unchecked.png);
+    }
     #LibraryBPMButton::item {
       color: #cfcfcf;
       }
