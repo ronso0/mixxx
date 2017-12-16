@@ -55,48 +55,7 @@
             <Layout>horizontal</Layout>
             <Children>
 
-              <PushButton>
-	              <TooltipId>repeat</TooltipId>
-	              <Style></Style>
-	              <NumberStates>2</NumberStates>
-	              <State>
-		              <Number>0</Number>
-		              <Pressed>buttons/btn_repeat2.png</Pressed>
-		              <Unpressed>buttons/btn_repeat2.png</Unpressed>
-	              </State>
-	              <State>
-		              <Number>1</Number>
-		              <Pressed>buttons/btn_repeat2_over.png</Pressed>
-		              <Unpressed>buttons/btn_repeat2_over.png</Unpressed>
-	              </State>
-	              <Connection>
-		              <ConfigKey>[Channel<Variable name="channum"/>],repeat</ConfigKey>
-	              </Connection>
-              </PushButton>
-
-              <PushButton>
-	              <TooltipId>eject</TooltipId>
-	              <Style></Style>
-	              <NumberStates>1</NumberStates>
-	              <State>
-		              <Number>0</Number>
-		              <Pressed>buttons/btn_eject2_over.png</Pressed>
-		              <Unpressed>buttons/btn_eject2.png</Unpressed>
-	              </State>
-	              <Connection>
-		              <ConfigKey>[Channel<Variable name="channum"/>],eject</ConfigKey>
-		              <ButtonState>LeftButton</ButtonState>
-	              </Connection>
-              </PushButton>
-
-    	      </Children>
-    	    </WidgetGroup>
-
-    	    <WidgetGroup>
-    	      <Layout>horizontal</Layout>
-    	      <Children>
-
-              <PushButton>
+    	                   <PushButton>
                 <TooltipId>quantize</TooltipId>
                 <Style></Style>
                 <NumberStates>2</NumberStates>
@@ -117,7 +76,68 @@
                 </Connection>
               </PushButton>
 
-		          <PushButton>
+    	      </Children>
+    	    </WidgetGroup>
+    	    
+    	    
+    	    
+    	    <WidgetGroup>
+            <ObjectName>ToggleRowOne</ObjectName>
+            <Layout>horizontal</Layout>
+            <Children>
+
+              <PushButton>
+	              <TooltipId>repeat</TooltipId>
+	              <Style></Style>
+	              <NumberStates>2</NumberStates>
+	              <State>
+		              <Number>0</Number>
+		              <Pressed>buttons/btn_repeat2.png</Pressed>
+		              <Unpressed>buttons/btn_repeat2.png</Unpressed>
+	              </State>
+	              <State>
+		              <Number>1</Number>
+		              <Pressed>buttons/btn_repeat2_over.png</Pressed>
+		              <Unpressed>buttons/btn_repeat2_over.png</Unpressed>
+	              </State>
+	              <Connection>
+		              <ConfigKey>[Channel<Variable name="channum"/>],repeat</ConfigKey>
+	              </Connection>
+              </PushButton>
+
+    	      </Children>
+    	    </WidgetGroup>
+    	    
+    	    
+    	    <WidgetGroup>
+    	      <Layout>horizontal</Layout>
+    	      <Children>
+
+              
+                            <PushButton>
+	              <TooltipId>eject</TooltipId>
+	              <Style></Style>
+	              <NumberStates>1</NumberStates>
+	              <State>
+		              <Number>0</Number>
+		              <Pressed>buttons/btn_eject2_over.png</Pressed>
+		              <Unpressed>buttons/btn_eject2.png</Unpressed>
+	              </State>
+	              <Connection>
+		              <ConfigKey>[Channel<Variable name="channum"/>],eject</ConfigKey>
+		              <ButtonState>LeftButton</ButtonState>
+	              </Connection>
+              </PushButton>
+		      
+	          </Children>
+          </WidgetGroup> <!-- /Channel1 Toggle Buttons -->
+          
+          
+              <WidgetGroup>
+    	      <Layout>horizontal</Layout>
+    	      <Children>
+
+    	      		<PushButton>
 			          <TooltipId>keylock</TooltipId>
 			          <Style></Style>
 			          <NumberStates>2</NumberStates>
