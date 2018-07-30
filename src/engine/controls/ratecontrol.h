@@ -116,6 +116,7 @@ private:
   std::unique_ptr<ControlObject> m_pRateDir;
   std::unique_ptr<ControlObject> m_pRateRange;
   std::unique_ptr<ControlPotmeter> m_pRateSlider;
+  std::unique_ptr<ControlPotmeter> m_pRateUltraSlider;
   std::unique_ptr<ControlPotmeter> m_pRateSearch;
 
   std::unique_ptr<ControlPushButton> m_pButtonRateTempDown;

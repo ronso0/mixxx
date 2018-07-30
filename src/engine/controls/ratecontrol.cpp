@@ -18,7 +18,8 @@
 namespace {
 constexpr int kRateSensitivityMin = 100;
 constexpr int kRateSensitivityMax = 2500;
-} // namespace
+const double kRateUltraRange = 0.5; // +-50 %
+} // anonymous namespace
 
 // Static default values for rate buttons (percents)
 ControlValueAtomic<double> RateControl::m_dTemporaryRateChangeCoarse;
@@ -51,6 +52,10 @@ RateControl::RateControl(const QString& group, UserSettingsPointer pConfig)
           // adjustments are not capped.
           m_pRateSlider(std::make_unique<ControlPotmeter>(
                   ConfigKey(group, QStringLiteral("rate")), -1.0, 1.0, true)),
+          // Allow rate utra slider to go out of bounds so that master sync rate
+          // adjustments are not capped.
+          m_pRateUltraSlider(std::make_unique<ControlPotmeter>(
+                  ConfigKey(group, QStringLiteral("rate_ultra")), -1.0, 1.0, true)),
           // Search rate. Rate used when searching in sound. This overrules the
           // playback rate
           m_pRateSearch(std::make_unique<ControlPotmeter>(
@@ -143,6 +148,12 @@ RateControl::RateControl(const QString& group, UserSettingsPointer pConfig)
             Qt::DirectConnection);
 
     connect(m_pRateSlider.get(),
+            &ControlObject::valueChanged,
+            this,
+            &RateControl::slotRateSliderChanged,
+            Qt::DirectConnection);
+
+    connect(m_pRateUltraSlider.get(),
             &ControlObject::valueChanged,
             this,
             &RateControl::slotRateSliderChanged,
@@ -290,19 +301,32 @@ void RateControl::slotRateRangeChanged(double) {
     slotRateRatioChanged(m_pRateRatio->get());
 }
 
-void RateControl::slotRateSliderChanged(double v) {
-    double rateRatio = 1.0 + m_pRateDir->get() * m_pRateRange->get() * v;
+void RateControl::slotRateSliderChanged(double) {
+    double rateRatio = 1.0 +
+            m_pRateDir->get() *
+                    (m_pRateSlider->get() * m_pRateRange->get() +
+                     m_pRateUltraSlider->get() * kRateUltraRange);
     m_pRateRatio->set(rateRatio);
 }
 
 void RateControl::slotRateRatioChanged(double v) {
+    /* Classic mode without rate_ultra
     double rateRange = m_pRateRange->get();
     if (rateRange > 0.0) {
         double newRate = m_pRateDir->get() * (v - 1) / rateRange;
         m_pRateSlider->set(newRate);
+        m_pRateUltraSlider->set(0.0);
     } else {
         m_pRateSlider->set(0);
+        m_pRateUltraSlider->set(0.0);
     }
+    */
+
+    // never change rate slider programmatically
+    double newRateUltra =
+            (((v - 1) * m_pRateDir->get()) -
+             (m_pRateRange->get() * m_pRateSlider->get())) / kRateUltraRange;
+    m_pRateUltraSlider->set(newRateUltra);
 }
 
 void RateControl::slotReverseRollActivate(double v) {
