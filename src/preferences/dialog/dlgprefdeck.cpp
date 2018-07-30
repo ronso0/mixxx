@@ -404,7 +404,6 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
 }
 
 DlgPrefDeck::~DlgPrefDeck() {
-    qDeleteAll(m_rateControls);
     qDeleteAll(m_rateDirectionControls);
     qDeleteAll(m_cueControls);
     qDeleteAll(m_rateRangeControls);
@@ -576,21 +575,12 @@ void DlgPrefDeck::slotRateInversionCheckbox(bool inverted) {
 }
 
 void DlgPrefDeck::setRateDirectionForAllDecks(bool inverted) {
-    double oldRateDirectionMultiplier = m_rateDirectionControls[0]->get();
     double rateDirectionMultiplier = 1.0;
     if (inverted) {
         rateDirectionMultiplier = kRateDirectionInverted;
     }
     for (ControlProxy* pControl : std::as_const(m_rateDirectionControls)) {
         pControl->set(rateDirectionMultiplier);
-    }
-
-    // If the rate slider direction setting has changed,
-    // multiply the rate by -1 so the current sound does not change.
-    if (rateDirectionMultiplier != oldRateDirectionMultiplier) {
-        for (ControlProxy* pControl : std::as_const(m_rateControls)) {
-            pControl->set(-1 * pControl->get());
-        }
     }
 }
 
@@ -783,8 +773,6 @@ void DlgPrefDeck::slotNumDecksChanged(double new_count, bool initializing) {
 
     for (int i = m_iNumConfiguredDecks; i < numdecks; ++i) {
         QString group = PlayerManager::groupForDeck(i);
-        m_rateControls.push_back(new ControlProxy(
-                group, "rate"));
         m_rateRangeControls.push_back(new ControlProxy(
                 group, "rateRange"));
         m_rateDirectionControls.push_back(new ControlProxy(
@@ -816,8 +804,6 @@ void DlgPrefDeck::slotNumSamplersChanged(double new_count, bool initializing) {
 
     for (int i = m_iNumConfiguredSamplers; i < numsamplers; ++i) {
         QString group = PlayerManager::groupForSampler(i);
-        m_rateControls.push_back(new ControlProxy(
-                group, "rate"));
         m_rateRangeControls.push_back(new ControlProxy(
                 group, "rateRange"));
         m_rateDirectionControls.push_back(new ControlProxy(
