@@ -144,6 +144,7 @@ public:
     ControlObject* m_pRateDir;
     ControlObject* m_pRateRange;
     ControlPotmeter* m_pRateSlider;
+    ControlPotmeter* m_pRateUltraSlider;
     ControlPotmeter* m_pRateSearch;
     ControlPushButton* m_pReverseButton;
     ControlPushButton* m_pReverseRollButton;
