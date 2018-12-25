@@ -580,19 +580,6 @@
             <Horizontal>true</Horizontal>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],pitch</ConfigKey>
-			<EmitOnDownPress>false</EmitOnDownPress>
-		  </Connection>
-	    </SliderComposed>
-					
-		<SliderComposed>
-		  <TooltipId>rate_ultra</TooltipId>
-			<Style></Style>
-			<Handle>knob_pitch1.png</Handle>
-			<Slider>slider_pitch1.png</Slider>
-			<Pos>24,67</Pos>
-			<Horizontal>false</Horizontal>
-			<Connection>
-			  <ConfigKey>[Channel<Variable name="channum"/>],rate_ultra</ConfigKey>
               <EmitOnDownPress>false</EmitOnDownPress>
             </Connection>
           </SliderComposed>
@@ -606,6 +593,19 @@
             <Horizontal>false</Horizontal>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],rate</ConfigKey>
+              <EmitOnDownPress>false</EmitOnDownPress>
+            </Connection>
+          </SliderComposed>
+
+          <SliderComposed>
+            <TooltipId>rate_ultra</TooltipId>
+            <Style></Style>
+            <Handle>knob_pitch.png</Handle>
+            <Slider>slider_pitch.png</Slider>
+            <Pos>24,67</Pos>
+            <Horizontal>false</Horizontal>
+            <Connection>
+              <ConfigKey>[Channel<Variable name="channum"/>],rate_ultra</ConfigKey>
               <EmitOnDownPress>false</EmitOnDownPress>
             </Connection>
           </SliderComposed>
