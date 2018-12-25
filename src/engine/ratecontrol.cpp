@@ -67,7 +67,7 @@ RateControl::RateControl(QString group,
     m_pRateSlider = new ControlPotmeter(
             ConfigKey(group, "rate"), -1.0, 1.0, true);
     connect(m_pRateSlider, SIGNAL(valueChanged(double)),
-            this, SLOT(slotRateSliderChanged(double)),
+            this, SLOT(slotRateSliderChanged()),
             Qt::DirectConnection);
 
     // Allow rate utra slider to go out of bounds so that master sync rate
@@ -75,7 +75,7 @@ RateControl::RateControl(QString group,
     m_pRateUltraSlider = new ControlPotmeter(
             ConfigKey(group, "rate_ultra"), -1.0, 1.0, true);
     connect(m_pRateUltraSlider, SIGNAL(valueChanged(double)),
-            this, SLOT(slotRateSliderChanged(double)),
+            this, SLOT(slotRateSliderChanged()),
             Qt::DirectConnection);
 
     // Search rate. Rate used when searching in sound. This overrules the
@@ -308,8 +308,11 @@ void RateControl::slotRateRangeChanged(double) {
     slotRateRatioChanged(m_pRateRatio->get());
 }
 
-void RateControl::slotRateSliderChanged(double v) {
-    double rateRatio = 1.0 + m_pRateDir->get() * m_pRateRange->get() * v;
+void RateControl::slotRateSliderChanged() {
+    double rateRatio = 1.0 +
+            m_pRateDir->get() *
+                    (m_pRateSlider->get() * m_pRateRange->get() +
+                     m_pRateUltraSlider->get() * kRateUltraRange);
     m_pRateRatio->set(rateRatio);
 }
 
