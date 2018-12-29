@@ -378,7 +378,8 @@ WTime {
   #TitleTextMini,
   #PlayPositionTextMini,
   #BpmTextMini,
-  #KeyTextMini {
+  #KeyTextMini,
+  #EjectMini{
     background-color: #1e1e1e;
   }
   #TitleTextMini {
@@ -387,7 +388,8 @@ WTime {
   #PlayPositionTextMini {
     margin: 0px 1px 0px 1px;
   }
-  #KeyTextMini {
+  #KeyTextMini,
+  #EjectMini {
     font-size: 13px/13px;
     margin: 0px 1px 0px 0px;
     text-transform: none;
