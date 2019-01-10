@@ -2,35 +2,25 @@
   <WidgetGroup>
     <ObjectName>RateContainer</ObjectName>
     <Layout>vertical</Layout>
-    <Size>69f,-1me</Size>
+    <SizePolicy>min,me</SizePolicy>
     <Children>
       <WidgetGroup>
         <ObjectName>AlignCenter</ObjectName>
         <Layout>vertical</Layout>
-        <SizePolicy>min,me</SizePolicy>
-        <MaximumSize>-1,46</MaximumSize>
+        <SizePolicy>min,min</SizePolicy>
+        <MinimumSize>60,22</MinimumSize>
+        <MaximumSize>i,i</MaximumSize>
         <Children>
           <!-- In order to make the bpm display tappable, we use an old-style
           widget group and put the bpm pushbutton on top of the display. -->
           <WidgetGroup>
             <ObjectName>BpmContainer</ObjectName>
             <Layout>stacked</Layout>
-            <Size>60f,22f</Size>
+            <Size>max,22f</Size>
             <Children>
-              <NumberBpm>
-                <ObjectName>BpmText</ObjectName>
-                <TooltipId>visual_bpm</TooltipId>
-                <Size>60f,22f</Size>
-                <Channel><Variable name="channum" /></Channel>
-                <NumberOfDigits>2</NumberOfDigits>
-                <Connection>
-                  <ConfigKey><Variable name="group"/>,visual_bpm</ConfigKey>
-                </Connection>
-              </NumberBpm>
-
               <PushButton>
                 <TooltipId>bpm_tap_visual_bpm</TooltipId>
-                <Size>60f,22f</Size>
+                <SizePolicy>min,me</SizePolicy>
                 <NumberStates>1</NumberStates>
                 <State>
                   <Number>0</Number>
@@ -45,12 +35,24 @@
                   <EmitOnPressAndRelease>true</EmitOnPressAndRelease>
                 </Connection>
               </PushButton>
+
+              <NumberBpm>
+                <ObjectName>BpmText</ObjectName>
+                <TooltipId>visual_bpm</TooltipId>
+                <SizePolicy>min,me</SizePolicy>
+                <Channel><Variable name="channum" /></Channel>
+                <NumberOfDigits>2</NumberOfDigits>
+                <Connection>
+                  <ConfigKey><Variable name="group"/>,visual_bpm</ConfigKey>
+                </Connection>
+              </NumberBpm>
             </Children>
           </WidgetGroup>
 
           <NumberRate>
             <TooltipId>rate_display</TooltipId>
             <ObjectName>RateText</ObjectName>
+            <SizePolicy>min,max</SizePolicy>
             <Channel><Variable name="channum" /></Channel>
             <NumberOfDigits>2</NumberOfDigits>
           </NumberRate>
@@ -60,9 +62,20 @@
 
       <WidgetGroup>
         <ObjectName>RateControls</ObjectName>
-        <Size>-1min,110me</Size>
+        <SizePolicy>min,me</SizePolicy>
         <Layout>horizontal</Layout>
         <Children>
+          <SliderComposed>
+            <ObjectName>RateSlider</ObjectName>
+            <TooltipId>rate_ultra</TooltipId>
+            <Handle scalemode="STRETCH_ASPECT">knob_pitch_ultra_deck.svg</Handle>
+            <Slider>slider_pitch_ultra_deck.svg</Slider>
+            <Horizontal>false</Horizontal>
+            <Connection>
+              <ConfigKey><Variable name="group"/>,rate_ultra</ConfigKey>
+            </Connection>
+          </SliderComposed>
+
           <SliderComposed>
             <ObjectName>RateSlider</ObjectName>
             <TooltipId>rate</TooltipId>
@@ -77,7 +90,7 @@
           <WidgetGroup><!-- RateButtons for different rate directions -->
             <ObjectName>RateButtons</ObjectName>
             <Layout>vertical</Layout>
-            <SizePolicy>min,min</SizePolicy>
+            <Size>28f,-1me</Size>
             <Children>
               <WidgetGroup><!-- Rate buttons for up=faster -->
                 <Layout>vertical</Layout>

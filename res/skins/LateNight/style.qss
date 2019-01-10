@@ -342,10 +342,6 @@ WTime {
   qproperty-layoutAlignment: 'AlignRight | AlignBottom';
 }
 
-#RateButtons {
-  qproperty-layoutAlignment: 'AlignHCenter | AlignBottom';
-}
-
 #DeckControls {
   qproperty-layoutAlignment: 'AlignCenter';
   border: 1px solid #585858;
@@ -970,6 +966,7 @@ border: 0px;
 
 #RateControls {
   qproperty-layoutAlignment: 'AlignHCenter | AlignVCenter';
+  padding: 0px 3px 0px 3px;
 }
 
 #RateSlider {
@@ -978,7 +975,7 @@ border: 0px;
 }
 
 #RateButtons {
-  qproperty-layoutAlignment: 'AlignHCenter | AlignVCenter';
+  qproperty-layoutAlignment: 'AlignLeft | AlignVCenter';
   padding: 2px 0px 0px 2px;
 }
 
