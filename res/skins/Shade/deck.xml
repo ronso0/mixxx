@@ -439,15 +439,15 @@
             <NumberStates>2</NumberStates>
             <State>
               <Number>0</Number>
-              <Pressed>skin:/btn/btn_kill_down.png</Pressed>
-              <Unpressed>skin:/btn/btn_kill.png</Unpressed>
+              <Pressed>skin:/btn/btn_bpm_down.png</Pressed>
+              <Unpressed>skin:/btn/btn_bpm.png</Unpressed>
             </State>
             <State>
               <Number>1</Number>
-              <Pressed>skin:/btn/btn_kill_overdown.png</Pressed>
-              <Unpressed>skin:/btn/btn_kill_over.png</Unpressed>
+              <Pressed>skin:/btn/btn_bpm_overdown.png</Pressed>
+              <Unpressed>skin:/btn/btn_bpm_over.png</Unpressed>
             </State>
-            <Pos>6,21</Pos>
+            <Pos>2,15</Pos>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],sync_enabled</ConfigKey>
               <ButtonState>LeftButton</ButtonState>
@@ -464,15 +464,15 @@
             <NumberStates>2</NumberStates>
             <State>
               <Number>0</Number>
-              <Pressed>skin:/btn/btn_kill_down.png</Pressed>
-              <Unpressed>skin:/btn/btn_kill.png</Unpressed>
+              <Pressed>skin:/btn/btn_key_down.png</Pressed>
+              <Unpressed>skin:/btn/btn_key.png</Unpressed>
             </State>
             <State>
               <Number>1</Number>
-              <Pressed>skin:/btn/btn_kill_overdown.png</Pressed>
-              <Unpressed>skin:/btn/btn_kill_over.png</Unpressed>
+              <Pressed>skin:/btn/btn_key_overdown.png</Pressed>
+              <Unpressed>skin:/btn/btn_key_over.png</Unpressed>
             </State>
-            <Pos>32,21</Pos>
+            <Pos>27,15</Pos>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],sync_key</ConfigKey>
               <ButtonState>LeftButton</ButtonState>
@@ -485,7 +485,7 @@
 
 
           <WidgetGroup>
-            <Pos>3,34</Pos>
+            <Pos>3,29</Pos>
             <Size>47f,26f</Size>
             <Style>QGroupBox { border: 0px solid red; } QWidget { margin: 0px; padding: 0; }
               QLabel {
@@ -519,17 +519,6 @@
 
             </Children>
           </WidgetGroup>
-          <SliderComposed>
-            <Style></Style>
-            <Handle>knob_visual_key.png</Handle>
-            <Slider>slider_visual_key.png</Slider>
-            <Pos>18,59</Pos>
-            <Horizontal>true</Horizontal>
-            <Connection>
-              <ConfigKey>[Channel<Variable name="channum"/>],visual_key_distance</ConfigKey>
-              <EmitOnDownPress>false</EmitOnDownPress>
-            </Connection>
-          </SliderComposed>
 
           <PushButton>
             <TooltipId>pitch_down</TooltipId>
@@ -540,7 +529,7 @@
               <Number>0</Number>
               <Text>◄</Text>
             </State>
-            <Pos>5,57</Pos>
+            <Pos>5,48</Pos>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],pitch_down</ConfigKey>
               <ButtonState>LeftButton</ButtonState>
@@ -551,6 +540,31 @@
             </Connection>
           </PushButton>
 
+          <SliderComposed>
+            <Style></Style>
+            <Handle>knob_visual_key.png</Handle>
+            <Slider>slider_visual_key.png</Slider>
+            <Pos>18,52</Pos>
+            <Horizontal>true</Horizontal>
+            <Connection>
+              <ConfigKey>[Channel<Variable name="channum"/>],visual_key_distance</ConfigKey>
+              <EmitOnDownPress>false</EmitOnDownPress>
+            </Connection>
+          </SliderComposed>
+
+          <SliderComposed>
+            <TooltipId>pitch</TooltipId>
+            <Style></Style>
+            <Handle>knob_visual_key.png</Handle>
+            <Slider>slider_visual_key.png</Slider>
+            <Pos>18,56</Pos>
+            <Horizontal>true</Horizontal>
+            <Connection>
+              <ConfigKey>[Channel<Variable name="channum"/>],pitch</ConfigKey>
+              <EmitOnDownPress>false</EmitOnDownPress>
+            </Connection>
+          </SliderComposed>
+
           <PushButton>
             <TooltipId>pitch_up</TooltipId>
             <Size>10f,10f</Size>
@@ -560,7 +574,7 @@
               <Number>0</Number>
               <Text>►</Text>
             </State>
-            <Pos>38,57</Pos>
+            <Pos>38,48</Pos>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],pitch_up</ConfigKey>
               <ButtonState>LeftButton</ButtonState>
@@ -571,25 +585,13 @@
             </Connection>
           </PushButton>
 
-          <SliderComposed>
-            <TooltipId>pitch</TooltipId>
-            <Style></Style>
-            <Handle>knob_visual_key.png</Handle>
-            <Slider>slider_visual_key.png</Slider>
-            <Pos>18,63</Pos>
-            <Horizontal>true</Horizontal>
-            <Connection>
-              <ConfigKey>[Channel<Variable name="channum"/>],pitch</ConfigKey>
-              <EmitOnDownPress>false</EmitOnDownPress>
-            </Connection>
-          </SliderComposed>
-
+          <!-- rate & rate_coarse slider -->
           <SliderComposed>
             <TooltipId>rate</TooltipId>
             <Style></Style>
             <Handle>knob_pitch.png</Handle>
             <Slider>slider_pitch.png</Slider>
-            <Pos>16,67</Pos>
+            <Pos>12,60</Pos>
             <Horizontal>false</Horizontal>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],rate</ConfigKey>
@@ -600,36 +602,15 @@
           <SliderComposed>
             <TooltipId>rate_ultra</TooltipId>
             <Style></Style>
-            <Handle>knob_pitch.png</Handle>
-            <Slider>slider_pitch.png</Slider>
-            <Pos>24,67</Pos>
+            <Handle>knob_pitch_ultra.png</Handle>
+            <Slider>slider_pitch_ultra.png</Slider>
+            <Pos>34,60</Pos>
             <Horizontal>false</Horizontal>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],rate_ultra</ConfigKey>
               <EmitOnDownPress>false</EmitOnDownPress>
             </Connection>
           </SliderComposed>
-
-          <PushButton>
-            <TooltipId>rate_temp_up_rate_temp_up_small</TooltipId>
-            <Size>10f,10f</Size>
-            <NumberStates>1</NumberStates>
-            <State>
-              <Number>0</Number>
-              <Text>►</Text>
-            </State>
-            <Pos>36,148</Pos>
-            <Connection>
-              <ConfigKey>[Channel<Variable name="channum"/>],rate_temp_up</ConfigKey>
-              <EmitOnPressAndRelease>true</EmitOnPressAndRelease>
-              <ButtonState>LeftButton</ButtonState>
-            </Connection>
-            <Connection>
-              <ConfigKey>[Channel<Variable name="channum"/>],rate_temp_up_small</ConfigKey>
-              <EmitOnPressAndRelease>true</EmitOnPressAndRelease>
-              <ButtonState>RightButton</ButtonState>
-            </Connection>
-          </PushButton>
 
           <PushButton>
             <TooltipId>rate_temp_down_rate_temp_down_small</TooltipId>
@@ -639,7 +620,7 @@
               <Number>0</Number>
               <Text>◄</Text>
             </State>
-            <Pos>7,148</Pos>
+            <Pos>7,150</Pos>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],rate_temp_down</ConfigKey>
               <EmitOnPressAndRelease>true</EmitOnPressAndRelease>
@@ -647,6 +628,27 @@
             </Connection>
             <Connection>
               <ConfigKey>[Channel<Variable name="channum"/>],rate_temp_down_small</ConfigKey>
+              <EmitOnPressAndRelease>true</EmitOnPressAndRelease>
+              <ButtonState>RightButton</ButtonState>
+            </Connection>
+          </PushButton>
+
+          <PushButton>
+            <TooltipId>rate_temp_up_rate_temp_up_small</TooltipId>
+            <Size>10f,10f</Size>
+            <NumberStates>1</NumberStates>
+            <State>
+              <Number>0</Number>
+              <Text>►</Text>
+            </State>
+            <Pos>22,150</Pos>
+            <Connection>
+              <ConfigKey>[Channel<Variable name="channum"/>],rate_temp_up</ConfigKey>
+              <EmitOnPressAndRelease>true</EmitOnPressAndRelease>
+              <ButtonState>LeftButton</ButtonState>
+            </Connection>
+            <Connection>
+              <ConfigKey>[Channel<Variable name="channum"/>],rate_temp_up_small</ConfigKey>
               <EmitOnPressAndRelease>true</EmitOnPressAndRelease>
               <ButtonState>RightButton</ButtonState>
             </Connection>
