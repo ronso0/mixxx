@@ -183,8 +183,8 @@ void KeyControl::updateRate() {
             // Disabling Keylock
             // If "Keep unlocked key" is enabled
             if (m_keyunlockMode->get() == kKeepUnlockedKey) {
-                // don't reset to linear pitch, instead adopt speedSliderPitchRatio
-                // change as pitchTweakRatio
+                // don't reset to linear pitch, instead adopt changed
+                // speedSliderPitchRatio as pitchTweakRatio
                 m_pitchRateInfo.pitchTweakRatio *=
                         (speedSliderPitchRatio / m_pitchRateInfo.tempoRatio);
                 // adopt pitch_adjust now so that it doesn't jump and resets key
@@ -267,10 +267,12 @@ void KeyControl::slotPitchChanged(double pitch) {
 void KeyControl::updatePitch() {
     double pitch = m_pPitch->get();
 
-    //qDebug() << "KeyControl::slotPitchChanged 1" << pitch <<
-    //        m_pitchRateInfo.pitchRatio <<
-    //        m_pitchRateInfo.pitchTweakRatio <<
-    //        m_pitchRateInfo.tempoRatio;
+    qDebug() << "";
+    qDebug() << "KeyControl::updatePitch --before" <<
+            " pitch:" << pitch <<
+            " | pitchRatio:" << m_pitchRateInfo.pitchRatio <<
+            " | pitchTweakRatio:" << m_pitchRateInfo.pitchTweakRatio <<
+            " | tempoRatio:" << m_pitchRateInfo.tempoRatio;
 
     double speedSliderPitchRatio =
             m_pitchRateInfo.pitchRatio / m_pitchRateInfo.pitchTweakRatio;
@@ -284,10 +286,11 @@ void KeyControl::updatePitch() {
             KeyUtils::powerOf2ToSemitoneChange(m_pitchRateInfo.pitchTweakRatio));
     updateKeyCOs(dFileKey, KeyUtils::powerOf2ToOctaveChange(pitchKnobRatio));
 
-    //qDebug() << "KeyControl::slotPitchChanged 2" << pitch <<
-    //        m_pitchRateInfo.pitchRatio <<
-    //        m_pitchRateInfo.pitchTweakRatio <<
-    //        m_pitchRateInfo.tempoRatio;
+    qDebug() << "KeyControl::updatePitch --after " <<
+            " pitch:" << pitch <<
+            " | pitchRatio:" << m_pitchRateInfo.pitchRatio <<
+            " | pitchTweakRatio:" << m_pitchRateInfo.pitchTweakRatio <<
+            " | tempoRatio:" << m_pitchRateInfo.tempoRatio;
 }
 
 void KeyControl::slotPitchAdjustChanged(double pitchAdjust) {
