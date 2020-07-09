@@ -93,7 +93,7 @@ void WTrackMenu::createMenus() {
 
     if (featureIsEnabled(Feature::Playlist)) {
         m_pPlaylistMenu = new QMenu(this);
-        m_pPlaylistMenu->setTitle(tr("Add to Playlist"));
+        m_pPlaylistMenu->setTitle(tr("Playlists > Add to"));
         connect(m_pPlaylistMenu, &QMenu::aboutToShow, this, &WTrackMenu::slotPopulatePlaylistMenu);
     }
 
@@ -118,12 +118,12 @@ void WTrackMenu::createMenus() {
 
     if (featureIsEnabled(Feature::BPM)) {
         m_pBPMMenu = new QMenu(this);
-        m_pBPMMenu->setTitle(tr("Adjust BPM"));
+        m_pBPMMenu->setTitle(tr("BPM"));
     }
 
     if (featureIsEnabled(Feature::Color)) {
         m_pColorMenu = new QMenu(this);
-        m_pColorMenu->setTitle(tr("Select Color"));
+        m_pColorMenu->setTitle(tr("Color"));
     }
 
     if (featureIsEnabled(Feature::Reset)) {
