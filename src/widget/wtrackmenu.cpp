@@ -56,7 +56,7 @@ WTrackMenu::WTrackMenu(QWidget* parent,
 
     createMenus();
     createActions();
-    setupActions();
+    addActions();
 }
 
 WTrackMenu::~WTrackMenu() {
@@ -306,7 +306,7 @@ void WTrackMenu::createActions() {
     }
 }
 
-void WTrackMenu::setupActions() {
+void WTrackMenu::addActions() {
     if (featureIsEnabled(Feature::AutoDJ)) {
         addAction(m_pAutoDJBottomAct);
         addAction(m_pAutoDJTopAct);

@@ -27,6 +27,8 @@ class WTrackMenu : public QMenu {
     Q_OBJECT
   public:
     enum Feature {
+        // Note(ronso0): what does 'n << m' do? It doesn't change the order of items!?
+        // Is the order entirely set by addActions() ?
         AutoDJ = 1,
         // The loadTrackToPlayer signal emitted from this class must be handled to make LoadTo work.
         LoadTo = 1 << 1,
@@ -144,7 +146,7 @@ class WTrackMenu : public QMenu {
 
     void createMenus();
     void createActions();
-    void setupActions();
+    void addActions();
     void updateMenus();
 
     bool featureIsEnabled(Feature flag) const;
