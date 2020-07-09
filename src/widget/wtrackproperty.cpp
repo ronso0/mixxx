@@ -8,12 +8,15 @@
 
 namespace {
 const WTrackMenu::Features trackMenuFeatures =
-        WTrackMenu::Feature::Playlist |
-        WTrackMenu::Feature::Crate |
-        WTrackMenu::Feature::Metadata |
+        //WTrackMenu::Feature::Playlist |
+        //WTrackMenu::Feature::Crate |
+        //WTrackMenu::Feature::Metadata |
+        //WTrackMenu::Feature::Metadata |
         WTrackMenu::Feature::Reset |
         WTrackMenu::Feature::BPM |
         WTrackMenu::Feature::Color |
+        // Note(ronso0): The menu won't show up as soon as I add this (here)
+        //WTrackMenu::Feature::HideUnhidePurge |
         WTrackMenu::Feature::FileBrowser |
         WTrackMenu::Feature::Properties;
 }
