@@ -24,6 +24,16 @@
 #include "widget/wtracktableviewheader.h"
 
 namespace {
+const WTrackMenu::Features trackMenuFeatures =
+        WTrackMenu::Feature::Playlist |
+        WTrackMenu::Feature::Crate |
+        WTrackMenu::Feature::Metadata |
+        WTrackMenu::Feature::Reset |
+        WTrackMenu::Feature::BPM |
+        WTrackMenu::Feature::Color |
+        WTrackMenu::Feature::HideUnhidePurge |
+        WTrackMenu::Feature::FileBrowser |
+        WTrackMenu::Feature::Properties;
 
 const ConfigKey kConfigKeyAllowTrackLoadToPlayingDeck("[Controls]", "AllowTrackLoadToPlayingDeck");
 
@@ -322,7 +332,7 @@ void WTrackTableView::initTrackMenu() {
     m_pTrackMenu = make_parented<WTrackMenu>(this,
             m_pConfig,
             m_pTrackCollectionManager,
-            WTrackMenu::Feature::All,
+            trackMenuFeatures,
             trackModel);
     connect(m_pTrackMenu.get(),
             &WTrackMenu::loadTrackToPlayer,
