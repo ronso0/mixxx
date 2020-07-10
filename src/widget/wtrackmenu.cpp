@@ -307,6 +307,31 @@ void WTrackMenu::createActions() {
 }
 
 void WTrackMenu::addActions() {
+    if (featureIsEnabled(Feature::Properties)) {
+        addSeparator();
+        addAction(m_pPropertiesAct);
+    }
+
+    addSeparator();
+
+    if (featureIsEnabled(Feature::FileBrowser)) {
+        addAction(m_pFileBrowserAct);
+    }
+
+    if (featureIsEnabled(Feature::HideUnhidePurge)) {
+        if (m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_HIDE)) {
+            addAction(m_pHideAct);
+        }
+        if (m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_UNHIDE)) {
+            addAction(m_pUnhideAct);
+        }
+        if (m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_PURGE)) {
+            addAction(m_pPurgeAct);
+        }
+    }
+
+    addSeparator();
+
     if (featureIsEnabled(Feature::AutoDJ)) {
         addAction(m_pAutoDJBottomAct);
         addAction(m_pAutoDJTopAct);
@@ -349,26 +374,21 @@ void WTrackMenu::addActions() {
 
     addSeparator();
 
-    if (featureIsEnabled(Feature::BPM)) {
-        m_pBPMMenu->addAction(m_pBpmDoubleAction);
-        m_pBPMMenu->addAction(m_pBpmHalveAction);
-        m_pBPMMenu->addAction(m_pBpmTwoThirdsAction);
-        m_pBPMMenu->addAction(m_pBpmThreeFourthsAction);
-        m_pBPMMenu->addAction(m_pBpmFourThirdsAction);
-        m_pBPMMenu->addAction(m_pBpmThreeHalvesAction);
-        m_pBPMMenu->addSeparator();
-        m_pBPMMenu->addAction(m_pBpmLockAction);
-        m_pBPMMenu->addAction(m_pBpmUnlockAction);
-        m_pBPMMenu->addSeparator();
-        m_pBPMMenu->addAction(m_pBpmResetAction);
-        m_pBPMMenu->addSeparator();
-
-        addMenu(m_pBPMMenu);
-    }
-
-    if (featureIsEnabled(Feature::Color)) {
-        m_pColorMenu->addAction(m_pColorPickerAction);
-        addMenu(m_pColorMenu);
+    if (featureIsEnabled(Feature::Reset)) {
+        m_pClearMetadataMenu->addAction(m_pClearBeatsAction);
+        m_pClearMetadataMenu->addAction(m_pClearPlayCountAction);
+        // FIXME: Why is clearing the loop not working?
+        m_pClearMetadataMenu->addAction(m_pClearMainCueAction);
+        m_pClearMetadataMenu->addAction(m_pClearHotCuesAction);
+        m_pClearMetadataMenu->addAction(m_pClearIntroCueAction);
+        m_pClearMetadataMenu->addAction(m_pClearOutroCueAction);
+        //m_pClearMetadataMenu->addAction(m_pClearLoopAction);
+        m_pClearMetadataMenu->addAction(m_pClearKeyAction);
+        m_pClearMetadataMenu->addAction(m_pClearReplayGainAction);
+        m_pClearMetadataMenu->addAction(m_pClearWaveformAction);
+        m_pClearMetadataMenu->addSeparator();
+        m_pClearMetadataMenu->addAction(m_pClearAllMetadataAction);
+        addMenu(m_pClearMetadataMenu);
     }
 
     if (featureIsEnabled(Feature::Metadata)) {
@@ -394,43 +414,28 @@ void WTrackMenu::addActions() {
         addMenu(m_pMetadataMenu);
     }
 
-    if (featureIsEnabled(Feature::Reset)) {
-        m_pClearMetadataMenu->addAction(m_pClearBeatsAction);
-        m_pClearMetadataMenu->addAction(m_pClearPlayCountAction);
-        // FIXME: Why is clearing the loop not working?
-        m_pClearMetadataMenu->addAction(m_pClearMainCueAction);
-        m_pClearMetadataMenu->addAction(m_pClearHotCuesAction);
-        m_pClearMetadataMenu->addAction(m_pClearIntroCueAction);
-        m_pClearMetadataMenu->addAction(m_pClearOutroCueAction);
-        //m_pClearMetadataMenu->addAction(m_pClearLoopAction);
-        m_pClearMetadataMenu->addAction(m_pClearKeyAction);
-        m_pClearMetadataMenu->addAction(m_pClearReplayGainAction);
-        m_pClearMetadataMenu->addAction(m_pClearWaveformAction);
-        m_pClearMetadataMenu->addSeparator();
-        m_pClearMetadataMenu->addAction(m_pClearAllMetadataAction);
-        addMenu(m_pClearMetadataMenu);
-    }
-
     addSeparator();
-    if (featureIsEnabled(Feature::HideUnhidePurge)) {
-        if (m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_HIDE)) {
-            addAction(m_pHideAct);
-        }
-        if (m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_UNHIDE)) {
-            addAction(m_pUnhideAct);
-        }
-        if (m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_PURGE)) {
-            addAction(m_pPurgeAct);
-        }
+
+    if (featureIsEnabled(Feature::Color)) {
+        m_pColorMenu->addAction(m_pColorPickerAction);
+        addMenu(m_pColorMenu);
     }
 
-    if (featureIsEnabled(Feature::FileBrowser)) {
-        addAction(m_pFileBrowserAct);
-    }
+    if (featureIsEnabled(Feature::BPM)) {
+        m_pBPMMenu->addAction(m_pBpmDoubleAction);
+        m_pBPMMenu->addAction(m_pBpmHalveAction);
+        m_pBPMMenu->addAction(m_pBpmTwoThirdsAction);
+        m_pBPMMenu->addAction(m_pBpmThreeFourthsAction);
+        m_pBPMMenu->addAction(m_pBpmFourThirdsAction);
+        m_pBPMMenu->addAction(m_pBpmThreeHalvesAction);
+        m_pBPMMenu->addSeparator();
+        m_pBPMMenu->addAction(m_pBpmLockAction);
+        m_pBPMMenu->addAction(m_pBpmUnlockAction);
+        m_pBPMMenu->addSeparator();
+        m_pBPMMenu->addAction(m_pBpmResetAction);
+        m_pBPMMenu->addSeparator();
 
-    if (featureIsEnabled(Feature::Properties)) {
-        addSeparator();
-        addAction(m_pPropertiesAct);
+        addMenu(m_pBPMMenu);
     }
 }
 
