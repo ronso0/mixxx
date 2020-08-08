@@ -7,6 +7,19 @@
 #include "util/sample.h"
 
 constexpr int EchoGroupState::kMaxDelaySeconds;
+// Previously GroupFeatureBeatLength had a `frames` member
+// BPM | frames
+// 130   20353.8
+// 140   18900
+// 150   17640
+// 160   16537.5
+// now it's seconds: 60 / BPM
+// BPM | seconds
+// 130   0.461538462
+// 140   0.428571429
+// 150   0.4
+// 160   0.375
+constexpr double kMinBeatLengthSec = 20353.8;
 
 namespace {
 
@@ -138,6 +151,12 @@ void EchoEffect::processChannel(
             period = std::max(roundToFraction(period, 4), 1 / 8.0);
             if (m_pTripletParameter->toBool()) {
                 period /= 3.0;
+            }
+            // (ronso0) With ~160 BPM tracks the default period is too short to
+            // deliver a somehow usable fade-out (Vol fader down, xfader cut).
+            // If the track is faster than xxx BPM (beat length in frames), half the period.
+            if (groupFeatures.beat_length->seconds < kMinBeatLengthSec) {
+                period *= 2;
             }
         } else if (period < 1 / 8.0) {
             period = 1 / 8.0;
