@@ -139,6 +139,14 @@ void EchoEffect::processChannel(
             if (m_pTripletParameter->toBool()) {
                 period /= 3.0;
             }
+            // (ronso0) With ~160 BPM tracks the default period is too short to
+            // deliver a somehow usable fade-out (Vol fader down, xfader cut).
+            // If the track is faster than xxx BPM half the period
+            int max_bpm = 130;
+            double min_beat_length = 1 / max_bpm / 60;
+            if (groupFeatures.beat_length_sec < min_beat_length) {
+                period *= 2;
+            }
         } else if (period < 1 / 8.0) {
             period = 1 / 8.0;
         }
