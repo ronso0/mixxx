@@ -1019,6 +1019,10 @@ WTrackMenu QMenu QCheckBox,
 #AuxSubTitle {
   color: #0bd9d1;
 }
+/* Prevent cut-off or shifted stars on macOS */
+WStarRating {
+  background-color: #1e1e1e;
+}
 
 /* green for Fx 1/2 */
 #FxUnit1 #FxUnitLabel[highlight="1"],

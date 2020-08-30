@@ -1222,6 +1222,10 @@ WEffectSelector,
   #Deck4 WStarRating, #DeckCompact4 WStarRating {
     color: #559b99;
   }
+/* Prevent cut-off or shifted stars on macOS */
+WStarRating {
+  background-color: #19191a;
+}
 
 /* Grey for FxUnit labels */
 #FxUnitLabel,
