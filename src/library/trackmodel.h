@@ -44,8 +44,9 @@ class TrackModel {
         TRACKMODELCAPS_HIDE              = 0x04000,
         TRACKMODELCAPS_UNHIDE            = 0x08000,
         TRACKMODELCAPS_PURGE             = 0x10000,
-        TRACKMODELCAPS_REMOVE_PLAYLIST   = 0x20000,
-        TRACKMODELCAPS_REMOVE_CRATE      = 0x40000,
+        TRACKMODELCAPS_DELETE            = 0x20000,
+        TRACKMODELCAPS_REMOVE_PLAYLIST   = 0x40000,
+        TRACKMODELCAPS_REMOVE_CRATE      = 0x80000,
     };
     typedef int CapabilitiesFlags; /** Enables us to do ORing */
 

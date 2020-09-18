@@ -39,11 +39,13 @@ class WTrackMenu : public QMenu {
         BPM = 1 << 7,
         Color = 1 << 8,
         HideUnhidePurge = 1 << 9,
-        FileBrowser = 1 << 10,
-        Properties = 1 << 11,
+        RemoveFromDisk = 1 << 10,
+        FileBrowser = 1 << 11,
+        Properties = 1 << 12,
         TrackModelFeatures = Remove | HideUnhidePurge,
         All = AutoDJ | LoadTo | Playlist | Crate | Remove | Metadata | Reset |
-                BPM | Color | HideUnhidePurge | FileBrowser | Properties
+                BPM | Color | HideUnhidePurge | RemoveFromDisk | FileBrowser |
+                Properties
     };
     Q_DECLARE_FLAGS(Features, Feature)
 
@@ -122,6 +124,7 @@ class WTrackMenu : public QMenu {
     void slotHide();
     void slotUnhide();
     void slotPurge();
+    void slotRemoveFromDisk();
 
   private:
     // This getter verifies that m_pTrackModel is set when
@@ -216,6 +219,7 @@ class WTrackMenu : public QMenu {
     QAction* m_pHideAct{};
     QAction* m_pUnhideAct{};
     QAction* m_pPurgeAct{};
+    QAction* m_pFileRemoveFromDiskAct{};
 
     // Show track-editor action
     QAction* m_pPropertiesAct{};

@@ -106,5 +106,6 @@ TrackModel::CapabilitiesFlags LibraryTableModel::getCapabilities() const {
             | TRACKMODELCAPS_LOADTOSAMPLER
             | TRACKMODELCAPS_LOADTOPREVIEWDECK
             | TRACKMODELCAPS_HIDE
+            | TRACKMODELCAPS_DELETE
             | TRACKMODELCAPS_RESETPLAYED;
 }

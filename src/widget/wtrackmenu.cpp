@@ -180,6 +180,14 @@ void WTrackMenu::createActions() {
         connect(m_pPurgeAct, &QAction::triggered, this, &WTrackMenu::slotPurge);
     }
 
+    if (featureIsEnabled(Feature::RemoveFromDisk)) {
+        m_pFileRemoveFromDiskAct = new QAction(tr("Delete File"), this);
+        connect(m_pFileRemoveFromDiskAct,
+                &QAction::triggered,
+                this,
+                &WTrackMenu::slotRemoveFromDisk);
+    }
+
     if (featureIsEnabled(Feature::Properties)) {
         m_pPropertiesAct = new QAction(tr("Properties"), this);
         connect(m_pPropertiesAct, &QAction::triggered, this, &WTrackMenu::slotShowDlgTrackInfo);
@@ -429,6 +437,12 @@ void WTrackMenu::setupActions() {
         }
         if (m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_PURGE)) {
             addAction(m_pPurgeAct);
+        }
+    }
+
+    if (featureIsEnabled(Feature::RemoveFromDisk)) {
+        if (m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_DELETE)) {
+            addAction(m_pFileRemoveFromDiskAct);
         }
     }
 
@@ -1625,6 +1639,59 @@ void WTrackMenu::slotPurge() {
     m_pTrackModel->purgeTracks(getTrackIndices());
 }
 
+void WTrackMenu::slotRemoveFromDisk() {
+    if (!m_pTrackModel) {
+        return;
+    }
+    // Build file list
+    // TODO Instead of abusing QMessageBox by squeezing the file list into the
+    // regular meassage box text, create a custom QDialog and insert
+    // a file table there. This could hold columns for Title, Artist, file path
+    // and maybe a Hide checkbox for each track
+    QString fileList;
+    for (const QModelIndex& index : m_trackIndexList) {
+        if (!index.isValid()) {
+            continue;
+        }
+        QString file = m_pTrackModel->getTrackLocation(index) + "<br>";
+        fileList.append(file);
+    }
+
+    QMessageBox msgBox(QMessageBox::Warning,
+            QObject::tr("Remove From Disk"),
+            QObject::tr("<b>Really delete %1 selected files from disk?<br>"
+                        "<br>"
+                        "Permanent deletion, this can not be undone!</b>"
+                        "<br><br> %2")
+                    .arg(QString::number(m_trackIndexList.length()), fileList));
+    msgBox.setTextFormat(Qt::RichText);
+
+    // Add hide checkbox
+    QCheckBox alsoHide(QObject::tr("Also hide track in library"), &msgBox);
+    alsoHide.blockSignals(true);
+    // Note ronso0 Set checked by default because that is what I usually need
+    alsoHide.setCheckState(Qt::Checked);
+    msgBox.addButton(&alsoHide, QMessageBox::ActionRole);
+
+    // Setup buttons
+    msgBox.setStandardButtons(QMessageBox::Cancel | QMessageBox::Apply);
+    msgBox.setDefaultButton(QMessageBox::Cancel);
+
+    if (QMessageBox::Apply == msgBox.exec()) {
+        for (const QModelIndex& index : m_trackIndexList) {
+            if (!index.isValid()) {
+                continue;
+            }
+            QString filenameWithPath = m_pTrackModel->getTrackLocation(index);
+            QFile file(filenameWithPath);
+            file.remove();
+        }
+        if (alsoHide.checkState() == Qt::Checked) {
+            m_pTrackModel->hideTracks(m_trackIndexList);
+        }
+    }
+}
+
 void WTrackMenu::clearTrackSelection() {
     m_trackPointerList.clear();
     m_trackIndexList.clear();
@@ -1676,6 +1743,8 @@ bool WTrackMenu::featureIsEnabled(Feature flag) const {
         return m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_HIDE) ||
                 m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_UNHIDE) ||
                 m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_PURGE);
+    case Feature::RemoveFromDisk:
+        return m_pTrackModel->hasCapabilities(TrackModel::TRACKMODELCAPS_DELETE);
     case Feature::FileBrowser:
         return true;
     case Feature::Properties:
