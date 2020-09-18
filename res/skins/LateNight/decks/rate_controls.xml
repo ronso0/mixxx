@@ -20,11 +20,13 @@
         <SizePolicy>min,me</SizePolicy>
         <Children>
 
+          <WidgetGroup><Size>0min,0me</Size></WidgetGroup>
+
           <WidgetGroup><!-- BPM + rate -->
             <ObjectName>BpmRateTapContainer</ObjectName>
             <Layout>vertical</Layout>
             <SizePolicy>min,me</SizePolicy>
-            <MaximumSize>,46</MaximumSize>
+            <MaximumSize>,30</MaximumSize>
             <Children>
               <WidgetGroup><!-- BpmContainer + Tap overlay -->
                 <ObjectName>AlignCenter</ObjectName>
@@ -60,13 +62,6 @@
                   </NumberBpm>
                 </Children>
               </WidgetGroup><!-- BpmContainer + Tap overlay -->
-
-              <NumberRate>
-                <TooltipId>rate_display</TooltipId>
-                <ObjectName>RateText</ObjectName>
-                <Channel><Variable name="ChanNum" /></Channel>
-                <NumberOfDigits>2</NumberOfDigits>
-              </NumberRate>
             </Children>
           </WidgetGroup><!-- BPM + rate -->
 
