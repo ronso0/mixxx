@@ -481,6 +481,9 @@ WLibrary,
       /* for some reason the padding/margin is doubled in the skin... */
       padding: 0px 1px 1px 1px;
     }
+    #CommentText {
+      padding: 0px 5px 1px 5px;
+    }
 
     #TitleTextSmall {
       padding: 1px 3px 1px 1px;
@@ -1069,7 +1072,7 @@ WTrackMenu QMenu QCheckBox,
 
 /* Grey. default for all deck labels */
 #PlayPositionText, #PlayPositionTextSmall,
-#DurationText, #RateText,
+#DurationText, #CommentText, #RateText,
 #KeyText, #KeyTextSmall,
 #PreviewLabel,
 WEffectSelector, WEffectSelector QAbstractScrollArea,
