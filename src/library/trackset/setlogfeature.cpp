@@ -84,11 +84,6 @@ void SetlogFeature::bindLibraryWidget(
     m_libraryWidget = libraryWidget;
 }
 
-void SetlogFeature::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
-    // store the sidebar widget pointer for later use in onRightClickChild
-    m_pSidebarWidget = pSidebarWidget;
-}
-
 void SetlogFeature::onRightClick(const QPoint& globalPos) {
     Q_UNUSED(globalPos);
     m_lastRightClickedIndex = QModelIndex();
@@ -339,10 +334,12 @@ void SetlogFeature::slotJoinWithPrevious() {
                          << " previous:" << previousPlaylistId;
                 if (m_playlistDao.copyPlaylistTracks(
                             currentPlaylistId, previousPlaylistId)) {
+                    m_lastRightClickedIndex = constructChildModel(previousPlaylistId);
                     m_playlistDao.deletePlaylist(currentPlaylistId);
                     slotPlaylistTableChanged(
                             previousPlaylistId); // For moving selection
                     emit showTrackModel(m_pPlaylistTableModel);
+                    emit activatePlaylist(previousPlaylistId);
                 }
             }
         }

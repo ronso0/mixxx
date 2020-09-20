@@ -27,8 +27,6 @@ class PlaylistFeature : public BasePlaylistFeature {
     QVariant title() override;
     QIcon getIcon() override;
 
-    void bindSidebarWidget(WLibrarySidebar* pSidebarWidget) override;
-
     bool dropAcceptChild(const QModelIndex& index, QList<QUrl> urls, QObject* pSource) override;
     bool dragMoveAcceptChild(const QModelIndex& index, QUrl url) override;
 
@@ -50,5 +48,4 @@ class PlaylistFeature : public BasePlaylistFeature {
   private:
     QString getRootViewHtml() const override;
     const QIcon m_icon;
-    QPointer<WLibrarySidebar> m_pSidebarWidget;
 };
