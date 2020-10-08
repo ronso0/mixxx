@@ -22,6 +22,10 @@
 #include "widget/wlibrarysidebar.h"
 #include "widget/wlibrarytextbrowser.h"
 
+namespace {
+const char* kUnsafeFilenameReplacement = "-";
+}
+
 BasePlaylistFeature::BasePlaylistFeature(
         Library* pLibrary,
         UserSettingsPointer pConfig,
@@ -462,7 +466,7 @@ void BasePlaylistFeature::slotExportPlaylist() {
     }
     QString playlistName = m_playlistDao.getPlaylistName(playlistId);
     // replace separator character with something generic
-    playlistName = playlistName.replace(QDir::separator(), "-");
+    playlistName = playlistName.replace(QDir::separator(), kUnsafeFilenameReplacement);
     qDebug() << "Export playlist" << playlistName;
 
     QString lastPlaylistDirectory = m_pConfig->getValue(
@@ -653,12 +657,11 @@ void BasePlaylistFeature::clearChildModel() {
 QModelIndex BasePlaylistFeature::indexFromPlaylistId(int playlistId) {
     QVariant variantId = QVariant(playlistId);
     QModelIndexList results = m_childModel.match(
-                                m_childModel.getRootIndex(),
-                                TreeItemModel::kDataRole,
-                                variantId,
-                                1,
-                                Qt::MatchWrap | Qt::MatchExactly | Qt::MatchRecursive);
-    qDebug() << "indexFromPlaylistId: len:" << results.length();
+            m_childModel.getRootIndex(),
+            TreeItemModel::kDataRole,
+            variantId,
+            1,
+            Qt::MatchWrap | Qt::MatchExactly | Qt::MatchRecursive);
     if (!results.isEmpty()) {
         return results.front();
     }
@@ -686,7 +689,7 @@ void BasePlaylistFeature::slotTrackSelected(TrackPointer pTrack) {
 void BasePlaylistFeature::markTreeItem(TreeItem* pTreeItem) {
     bool ok;
     int playlistId = pTreeItem->getData().toInt(&ok);
-    if(ok) {
+    if (ok) {
         bool shouldBold = m_playlistsSelectedTrackIsIn.contains(playlistId);
         pTreeItem->setBold(shouldBold);
         if (shouldBold && pTreeItem->hasParent()) {
