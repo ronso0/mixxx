@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "control/controlobject.h"
 #include "database/mixxxdb.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
@@ -14,16 +15,16 @@ class LibraryTest : public MixxxDbTest {
     LibraryTest();
     ~LibraryTest() override = default;
 
-    TrackCollectionManager* trackCollections() {
+    TrackCollectionManager* trackCollections() const {
         return m_pTrackCollectionManager.get();
     }
 
-    TrackCollection* internalCollection() {
+    TrackCollection* internalCollection() const {
         return trackCollections()->internalCollection();
     }
 
     TrackPointer getOrAddTrackByLocation(
-            const QString& trackLocation);
+            const QString& trackLocation) const;
 
   private:
     const std::unique_ptr<TrackCollectionManager> m_pTrackCollectionManager;
