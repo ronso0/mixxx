@@ -198,7 +198,7 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
             if (i != groups.end() && i.key() == yearCreated) {
                 groupItem = i.value();
             } else {
-                groupItem = new TreeItem(QString("%1").arg(yearCreated), -1);
+                groupItem = new TreeItem(QString::number(yearCreated), -1);
                 groups.insert(yearCreated, groupItem);
                 itemList.append(groupItem);
             }
@@ -473,5 +473,6 @@ void SetlogFeature::activatePlaylist(int playlistId) {
 }
 
 QString SetlogFeature::getRootViewHtml() const {
+    // Instead of the help text, the history shows the current entry instead
     return QString();
 }
