@@ -135,7 +135,9 @@ QAbstractScrollArea::corner {
   #LibraryContainer QScrollBar::handle:horizontal,
   #LibraryContainer QScrollBar::handle:vertical,
   WEffectSelector QAbstractScrollArea QScrollBar::handle:horizontal,
-  WEffectSelector QAbstractScrollArea QScrollBar::handle:vertical {
+  WEffectSelector QAbstractScrollArea QScrollBar::handle:vertical,
+  WSearchLineEdit QAbstractScrollArea QScrollBar::handle:horizontal,
+  WSearchLineEdit QAbstractScrollArea QScrollBar::handle:vertical {
     background-color: #333338;
     }
     QAbstractScrollArea::corner {
@@ -872,8 +874,8 @@ WEffectSelector {
   }
 
   WEffectSelector QAbstractScrollArea,
+  WSearchLineEdit QAbstractScrollArea,
   #fadeModeCombobox QAbstractScrollArea {
-    width: 142px;
     /* padding-left: 6px; */
     /* On Linux, this is not applied but font color from WEffectSelector
     is inherited.
@@ -883,8 +885,13 @@ WEffectSelector {
     padding: 0px;
     margin: 0px;
   }
+  WEffectSelector QAbstractScrollArea,
+  #fadeModeCombobox QAbstractScrollArea {
+    width: 142px;
+  }
   /* selected item */
   WEffectSelector::checked,
+  WSearchLineEdit::checked,
   #fadeModeCombobox::checked {
     /* not applied
     padding-left: 5px;  */
@@ -894,6 +901,7 @@ WEffectSelector {
   }
   /* hovered items */
   WEffectSelector::item:selected,
+  WSearchLineEdit::item:selected,
   #fadeModeCombobox::item:selected {
     background-color: #333;
   /* Already of those two destroys font config and puts tick mark behind text:
@@ -1267,6 +1275,7 @@ WEffectSelector,
 #MasterControls #FxAssignButtons WPushButton[displayValue="0"],
 #PreviewLabel,
 WEffectSelector QAbstractScrollArea,
+WSearchLineEdit QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea,
 #GuiToggleButton[displayValue="0"],
 #RecDuration[highlight="0"],
@@ -2529,7 +2538,8 @@ WCueMenuPopup QPushButton:focus {
 
 /*********** scrollbars *********************************/
 #LibraryContainer QScrollBar,
-WEffectSelector QAbstractScrollArea QScrollBar {
+WEffectSelector QAbstractScrollArea QScrollBar,
+WSearchLineEdit QAbstractScrollArea QScrollBar {
   border: 0px solid #585858;
   background: #000;
   border-radius: 2px;
@@ -2537,7 +2547,8 @@ WEffectSelector QAbstractScrollArea QScrollBar {
   color: #999;
   }
   #LibraryContainer QScrollBar:horizontal,
-  WEffectSelector QAbstractScrollArea QScrollBar:horizontal {
+  WEffectSelector QAbstractScrollArea QScrollBar:horizontal,
+  WSearchLineEdit QAbstractScrollArea QScrollBar:horizontal {
     min-width: 12px;
     height: 15px;
     border-top-left-radius: 0px;
@@ -2545,7 +2556,8 @@ WEffectSelector QAbstractScrollArea QScrollBar {
     background-color: #000;
   }
   #LibraryContainer QScrollBar:vertical,
-  WEffectSelector QAbstractScrollArea QScrollBar:vertical {
+  WEffectSelector QAbstractScrollArea QScrollBar:vertical,
+  WSearchLineEdit QAbstractScrollArea QScrollBar:vertical {
     min-height: 12px;
     width: 15px;
     border-top-left-radius: 0px;
@@ -2560,11 +2572,13 @@ WEffectSelector QAbstractScrollArea QScrollBar {
   #LibraryContainer QTreeView:focus QScrollBar:vertical {
   }*/
   #LibraryContainer QScrollBar::handle:horizontal,
-  WEffectSelector QAbstractScrollArea QScrollBar::handle:horizontal {
+  WEffectSelector QAbstractScrollArea QScrollBar::handle:horizontal,
+  WSearchLineEdit QAbstractScrollArea QScrollBar::handle:horizontal {
     min-width: 25px;
   }
   #LibraryContainer QScrollBar::handle:vertical,
-  WEffectSelector QAbstractScrollArea QScrollBar::handle:vertical {
+  WEffectSelector QAbstractScrollArea QScrollBar::handle:vertical,
+  WSearchLineEdit QAbstractScrollArea QScrollBar::handle:vertical {
     min-height: 25px;
   }
 
@@ -2572,7 +2586,9 @@ WEffectSelector QAbstractScrollArea QScrollBar {
 #LibraryContainer QScrollBar::add-page,
 #LibraryContainer QScrollBar::sub-page,
 WEffectSelector QAbstractScrollArea QScrollBar::add-page,
-WEffectSelector QAbstractScrollArea QScrollBar::sub-page {
+WEffectSelector QAbstractScrollArea QScrollBar::sub-page,
+WSearchLineEdit QAbstractScrollArea QScrollBar::add-page,
+WSearchLineEdit QAbstractScrollArea QScrollBar::sub-page {
   min-width: 15px;
   min-height: 15px;
   background-color: #000;
@@ -2582,7 +2598,9 @@ WEffectSelector QAbstractScrollArea QScrollBar::sub-page {
 #LibraryContainer QScrollBar::add-line,
 #LibraryContainer QScrollBar::sub-line,
 WEffectSelector QAbstractScrollArea QScrollBar::add-line,
-WEffectSelector QAbstractScrollArea QScrollBar::sub-line {
+WEffectSelector QAbstractScrollArea QScrollBar::sub-line,
+WSearchLineEdit QAbstractScrollArea QScrollBar::add-line,
+WSearchLineEdit QAbstractScrollArea QScrollBar::sub-line {
   width: 0px;
   height: 0px;
   border: 0px;
@@ -2590,7 +2608,8 @@ WEffectSelector QAbstractScrollArea QScrollBar::sub-line {
 
 /* Corner in between two scrollbars */
 #LibraryContainer QAbstractScrollArea::corner,
-WEffectSelector QAbstractScrollArea QScrollBar::corner {
+WEffectSelector QAbstractScrollArea QScrollBar::corner,
+WSearchLineEdit QAbstractScrollArea QScrollBar::corner {
   background-color: #1e1e1e;
 }
 /*********** scrollbars *********************************/
@@ -2821,13 +2840,16 @@ WBeatSpinBox QMenu::item,
 WTrackMenu QCheckBox,
 WTrackMenu QMenu QCheckBox,
 WEffectSelector QAbstractScrollArea,
+WSearchLineEdit QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea,
 WEffectSelector::item,
+WSearchLineEdit::item,
 #fadeModeCombobox::item {
   background-color: #151517;
 }
   /* hovered items */
   WEffectSelector::item:selected,
+  WSearchLineEdit::item:selected,
   #fadeModeCombobox::item:selected,
   WBeatSpinBox QMenu::item:selected,
   #LibraryContainer QMenu::item:selected,
@@ -2894,6 +2916,7 @@ WEffectSelector,
     margin: 4px 1px 4px 1px;
   }
   WEffectSelector::down-arrow,
+  WSearchLineEdit::down-arrow,
   #fadeModeCombobox::down-arrow {
     image: url(skin:/palemoon/buttons/btn__fx_selector_down.svg);
     border: 0;
@@ -2918,6 +2941,8 @@ WEffectSelector,
   WEffectSelector::indicator, /* checkbox, tick mark */
   WEffectSelector::drop-down,
   WEffectSelector::indicator:!checked,
+  WSearchLineEdit::drop-down,
+  WSearchLineEdit::indicator,
   #fadeModeCombobox::checked, /* selected mode */
   #fadeModeCombobox::indicator, /* checkbox, tick mark */
   #fadeModeCombobox::drop-down,
