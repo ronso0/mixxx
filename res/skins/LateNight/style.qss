@@ -236,7 +236,8 @@ WEffectChainPresetSelector QAbstractScrollArea,
 #PreviewTitle,
 #PreviewLabel,
 WBeatSpinBox,
-#spinBoxTransition {
+#spinBoxTransition,
+#MenubarToggle {
   font-size: 14px;
 }
 

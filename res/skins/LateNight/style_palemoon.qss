@@ -1321,13 +1321,16 @@ WEffectChainPresetSelector:!editable:on,
 WEffectSelector QAbstractScrollArea,
 WEffectChainPresetSelector QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea,
-#GuiToggleButton[displayValue="0"],
+#GuiToggleButton[displayValue="0"], #MenubarToggle,
 #RecDuration[highlight="0"],
 #BroadcastButton[displayValue="0"],
 #SkinSettingsToggle[displayValue="0"],
 #LibraryFeatureControls QLabel {
   color: #777;
-}
+  }/*
+  #MenubarToggle[hover="true"] {
+    color: #999;
+  }*/
 
 /* Darker grey for knob labels & inactive decks/units */
 #KnobLabel,
