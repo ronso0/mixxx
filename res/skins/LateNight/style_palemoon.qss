@@ -1309,7 +1309,7 @@ WEffectSelector,
 /* Grey. default for all deck labels */
 #PlayPositionText, #PlayPositionTextSmall,
 #DurationText, #RateText,
-#MasterControls #FxAssignButtons WPushButton[displayValue="0"],
+#MixerMasterHeadphone #FxAssignButtons WPushButton[displayValue="0"],
 #PreviewLabel,
 WEffectSelector QAbstractScrollArea,
 WSearchLineEdit QAbstractScrollArea,
@@ -1336,6 +1336,7 @@ WLibrary QLabel {
 
 /* Even darker grey for knob labels in master/headphone mixer */
 #MixerMasterHeadphone #KnobLabel,
+#MixerMasterHeadphone #FxAssignButtons WPushButton[displayValue="0"],
 #LatencyLabel {
   color: #444;
 }
@@ -1475,9 +1476,10 @@ WEffectSelector,
   }
   #LibraryContainer QHeaderView::up-arrow,
   #LibraryContainer QHeaderView::down-arrow {
+    /* ToDo: restore image
     outline: none;
     border-width: 1px 2px 1px 0px;
-    border-image: url(skin:/palemoon/buttons/btn_embedded_library_header_sort.svg) 1 2 1 1;
+    border-image: url(skin:/palemoon/buttons/btn_embedded_library_header_sort.svg) 1 2 1 1; */
   }
 
   #DlgMissing > QPushButton:!enabled,
@@ -1603,7 +1605,6 @@ WBeatSpinBox::down-button {
   /* brigth buttons in dimmed containers
   #BeatgridControls WPushButton[displayValue="0"], */
   #CueDeleteButton,
-  #MasterControls #FxAssignButtons WPushButton[displayValue="0"],
   #SplitCue[displayValue="0"],
   #PlayPreview[displayValue="0"],
   /* library controls */
@@ -1618,7 +1619,8 @@ WBeatSpinBox::down-button {
     background-color: #222;
   }
   /* dark buttons in toolbar */
-  #ToolBar WPushButton[displayValue="0"] {
+  #ToolBar WPushButton[displayValue="0"],
+  #MixerMasterHeadphone #FxAssignButtons WPushButton[displayValue="0"] {
     background-color: #151517;
   }
 
@@ -2485,8 +2487,7 @@ WColorPicker QPushButton[checked="true"] {
   margin: 0px;
   padding: 0px;
   }
-  #LibraryContainer QTableView::indicator:checked,
-  #LibraryContainer QTableView::indicator:checked:selected {
+  #LibraryContainer QTableView::indicator:checked {
     image: url(skin:/palemoon/buttons/btn__lib_checkmark_blue.svg);
     }
   #LibraryContainer QTableView::indicator:unchecked {
