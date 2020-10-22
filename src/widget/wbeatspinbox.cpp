@@ -8,11 +8,14 @@
 
 QRegExp WBeatSpinBox::s_regexpBlacklist("[^0-9.,/ ]");
 
-WBeatSpinBox::WBeatSpinBox(QWidget* parent, const ConfigKey& configKey,
-                           int decimals, double minimum, double maximum)
+WBeatSpinBox::WBeatSpinBox(QWidget* parent,
+        const ConfigKey& configKey,
+        int decimals,
+        double minimum,
+        double maximum)
         : QDoubleSpinBox(parent),
           WBaseWidget(this),
-          m_valueControl(configKey, this),
+          m_valueControl(configKey, this, ControlFlag::NoAssertIfMissing),
           m_scaleFactor(1.0) {
     // replace the original QLineEdit by one that supports font scaling.
     setLineEdit(new WBeatLineEdit(this));
@@ -276,7 +279,8 @@ bool WBeatSpinBox::event(QEvent* pEvent) {
         // QAbstractSpinBox::minimumSizeHint() the lineEdit()->font() is used for
         // rendering
         if (fonti.pixelSize() > 0) {
-            const_cast<QFont&>(fonti).setPixelSize(fonti.pixelSize() * m_scaleFactor);
+            const_cast<QFont&>(fonti).setPixelSize(
+                    static_cast<int>(fonti.pixelSize() * m_scaleFactor));
         }
     }
     return QDoubleSpinBox::event(pEvent);
@@ -291,7 +295,8 @@ bool WBeatLineEdit::event(QEvent* pEvent) {
         // Only scale pixel size fonts, point size fonts are scaled by the OS
         // This font instance is the one, used for rendering.
         if (fonti.pixelSize() > 0) {
-            const_cast<QFont&>(fonti).setPixelSize(fonti.pixelSize() * m_scaleFactor);
+            const_cast<QFont&>(fonti).setPixelSize(
+                    static_cast<int>(fonti.pixelSize() * m_scaleFactor));
         }
     }
     return QLineEdit::event(pEvent);
