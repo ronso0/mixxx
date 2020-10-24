@@ -750,7 +750,10 @@ WBeatSpinBox::down-button,
   }
   #MasterControls {
     border-radius: 0px 1px 0px 0px;
-  }
+    }
+    #BoothLabelBox {
+      padding: 0px 0px 2px 0px;
+    }
   #HeadphoneControls {
     border-radius: 0px 0px 1px 0px;
   }

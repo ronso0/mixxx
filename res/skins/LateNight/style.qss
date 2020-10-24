@@ -431,7 +431,10 @@ WSpinny { /*
   #MasterControls,
   #HeadphoneControls {
     qproperty-layoutAlignment: 'AlignHCenter | AlignVCenter';
-  }
+    }
+    #BoothLabelBox {
+      qproperty-layoutAlignment: 'AlignLeft | AlignBottom';
+    }
   #MasterHeadphoneSeparator {
   }
 
