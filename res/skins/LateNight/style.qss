@@ -127,6 +127,7 @@ WLibrary QRadioButton {
 
 WKey,
 #DurationText,
+#CommentText,
 WEffectSelector,
 WEffectSelector QAbstractScrollArea,
 #fadeModeCombobox,

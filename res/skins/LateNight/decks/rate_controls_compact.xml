@@ -23,7 +23,7 @@
           <WidgetGroup><!-- BPM + rate -->
             <ObjectName>BpmRateTapContainer</ObjectName>
             <Layout>stacked</Layout>
-            <Size>60f,42f</Size>
+            <Size>60f,25f</Size>
             <Children>
               <!-- In order to make the bpm display tappable, we use an old-style
               widget group and put the bpm pushbutton on top of the display. -->
@@ -31,7 +31,7 @@
                 <TooltipId>bpm_tap_visual_bpm</TooltipId>
                 <ObjectName>BpmTap</ObjectName>
                 <!-- substract parent margin & padding -->
-                <Size>57f,40f</Size>
+                <Size>57f,23f</Size>
                 <NumberStates>1</NumberStates>
                 <State>
                   <Number>0</Number>
@@ -47,7 +47,7 @@
               <WidgetGroup><!-- BpmContainer + Tap overlay -->
                 <ObjectName>AlignCenter</ObjectName>
                 <Layout>vertical</Layout>
-                <Size>60f,39f</Size>
+                <Size>60f,22f</Size>
                 <Children>
                   <NumberBpm>
                     <ObjectName>BpmText</ObjectName>
@@ -59,13 +59,6 @@
                       <ConfigKey><Variable name="Group"/>,visual_bpm</ConfigKey>
                     </Connection>
                   </NumberBpm>
-
-                  <NumberRate>
-                    <TooltipId>rate_display</TooltipId>
-                    <ObjectName>RateText</ObjectName>
-                    <Channel><Variable name="ChanNum" /></Channel>
-                    <NumberOfDigits>2</NumberOfDigits>
-                  </NumberRate>
                 </Children>
               </WidgetGroup><!-- BpmContainer + Tap overlay -->
             </Children>
@@ -76,126 +69,64 @@
           <WidgetGroup>
             <ObjectName>RateControls</ObjectName>
             <SizePolicy>min,min</SizePolicy>
-            <Layout>horizontal</Layout>
+            <Layout>vertical</Layout>
             <Children>
-              <!-- show_sync_button_compact -->
+
               <WidgetGroup>
-                <Connection>
-                  <ConfigKey persist="true">[LateNight],show_sync_button_compact</ConfigKey>
-                  <BindProperty>visible</BindProperty>
-                </Connection>
-                <SizePolicy>min,min</SizePolicy>
-                <Layout>vertical</Layout>
-                <Children>
-
-                  <WidgetGroup>
-                    <ObjectName>SyncBoxCompact</ObjectName>
-                    <Layout>horizontal</Layout>
-                    <SizePolicy>min,min</SizePolicy>
-                    <Children>
-                      <Template src="skin:/controls/button_2state_right.xml">
-                        <SetVariable name="TooltipId">sync_enabled</SetVariable>
-                        <SetVariable name="ObjectName">SyncDeck</SetVariable>
-                        <SetVariable name="Size">48f,22f</SetVariable>
-                        <SetVariable name="BtnType"><Variable name="TopRegion_BtnType"/></SetVariable>
-                        <SetVariable name="BtnSize">sync</SetVariable>
-                        <SetVariable name="ConfigKey"><Variable name="Group"/>,sync_enabled</SetVariable>
-                        <SetVariable name="ConfigKeyRight"><Variable name="Group"/>,beatsync_tempo</SetVariable>
-                      </Template>
-                    </Children>
-                  </WidgetGroup>
-
-                  <WidgetGroup>
-                    <ObjectName>AlignCenter</ObjectName>
-                    <SizePolicy>min,min</SizePolicy>
-                    <Layout>vertical</Layout>
-                    <Children>
-                      <WidgetGroup><!-- Rate slider + center indicator -->
-                        <ObjectName></ObjectName>
-                        <Size>50f,79f</Size>
-                        <Children>
-                          <Label>
-                            <ObjectName>RateCenter</ObjectName>
-                            <Size>5f,5f</Size>
-                            <Pos>2,37</Pos>
-                            <Connection>
-                              <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
-                              <Transform><IsEqual>0.5</IsEqual></Transform>
-                              <BindProperty>highlight</BindProperty>
-                            </Connection>
-                          </Label>
-                          <SliderComposed>
-                            <ObjectName>RateSlider</ObjectName>
-                            <Size>40f,79f</Size>
-                            <Pos>5,0</Pos>
-                            <TooltipId>rate</TooltipId>
-                            <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck.svg</Handle>
-                            <Slider scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact_sync.svg</Slider>
-                            <Horizontal>false</Horizontal>
-                            <BarWidth><Variable name="BarWidth"/></BarWidth>
-                            <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
-                            <BarColor><Variable name="BarColorPitch"/></BarColor>
-                            <BarRoundCaps>true</BarRoundCaps>
-                            <BarAxisPos>20.0</BarAxisPos>
-                            <BarUnipolar>false</BarUnipolar>
-                            <Connection>
-                              <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
-                            </Connection>
-                          </SliderComposed>
-                        </Children>
-                      </WidgetGroup><!-- Rate slider + center indicator -->
-                    </Children>
-                  </WidgetGroup>
-                </Children>
-              </WidgetGroup><!-- show_sync_button_compact -->
-
-              <WidgetGroup><!-- !show_sync_button_compact -->
-                <ObjectName>AlignCenter</ObjectName>
-                <Connection>
-                  <ConfigKey persist="true">[LateNight],show_sync_button_compact</ConfigKey>
-                  <Transform><Not/></Transform>
-                  <BindProperty>visible</BindProperty>
-                </Connection>
-                <SizePolicy>min,min</SizePolicy>
+                <ObjectName>SyncBoxCompact</ObjectName>
                 <Layout>horizontal</Layout>
+                <SizePolicy>min,min</SizePolicy>
                 <Children>
-                  <WidgetGroup><!-- Rate slider + center indicator -->
-                    <ObjectName></ObjectName>
-                    <Size>50f,95f</Size>
-                    <Children>
-                      <Label>
-                        <ObjectName>RateCenter</ObjectName>
-                        <Size>5f,5f</Size>
-                        <Pos>2,45</Pos>
-                        <Connection>
-                          <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
-                          <Transform><IsEqual>0.5</IsEqual></Transform>
-                          <BindProperty>highlight</BindProperty>
-                        </Connection>
-                      </Label>
-
-                      <SliderComposed>
-                        <ObjectName>RateSlider</ObjectName>
-                        <Size>40f,95f</Size>
-                        <Pos>5,0</Pos>
-                        <TooltipId>rate</TooltipId>
-                        <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck.svg</Handle>
-                        <Slider scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact.svg</Slider>
-                        <Horizontal>false</Horizontal>
-                        <BarWidth><Variable name="BarWidth"/></BarWidth>
-                        <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
-                        <BarColor><Variable name="BarColorPitch"/></BarColor>
-                        <BarRoundCaps>true</BarRoundCaps>
-                        <BarAxisPos>20.0</BarAxisPos>
-                        <BarUnipolar>false</BarUnipolar>
-                        <Connection>
-                          <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
-                        </Connection>
-                      </SliderComposed>
-                    </Children>
-                  </WidgetGroup><!-- Rate slider + center indicator -->
+                  <Template src="skin:/controls/button_2state_right.xml">
+                    <SetVariable name="TooltipId">sync_enabled</SetVariable>
+                    <SetVariable name="ObjectName">SyncDeck</SetVariable>
+                    <SetVariable name="Size">48f,22f</SetVariable>
+                    <SetVariable name="BtnType"><Variable name="TopRegion_BtnType"/></SetVariable>
+                    <SetVariable name="BtnSize">sync</SetVariable>
+                    <SetVariable name="ConfigKey"><Variable name="Group"/>,sync_enabled</SetVariable>
+                    <SetVariable name="ConfigKeyRight"><Variable name="Group"/>,beatsync_tempo</SetVariable>
+                  </Template>
                 </Children>
-              </WidgetGroup><!-- !show_sync_button_compact -->
+                <Connection>
+                  <ConfigKey persist="true">[LateNight],show_sync_button_compact</ConfigKey>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
+              </WidgetGroup>
+              <WidgetGroup><!-- Rate slider + center indicator -->
+                <ObjectName></ObjectName>
+                <Size>50f,95f</Size>
+                <Children>
+                  <Label>
+                    <ObjectName>RateCenter</ObjectName>
+                    <Size>5f,5f</Size>
+                    <Pos>2,45</Pos>
+                    <Connection>
+                      <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
+                      <Transform><IsEqual>0.5</IsEqual></Transform>
+                      <BindProperty>highlight</BindProperty>
+                    </Connection>
+                  </Label>
+
+                  <SliderComposed>
+                    <ObjectName>RateSlider</ObjectName>
+                    <Size>40f,95f</Size>
+                    <Pos>5,0</Pos>
+                    <TooltipId>rate</TooltipId>
+                    <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck.svg</Handle>
+                    <Slider scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact.svg</Slider>
+                    <Horizontal>false</Horizontal>
+                    <BarWidth><Variable name="BarWidth"/></BarWidth>
+                    <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
+                    <BarColor><Variable name="BarColorPitch"/></BarColor>
+                    <BarRoundCaps>true</BarRoundCaps>
+                    <BarAxisPos>20.0</BarAxisPos>
+                    <BarUnipolar>false</BarUnipolar>
+                    <Connection>
+                      <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
+                    </Connection>
+                  </SliderComposed>
+                </Children>
+              </WidgetGroup>
             </Children>
           </WidgetGroup><!-- RateControls -->
 

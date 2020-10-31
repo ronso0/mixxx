@@ -81,7 +81,7 @@
             <Children>
               <WidgetGroup>
                 <Layout>horizontal</Layout>
-                <SizePolicy>me,me</SizePolicy>
+                <SizePolicy>min,me</SizePolicy>
                 <Children>
                   <TrackProperty>
                     <ObjectName>ArtistText</ObjectName>
@@ -98,6 +98,25 @@
                 </Children>
               </WidgetGroup>
 
+              <WidgetGroup><Size>0me,0min</Size></WidgetGroup>
+
+              <WidgetGroup>
+                <Layout>horizontal</Layout>
+                <SizePolicy>min,me</SizePolicy>
+                <Children>
+                  <TrackProperty>
+                    <ObjectName>CommentText</ObjectName>
+                    <Size>0me,23f</Size>
+                    <TooltipId>track_artist</TooltipId>
+                    <Property>comment</Property>
+                    <Elide>right</Elide>
+                    <Channel><Variable name="ChanNum"/></Channel>
+                  </TrackProperty>
+                </Children>
+              </WidgetGroup>
+
+              <WidgetGroup><Size>0me,0min</Size></WidgetGroup>
+
               <WidgetGroup>
                 <ObjectName>DurationGutter</ObjectName>
                 <Layout>horizontal</Layout>
@@ -108,9 +127,7 @@
                     <TooltipId>track_duration</TooltipId>
                     <Size>0min,22f</Size>
                     <Property>durationFormatted</Property>
-                    <Channel>
-                      <Variable name="ChanNum"/>
-                    </Channel>
+                    <Channel><Variable name="ChanNum"/></Channel>
                   </TrackProperty>
                 </Children>
               </WidgetGroup>
