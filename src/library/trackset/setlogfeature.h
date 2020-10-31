@@ -20,16 +20,17 @@ class SetlogFeature : public BasePlaylistFeature {
 
     void bindLibraryWidget(WLibrary* libraryWidget,
             KeyboardEventFilter* keyboard) override;
-    void bindSidebarWidget(WLibrarySidebar* pSidebarWidget) override;
+    void activatePlaylist(int playlistId) override;
 
   public slots:
     void onRightClick(const QPoint& globalPos) override;
     void onRightClickChild(const QPoint& globalPos, QModelIndex index) override;
     void slotJoinWithPrevious();
     void slotGetNewPlaylist();
+    void activate() override;
 
   protected:
-    QList<BasePlaylistFeature::IdAndLabel> createPlaylistLabels() override;
+    QModelIndex constructChildModel(int selectedId);
     QString fetchPlaylistLabel(int playlistId) override;
     void decorateChild(TreeItem* pChild, int playlistId) override;
 
@@ -48,6 +49,5 @@ class SetlogFeature : public BasePlaylistFeature {
     QAction* m_pGetNewPlaylist;
     int m_playlistId;
     WLibrary* m_libraryWidget;
-    QPointer<WLibrarySidebar> m_pSidebarWidget;
     const QIcon m_icon;
 };

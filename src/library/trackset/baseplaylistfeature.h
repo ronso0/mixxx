@@ -5,6 +5,7 @@
 #include <QModelIndex>
 #include <QObject>
 #include <QPair>
+#include <QPointer>
 #include <QSet>
 #include <QString>
 #include <QUrl>
@@ -18,6 +19,7 @@ class KeyboardEventFilter;
 class PlaylistTableModel;
 class TrackCollectionManager;
 class TreeItem;
+class WLibrarySidebar;
 
 class BasePlaylistFeature : public BaseTrackSetFeature {
     Q_OBJECT
@@ -33,6 +35,7 @@ class BasePlaylistFeature : public BaseTrackSetFeature {
 
     void bindLibraryWidget(WLibrary* libraryWidget,
             KeyboardEventFilter* keyboard) override;
+    void bindSidebarWidget(WLibrarySidebar* pSidebarWidget) override;
 
   public slots:
     void activateChild(const QModelIndex& index) override;
@@ -66,10 +69,8 @@ class BasePlaylistFeature : public BaseTrackSetFeature {
         QString label;
     };
 
-    virtual QModelIndex constructChildModel(int selected_id);
     virtual void updateChildModel(int selected_id);
     virtual void clearChildModel();
-    virtual QList<IdAndLabel> createPlaylistLabels() = 0;
     virtual QString fetchPlaylistLabel(int playlistId) = 0;
     virtual void decorateChild(TreeItem* pChild, int playlistId) = 0;
     virtual void addToAutoDJ(PlaylistDAO::AutoDJSendLoc loc);
@@ -81,6 +82,7 @@ class BasePlaylistFeature : public BaseTrackSetFeature {
 
     PlaylistDAO& m_playlistDao;
     QModelIndex m_lastRightClickedIndex;
+    QPointer<WLibrarySidebar> m_pSidebarWidget;
 
     QAction* m_pCreatePlaylistAction;
     QAction* m_pDeletePlaylistAction;
@@ -97,6 +99,7 @@ class BasePlaylistFeature : public BaseTrackSetFeature {
     QAction* m_pAnalyzePlaylistAction;
 
     PlaylistTableModel* m_pPlaylistTableModel;
+    QSet<int> m_playlistsSelectedTrackIsIn;
 
   private slots:
     void slotTrackSelected(TrackPointer pTrack);
@@ -105,8 +108,7 @@ class BasePlaylistFeature : public BaseTrackSetFeature {
   private:
     void initActions();
     virtual QString getRootViewHtml() const = 0;
+    void markTreeItem(TreeItem* pTreeItem);
 
     TrackPointer m_pSelectedTrack;
-
-    QSet<int> m_playlistsSelectedTrackIsIn;
 };
