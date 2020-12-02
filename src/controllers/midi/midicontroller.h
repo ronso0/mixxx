@@ -20,6 +20,8 @@
 #include "controllers/midi/midioutputhandler.h"
 #include "controllers/softtakeover.h"
 
+class DlgControllerLearning;
+
 class MidiController : public Controller {
     Q_OBJECT
   public:
@@ -60,7 +62,7 @@ class MidiController : public Controller {
     /// Alias for send()
     /// The length parameter is here for backwards compatibility for when scripts
     /// were required to specify it.
-    Q_INVOKABLE inline void sendSysexMsg(QList<int> data, unsigned int length = 0) {
+    Q_INVOKABLE inline void sendSysexMsg(const QList<int>& data, unsigned int length = 0) {
         Q_UNUSED(length);
         send(data);
     }
@@ -69,7 +71,7 @@ class MidiController : public Controller {
     virtual void receive(unsigned char status, unsigned char control,
                          unsigned char value, mixxx::Duration timestamp);
     // For receiving System Exclusive messages
-    void receive(const QByteArray data, mixxx::Duration timestamp) override;
+    void receive(const QByteArray& data, mixxx::Duration timestamp) override;
     int close() override;
 
   private slots:
@@ -115,6 +117,9 @@ class MidiController : public Controller {
     // So it can access sendShortMsg()
     friend class MidiOutputHandler;
     friend class MidiControllerTest;
+
+    // MIDI learning assistant
+    friend class DlgControllerLearning;
 };
 
 #endif

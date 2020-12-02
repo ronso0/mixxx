@@ -102,7 +102,7 @@ class ConfigValueKbd : public ConfigValue {
     ConfigValueKbd() = default;
     ~ConfigValueKbd() override = default;
     explicit ConfigValueKbd(const QKeySequence& keys);
-    explicit ConfigValueKbd(const QDomNode) {
+    explicit ConfigValueKbd(const QDomNode&) {
         reportFatalErrorAndQuit("ConfigValueKbd from QDomNode not implemented here");
     }
 
@@ -169,7 +169,7 @@ template <class ValueType> class ConfigObject {
     QMultiHash<ValueType, ConfigKey> transpose() const;
 
     void reopen(const QString& file);
-    void save();
+    bool save();
 
     // Returns the resource path -- the path where controller presets, skins,
     // library schema, keyboard mappings, and more are stored.
@@ -184,7 +184,7 @@ template <class ValueType> class ConfigObject {
     }
 
     QSet<QString> getGroups();
-    QList<ConfigKey> getKeysWithGroup(QString group) const;
+    QList<ConfigKey> getKeysWithGroup(const QString& group) const;
 
   protected:
     // We use QMap because we want a sorted list in mixxx.cfg

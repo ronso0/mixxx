@@ -385,7 +385,8 @@ void WTrackMenu::setupActions() {
         m_pMetadataMenu->addAction(m_pImportMetadataFromMusicBrainzAct);
         m_pMetadataMenu->addAction(m_pExportMetadataAct);
 
-        for (const auto& updateInExternalTrackCollection : m_updateInExternalTrackCollections) {
+        for (const auto& updateInExternalTrackCollection :
+                qAsConst(m_updateInExternalTrackCollections)) {
             ExternalTrackCollection* externalTrackCollection =
                     updateInExternalTrackCollection.externalTrackCollection;
             if (externalTrackCollection) {
@@ -447,7 +448,7 @@ bool WTrackMenu::isAnyTrackBpmLocked() const {
     if (m_pTrackModel) {
         const int column =
                 m_pTrackModel->fieldIndex(LIBRARYTABLE_BPM_LOCK);
-        for (const auto trackIndex : m_trackIndexList) {
+        for (const auto& trackIndex : m_trackIndexList) {
             QModelIndex bpmLockedIndex =
                     trackIndex.sibling(trackIndex.row(), column);
             if (bpmLockedIndex.data().toBool()) {
@@ -474,7 +475,7 @@ std::optional<std::optional<mixxx::RgbColor>> WTrackMenu::getCommonTrackColor() 
                 m_pTrackModel->fieldIndex(LIBRARYTABLE_COLOR);
         commonColor = mixxx::RgbColor::fromQVariant(
                 m_trackIndexList.first().sibling(m_trackIndexList.first().row(), column).data());
-        for (const auto trackIndex : m_trackIndexList) {
+        for (const auto& trackIndex : m_trackIndexList) {
             const auto otherColor = mixxx::RgbColor::fromQVariant(
                     trackIndex.sibling(trackIndex.row(), column).data());
             if (commonColor != otherColor) {
@@ -1205,7 +1206,7 @@ void WTrackMenu::slotColorPicked(mixxx::RgbColor::optional_t color) {
     hide();
 }
 
-void WTrackMenu::loadSelectionToGroup(QString group, bool play) {
+void WTrackMenu::loadSelectionToGroup(const QString& group, bool play) {
     TrackPointer pTrack = getFirstTrackPointer();
     if (!pTrack) {
         return;

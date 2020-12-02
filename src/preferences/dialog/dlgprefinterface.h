@@ -44,12 +44,12 @@ class DlgPrefInterface : public DlgPreferencePage, public Ui::DlgPrefControlsDlg
     ~DlgPrefInterface() override = default;
 
   public slots:
-    void slotUpdate();
-    void slotApply();
-    void slotResetToDefaults();
+    void slotUpdate() override;
+    void slotApply() override;
+    void slotResetToDefaults() override;
 
     void slotSetTooltips();
-    void slotSetSkinDescription(QString skin);
+    void slotSetSkinDescription(const QString& skin);
     void slotSetSkin(int);
     void slotSetScheme(int);
     void slotUpdateSchemes();

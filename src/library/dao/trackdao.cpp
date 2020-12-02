@@ -1,43 +1,43 @@
 #include "library/dao/trackdao.h"
 
-#include <QtDebug>
+#include <QChar>
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
-#include <QtSql>
 #include <QImage>
 #include <QRegExp>
-#include <QChar>
+#include <QtDebug>
+#include <QtSql>
 
-#include "sources/soundsourceproxy.h"
-#include "track/track.h"
-#include "library/queryutil.h"
-#include "util/db/sqlstringformatter.h"
-#include "util/db/sqllikewildcards.h"
-#include "util/db/sqllikewildcardescaper.h"
-#include "util/db/sqltransaction.h"
 #include "library/coverart.h"
 #include "library/coverartutils.h"
-#include "library/dao/trackschema.h"
 #include "library/crate/cratestorage.h"
-#include "library/dao/cuedao.h"
-#include "library/dao/playlistdao.h"
 #include "library/dao/analysisdao.h"
+#include "library/dao/cuedao.h"
 #include "library/dao/libraryhashdao.h"
+#include "library/dao/playlistdao.h"
+#include "library/dao/trackschema.h"
+#include "library/queryutil.h"
+#include "sources/soundsourceproxy.h"
 #include "track/beatfactory.h"
 #include "track/beats.h"
+#include "track/globaltrackcache.h"
 #include "track/keyfactory.h"
 #include "track/keyutils.h"
-#include "track/globaltrackcache.h"
+#include "track/track.h"
 #include "track/tracknumbers.h"
 #include "util/assert.h"
 #include "util/compatibility.h"
 #include "util/datetime.h"
+#include "util/db/sqllikewildcardescaper.h"
+#include "util/db/sqllikewildcards.h"
+#include "util/db/sqlstringformatter.h"
+#include "util/db/sqltransaction.h"
 #include "util/file.h"
 #include "util/logger.h"
-#include "util/timer.h"
 #include "util/math.h"
-
+#include "util/qt.h"
+#include "util/timer.h"
 
 namespace {
 
@@ -45,7 +45,7 @@ mixxx::Logger kLogger("TrackDAO");
 
 enum { UndefinedRecordIndex = -2 };
 
-void markTrackLocationsAsDeleted(QSqlDatabase database, const QString& directory) {
+void markTrackLocationsAsDeleted(const QSqlDatabase& database, const QString& directory) {
     //qDebug() << "TrackDAO::markTrackLocationsAsDeleted" << QThread::currentThread() << m_database.connectionName();
     QSqlQuery query(database);
     query.prepare("UPDATE track_locations "
@@ -286,17 +286,17 @@ void TrackDAO::saveTrack(Track* pTrack) const {
         // not receive any signals that are usually forwarded to
         // BaseTrackCache.
         DEBUG_ASSERT(!pTrack->isDirty());
-        emit trackClean(trackId);
+        emit mixxx::thisAsNonConst(this)->trackClean(trackId);
     }
 }
 
-void TrackDAO::slotDatabaseTracksChanged(QSet<TrackId> changedTrackIds) {
+void TrackDAO::slotDatabaseTracksChanged(const QSet<TrackId>& changedTrackIds) {
     if (!changedTrackIds.isEmpty()) {
         emit tracksChanged(changedTrackIds);
     }
 }
 
-void TrackDAO::slotDatabaseTracksRelocated(QList<RelocatedTrack> relocatedTracks) {
+void TrackDAO::slotDatabaseTracksRelocated(const QList<RelocatedTrack>& relocatedTracks) {
     QSet<TrackId> removedTrackIds;
     QSet<TrackId> changedTrackIds;
     for (const auto& relocatedTrack : qAsConst(relocatedTracks)) {
@@ -493,7 +493,10 @@ namespace {
         pTrackLibraryQuery->bindValue(":key_id", static_cast<int>(key));
     }
 
-    bool insertTrackLibrary(QSqlQuery* pTrackLibraryInsert, const Track& track, DbId trackLocationId, QDateTime trackDateAdded) {
+    bool insertTrackLibrary(QSqlQuery* pTrackLibraryInsert,
+            const Track& track,
+            DbId trackLocationId,
+            const QDateTime& trackDateAdded) {
         bindTrackLibraryValues(pTrackLibraryInsert, track);
 
         if (!track.getDateAdded().isNull()) {
@@ -750,7 +753,7 @@ void TrackDAO::afterHidingTracks(
     // TODO: QSet<T>::fromList(const QList<T>&) is deprecated and should be
     // replaced with QSet<T>(list.begin(), list.end()).
     // However, the proposed alternative has just been introduced in Qt
-    // 5.14. Until the minimum required Qt version of Mixx is increased,
+    // 5.14. Until the minimum required Qt version of Mixxx is increased,
     // we need a version check here
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     emit tracksRemoved(QSet<TrackId>(trackIds.begin(), trackIds.end()));
@@ -783,7 +786,7 @@ void TrackDAO::afterUnhidingTracks(
     // TODO: QSet<T>::fromList(const QList<T>&) is deprecated and should be
     // replaced with QSet<T>(list.begin(), list.end()).
     // However, the proposed alternative has just been introduced in Qt
-    // 5.14. Until the minimum required Qt version of Mixx is increased,
+    // 5.14. Until the minimum required Qt version of Mixxx is increased,
     // we need a version check here
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     emit tracksAdded(QSet<TrackId>(trackIds.begin(), trackIds.end()));
@@ -902,7 +905,7 @@ void TrackDAO::afterPurgingTracks(
     // TODO: QSet<T>::fromList(const QList<T>&) is deprecated and should be
     // replaced with QSet<T>(list.begin(), list.end()).
     // However, the proposed alternative has just been introduced in Qt
-    // 5.14. Until the minimum required Qt version of Mixx is increased,
+    // 5.14. Until the minimum required Qt version of Mixxx is increased,
     // we need a version check here
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     QSet<TrackId> tracksRemovedSet = QSet<TrackId>(trackIds.begin(), trackIds.end());
@@ -1345,7 +1348,7 @@ TrackPointer TrackDAO::getTrackById(TrackId trackId) const {
             this,
             [this](TrackId trackId) {
                 // Adapt and forward signal
-                emit tracksChanged(QSet<TrackId>{trackId});
+                emit mixxx::thisAsNonConst(this)->tracksChanged(QSet<TrackId>{trackId});
             });
 
     // BaseTrackCache cares about track trackDirty/trackClean notifications
@@ -1353,9 +1356,9 @@ TrackPointer TrackDAO::getTrackById(TrackId trackId) const {
     // track modifications above have been sent before the TrackDAO has been
     // connected to the track's signals and need to be replayed manually.
     if (pTrack->isDirty()) {
-        emit trackDirty(trackId);
+        emit mixxx::thisAsNonConst(this)->trackDirty(trackId);
     } else {
-        emit trackClean(trackId);
+        emit mixxx::thisAsNonConst(this)->trackClean(trackId);
     }
 
     return pTrack;

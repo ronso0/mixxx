@@ -123,6 +123,7 @@ AutoDJProcessor::AutoDJProcessor(
     m_pAutoDJTableModel = new PlaylistTableModel(this, pTrackCollectionManager,
                                                  "mixxx.db.model.autodj");
     m_pAutoDJTableModel->setTableModel(iAutoDJPlaylistId);
+    m_pAutoDJTableModel->select();
 
     m_pShufflePlaylist = new ControlPushButton(
             ConfigKey("[AutoDJ]", "shuffle_playlist"));
@@ -1612,7 +1613,7 @@ DeckAttributes* AutoDJProcessor::getOtherDeck(
 }
 
 DeckAttributes* AutoDJProcessor::getFromDeck() {
-    for (const auto& pDeck : m_decks) {
+    for (const auto& pDeck : qAsConst(m_decks)) {
         if (pDeck->isFromDeck) {
             return pDeck;
         }
