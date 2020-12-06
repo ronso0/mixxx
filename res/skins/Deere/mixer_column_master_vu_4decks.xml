@@ -8,11 +8,13 @@
       <Template src="skin:vumeter_master.xml"/>
     </Children>
   </SingletonDefinition>
+
   <WidgetGroup>
     <ObjectName>MixerStrip_4Decks</ObjectName>
     <Layout>vertical</Layout>
     <Children>
 
+      <!-- Large Main VU -->
       <WidgetGroup>
         <ObjectName>MixerStrip_4Decks_large</ObjectName>
         <Layout>vertical</Layout>
@@ -24,17 +26,20 @@
           <WidgetGroup>
             <Layout>vertical</Layout>
             <SizePolicy>min,me</SizePolicy>
-            <MaximumSize>60,300</MaximumSize>
             <Children>
+              <!-- Spacer to align top of main VU meter with channels' Pfl buttons -->
+              <WidgetGroup><Size>0me,58f</Size></WidgetGroup>
               <SingletonContainer>
                 <ObjectName>StereoVUMeterMaster</ObjectName>
               </SingletonContainer>
             </Children>
           </WidgetGroup>
+          <!-- Spacer to align bottom of main VU meter with channel meters -->
           <WidgetGroup><Size>0me,25f</Size></WidgetGroup>
         </Children>
       </WidgetGroup>
-      <!-- Same size as deck VU meters -->
+
+      <!-- Main VU sized like deck VU meters -->
       <WidgetGroup>
         <ObjectName>MixerStrip_4Decks_small</ObjectName>
         <Layout>vertical</Layout>
