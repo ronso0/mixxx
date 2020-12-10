@@ -343,25 +343,30 @@ QPushButton#LibraryPreviewButton:checked:hover {
 /* library header row */
 #LibraryContainer QHeaderView {
   color: #d2d2d2;
-  background: #1A1A1A;
+  background: #1f1f1f;
   border-bottom: 1px solid #141414;
+  padding: 0px;
+  margin: 0px;
 }
 
 #LibraryContainer QHeaderView::section {
-  font-size: 12px/14px;
+  font-size: 1em;
+  line-height: 1.1em;
+  height: 1.1em;
   font-weight: bold;
-  padding: 2px;
-  background: #1A1A1A;
+  padding: 0px 0px 0px 2px;
+  margin: 0px;
+  background: #1f1f1f;
   border-top: none;
   border-left: none;
-  border-bottom: 1px solid #141414;
+  border-bottom: 0px;
   border-right: 1px solid #141414;
 }
 
 #LibraryContainer QHeaderView::up-arrow,
 #LibraryContainer QHeaderView::down-arrow {
-  background-color: rgba(26,26,26,220);
-  margin: 0px -1px 0px 0xp;
+  background-color: rgba(30,30,30,200);
+  margin: 0px;
   padding: 0px;
 }
 #LibraryContainer QHeaderView::up-arrow {
@@ -503,7 +508,6 @@ WSearchLineEdit {
   border: 1px solid #1A1A1A;
 }
 /* transition time in Auto DJ tab is styled pretty much the same as WBeatSpinBox above */
-#DlgAutoDJ QSpinBox {}
 
 /* Extra declaration for QRadionButton otherwise it shows up with wrong colors in Linux with Gnome */
 WLibrary QLabel, WLibrary QRadioButton {
@@ -549,7 +553,8 @@ WLibrary QRadioButton::indicator:unchecked {
   #DlgAutoDJ > QPushButton {
     padding: 0px 1px;
   }
-  #DlgAutoDJ > QPushButton {
+  #DlgAutoDJ > QPushButton,
+  #spinBoxTransition {
     width: 34px;
     height: 20px;
   }
@@ -833,8 +838,8 @@ WTrackText,
 WTrackProperty,
 WRecordingDuration,
 QSpinBox,
+QSpinBox QMenu,
 WBeatSpinBox,
-WOverview #PassthroughLabel,
 WBeatSpinBox QMenu,
 WCueMenuPopup,
 WCueMenuPopup QMenu,
@@ -842,7 +847,9 @@ WCueMenuPopup QLabel,
 WCoverArtMenu,
 WTrackMenu,
 WTrackMenu QMenu,
-WOverview /* Hotcue labels in the overview */,
+WOverview, /* Hotcue labels in the overview */
+WOverview #PassthroughLabel,
+WWaveformViewer, #Waveform, /* has no effect */
 QComboBox,
 WEffect,
 WEffectSelector,
@@ -854,15 +861,26 @@ WEffectSelector QAbstractScrollArea,
 #LibraryContainer QRadioButton,
 #LibraryContainer QHeaderView,
 #LibraryContainer QHeaderView::item,
-#LibraryContainer QMenu {
+#LibraryContainer QMenu,
+QTextBrowser {
   font-family: "Open Sans";
+  font-style: normal;
+  font-weight: normal;
+  text-decoration: none;
+  text-transform: none;
 }
 
 WWidget,
-WLibrary QLabel,
-WLibrary QPushButton {
+/* for some reason we have to apply font settings again for
+  the library feature buttons... */
+#LibraryContainer QPushButton,
+#LibraryContainer QLabel,
+#LibraryContainer QRadioButton{
+  font-family: "Open Sans";
   font-size: 12px;
   font-weight: bold;
+  font-style: normal;
+  text-decoration: none;
   text-transform: uppercase;
 }
 
@@ -943,7 +961,7 @@ WBeatSpinBox,
   background-color: #1f1e1e;
   border: 1px solid #444342;
   border-radius: 3px;
-  font: 15px;
+  font-size: 15px;
   }
   WBeatSpinBox {
     padding: 2px;

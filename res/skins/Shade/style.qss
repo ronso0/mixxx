@@ -28,14 +28,19 @@ QSpinBox,
 WBeatSpinBox,
 WLibrary QHeaderView,
 WLibrary QHeaderView::item,
+QTextBrowser,
 QToolTip,
 WOverview #PassthroughLabel,
 #LibraryContainer QMenu,
 WCueMenuPopup,
+WCueMenuPopup QLabel,
+WCueMenuPopup QLineEdit,
+WCueMenuPopup QPushButton,
 WCueMenuPopup QMenu,
 WCoverArtMenu,
 WTrackMenu,
 WTrackMenu QMenu,
+WTrackMenu QMenu QCheckBox,
 WOverview /* Hotcue labels in the overview */,
 QComboBox,
 WEffectSelector,
@@ -43,6 +48,8 @@ WEffectSelector QAbstractScrollArea,
 #fadeModeCombobox,
 #fadeModeCombobox QAbstractScrollArea {
   font-family: "Open Sans";
+  font-style: normal;
+  text-transform: none;
 }
 
 /* Passthrough label on overview waveform */
@@ -57,7 +64,6 @@ WBeatSpinBox,
 wouldn't style the respective spinbox in Shade (anymore),
 that's why we do it in another way here */
 #spinBoxTransition {
-  font-size: 13px;
   padding: 0px;
   selection-color: #eee;
   selection-background-color: #060613;
@@ -144,7 +150,9 @@ WEffectSelector::indicator:!checked,
 #fadeModeCombobox QAbstractScrollArea,
 #fadeModeCombobox::down-arrow,
 #fadeModeCombobox::indicator:!checked,
-WLibrary QPushButton:enabled,
+WLibrary QPushButton,
+WLibrary QLabel,
+WLibrary QRadioButton,
 WBeatSpinBox,
 #spinBoxTransition {
   font-size: 13px;
@@ -378,8 +386,8 @@ WCoverArtMenu::item {
   #LibraryContainer QMenu::right-arrow,
   WTrackMenu::right-arrow,
   WTrackMenu QMenu::right-arrow {
-    width: 10px;
-    height: 10px;
+    width: 0.8em;
+    height: 0.8em;
     image: url(skin:/style/menu_arrow.svg);
   }
 
@@ -438,9 +446,10 @@ WCueMenuPopup QLabel {
 }
 #CueColorPicker QPushButton,
 WLibrary WColorPicker QPushButton {
-  width: 38px;
-  height: 20px;
+  width: 2.9em;
+  height: 1.5em;
   border: 1px solid #060613;
+  outline: none;
 }
 
 /*################################################################
@@ -461,6 +470,9 @@ WLibrary WColorPicker QPushButton {
   selection-color: #000;
   /* background of Color delegate in selected row */
   selection-background-color: #656d75;
+}
+#LibraryContainer QTableView {
+  line-height: 1.3em;
 }
 
 QTextBrowser {
@@ -657,13 +669,9 @@ WEffectSelector QAbstractScrollArea QScrollBar:vertical,
   background-color: #626f87;
 }
 #LibraryContainer QHeaderView {
-  /* Note(ronso0)
-  This previously interfered with skin scaling:
-  font-size: 13px/13px;
-  This doesn't scale when using QT_SCALE_FACTOR manually:
-  font-size: 10pt;	*/
-  font-size: 13px;
-  line-height: 13px;
+  /* Note:
+    - table font is set in Preferences > Library
+    - table header font is set by OS/Qt Settings */
   font-weight: bold;
   color: #000;
   border-radius: 0px;
@@ -798,25 +806,27 @@ QSplitter::handle:vertical {
   height: 6px;
 }
 
-WLibrary QPushButton {
-  font-size: 10px;
-  font-family: "Open Sans";
-}
 /* Extra declaration for QRadionButton otherwise it shows up with wrong colors in Linux with Gnome */
-WLibrary QLabel, WLibrary QRadioButton {
-  font-size: 13px;
+WLibrary QPushButton,
+WLibrary QLabel,
+WLibrary QRadioButton {
   background: transparent;
   color: #C1C1C1;
 }
 
 
-WLibrary { margin: 2px 3px 0px 0px; }
+WLibrary {
+  margin: 2px 3px 0px 0px;
+}
 
 WLibrary QRadioButton {
   margin: 0px 3px 3px 3px;
 }
+
 /* Center QLabels */
-WLibrary QLabel { margin: 0px 3px 3px 0px; }
+WLibrary QLabel {
+  margin: 0px 3px 3px 0px;
+}
 
 WLibrary QRadioButton::indicator:checked {
   image: url(skin:/btn/btn_lib_radio_button_on_pink.svg) center center;

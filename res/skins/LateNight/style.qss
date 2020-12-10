@@ -98,8 +98,8 @@ WCoverArtMenu,
 WTrackMenu,
 WTrackMenu QMenu,
 WBeatSpinBox QMenu,
-#labelRecPrefix,
-#labelRecStatistics {
+QSpinBox QMenu,
+#DlgRecording QLabel {
   font-weight: normal;
 }
 
@@ -199,7 +199,8 @@ WBeatSpinBox,
 #spinBoxTransition {
   text-align: center;
   }
-  WBeatSpinBox,#spinBoxTransition {
+  WBeatSpinBox,
+  #spinBoxTransition {
     qproperty-alignment: 'AlignHCenter';
   }
 

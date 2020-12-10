@@ -18,6 +18,7 @@
 
       <Visual>
         <TooltipId>waveform_display</TooltipId>
+        <ObjectName>Waveform</ObjectName>
         <Group><Variable name="group"/></Group>
         <BgColor><Variable name="DeckBackgroundColor"/></BgColor>
         <SignalHighColor></SignalHighColor>
@@ -34,16 +35,15 @@
         <LabelFontSize>12</LabelFontSize>
         <Align></Align>
         <DefaultMark>
-          <Align>top</Align>
+          <Align>bottom|right</Align>
           <Color>#006596</Color>
           <TextColor>#000000</TextColor>
           <Text> %1 </Text>
         </DefaultMark>
         <Mark>
           <Control>cue_point</Control>
-          <Pixmap>image/marker_cue.png</Pixmap>
           <Text>CUE</Text>
-          <Align>bottom</Align>
+          <Align>top|right</Align>
           <Color>#FF001C</Color>
           <TextColor>#FFFFFF</TextColor>
         </Mark>
@@ -59,17 +59,15 @@
         </MarkRange>
         <Mark>
           <Control>loop_start_position</Control>
-          <Pixmap>image/marker_loop_in.png</Pixmap>
-          <Text>IN</Text>
-          <Align>bottom</Align>
+          <Text>&#8635;</Text>
+          <Align>top|left</Align>
           <Color>#00FF00</Color>
           <TextColor>#FFFFFF</TextColor>
         </Mark>
         <Mark>
           <Control>loop_end_position</Control>
-          <Pixmap>image/marker_loop_out.png</Pixmap>
-          <Text>OUT</Text>
-          <Align>bottom</Align>
+          <Text>&#8635;</Text>
+          <Align>top|right</Align>
           <Color>#00FF00</Color>
           <TextColor>#FFFFFF</TextColor>
         </Mark>
@@ -85,7 +83,7 @@
           <Control>intro_start_position</Control>
           <VisibilityControl>[Skin],show_intro_outro_cues</VisibilityControl>
           <Text>|&#9698;</Text>
-          <Align>bottom</Align>
+          <Align>bottom|left</Align>
           <Color>#0000FF</Color>
           <TextColor>#FFFFFF</TextColor>
         </Mark>
@@ -93,7 +91,7 @@
           <Control>intro_end_position</Control>
           <VisibilityControl>[Skin],show_intro_outro_cues</VisibilityControl>
           <Text>&#9698;|</Text>
-          <Align>bottom</Align>
+          <Align>bottom|right</Align>
           <Color>#0000FF</Color>
           <TextColor>#FFFFFF</TextColor>
         </Mark>
@@ -109,7 +107,7 @@
           <Control>outro_start_position</Control>
           <VisibilityControl>[Skin],show_intro_outro_cues</VisibilityControl>
           <Text>|&#9699;</Text>
-          <Align>bottom</Align>
+          <Align>bottom|left</Align>
           <Color>#0000FF</Color>
           <TextColor>#FFFFFF</TextColor>
         </Mark>
@@ -117,7 +115,7 @@
           <Control>outro_end_position</Control>
           <VisibilityControl>[Skin],show_intro_outro_cues</VisibilityControl>
           <Text>&#9699;|</Text>
-          <Align>bottom</Align>
+          <Align>bottom|right</Align>
           <Color>#0000FF</Color>
           <TextColor>#FFFFFF</TextColor>
         </Mark>
