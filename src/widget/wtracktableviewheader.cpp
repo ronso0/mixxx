@@ -8,8 +8,7 @@
 
 #define WTTVH_MINIMUM_SECTION_SIZE 20
 
-HeaderViewState::HeaderViewState(const QHeaderView& headers)
-{
+HeaderViewState::HeaderViewState(const QHeaderView& headers) {
     QAbstractItemModel* model = headers.model();
     for (int vi = 0; vi < headers.count(); ++vi) {
         int li = headers.logicalIndex(vi);
