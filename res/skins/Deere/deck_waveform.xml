@@ -31,6 +31,7 @@
         <PlayPosColor>#00FF00</PlayPosColor>
         <EndOfTrackColor>#EA0000</EndOfTrackColor>
         <AxesColor></AxesColor>
+        <LabelFontSize>12</LabelFontSize>
         <Align></Align>
         <DefaultMark>
           <Align>top</Align>

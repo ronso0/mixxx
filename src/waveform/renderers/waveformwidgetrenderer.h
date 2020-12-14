@@ -111,6 +111,9 @@ class WaveformWidgetRenderer {
     int getWidth() const {
         return m_width;
     }
+    double getLabelFontSize() const {
+        return m_labelFontSize;
+    }
     float getDevicePixelRatio() const {
         return m_devicePixelRatio;
     }
@@ -161,6 +164,7 @@ class WaveformWidgetRenderer {
     int m_dimBrightThreshold;
     int m_height;
     int m_width;
+    double m_labelFontSize;
     float m_devicePixelRatio;
     WaveformSignalColors m_colors;
 

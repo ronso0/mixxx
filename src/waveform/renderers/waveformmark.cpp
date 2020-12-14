@@ -51,11 +51,12 @@ Qt::Alignment decodeAlignmentFlags(const QString& alignString, Qt::Alignment def
 } // anonymous namespace
 
 WaveformMark::WaveformMark(const QString& group,
-                           const QDomNode& node,
-                           const SkinContext& context,
-                           const WaveformSignalColors& signalColors,
-                           int hotCue)
-        : m_iHotCue(hotCue) {
+        const QDomNode& node,
+        const SkinContext& context,
+        const WaveformSignalColors& signalColors,
+        int hotCue)
+        : m_iHotCue(hotCue),
+          m_labelFontSize(10) {
     QString control;
     if (hotCue != Cue::kNoHotCue) {
         control = "hotcue_" + QString::number(hotCue + 1) + "_position";

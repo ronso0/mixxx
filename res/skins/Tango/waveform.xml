@@ -31,6 +31,7 @@ Variables:
         <BeatColor>#ffffff</BeatColor>
         <PlayPosColor>#FF4300</PlayPosColor>
         <EndOfTrackColor><Variable name="EndOfTrackColor"/></EndOfTrackColor>
+        <LabelFontSize>11</LabelFontSize>
         <DefaultMark>
           <Align>bottom|right</Align>
           <Color>#666666</Color>

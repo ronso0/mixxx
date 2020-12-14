@@ -174,10 +174,12 @@ void WaveformRenderMark::generateMarkImage(WaveformMarkPointer pMark) {
         }
     }
 
-    //QFont font("Bitstream Vera Sans");
-    //QFont font("Helvetica");
-    QFont font; // Uses the application default
-    font.setPointSizeF(10 * scaleFactor());
+    // Don't use the application default font here, it might not match the skin.
+    // 'Open Sans' in installed by us and use in sevral skins, so pick that.
+    QFont font("Open Sans");
+    font.setPixelSize(static_cast<int>(
+            m_waveformRenderer->getLabelFontSize() * scaleFactor()));
+    font.setStyle(QFont::StyleNormal);
     font.setStretch(100);
     font.setWeight(75);
 

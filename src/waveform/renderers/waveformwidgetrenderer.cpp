@@ -27,6 +27,7 @@ WaveformWidgetRenderer::WaveformWidgetRenderer(const QString& group)
           m_dimBrightThreshold(kDefaultDimBrightThreshold),
           m_height(-1),
           m_width(-1),
+          m_labelFontSize(10),
           m_devicePixelRatio(1.0f),
 
           m_firstDisplayedPosition(0.0),
@@ -329,6 +330,10 @@ void WaveformWidgetRenderer::setup(
     if (!okay) {
         m_dimBrightThreshold = kDefaultDimBrightThreshold;
     }
+
+    // Pick font size from widget template because the skin design might be
+    // screwed up by inadequately sized OS fonts.
+    m_labelFontSize = context.selectDouble(node, "LabelFontSize", 10.0);
 
     m_colors.setup(node, context);
     for (int i = 0; i < m_rendererStack.size(); ++i) {
