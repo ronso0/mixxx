@@ -18,9 +18,9 @@ class DlgPrefControllers : public DlgPreferencePage, public Ui::DlgPrefControlle
     Q_OBJECT
   public:
     DlgPrefControllers(DlgPreferences* pDlgPreferences,
-                       UserSettingsPointer pConfig,
-                       ControllerManager* pControllerManager,
-                       QTreeWidgetItem* pControllerTreeItem);
+            UserSettingsPointer pConfig,
+            ControllerManager* pControllerManager,
+            QTreeWidgetItem* pControllersRootItem);
     virtual ~DlgPrefControllers();
 
     bool handleTreeItemClick(QTreeWidgetItem* clickedItem);
@@ -48,7 +48,7 @@ class DlgPrefControllers : public DlgPreferencePage, public Ui::DlgPrefControlle
     DlgPreferences* m_pDlgPreferences;
     UserSettingsPointer m_pConfig;
     ControllerManager* m_pControllerManager;
-    QTreeWidgetItem* m_pControllerTreeItem;
-    QList<DlgPrefController*> m_controllerWindows;
+    QTreeWidgetItem* m_pControllersRootItem;
+    QList<DlgPrefController*> m_controllerPages;
     QList<QTreeWidgetItem*> m_controllerTreeItems;
 };
