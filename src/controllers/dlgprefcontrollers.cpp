@@ -43,26 +43,26 @@ void DlgPrefControllers::slotOpenLocalFile(const QString& file) {
 }
 
 void DlgPrefControllers::slotUpdate() {
-    for (DlgPrefController* pControllerWindows : qAsConst(m_controllerWindows)) {
-        pControllerWindows->slotUpdate();
+    for (DlgPrefController* controllerDlg : qAsConst(m_controllerPages)) {
+        controllerDlg->slotUpdate();
     }
 }
 
 void DlgPrefControllers::slotCancel() {
-    for (DlgPrefController* pControllerWindows : qAsConst(m_controllerWindows)) {
-        pControllerWindows->slotCancel();
+    for (DlgPrefController* controllerDlg : qAsConst(m_controllerPages)) {
+        controllerDlg->slotCancel();
     }
 }
 
 void DlgPrefControllers::slotApply() {
-    for (DlgPrefController* pControllerWindows : qAsConst(m_controllerWindows)) {
-        pControllerWindows->slotApply();
+    for (DlgPrefController* controllerDlg : qAsConst(m_controllerPages)) {
+        controllerDlg->slotApply();
     }
 }
 
 void DlgPrefControllers::slotResetToDefaults() {
-    for (DlgPrefController* pControllerWindows : qAsConst(m_controllerWindows)) {
-        pControllerWindows->slotResetToDefaults();
+    for (DlgPrefController* controllerDlg : qAsConst(m_controllerPages)) {
+        controllerDlg->slotResetToDefaults();
     }
 }
 
@@ -73,9 +73,9 @@ QUrl DlgPrefControllers::helpUrl() const {
 bool DlgPrefControllers::handleTreeItemClick(QTreeWidgetItem* clickedItem) {
     int controllerIndex = m_controllerTreeItems.indexOf(clickedItem);
     if (controllerIndex >= 0) {
-        DlgPrefController* controllerWidget = m_controllerWindows.value(controllerIndex);
-        if (controllerWidget) {
-            m_pDlgPreferences->switchToPage(controllerWidget);
+        DlgPrefController* controllerDlg = m_controllerPages.value(controllerIndex);
+        if (controllerDlg) {
+            m_pDlgPreferences->switchToPage(controllerDlg);
         }
         return true;
     } else if (clickedItem == m_pControllersRootItem) {
@@ -93,8 +93,8 @@ void DlgPrefControllers::rescanControllers() {
 }
 
 void DlgPrefControllers::destroyControllerWidgets() {
-    while (!m_controllerWindows.isEmpty()) {
-        DlgPrefController* controllerDlg = m_controllerWindows.takeLast();
+    while (!m_controllerPages.isEmpty()) {
+        DlgPrefController* controllerDlg = m_controllerPages.takeLast();
         m_pDlgPreferences->removePageWidget(controllerDlg);
         delete controllerDlg;
     }
@@ -126,7 +126,7 @@ void DlgPrefControllers::setupControllerWidgets() {
                 m_pDlgPreferences,
                 &DlgPreferences::show);
 
-        m_controllerWindows.append(controllerDlg);
+        m_controllerPages.append(controllerDlg);
 
         connect(pController,
                 &Controller::openChanged,
@@ -154,20 +154,19 @@ void DlgPrefControllers::setupControllerWidgets() {
     txtNoControllersAvailable->setVisible(controllerList.empty());
 }
 
-void DlgPrefControllers::slotHighlightDevice(DlgPrefController* dialog, bool enabled) {
-    int dialogIndex = m_controllerWindows.indexOf(dialog);
-    if (dialogIndex < 0) {
+void DlgPrefControllers::slotHighlightDevice(DlgPrefController* controllerDlg, bool enabled) {
+    int controllerPageIndex = m_controllerPages.indexOf(controllerDlg);
+    if (controllerPageIndex < 0) {
         return;
     }
 
-    QTreeWidgetItem * controllerWindowLink =
-            m_controllerTreeItems.at(dialogIndex);
-
-    if (!controllerWindowLink) {
+    QTreeWidgetItem* controllerTreeItem =
+            m_controllerTreeItems.at(controllerPageIndex);
+    if (!controllerTreeItem) {
         return;
     }
 
-    QFont temp = controllerWindowLink->font(0);
+    QFont temp = controllerTreeItem->font(0);
     temp.setBold(enabled);
-    controllerWindowLink->setFont(0,temp);
+    controllerTreeItem->setFont(0, temp);
 }
