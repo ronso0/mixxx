@@ -150,4 +150,6 @@ class DlgPreferences : public QDialog, public Ui::DlgPreferencesDlg {
 #endif /* __MODPLUG__ */
 
     QSize m_pageSizeHint;
+
+    QString m_iconsPath;
 };

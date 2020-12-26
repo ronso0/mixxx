@@ -311,15 +311,21 @@ void DlgPrefController::enumeratePresets(const QString& selectedPresetPath) {
 
     // qDebug() << "Enumerating presets for controller" << m_pController->getName();
 
+    // Check the text color of the palette for whether to use dark or light icons
+    QString iconsPath = ":/images/preferences/dark/";
+    if (!Color::isDimColor(palette().text().color())) {
+        iconsPath = ":/images/preferences/light/";
+    }
+
     // Insert a dummy item at the top to try to make it less confusing.
     // (We don't want the first found file showing up as the default item when a
     // user has their controller plugged in)
-    QIcon noPresetIcon(":/images/ic_none.svg");
+    QIcon noPresetIcon(iconsPath + "ic_none.svg");
     m_ui.comboBoxPreset->addItem(noPresetIcon, "No Preset");
 
     PresetInfo match;
     // Enumerate user presets
-    QIcon userPresetIcon(":/images/ic_custom.svg");
+    QIcon userPresetIcon(iconsPath + "ic_custom.svg");
 
     // Reload user presets to detect added, changed or removed mappings
     m_pControllerManager->getMainThreadUserPresetEnumerator()->loadSupportedPresets();
@@ -335,7 +341,7 @@ void DlgPrefController::enumeratePresets(const QString& selectedPresetPath) {
     m_ui.comboBoxPreset->insertSeparator(m_ui.comboBoxPreset->count());
 
     // Enumerate system presets
-    QIcon systemPresetIcon(":/images/ic_mixxx_symbolic.svg");
+    QIcon systemPresetIcon(iconsPath + "ic_mixxx_symbolic.svg");
     PresetInfo systemPresetsMatch = enumeratePresetsFromEnumerator(
             m_pControllerManager->getMainThreadSystemPresetEnumerator(),
             systemPresetIcon);

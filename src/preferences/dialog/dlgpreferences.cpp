@@ -50,6 +50,7 @@
 #include "library/trackcollectionmanager.h"
 #include "mixxx.h"
 #include "skin/skinloader.h"
+#include "util/color/color.h"
 #include "util/widgethelper.h"
 
 DlgPreferences::DlgPreferences(MixxxMainWindow * mixxx, SkinLoader* pSkinLoader,
@@ -78,8 +79,15 @@ DlgPreferences::DlgPreferences(MixxxMainWindow * mixxx, SkinLoader* pSkinLoader,
     }
 
     // Construct widgets for use in tabs:
+    // * check the text color of the palette for whether to use dark or light icons
     // * create the tree view button first (important for 'Controllers' page!)
     // * instantiate preferences page
+    QString iconsColor = "dark/";
+    if (!Color::isDimColor(palette().text().color())) {
+        iconsColor = QStringLiteral("light/");
+    }
+    m_iconsPath = ":/images/preferences/" + iconsColor;
+
     m_pSoundButton = new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type);
     m_soundPage = new DlgPrefSound(this, soundman, m_pConfig);
     addPageWidget(m_soundPage,
@@ -443,7 +451,7 @@ void DlgPreferences::addPageWidget(DlgPreferencePage* pWidget,
         const QString& pageTitle,
         const QString& iconFile) {
     // Configure the tree button linked to the page
-    treeItem->setIcon(0, QIcon(":/images/preferences/ic_preferences_" + iconFile));
+    treeItem->setIcon(0, QIcon(m_iconsPath + "ic_preferences_" + iconFile));
     treeItem->setText(0, pageTitle);
     treeItem->setTextAlignment(0, Qt::AlignLeft | Qt::AlignVCenter);
     treeItem->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
@@ -458,7 +466,7 @@ void DlgPreferences::addPageWidget(DlgPreferencePage* pWidget,
             pWidget,
             &DlgPreferencePage::slotResetToDefaults);
 
-    // Add a new scroll area containing the page to the stacked pages widget
+    // Add a new scroll area to the stacked pages widget containing the page
     QScrollArea* sa = new QScrollArea(pagesWidget);
     sa->setWidgetResizable(true);
     sa->setWidget(pWidget);
