@@ -415,6 +415,57 @@ ControlPickerMenu::ControlPickerMenu(QWidget* pParent)
         hotcueMainMenu->addMenu(hotcueMoreMenu);
     }
 
+    // Intro/outro cues
+    QMenu* introOutroMenu = addSubmenu(tr("Intro / Outro Cues"));
+    QString introStartTitle(tr("Intro Start"));
+    QString introEndTitle(tr("Intro End"));
+    QString outroStartTitle(tr("Outro Start"));
+    QString outroEndTitle(tr("Outro End"));
+    QMenu* introStartMenu = addSubmenu(introStartTitle, introOutroMenu);
+    QMenu* introEndMenu = addSubmenu(introEndTitle, introOutroMenu);
+    QMenu* outroStartMenu = addSubmenu(outroStartTitle, introOutroMenu);
+    QMenu* outroEndMenu = addSubmenu(outroEndTitle, introOutroMenu);
+    QList<QMenu*> introOutroSubmenus;
+    introOutroSubmenus.append(introStartMenu);
+    introOutroSubmenus.append(introEndMenu);
+    introOutroSubmenus.append(outroStartMenu);
+    introOutroSubmenus.append(outroEndMenu);
+    QStringList cueTypeTitles;
+    cueTypeTitles.append(introStartTitle);
+    cueTypeTitles.append(introEndTitle);
+    cueTypeTitles.append(outroStartTitle);
+    cueTypeTitles.append(outroEndTitle);
+    QStringList cueTypeNames;
+    cueTypeNames.append(tr("intro start"));
+    cueTypeNames.append(tr("intro end"));
+    cueTypeNames.append(tr("outro start"));
+    cueTypeNames.append(tr("outro end"));
+    QStringList cueTypeCOs;
+    cueTypeCOs.append("intro_start");
+    cueTypeCOs.append("intro_end");
+    cueTypeCOs.append("outro_start");
+    cueTypeCOs.append("outro_end");
+
+    for (int i = 0; i < introOutroSubmenus.size(); ++i) {
+        addDeckAndSamplerAndPreviewDeckControl(
+                QString("%1_activate").arg(cueTypeCOs[i]),
+                tr("Activate %1 Cue").arg(cueTypeTitles[i]),
+                tr("Go to the %1 cue or set it to the current position if it is not set, yet")
+                        .arg(cueTypeNames[i]),
+                introOutroSubmenus[i]);
+        addDeckAndSamplerAndPreviewDeckControl(
+                QString("%1_set").arg(cueTypeCOs[i]),
+                tr("Set %1 Cue").arg(cueTypeTitles[i]),
+                tr("Set the %1 cue or or go there if it is already set")
+                        .arg(cueTypeNames[i]),
+                introOutroSubmenus[i]);
+        addDeckAndSamplerAndPreviewDeckControl(
+                QString("%1_clear").arg(cueTypeCOs[i]),
+                tr("Clear %1 Cue").arg(cueTypeTitles[i]),
+                tr("Clear the %1 cue").arg(cueTypeNames[i]),
+                introOutroSubmenus[i]);
+    }
+
     // Loops
     QMenu* loopMenu = addSubmenu(tr("Looping"));
     // add beatloop_activate and beatlooproll_activate to both the
