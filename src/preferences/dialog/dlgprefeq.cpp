@@ -226,9 +226,9 @@ void DlgPrefEQ::slotPopulateDeckEffectSelectors() {
             }
         }
         //: Displayed when no effect is selected
-        box->addItem(tr("None"), QVariant(QString("")));
+        box->addItem(EffectsManager::kNoEffectString); // " --- "
         if (selectedEffectId.isEmpty()) {
-            currentIndex = availableEQEffects.size(); // selects "None"
+            currentIndex = availableEQEffects.size(); // selects " --- "
         } else if (currentIndex < 0 && !selectedEffectName.isEmpty() ) {
             // current selection is not part of the new list
             // So we need to add it
@@ -255,9 +255,9 @@ void DlgPrefEQ::slotPopulateDeckEffectSelectors() {
             }
         }
         //: Displayed when no effect is selected
-        box->addItem(tr("None"), QVariant(QString("")));
+        box->addItem(EffectsManager::kNoEffectString); // " --- "
         if (selectedEffectId.isEmpty()) {
-            currentIndex = availableQuickEffects.size(); // selects "None"
+            currentIndex = availableQuickEffects.size(); // selects " --- "
         } else if (currentIndex < 0 && !selectedEffectName.isEmpty()) {
             // current selection is not part of the new list
             // So we need to add it
@@ -672,11 +672,11 @@ void DlgPrefEQ::setUpMasterEQ() {
         comboBoxMasterEq->addItem(pManifest->name(), QVariant(pManifest->id()));
     }
     //: Displayed when no effect is selected
-    comboBoxMasterEq->addItem(tr("None"), QVariant());
+    comboBoxMasterEq->addItem(EffectsManager::kNoEffectString); // " --- "
 
     int masterEqIndex = comboBoxMasterEq->findData(configuredEffect);
     if (masterEqIndex < 0) {
-        masterEqIndex = availableMasterEQEffects.size(); // selects "None"
+        masterEqIndex = availableMasterEQEffects.size(); // selects " --- "
     }
     comboBoxMasterEq->setCurrentIndex(masterEqIndex);
 
