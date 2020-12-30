@@ -417,24 +417,11 @@ ControlPickerMenu::ControlPickerMenu(QWidget* pParent)
 
     // Intro/outro range markers
     QMenu* introOutroMenu = addSubmenu(tr("Intro / Outro Cues"));
-    QString introStartTitle(tr("Intro Start Cue"));
-    QString introEndTitle(tr("Intro End Cue"));
-    QString outroStartTitle(tr("Outro Start Cue"));
-    QString outroEndTitle(tr("Outro End Cue"));
-    QMenu* introStartMenu = addSubmenu(introStartTitle, introOutroMenu);
-    QMenu* introEndMenu = addSubmenu(introEndTitle, introOutroMenu);
-    QMenu* outroStartMenu = addSubmenu(outroStartTitle, introOutroMenu);
-    QMenu* outroEndMenu = addSubmenu(outroEndTitle, introOutroMenu);
-    QList<QMenu*> introOutroSubmenus = {
-            introStartMenu,
-            introEndMenu,
-            outroStartMenu,
-            outroEndMenu};
     const QStringList cueTypeTitles = {
-            introStartTitle,
-            introEndTitle,
-            outroStartTitle,
-            outroEndTitle};
+            tr("Intro Start Cue"),
+            tr("Intro End Cue"),
+            tr("Outro Start Cue"),
+            tr("Outro End Cue")};
     const QStringList cueTypeNames = {
             tr("intro start cue"),
             tr("intro end cue"),
@@ -446,24 +433,23 @@ ControlPickerMenu::ControlPickerMenu(QWidget* pParent)
             "outro_start",
             "outro_end"};
 
-    for (int i = 0; i < introOutroSubmenus.size(); ++i) {
+    for (int i = 0; i < cueTypeTitles.size(); ++i) {
+        QMenu* tempMenu = addSubmenu(cueTypeTitles[i], introOutroMenu);
         addDeckAndSamplerAndPreviewDeckControl(
                 QString("%1_activate").arg(cueTypeCOs[i]),
                 tr("Activate %1").arg(cueTypeTitles[i]),
-                tr("Jump to or set the %1")
-                        .arg(cueTypeNames[i]),
-                introOutroSubmenus[i]);
+                tr("Jump to or set the %1").arg(cueTypeNames[i]),
+                tempMenu);
         addDeckAndSamplerAndPreviewDeckControl(
                 QString("%1_set").arg(cueTypeCOs[i]),
                 tr("Set %1").arg(cueTypeTitles[i]),
-                tr("Set or jump to the %1")
-                        .arg(cueTypeNames[i]),
-                introOutroSubmenus[i]);
+                tr("Set or jump to the %1").arg(cueTypeNames[i]),
+                tempMenu);
         addDeckAndSamplerAndPreviewDeckControl(
                 QString("%1_clear").arg(cueTypeCOs[i]),
                 tr("Clear %1").arg(cueTypeTitles[i]),
                 tr("Clear the %1").arg(cueTypeNames[i]),
-                introOutroSubmenus[i]);
+                tempMenu);
     }
 
     // Loops
