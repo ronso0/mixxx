@@ -272,6 +272,7 @@ WLibrary QLineEdit,
   border: 1px solid transparent;
 }
 
+/* checkmark in 'Played' column */
 #LibraryContainer QTableView::indicator:checked,
 #LibraryContainer QTableView::indicator:checked:selected {
   image: url(skin:/icon/ic_library_checkmark.svg);
@@ -348,7 +349,7 @@ QPushButton#LibraryPreviewButton:checked:hover {
 }
 
 #LibraryContainer QHeaderView::section {
-  font-size: 12px/14px;
+  font-size: 1em;
   font-weight: bold;
   padding: 2px;
   background: #1A1A1A;
@@ -361,7 +362,7 @@ QPushButton#LibraryPreviewButton:checked:hover {
 #LibraryContainer QHeaderView::up-arrow,
 #LibraryContainer QHeaderView::down-arrow {
   background-color: rgba(26,26,26,220);
-  margin: 0px -1px 0px 0xp;
+  margin: 0px 0px 0px 0px;
   padding: 0px;
 }
 #LibraryContainer QHeaderView::up-arrow {
@@ -856,6 +857,7 @@ WEffectSelector QAbstractScrollArea,
 #LibraryContainer QHeaderView::item,
 #LibraryContainer QMenu {
   font-family: "Open Sans";
+  font-style: normal;
 }
 
 WWidget,
@@ -943,7 +945,7 @@ WBeatSpinBox,
   background-color: #1f1e1e;
   border: 1px solid #444342;
   border-radius: 3px;
-  font: 15px;
+  font-size: 15px;
   }
   WBeatSpinBox {
     padding: 2px;
@@ -1028,11 +1030,13 @@ WBeatSpinBox,
 /* End spacing for toolbar */
 
 #Time {
-  font: bold 13px;
+  font-size: 13px;
+  font-weight: bold;
 }
 
 #KnobLabelH, #HeadSplit {
-  font: bold 11px;
+  font-size: 11px;
+  font-weight: bold;
 }
 
 /* All widget groups that are children of #DeckRows should AlignTop. */
@@ -1135,8 +1139,8 @@ WBeatSpinBox,
 #PlayPositionTextSmall,
 #ArtistTextSmall,
 #BpmKeyTextSmall {
-  font-weight: bold;
   font-size: 15px;
+  font-weight: bold;
   text-transform: none;
 }
 
@@ -1158,8 +1162,8 @@ WBeatSpinBox,
 #DeckTextRow #TitleGutter WLabel,
 #TitleTextSmall,
 #EffectRackExpanded #EffectUnitNameContainer WLabel {
-  font-weight: bold;
   font-size: 17px;
+  font-weight: bold;
   text-transform: none;
   text-align: left;
 }
@@ -1171,15 +1175,15 @@ WBeatSpinBox,
 }
 
 #SamplerTopRowInner WLabel {
-  font-weight: bold;
   font-size: 15px;
+  font-weight: bold;
   text-transform: none;
   text-align: left;
 }
 
 #EffectUnitLabel, #EffectRackCollapsed #EffectUnitNameContainer WLabel {
-  font-weight: bold;
   font-size: 15px;
+  font-weight: bold;
   text-transform: none;
   text-align: center;
 }
@@ -1196,7 +1200,9 @@ WBeatSpinBox,
 
 #EffectUnitToggle {
   padding: 0px 0px 0px 27px;
-  font: bold 14px/20px;
+  font-size:14px;
+  line-height: 20px;
+  font-weight: bold;
   border: 0px;
 }
 
@@ -1228,7 +1234,7 @@ WBeatSpinBox,
 }
 
 #EffectChainGroupControlButton {
-  font: 10px;
+  font-size: 10px;
 }
 
 #EffectUnitNameContainer {
@@ -1279,7 +1285,7 @@ WBeatSpinBox,
   background-color: none;
   border: none;
   qproperty-alignment: 'AlignHCenter';
-  font: 10px;
+  font-size: 10px;
 }
 
 #EffectUnitNameRow {
@@ -1293,19 +1299,19 @@ WBeatSpinBox,
   background-color: none;
   border: none;
   qproperty-alignment: 'AlignHCenter | AlignTop';
-  font: 10px;
+  font-size: 10px;
   margin-top: -2px;
 }
 
 #EffectButton {
-  font: 10px;
+  font-size: 10px;
 }
 
 #EffectButtonLabel {
   background-color: none;
   border: none;
   qproperty-alignment: 'AlignHCenter';
-  font: 10px;
+  font-size: 10px;
   margin-top: 1px;
 }
 
@@ -1591,37 +1597,37 @@ WWidgetGroup {
  *******************************************************************************/
 
 WPushButton {
-    color: #D2D2D2;
-    background-color: #4B4B4B;
-    border: 1px solid #4B4B4B;
-    border-radius: 2px;
-    outline: none;
-    font-size: 12px;
-    font-weight: bold;
+  color: #D2D2D2;
+  background-color: #4B4B4B;
+  border: 1px solid #4B4B4B;
+  border-radius: 2px;
+  outline: none;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 WPushButton:hover,
 #PlayToggle:hover {
-    color: #D2D2D2;
-    background-color: #5F5F5F;
-    border: 1px solid #5F5F5F;
+  color: #D2D2D2;
+  background-color: #5F5F5F;
+  border: 1px solid #5F5F5F;
 }
 
 /*"Pressed" state*/
 WPushButton[value="1"],
 WPushButton[value="2"],
 #PlayToggle[value="1"] {
-    color: #FDFDFD;
-    background-color: #006596;
-    border: 1px solid #006596;
+  color: #FDFDFD;
+  background-color: #006596;
+  border: 1px solid #006596;
 }
 
 WPushButton[value="1"]:hover,
 WPushButton[value="2"]:hover,
 #PlayToggle[value="1"]:hover {
-    color: #FDFDFD;
-    background-color: #0080BE;
-    border: 1px solid #0080BE;
+  color: #FDFDFD;
+  background-color: #0080BE;
+  border: 1px solid #0080BE;
 }
 
 #HotcueButton {
@@ -1629,7 +1635,7 @@ WPushButton[value="2"]:hover,
 }
 
 #HotcueButton[light="true"] {
-    color: #1f1e1e;
+  color: #1f1e1e;
 }
 
 #PlayToggle {
@@ -1658,17 +1664,17 @@ WPushButton#PreviewIndicator[value="0"] {
 }
 
 #ToolbarButton[value="1"] {
-    color: #D2D2D2;
-    background-color: #5a5a5a;
-    border: 3px solid #006596;
-    border-radius: 3px;
+  color: #D2D2D2;
+  background-color: #5a5a5a;
+  border: 3px solid #006596;
+  border-radius: 3px;
 }
 
 #SkinSectionToggleButton[value="1"]:hover {
-    color: #D2D2D2;
-    background-color: #5F5F5F;
-    border: 3px solid #0080BE;
-    border-radius: 3px;
+  color: #D2D2D2;
+  background-color: #5F5F5F;
+  border: 3px solid #0080BE;
+  border-radius: 3px;
 }
 
 WRecordingDuration {
@@ -1686,11 +1692,11 @@ do not highlight either state. */
 
 #EffectUnitMixModeButton[value="0"]:hover,
 #EffectUnitMixModeButton[value="1"]:hover {
-    background-color: #5F5F5F;
+  background-color: #5F5F5F;
 }
 
 #EffectUnitMixModeButton[value="1"] {
-    background-color: #4B4B4B;
+  background-color: #4B4B4B;
 }
 
 
@@ -1709,11 +1715,11 @@ do not highlight either state. */
 #OrientationButtonDeck4[value="2"],
 #OrientationButtonAux[value="1"],
 #OrientationButtonSampler[value="1"] {
-    color: #D2D2D2;
-    background-color: #4B4B4B;
-    border: 1px solid #4B4B4B;
-    border-radius: 2px;
-    outline: none;
+  color: #D2D2D2;
+  background-color: #4B4B4B;
+  border: 1px solid #4B4B4B;
+  border-radius: 2px;
+  outline: none;
 }
 
 #OrientationButtonDeck1[value="0"]:hover,
@@ -1722,9 +1728,9 @@ do not highlight either state. */
 #OrientationButtonDeck4[value="2"]:hover,
 #OrientationButtonAux[value="1"]:hover,
 #OrientationButtonSampler[value="1"]:hover {
-    color: #D2D2D2;
-    background-color: #5F5F5F;
-    border: 0px solid #5F5F5F;
+  color: #D2D2D2;
+  background-color: #5F5F5F;
+  border: 0px solid #5F5F5F;
 }
 
 /* Highlight xfader special positions != default */
@@ -1740,11 +1746,11 @@ do not highlight either state. */
 #OrientationButtonAux[value="2"],
 #OrientationButtonSampler[value="0"],
 #OrientationButtonSampler[value="2"] {
-    color: #FDFDFD;
-    background-color: #006596;
-    border: 0px solid #006596;
-    border-radius: 2px;
-    outline: none;
+  color: #FDFDFD;
+  background-color: #006596;
+  border: 0px solid #006596;
+  border-radius: 2px;
+  outline: none;
 }
 
 #OrientationButtonDeck1[value="1"]:hover,
@@ -1759,9 +1765,9 @@ do not highlight either state. */
 #OrientationButtonAux[value="2"]:hover,
 #OrientationButtonSampler[value="0"]:hover,
 #OrientationButtonSampler[value="2"]:hover {
-    color: #FDFDFD;
-    background-color: #0080BE;
-    border: 0px solid #0080BE;
+  color: #FDFDFD;
+  background-color: #0080BE;
+  border: 0px solid #0080BE;
 }
 
 /* Special case SamplerPlayButtonRepeating controls
@@ -1770,15 +1776,15 @@ do not highlight either state. */
 */
 
 #SamplerPlayButtonRepeating[value="1"] {
-    color: #711ada;
-    background-color: #711ada;
-    border: 0px solid #711ada;
+  color: #711ada;
+  background-color: #711ada;
+  border: 0px solid #711ada;
 }
 
 #SamplerPlayButtonRepeating[value="1"]:hover {
-    color: #8b32ff;
-    background-color: #8b32ff;
-    border: 0px solid #8b32ff;
+  color: #8b32ff;
+  background-color: #8b32ff;
+  border: 0px solid #8b32ff;
 }
 
 /* Special case link_type button for effect parameters
@@ -1793,95 +1799,95 @@ do not highlight either state. */
   Note: EQ Gain effects cannot be used in split mode (= can be 0 or 1 only)
 */
 #EffectSlotParameterLinkButtonsContainer {
-    margin: 1px 4px;
-    qproperty-layoutSpacing: 1;
-    border-radius: 2px;
-    background-color: #282828;
+  margin: 1px 4px;
+  qproperty-layoutSpacing: 1;
+  border-radius: 2px;
+  background-color: #282828;
 }
 
 #EffectSlotParameterLinkTypeButton[value="2"] {
-    color: none;
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                      stop: 0 #006596,
-                                      stop: 0.33 #006596,
-                                      stop: 0.34 #4B4B4B,
-                                      stop: 0.66 #4B4B4B,
-                                      stop: 0.67 #4B4B4B,
-                                      stop: 1 #4B4B4B);
+  color: none;
+  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                    stop: 0 #006596,
+                                    stop: 0.33 #006596,
+                                    stop: 0.34 #4B4B4B,
+                                    stop: 0.66 #4B4B4B,
+                                    stop: 0.67 #4B4B4B,
+                                    stop: 1 #4B4B4B);
 
-    border: 0px solid #006596;
+  border: 0px solid #006596;
 }
 
 #EffectSlotParameterLinkTypeButton[value="2"]:hover {
-    color: none;
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                      stop: 0 #0080BE,
-                                      stop: 0.33 #0080BE,
-                                      stop: 0.34 #5F5F5F,
-                                      stop: 0.66 #5F5F5F,
-                                      stop: 0.67 #5F5F5F,
-                                      stop: 1 #5F5F5F);
-    border: 0px solid #0080BE;
+  color: none;
+  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                    stop: 0 #0080BE,
+                                    stop: 0.33 #0080BE,
+                                    stop: 0.34 #5F5F5F,
+                                    stop: 0.66 #5F5F5F,
+                                    stop: 0.67 #5F5F5F,
+                                    stop: 1 #5F5F5F);
+  border: 0px solid #0080BE;
 }
 
 #EffectSlotParameterLinkTypeButton[value="3"] {
-    color: none;
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                      stop: 0 #4B4B4B,
-                                      stop: 0.33 #4B4B4B,
-                                      stop: 0.34 #4B4B4B,
-                                      stop: 0.66 #4B4B4B,
-                                      stop: 0.67 #006596,
-                                      stop: 1 #006596);
-    border: 0px solid #006596;
+  color: none;
+  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                    stop: 0 #4B4B4B,
+                                    stop: 0.33 #4B4B4B,
+                                    stop: 0.34 #4B4B4B,
+                                    stop: 0.66 #4B4B4B,
+                                    stop: 0.67 #006596,
+                                    stop: 1 #006596);
+  border: 0px solid #006596;
 }
 
 
 #EffectSlotParameterLinkTypeButton[value="3"]:hover {
-    color: none;
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                      stop: 0 #5F5F5F,
-                                      stop: 0.33 #5F5F5F,
-                                      stop: 0.34 #5F5F5F,
-                                      stop: 0.66 #5F5F5F,
-                                      stop: 0.67 #0080BE,
-                                      stop: 1 #0080BE);
-    border: 0px solid #0080BE;
+  color: none;
+  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                    stop: 0 #5F5F5F,
+                                    stop: 0.33 #5F5F5F,
+                                    stop: 0.34 #5F5F5F,
+                                    stop: 0.66 #5F5F5F,
+                                    stop: 0.67 #0080BE,
+                                    stop: 1 #0080BE);
+  border: 0px solid #0080BE;
 }
 
 #EffectSlotParameterLinkTypeButton[value="4"] {
-    color: none;
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                      stop: 0 #006596,
-                                      stop: 0.330000 #006596,
-                                      stop: 0.340000 #4B4B4B,
-                                      stop: 0.660000 #4B4B4B,
-                                      stop: 0.670000 #006596,
-                                      stop: 1 #006596);
-    border: 0px solid #006596;
+  color: none;
+  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                    stop: 0 #006596,
+                                    stop: 0.330000 #006596,
+                                    stop: 0.340000 #4B4B4B,
+                                    stop: 0.660000 #4B4B4B,
+                                    stop: 0.670000 #006596,
+                                    stop: 1 #006596);
+  border: 0px solid #006596;
 }
 
 
 #EffectSlotParameterLinkTypeButton[value="4"]:hover {
-    color: none;
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                      stop: 0 #0080BE,
-                                      stop: 0.330000 #0080BE,
-                                      stop: 0.340000 #5F5F5F,
-                                      stop: 0.660000 #5F5F5F,
-                                      stop: 0.670000 #0080BE,
-                                      stop: 1 #0080BE);
-    border: 0px solid #0080BE;
+  color: none;
+  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                                    stop: 0 #0080BE,
+                                    stop: 0.330000 #0080BE,
+                                    stop: 0.340000 #5F5F5F,
+                                    stop: 0.660000 #5F5F5F,
+                                    stop: 0.670000 #0080BE,
+                                    stop: 1 #0080BE);
+  border: 0px solid #0080BE;
 }
 
 #EffectSlotParameterLinkInversionButton[value="1"] {
-    background-color: #b90505;
-    border: 1px solid #b90505;
+  background-color: #b90505;
+  border: 1px solid #b90505;
 }
 
 #EffectSlotParameterLinkInversionButton[value="1"]:hover {
-    background-color: #e80808;
-    border: 1px solid #FF0808;
+  background-color: #e80808;
+  border: 1px solid #FF0808;
 }
 
 /* Special case "hide/show" button
@@ -1894,17 +1900,17 @@ do not highlight either state. */
 }
 
 #SampleDeckToggle[value="1"], #LibraryToggle[value="1"], #EffectRackToggle[value="1"] {
-    color: #D2D2D2;
-    background-color: #4B4B4B;
-    border: 1px solid #4B4B4B;
-    border-radius: 2px;
-    outline: none;
+  color: #D2D2D2;
+  background-color: #4B4B4B;
+  border: 1px solid #4B4B4B;
+  border-radius: 2px;
+  outline: none;
 }
 
 #SampleDeckToggle[value="1"]:hover, #LibraryToggle[value="1"]:hover, #EffectRackToggle[value="1"]:hover {
-    color: #D2D2D2;
-    background-color: #5F5F5F;
-    border: 0px solid #5F5F5F;
+  color: #D2D2D2;
+  background-color: #5F5F5F;
+  border: 0px solid #5F5F5F;
 }
 
 #WaveformZoomDownButton[value="0"]:!hover,
@@ -1914,14 +1920,19 @@ do not highlight either state. */
   border: none;
 }
 
-#BeatJumpValue, #LoopMoveValue, #HotcueButton, #DeckCue, #DeckSync, #BeatsyncButton {
-  font: bold 12px;
+#BeatJumpValue,
+#LoopMoveValue,
+#HotcueButton,
+#DeckCue,
+#DeckSync,
+#BeatsyncButton {
+  font-size: 12px;
+  font-weight: bold;
 }
 
 /*******************************************************************************
  ** End Buttons  ***************************************************************
  *******************************************************************************/
-
 
 /* common styles for WEffectSelector, QMenu, QToolTip */
 WEffectSelector QAbstractScrollArea,
@@ -1938,10 +1949,7 @@ WTrackMenu QMenu {
 WEffectSelector QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea {
   padding: 2px;
-  font: 13px;
-}
-WEffectSelector QAbstractScrollArea,
-#fadeModeCombobox QAbstractScrollArea {
+  font-size: 13px;
   min-width: 180px;
 }
 WEffectSelector QAbstractScrollArea,
@@ -2014,7 +2022,7 @@ WEffectSelector,
   /* The 3D frame on the combo box becomes flat when you give it a border */
   border: 1px solid #444342;
   border-radius: 3px;
-  font: 15px;
+  font-size: 15px;
 }
 WEffectSelector {
   /* Fixes the white bars on the top/bottom of the popup on Mac OS X */
