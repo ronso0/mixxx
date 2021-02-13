@@ -823,7 +823,8 @@ WEffectSelector QAbstractScrollArea::corner,
   background-color: #222;
 }
 
-#Mixxx, WWidget,
+#Mixxx,
+WWidget,
 QToolTip,
 WLabel, QLabel,
 WNumber, WNumberPos,
@@ -850,6 +851,7 @@ WEffectSelector QAbstractScrollArea,
 #LibraryContainer QHeaderView::item,
 #LibraryContainer QMenu,
 #LibraryContainer QMenu QCheckBox,
+WLibraryTextBrowser,
 WTrackMenu,
 WTrackMenu QMenu,
 WTrackMenu QCheckBox,
@@ -1953,7 +1955,7 @@ WCueMenuPopup QMenu,
 WCoverArtMenu,
 WTrackMenu QMenu,
 #MainMenu QMenu {
-  padding: 0.15em;
+  padding: 0.15em 0.15em 0.25em 0.15em;
 }
 WEffectSelector QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea {
