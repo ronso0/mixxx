@@ -1655,8 +1655,9 @@ void WTrackMenu::slotRemoveFromDisk() {
 
         QVBoxLayout* delConfirmDlgLayout = new QVBoxLayout;
         QLabel* delWarning = new QLabel;
-        delWarning->setText(tr("Permanently delete these files from disk?") + QString("<br>") +
-                QString("<b>") + tr("This can not be undone!") + QString("</b>"));
+        delWarning->setText(tr("Permanently delete these files from disk?") +
+                QString("<br><br><b>") +
+                tr("This can not be undone!") + QString("</b><br>"));
         delWarning->setTextFormat(Qt::RichText);
 
         QListWidget* fileListWidget = new QListWidget;
