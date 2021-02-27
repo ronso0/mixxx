@@ -809,17 +809,10 @@ WTrackText,
 WTrackProperty,
 WRecordingDuration,
 QSpinBox,
-WBeatSpinBox,
-WOverview #PassthroughLabel,
-WBeatSpinBox QMenu,
-WCueMenuPopup,
-WCueMenuPopup QMenu,
-WCueMenuPopup QLabel,
-WCoverArtMenu,
-WTrackMenu,
-WTrackMenu QMenu,
-WOverview /* Hotcue labels in the overview */,
 QComboBox,
+WBeatSpinBox,
+WOverview /* Hotcue labels in the overview */,
+WOverview #PassthroughLabel,
 WEffect,
 WEffectSelector,
 WEffectSelector QAbstractScrollArea,
@@ -830,8 +823,20 @@ WEffectSelector QAbstractScrollArea,
 #LibraryContainer QRadioButton,
 #LibraryContainer QHeaderView,
 #LibraryContainer QHeaderView::item,
-#LibraryContainer QMenu {
+#LibraryContainer QMenu,
+#MainMenu,
+#MainMenu QMenu,
+WTrackMenu,
+WTrackMenu QMenu,
+WTrackMenu QMenu QCheckBox,
+WBeatSpinBox QMenu,
+WCoverArtMenu,
+WCueMenuPopup,
+WCueMenuPopup QMenu,
+WCueMenuPopup QLabel {
   font-family: "Open Sans";
+  font-style: normal;
+  text-transform: none;
 }
 
 WWidget,
@@ -840,11 +845,6 @@ WLibrary QPushButton {
   font-size: 12px;
   font-weight: bold;
   text-transform: uppercase;
-}
-
-/* cue points labels in the overview */
-WOverview {
-  text-transform: none;
 }
 
 /* Passthrough label on overview waveform */
@@ -1900,15 +1900,16 @@ do not highlight either state. */
 
 
 /* common styles for WEffectSelector, QMenu, QToolTip */
+QToolTip,
 WEffectSelector QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea,
-QToolTip,
+#MainMenu QMenu,
 #LibraryContainer QMenu,
+WTrackMenu QMenu,
+WCoverArtMenu,
 WBeatSpinBox QMenu,
 WCueMenuPopup,
-WCueMenuPopup QMenu,
-WCoverArtMenu,
-WTrackMenu QMenu {
+WCueMenuPopup QMenu {
   padding: 2px;
 }
 WEffectSelector QAbstractScrollArea,
@@ -1920,12 +1921,22 @@ WEffectSelector QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea {
   min-width: 180px;
 }
+QToolTip,
 WEffectSelector QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea,
-QToolTip,
-#LibraryContainer QMenu,
+#MainMenu,
+#MainMenu::item,
+#MainMenu QMenu,
+#MainMenu QMenu::item,
+#MainMenu QMenu QCheckBox,
+#LibraryContainer QMenu, /* context menu of all library widgets */
 #LibraryContainer QMenu::item,
 #LibraryContainer QMenu QCheckBox,
+WTrackMenu, /* context menu of decks' track labels */
+WTrackMenu::item,
+WTrackMenu QMenu,
+WTrackMenu QMenu::item,
+WTrackMenu QMenu QCheckBox,
 WBeatSpinBox QMenu,
 WBeatSpinBox QMenu::item,
 WCueMenuPopup,
@@ -1933,54 +1944,48 @@ WCueMenuPopup QMenu,
 WCueMenuPopup QLabel,
 WCueMenuPopup QMenu::item,
 WCoverArtMenu,
-WCoverArtMenu::item,
-WTrackMenu,
-WTrackMenu::item,
-WTrackMenu QCheckBox,
-WTrackMenu QMenu,
-WTrackMenu QMenu::item,
-WTrackMenu QMenu QCheckBox {
+WCoverArtMenu::item {
   color: #c1cabe;
   background-color: #201f1f;
 }
+QToolTip,
 WEffectSelector QAbstractScrollArea,
 #fadeModeCombobox QAbstractScrollArea,
-QToolTip,
+#MainMenu QMenu,
 #LibraryContainer QMenu,
+WTrackMenu,
+WTrackMenu QMenu,
 WBeatSpinBox QMenu,
 WCueMenuPopup,
 WCueMenuPopup QMenu,
-WCoverArtMenu,
-WTrackMenu,
-WTrackMenu QMenu {
+WCoverArtMenu {
   border-width: 1px;
   border-style: solid;
   border-color: #aaa;
   border-radius: 1px;
-}
+  }
   /* hovered items */
   WEffectSelector::item:selected,
   #fadeModeCombobox::item:selected,
-  WBeatSpinBox QMenu::item:selected,
-  WCueMenuPopup QMenu::item:selected,
-  WCoverArtMenu::item:selected,
+  #MainMenu:item:selected,
+  #MainMenu QMenu::item:selected,
+  #LibraryContainer QMenu::item:selected,
+  #LibraryContainer QMenu QCheckBox:selected,
+  #LibraryContainer QMenu QCheckBox:focus,  /* selected by keyboard */
+  #LibraryContainer QMenu QCheckBox:hover, /* mouse hover */
   WTrackMenu::item:selected,
-  WTrackMenu QCheckBox:selected,
-  WTrackMenu QCheckBox:focus,
-  WTrackMenu QCheckBox:hover,
   WTrackMenu QMenu::item:selected,
   WTrackMenu QMenu QCheckBox:selected,
   WTrackMenu QMenu QCheckBox:focus,
   WTrackMenu QMenu QCheckBox:hover,
-  #LibraryContainer QMenu::item:selected,
-  #LibraryContainer QMenu QCheckBox:selected,
-  #LibraryContainer QMenu QCheckBox:focus,  /* selected by keyboard */
-  #LibraryContainer QMenu QCheckBox:hover /* mouse hover */ {
-      background-color: #565353;
-      color: #fff;
-      /* remove OS focus indicator */
-      outline: none;
-    }
+  WBeatSpinBox QMenu::item:selected,
+  WCueMenuPopup QMenu::item:selected,
+  WCoverArtMenu::item:selected {
+    background-color: #565353;
+    color: #fff;
+    /* remove OS focus indicator */
+    outline: none;
+  }
 
 
 
@@ -2048,30 +2053,80 @@ WEffectSelector {
   #fadeModeCombobox::indicator, /* checkbox, tick mark */
   #fadeModeCombobox::drop-down,
   #fadeModeCombobox::indicator:!checked,
+  #MainMenu,
+  #MainMenu QMenu::item,
+  #MainMenu QMenu QCheckBox,
   #LibraryContainer QMenu::item,
+  WTrackMenu::item,
+  WTrackMenu QMenu::item,
+  WTrackMenu QMenu QCheckBox,
   WBeatSpinBox QMenu::item,
   WCueMenuPopup QMenu::item,
-  WCoverArtMenu::item,
-  WTrackMenu::item,
-  WTrackMenu QCheckBox,
-  WTrackMenu QMenu::item,
-  WTrackMenu QMenu QCheckBox {
-    padding: 0px;
-    margin: 0px;
+  WCoverArtMenu::item {
+    /*padding: 0px;
+    margin: 0px;*/
     image: none;
     outline: none;
     border: 0px solid transparent;
     }
+WLibrary QMenu::item,
+WLibrarySidebar QMenu::item,
+WTrackMenu::item,
+WTrackMenu QMenu::item,
+WCoverArtMenu::item {
+  padding: 0.1em 1.5em 0.1em 1.5em;
+  }
+#MainMenu {
+  padding: 0em;
+  margin: 0em;
+}
+#MainMenu::item {
+  padding: 0.1em 0.4em 0.1em 0.2em;
+}
+#MainMenu QMenu::item,
+#MainMenu QMenu QCheckBox {
+  padding: 0.25em 1.5em 0.25em 1.5em;
+  }
+#LibraryContainer QMenu QCheckBox,
+WTrackMenu QMenu QCheckBox {
+  /* Checkboxes in Crates > AutoDJ source and track > Crates submenu
+  don't need extra space on the left */
+  padding: 0.25em 1.5em 0.25em 0.2em;
+  }
+/* Some standart menus that have Copy, Paste, Select All actions,
+  maybe with icons */
+/* Above, use WLibrary QMenu::item and WLibrarySidebar QMeneu::item
+  instead of #LibraryContainer QMenu::item to explicitely address the
+  WSearchLineEdit QMenu here */
+WCueMenuPopup QLineEdit QMenu::item,
+WSearchLineEdit QMenu::item,
+WBeatSpinBox QMenu::item,
+#DlgAutoDJ QSpinBox QMenu::item,
+/* In-table track prperty editing via 'Selected click' */
+WLibrary QTableView QLineEdit QMenu::item {
+  /* smaller padding-left to get Copy, Paste,... action texts closer to OS menu icons */
+  padding: 0.25em 1.5em 0.25em 0.5em;
+  /* AFAIK this is the only way to prevent overlapping of action title "Select All"
+    and keyboard shortcut "Ctrl+A" */
+  min-width: 6em;
+}
+
+
+  #MainMenu QMenu::separator,
   #LibraryContainer QMenu::separator,
+  WTrackMenu::separator,
+  WTrackMenu QMenu::separator,
   WBeatSpinBox QMenu::separator,
   WCueMenuPopup QMenu::separator,
-  WCoverArtMenu::separator,
-  WTrackMenu::separator,
-  WTrackMenu QMenu::separator {
+  WCoverArtMenu::separator {
     height: 0px;
     border-top: 1px solid #0a0a0a;
-    margin: 4px;
+    margin: 0.2em;
     }
+
+
+
+
   #LibraryContainer QMenu::item,
   WBeatSpinBox QMenu::item,
   WCueMenuPopup QMenu::item,
@@ -2081,34 +2136,24 @@ WEffectSelector {
     /* right padding creates a margin to the menu expand arrow,
     left padding should be bigger than menu icon width + menu icon
     margin */
-    padding: 5px 13px 5px 26px;
+    /*padding: 5px 13px 5px 26px;*/
     }
-  /* icons in editline menu (searchbox, editable track properties) */
-  #LibraryContainer QMenu::icon,
+  #MainMenu QMenu::indicator,
+  /* checkboxes in Crates submenu */
   #LibraryContainer QMenu QCheckBox::indicator,
-  #LibraryContainer QMenu::indicator,
-  WBeatSpinBox QMenu::icon,
-  WCueMenuPopup QMenu::icon,
-  WCoverArtMenu::icon,
-  WTrackMenu::icon,
-  WTrackMenu QCheckBox::indicator,
-  WTrackMenu::indicator,
-  WTrackMenu QMenu::icon,
+  /* 'AutoDJ Track Source' checkbox in sidebar > Crates context menu */
+  WLibrarySidebar QMenu::indicator,
   WTrackMenu QMenu QCheckBox::indicator,
-  WTrackMenu QMenu::indicator,
-  WCoverArtMenu::indicator {
+  #LibraryContainer QHeaderView QMenu::indicator {
     margin: 0px 4px 0px 2px;
     padding: 1px;
     }
   #LibraryContainer QMenu QCheckBox,
-  WTrackMenu QCheckBox,
   WTrackMenu QMenu QCheckBox {
     padding: 2px 10px 2px 3px;
     }
   #LibraryContainer QMenu QCheckBox::indicator,
   #LibraryContainer QMenu::indicator,
-  WTrackMenu QCheckBox::indicator,
-  WTrackMenu::indicator,
   WTrackMenu QMenu QCheckBox::indicator,
   WTrackMenu QMenu::indicator {
     width: 13px;
@@ -2121,16 +2166,12 @@ WEffectSelector {
     }
   #LibraryContainer QMenu QCheckBox::indicator:selected,
   #LibraryContainer QMenu::indicator:selected,
-  WTrackMenu QCheckBox::indicator:selected,
-  WTrackMenu::indicator:selected,
   WTrackMenu QMenu QCheckBox::indicator:selected,
   WTrackMenu QMenu::indicator:selected {
     border: 1px solid #999;
     }
   #LibraryContainer QMenu QCheckBox::indicator:checked,
   #LibraryContainer QMenu::indicator:checked,
-  WTrackMenu QCheckBox::indicator:checked,
-  WTrackMenu::indicator:checked,
   WTrackMenu QMenu QCheckBox::indicator:checked,
   WTrackMenu QMenu::indicator:checked {
     image: url(skin:/icon/ic_library_checkmark.svg);
@@ -2141,14 +2182,12 @@ WEffectSelector {
   WCueMenuPopup QMenu::item:!enabled,
   WCoverArtMenu::item:!enabled,
   WTrackMenu::item:!enabled,
-  WTrackMenu QCheckBox:!enabled,
   WTrackMenu QMenu::item:!enabled,
   WTrackMenu QMenu QCheckBox:!enabled,
   #LibraryContainer QMenu QCheckBox:!enabled {
     color: #555;
   }
   #LibraryContainer QMenu QCheckBox::indicator:!enabled,
-  WTrackMenu QCheckBox::indicator:!enabled,
   WTrackMenu QMenu QCheckBox::indicator:!enabled {
     border: 1px solid #222;
     background-color: #333;
@@ -2156,9 +2195,6 @@ WEffectSelector {
   #LibraryContainer QMenu QCheckBox::indicator:!enabled:checked,
   #LibraryContainer QMenu QCheckBox::indicator:indeterminate,
   #LibraryContainer QCheckBox::indicator:indeterminate:!enabled,
-  WTrackMenu QCheckBox::indicator:!enabled:checked,
-  WTrackMenu QCheckBox::indicator:indeterminate,
-  WTrackMenu QCheckBox::indicator:indeterminate:!enabled,
   WTrackMenu QMenu QCheckBox::indicator:!enabled:checked,
   WTrackMenu QMenu QCheckBox::indicator:indeterminate,
   WTrackMenu QMenu QCheckBox::indicator:indeterminate:!enabled {
@@ -2177,10 +2213,6 @@ WEffectSelector {
   #LibraryContainer QHeaderView QMenu::indicator:checked:hover,
   #LibraryContainer QHeaderView QMenu::indicator:!checked,
   #LibraryContainer QHeaderView QMenu::indicator:!checked:hover,
-  WTrackMenu::indicator:checked,
-  WTrackMenu::indicator:checked:hover,
-  WTrackMenu::indicator:!checked,
-  WTrackMenu::indicator:!checked:hover,
   WTrackMenu QMenu::indicator:checked,
   WTrackMenu QMenu::indicator:checked:hover,
   WTrackMenu QMenu::indicator:!checked,
