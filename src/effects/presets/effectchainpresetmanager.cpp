@@ -343,7 +343,7 @@ void EffectChainPresetManager::savePreset(EffectChainPresetPointer pPreset) {
         bool okay = false;
         name = QInputDialog::getText(nullptr,
                 tr("Save preset for effect chain"),
-                errorText + tr("Name for new effect chain preset:"),
+                errorText + "\n" + tr("Name for new effect chain preset:"),
                 QLineEdit::Normal,
                 pPreset->name(),
                 &okay)
@@ -510,7 +510,7 @@ EffectsXmlData EffectChainPresetManager::readEffectsXml(
                 manifestList.append(pManifest);
             }
         }
-        std::sort(manifestList.begin(), manifestList.end(), EffectManifest::alphabetize);
+        std::sort(manifestList.begin(), manifestList.end(), EffectManifest::sortLexigraphically);
         for (const auto& pManifest : manifestList) {
             auto pChainPreset = EffectChainPresetPointer(new EffectChainPreset(pManifest));
             pChainPreset->setName(pManifest->displayName());

@@ -26,11 +26,11 @@ const QString kDefaultMasterEqId = QString();
 const int kFrequencyUpperLimit = 20050;
 const int kFrequencyLowerLimit = 16;
 
-static bool isMixingEQ(EffectManifest* pManifest) {
+bool isMixingEQ(EffectManifest* pManifest) {
     return pManifest->isMixingEQ();
 }
 
-static bool isMasterEQ(EffectManifest* pManifest) {
+bool isMasterEQ(EffectManifest* pManifest) {
     return pManifest->isMasterEQ();
 }
 } // anonymous namespace
@@ -141,15 +141,11 @@ void DlgPrefEQ::slotNumDecksChanged(double numDecks) {
         const EffectManifestPointer pEQManifest =
                 m_pBackendManager->getManifestFromUniqueId(configuredEffect);
 
-        int selectedEQEffectIndex = 0;
+        int selectedEQEffectIndex = 0; // placeholder for no effect
         if (pEQManifest) {
             selectedEQEffectIndex = m_deckEqEffectSelectors[i]->findData(
                     QVariant(pEQManifest->uniqueId()));
-        } else {
-            // Select "None"
-            selectedEQEffectIndex = m_deckEqEffectSelectors[i]->count() - 1;
         }
-
         m_deckEqEffectSelectors[i]->setCurrentIndex(selectedEQEffectIndex);
     }
     applySelections();

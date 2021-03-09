@@ -5,7 +5,8 @@
 /// EffectsMessenger sends EffectsRequests from the main thread and receives
 /// EffectsResponses from the audio thread. This allows memory allocation and
 /// deallocation on the heap, which is slow, to be done in the main thread to
-/// avoid blocking the audio thread and causing audible glitches.
+/// avoid blocking the audio thread and causing audible glitches. All of
+/// EffectsMessenger's methods are called on the main thread.
 /// Refer to
 /// http://www.rossbencina.com/code/real-time-audio-programming-101-time-waits-for-nothing
 /// for background information and
@@ -19,7 +20,7 @@ class EffectsMessenger {
     /// ownership of request and deletes it once a response is received.
     bool writeRequest(EffectsRequest* request);
 
-    void startShutdownProcess();
+    void initiateShutdown();
     void processEffectsResponses();
 
   private:

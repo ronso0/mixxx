@@ -160,6 +160,10 @@ EffectChain::~EffectChain() {
 }
 
 void EffectChain::addToEngine() {
+    VERIFY_OR_DEBUG_ASSERT(!m_pEngineEffectChain) {
+        return;
+    }
+
     m_pEngineEffectChain = new EngineEffectChain(
             m_group,
             m_pEffectsManager->registeredInputChannels(),
@@ -176,6 +180,10 @@ void EffectChain::addToEngine() {
 void EffectChain::removeFromEngine() {
     VERIFY_OR_DEBUG_ASSERT(m_effectSlots.isEmpty()) {
         m_effectSlots.clear();
+    }
+
+    VERIFY_OR_DEBUG_ASSERT(m_pEngineEffectChain) {
+        return;
     }
 
     EffectsRequest* pRequest = new EffectsRequest();
@@ -251,7 +259,7 @@ EffectChainMixMode EffectChain::mixMode() const {
 }
 
 void EffectChain::setMixMode(EffectChainMixMode mixMode) {
-    m_pControlChainMixMode->set(static_cast<int>(mixMode));
+    m_pControlChainMixMode->set(static_cast<double>(mixMode));
     sendParameterUpdate();
 }
 
