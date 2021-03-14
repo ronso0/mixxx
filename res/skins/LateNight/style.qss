@@ -41,7 +41,20 @@ WEffectSelector QAbstractScrollArea,
   font-style: normal;
   text-transform: none;
 }
-
+/*
+  To style the main menubar we use the skin's font but
+  we try to preserve most other font properties set by
+  the operating system, such as the font weight, size and style.
+  This is because the user may use a HiDPI screen with fonts
+  slightly larger than the defaults but may NOT have scaled Mixxx.
+  Even though different fonts at the same point size don't necessarily
+  produce the same effective visual size the difference is
+  marginal inmy experience, except for some really weird fonts.*/
+/*
+  TODO Actually we should handle the context menus the same. */
+#MainMenu, #MainMenu QMenu {
+  font-family: "Open Sans";
+}
 /* Bold */
 #KnobLabel,
 /* Passthrough label on overview waveform */
