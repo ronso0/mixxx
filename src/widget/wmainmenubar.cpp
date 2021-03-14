@@ -521,7 +521,7 @@ void WMainMenuBar::initialize() {
     // HELP MENU
     QMenu* pHelpMenu = new QMenu(tr("&Help"), this);
 
-    QString externalLinkSuffix = " =>";
+    QString externalLinkSuffix = " " + QChar(0x2197);
 
     QString supportTitle = tr("&Community Support") + externalLinkSuffix;
     QString supportText = tr("Get help with Mixxx");
