@@ -521,7 +521,10 @@ void WMainMenuBar::initialize() {
     // HELP MENU
     QMenu* pHelpMenu = new QMenu(tr("&Help"), this);
 
-    QString externalLinkSuffix = " " + QChar(0x2197);
+    QString externalLinkSuffix;
+#ifndef __APPLE__ // external links don't have icons on macOS
+    externalLinkSuffix = " " + QChar(0x2197);
+#endif
 
     QString supportTitle = tr("&Community Support") + externalLinkSuffix;
     QString supportText = tr("Get help with Mixxx");
