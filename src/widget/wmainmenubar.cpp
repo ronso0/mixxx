@@ -56,15 +56,25 @@ QUrl documentationFileUrl(const QString& resourcePath, const QString& fileName) 
     QDir resourceDir(resourcePath);
 #if !defined(__APPLE__)
 #if defined(MIXXX_INSTALL_DOCDIR_RELATIVE_TO_DATADIR)
+    qDebug() << "";
+    qDebug() << "   ifdef MIXXX_INSTALL_DOCDIR_RELATIVE_TO_DATADIR";
+    qDebug() << "   = " << MIXXX_INSTALL_DOCDIR_RELATIVE_TO_DATADIR;
     if (!resourceDir.exists(fileName)) {
+        qDebug() << "!exists" << resourceDir.absoluteFilePath(fileName);
         resourceDir.cd(MIXXX_INSTALL_DOCDIR_RELATIVE_TO_DATADIR);
     }
+#else
+    qDebug() << "";
+    qDebug() << "   ifndef MIXXX_INSTALL_DOCDIR_RELATIVE_TO_DATADIR";
 #endif
+    qDebug() << "";
+    qDebug() << "   resDir" << resourceDir;
+    qDebug() << "   resFile" << resourceDir.absoluteFilePath(fileName);
     if (resourceDir.exists(fileName)) {
         return QUrl::fromLocalFile(resourceDir.absoluteFilePath(fileName));
     }
 #endif
-
+    qDebug() << "";
     return QUrl();
 }
 }  // namespace
