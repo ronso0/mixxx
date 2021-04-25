@@ -71,7 +71,11 @@ class ControlPotmeter : public ControlObject {
     // when calling this method
     void setRange(double dMinValue, double dMaxValue, bool allowOutOfBounds);
 
+    // Used to check if the current control value matches the default value.
+    void checkValue(double v);
+
   protected:
     bool m_bAllowOutOfBounds;
     PotmeterControls m_controls;
+    ControlObject* m_pControlIsDefault;
 };

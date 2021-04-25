@@ -20,10 +20,21 @@ ControlPotmeter::ControlPotmeter(const ConfigKey& key,
     if (!bPersist) {
         set(default_value);
     }
-    //qDebug() << "" << this << ", min " << m_dMinValue << ", max " << m_dMaxValue << ", range " << m_dValueRange << ", val " << m_dValue;
+    //qDebug() << "" << this << ", min " << dMinValue << ", max " << dMaxValue << ", default " << default_value;
+
+    m_pControlIsDefault = new ControlObject(
+            ConfigKey(key.group, QString(key.item) + "_is_default"));
+    m_pControlIsDefault->setReadOnly();
+
+    connect(this,
+            &ControlObject::valueChanged,
+            this,
+            &ControlPotmeter::checkValue);
+    checkValue(get());
 }
 
 ControlPotmeter::~ControlPotmeter() {
+    delete m_pControlIsDefault;
 }
 
 void ControlPotmeter::setStepCount(int count) {
@@ -41,6 +52,14 @@ void ControlPotmeter::setRange(double dMinValue, double dMaxValue,
     if (m_pControl) {
         m_pControl->setBehavior(
                 new ControlPotmeterBehavior(dMinValue, dMaxValue, allowOutOfBounds));
+    }
+}
+
+void ControlPotmeter::checkValue(double v) {
+    if (v == defaultValue()) {
+        m_pControlIsDefault->forceSet(1);
+    } else {
+        m_pControlIsDefault->forceSet(0);
     }
 }
 
