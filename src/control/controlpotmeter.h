@@ -61,7 +61,7 @@ class ControlPotmeter : public ControlObject {
             bool bTrack = false,
             bool bPersist = false,
             double defaultValue = 0.0);
-    virtual ~ControlPotmeter();
+    ~ControlPotmeter() override = default;
 
     // Sets the step count of the associated PushButtons.
     void setStepCount(int count);
@@ -80,5 +80,4 @@ class ControlPotmeter : public ControlObject {
   protected:
     bool m_bAllowOutOfBounds;
     PotmeterControls m_controls;
-    ControlObject* m_pControlIsDefault;
 };
