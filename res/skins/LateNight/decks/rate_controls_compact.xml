@@ -118,18 +118,20 @@
             <SizePolicy>min,min</SizePolicy>
             <Children>
 
+              <!-- Rate slider + range displays with/without Sync button -->
               <WidgetStack currentpage="[LateNight],show_sync_button_compact" persist="true">
                 <ObjectName>RateStack<Variable name="Group"/></ObjectName>
-                <Children><!-- Rate slider + range displays with Sync button -->
+                <Children>
 
-                  <WidgetGroup><!-- Rate controls (no Sync button) -->
+                  <!-- Rate controls (no Sync button) -->
+                  <WidgetGroup>
                     <ObjectName>RateSliderBoxCompact</ObjectName>
-                    <Size>59f,121f</Size>
+                    <Size>59min,115me</Size>
                     <Layout>stacked</Layout>
                     <Children>
-                  <!-- Rate slider + center indicator -->
-                      <WidgetGroup>
-                        <Size>59f,121f</Size>
+
+                      <WidgetGroup><!-- Rate / Rate Ultra + center indicator -->
+                        <Size>59min,115me</Size>
                         <Children>
                           <Label>
                             <ObjectName>RateCenter</ObjectName>
@@ -140,6 +142,7 @@
                               <BindProperty>highlight</BindProperty>
                             </Connection>
                           </Label>
+
                           <SliderComposed>
                             <ObjectName>RateSlider</ObjectName>
                             <Size>40f,119f</Size>
@@ -156,6 +159,29 @@
                             <BarUnipolar>false</BarUnipolar>
                             <Connection>
                               <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
+                            </Connection>
+                          </SliderComposed>
+
+                          <SliderComposed>
+                            <ObjectName>RateSliderUltra</ObjectName>
+                            <Size>16f,79f</Size>
+                            <Pos>45,14</Pos>
+                            <TooltipId>rate_ultra</TooltipId>
+                            <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck_ultra.svg</Handle>
+                            <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact_sync_ultra.svg</Slider>
+                            <Horizontal>false</Horizontal>
+                            <BarWidth><Variable name="BarWidth"/></BarWidth>
+                            <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
+                            <BarColor><Variable name="BarColorPitch"/></BarColor>
+                            <BarRoundCaps>true</BarRoundCaps>
+                            <BarAxisPos>8.0</BarAxisPos>
+                            <BarUnipolar>false</BarUnipolar>
+                            <Connection>
+                              <ConfigKey><Variable name="Group"/>,rate_ultra</ConfigKey>
+                            </Connection>
+                            <Connection>
+                              <ConfigKey><Variable name="Group"/>,rate_ultra_enabled</ConfigKey>
+                              <BindProperty>visible</BindProperty>
                             </Connection>
                           </SliderComposed>
                         </Children>
@@ -177,15 +203,15 @@
                     </Children>
                   </WidgetGroup><!-- Rate controls (no Sync button) -->
 
-                  <!-- Rate slider + range displays with Sync button -->
+                  <!-- Rate controls WITH Sync button -->
                   <WidgetGroup trigger="[LateNight],show_sync_button_compact" on_hide_select="0">
                     <ObjectName>RateSliderBoxCompact</ObjectName>
-                    <Size>59f,97f</Size>
+                    <Size>59min,97f</Size>
                     <Layout>stacked</Layout>
                     <Children>
-                      <WidgetGroup><!-- Rate slider + center indicator -->
-                        <ObjectName></ObjectName>
-                        <Size>54f,97f</Size>
+                      <WidgetGroup><!-- Rate / Rate Ultra slider + center indicator -->
+                        <ObjectName>RateSliderWithSync</ObjectName>
+                        <Size>59min,97f</Size>
                         <Children>
                           <Label>
                             <ObjectName>RateCenter</ObjectName>
@@ -197,6 +223,7 @@
                             </Connection>
                           </Label>
 
+                          <!-- TODO move both sliders into a h-layout so they are h-centered -->
                           <SliderComposed>
                             <ObjectName>RateSlider</ObjectName>
                             <Size>40f,95f</Size>
@@ -213,6 +240,30 @@
                             <BarUnipolar>false</BarUnipolar>
                             <Connection>
                               <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
+                            </Connection>
+                          </SliderComposed>
+
+                          <SliderComposed>
+                            <ObjectName>RateSliderUltra</ObjectName>
+                            <Size>16f,79f</Size>
+                            <Pos>50,10</Pos>
+                            <TooltipId>rate_ultra</TooltipId>
+                            <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck_ultra.svg</Handle>
+                            <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact_sync_ultra.svg</Slider>
+                            <!-- <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact_ultra.svg</Slider> -->
+                            <Horizontal>false</Horizontal>
+                            <BarWidth><Variable name="BarWidth"/></BarWidth>
+                            <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
+                            <BarColor><Variable name="BarColorPitch"/></BarColor>
+                            <BarRoundCaps>true</BarRoundCaps>
+                            <BarAxisPos>8.0</BarAxisPos>
+                            <BarUnipolar>false</BarUnipolar>
+                            <Connection>
+                              <ConfigKey><Variable name="Group"/>,rate_ultra</ConfigKey>
+                            </Connection>
+                            <Connection>
+                              <ConfigKey><Variable name="Group"/>,rate_ultra_enabled</ConfigKey>
+                              <BindProperty>visible</BindProperty>
                             </Connection>
                           </SliderComposed>
                         </Children>
