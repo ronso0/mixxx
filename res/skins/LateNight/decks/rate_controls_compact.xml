@@ -119,7 +119,8 @@
                     <Children>
 
                       <WidgetGroup><!-- Rate slider + center indicator -->
-                        <Size>54f,81f</Size>
+                        <!-- <Size>54f,81f</Size> -->
+                        <Size>70f,81f</Size>
                         <Children>
                           <Label>
                             <ObjectName>RateCenter</ObjectName>
@@ -148,11 +149,31 @@
                               <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
                             </Connection>
                           </SliderComposed>
+
+                          <SliderComposed>
+                            <ObjectName>RateSliderUltra</ObjectName>
+                            <Size>16f,79f</Size>
+                            <Pos>45,2</Pos>
+                            <TooltipId>rate_ultra</TooltipId>
+                            <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck_ultra.svg</Handle>
+                            <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact_sync_ultra.svg</Slider>
+                            <Horizontal>false</Horizontal>
+                            <BarWidth><Variable name="BarWidth"/></BarWidth>
+                            <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
+                            <BarColor><Variable name="BarColorPitch"/></BarColor>
+                            <BarRoundCaps>true</BarRoundCaps>
+                            <BarAxisPos>8.0</BarAxisPos>
+                            <BarUnipolar>false</BarUnipolar>
+                            <Connection>
+                              <ConfigKey><Variable name="Group"/>,rate_ultra</ConfigKey>
+                            </Connection>
+                          </SliderComposed>
                         </Children>
                       </WidgetGroup><!-- Rate slider + center indicator -->
 
                       <WidgetGroup><!-- Rate range indicators -->
-                        <SizePolicy>min,me</SizePolicy>
+                        <ObjectName>RateRangeDisplayCompactSync</ObjectName>
+                        <SizePolicy>me,me</SizePolicy>
                         <Layout>vertical</Layout>
                         <Children>
                           <SingletonContainer>
@@ -180,7 +201,7 @@
                 <Children>
                   <WidgetGroup><!-- Rate slider + center indicator -->
                     <ObjectName></ObjectName>
-                    <Size>54f,97f</Size>
+                    <Size>70f,97f</Size>
                     <Children>
                       <Label>
                         <ObjectName>RateCenter</ObjectName>
@@ -210,10 +231,30 @@
                           <ConfigKey><Variable name="Group"/>,rate</ConfigKey>
                         </Connection>
                       </SliderComposed>
+
+                      <SliderComposed>
+                        <ObjectName>RateSliderUltra</ObjectName>
+                        <Size>16f,95f</Size>
+                        <Pos>45,2</Pos>
+                        <TooltipId>rate_ultra</TooltipId>
+                        <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck_ultra.svg</Handle>
+                        <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact_ultra.svg</Slider>
+                        <Horizontal>false</Horizontal>
+                        <BarWidth><Variable name="BarWidth"/></BarWidth>
+                        <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
+                        <BarColor><Variable name="BarColorPitch"/></BarColor>
+                        <BarRoundCaps>true</BarRoundCaps>
+                        <BarAxisPos>8.0</BarAxisPos>
+                        <BarUnipolar>false</BarUnipolar>
+                        <Connection>
+                          <ConfigKey><Variable name="Group"/>,rate_ultra</ConfigKey>
+                        </Connection>
+                      </SliderComposed>
                     </Children>
                   </WidgetGroup><!-- Rate slider + center indicator -->
 
                   <WidgetGroup><!-- Rate range indicators -->
+                    <ObjectName>RateRangeDisplayCompactSync</ObjectName>
                     <SizePolicy>min,me</SizePolicy>
                     <Layout>vertical</Layout>
                     <Children>
