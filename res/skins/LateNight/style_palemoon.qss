@@ -586,6 +586,10 @@ WTrackProperty[selected="true"],
   max-width: 0px;
 }
 
+#RateRangeDisplayCompactSync {
+  margin-right: 16px;
+}
+
 #ToolBar {
   padding: 0px 2px 0px 2px;
   }
@@ -4442,6 +4446,15 @@ DlgTagFetcher QCheckBox::indicator,
     #DlgTrackInfoMulti QCheckBox::indicator:disabled:checked {
       image: url(skins:LateNight/palemoon/buttons/btn__pref_checkmark_grey.svg) no-repeat center center;
     }
+  DlgPreferences QCheckBox::indicator:indeterminate,
+  DlgPreferences QTableView::indicator:indeterminate,
+  DlgTrackInfo QCheckBox::indicator:indeterminate,
+  DlgTagFetcher QCheckBox::indicator:indeterminate,
+  #Skin QDialog QCheckBox::indicator:indeterminate,
+  #DlgTrackInfo QCheckBox::indicator:indeterminate,
+  #DlgTrackInfoMulti QCheckBox::indicator:indeterminate {
+    image: url(skins:LateNight/palemoon/buttons/btn__pref_checkmark_blue_indeterminate.svg) no-repeat center center;
+  }
 
   DlgPreferences QRadioButton::indicator:checked {
     image: url(skins:LateNight/palemoon/buttons/btn__pref_radio_button_on.svg) center center;
