@@ -26,7 +26,7 @@
   <manifest>
     <title>Tango</title>
     <author>ronso0@mixxx.org</author>
-    <version>2.3.0.01</version>
+    <version>2.4.0.01</version>
     <description>A flexible nighttime skin with stacked waveforms, 4 decks and 16 samplers that can be minimized to the bare essentials.</description>
     <language>en</language>
     <license>Creative Commons Attribution, Share-Alike 3.0 Unported</license>
@@ -124,7 +124,7 @@
          src-mac="skins:Tango/style-mac.qss"
          src-linux="skins:default-menu-styles-linux.qss"
          src-windows="skins:default-menu-styles-windows.qss"/>
-  <MinimumSize>1008,500</MinimumSize>
+  <MinimumSize>1264,500</MinimumSize>
   <SizePolicy>me,me</SizePolicy>
   <Layout>vertical</Layout>
 
