@@ -199,6 +199,11 @@ WSearchLineEdit {
   #KeyText {
     border-width: 1px 0px 1px 0px;
   }
+  #KeyText[highlight="1"],
+  #KeyTextSmall[highlight="1"] {
+    background-color: orange;
+    color: black;
+  }
 
   #DeckSettingsContainer,
   #DeckSettingsContainerCompact,
@@ -1390,27 +1395,27 @@ WEffectChainPresetSelector,
 #Deck1 #TitleText,
   #Deck1 #ArtistText,
   #Deck1 #BpmText,
-  #Deck1 #KeyText,
+  #Deck1 #KeyText[highlight="0"],
   #DeckCompact1 #TitleText,
   #DeckCompact1 #ArtistText,
   #DeckCompact1 #BpmText,
-  #DeckCompact1 #KeyText,
+  #DeckCompact1 #KeyText[highlight="0"],
   #DeckMini1 #TitleTextSmall,
   #DeckMini1 #ArtistTextSmall,
   #DeckMini1 #BpmTextSmall,
-  #DeckMini1 #KeyTextSmall,
+  #DeckMini1 #KeyTextSmall[highlight="0"],
 #Deck2 #TitleText,
   #Deck2 #ArtistText,
   #Deck2 #BpmText,
-  #Deck2 #KeyText,
+  #Deck2 #KeyText[highlight="0"],
   #DeckCompact2 #TitleText,
   #DeckCompact2 #ArtistText,
   #DeckCompact2 #BpmText,
-  #DeckCompact2 #KeyText,
+  #DeckCompact2 #KeyText[highlight="0"],
   #DeckMini2 #TitleTextSmall,
   #DeckMini2 #ArtistTextSmall,
   #DeckMini2 #BpmTextSmall,
-  #DeckMini2 #KeyTextSmall,
+  #DeckMini2 #KeyTextSmall[highlight="0"],
 #MicAuxLabel,
 #SamplerTitle,
 #MainMenu QMenu,
@@ -1507,27 +1512,27 @@ WEffectSelector::item[effectEnabled="true"],
 #Deck3 #TitleText,
   #Deck3 #ArtistText,
   #Deck3 #BpmText,
-  #Deck3 #KeyText,
+  #Deck3 #KeyText[highlight="0"],
   #DeckCompact3 #TitleText,
   #DeckCompact3 #ArtistText,
   #DeckCompact3 #BpmText,
-  #DeckCompact3 #KeyText,
+  #DeckCompact3 #KeyText[highlight="0"],
   #DeckMini3 #TitleTextSmall,
   #DeckMini3 #ArtistTextSmall,
   #DeckMini3 #BpmTextSmall,
-  #DeckMini3 #KeyTextSmall,
+  #DeckMini3 #KeyTextSmall[highlight="0"],
 #Deck4 #TitleText,
   #Deck4 #ArtistText,
   #Deck4 #BpmText,
-  #Deck4 #KeyText,
+  #Deck4 #KeyText[highlight="0"],
   #DeckCompact4 #TitleText,
   #DeckCompact4 #ArtistText,
   #DeckCompact4 #BpmText,
-  #DeckCompact4 #KeyText,
+  #DeckCompact4 #KeyText[highlight="0"],
   #DeckMini4 #TitleTextSmall,
   #DeckMini4 #ArtistTextSmall,
   #DeckMini4 #BpmTextSmall,
-  #DeckMini4 #KeyTextSmall {
+  #DeckMini4 #KeyTextSmall[highlight="0"] {
   color: #85bdbb;
   }
   #Deck3 WStarRating, #DeckCompact3 WStarRating,
@@ -1667,7 +1672,8 @@ QPushButton#pushButtonRecording:checked {
 #RecFeedback[displayValue="0"],
 #BroadcastButton[displayValue="0"],
 #SkinSettingsToggle[displayValue="0"],
-#KeyMatchReset[displayValue="0"],
+#KeyMatch[displayValue="0"],
+#KeyReset[displayValue="0"],
 WPushButton#VinylStatus[displayValue="0"],
 #SyncDeck[displayValue="0"],
 WPushButton#FxAssignButton1[displayValue="0"],
@@ -1681,19 +1687,23 @@ WPushButton#FxAssignButton1[displayValue="0"],
   border-width: 2px;
   border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library.svg) 2 2 2 2;
   }
-    WEffectSelector:!editable {
-      outline: none;
-      border-width: 0px;
-      /* TODO find a cleaner way to eliminate the default styles */
-      border-image: url(skins:LateNight/palemoon/buttons/btn_.svg) 1 1 1 1;
-      }
-  /* WPushButton#BpmTap[displayValue="1"], */
+  WEffectSelector:!editable {
+    outline: none;
+    border-width: 0px;
+    /* TODO find a cleaner way to eliminate the default styles */
+    border-image: url(skins:LateNight/palemoon/buttons/btn_.svg) 1 1 1 1;
+  }
+  #KeyMatch[displayValue="0"],
+  #KeyMatch[displayValue="1"] {
+    border-right: 0px;
+  }
   WPushButton#VinylStatus[displayValue="1"],
   WPushButton#VinylStatus[displayValue="2"],
   WPushButton#VinylStatus[displayValue="3"],
   #SyncDeck[displayValue="1"],
   WPushButton#FxAssignButton1[displayValue="1"],
-  #KeyMatchReset[pressed="true"],
+  #KeyMatch[pressed="true"],
+  #KeyReset[pressed="true"],
   #GuiToggleButton[displayValue="1"],
   #RecFeedback[displayValue="1"],
   #RecFeedback[displayValue="2"],
@@ -2505,11 +2515,18 @@ WPushButton#PlayDeck[value="0"] {
   }
 
 /* Key buttons */
-#KeyMatchReset {
+#KeyMatch {
   image: url(skins:LateNight/palemoon/buttons/btn__key_match.svg) no-repeat center center;
   }
-  #KeyMatchReset[pressed="true"] {
+  #KeyMatch[pressed="true"] {
     image: url(skins:LateNight/palemoon/buttons/btn__key_match_active.svg) no-repeat center center;
+  }
+
+#KeyReset {
+  image: url(skins:LateNight/palemoon/buttons/btn__key_reset.svg) no-repeat center center;
+  }
+  #KeyReset[pressed="true"] {
+    image: url(skins:LateNight/palemoon/buttons/btn__key_reset_active.svg) no-repeat center center;
   }
 
 #KeyUp {
