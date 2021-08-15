@@ -207,6 +207,11 @@
                         <Connection>
                           <ConfigKey><Variable name="Group"/>,visual_key</ConfigKey>
                         </Connection>
+                        <Connection>
+                          <ConfigKey><Variable name="Group"/>,pitch_set_default</ConfigKey>
+                          <Transform><IsEqual>0</IsEqual></Transform>
+                          <BindProperty>highlight</BindProperty>
+                        </Connection>
                       </Key>
 
                       <NumberBpm>
