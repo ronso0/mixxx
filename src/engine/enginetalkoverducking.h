@@ -29,6 +29,8 @@ class EngineTalkoverDucking : public QObject, public EngineSideChainCompressor {
   public slots:
     void slotSampleRateChanged(double);
     void slotDuckStrengthChanged(double);
+    void slotDuckAttackTimeChanged(double);
+    void slotDuckDecayTimeChanged(double);
     void slotDuckModeChanged(double);
 
   private:
@@ -37,5 +39,7 @@ class EngineTalkoverDucking : public QObject, public EngineSideChainCompressor {
 
     ControlProxy* m_pSampleRate;
     ControlPotmeter* m_pDuckStrength;
+    ControlPotmeter* m_pDuckAttackTime;
+    ControlPotmeter* m_pDuckDecayTime;
     ControlPushButton* m_pTalkoverDucking;
 };
