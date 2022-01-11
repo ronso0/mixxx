@@ -296,6 +296,8 @@ void MixxxMainWindow::initialize() {
     // Show the menubar after the launch image is replaced by the skin widget,
     // otherwise it would shift the launch image shortly before the skin is visible.
     m_pMenuBar->show();
+    // ToDo Parse command line args for --hide-menu-bar
+    m_pMenuBar->updateShowHideMenuBarFromCfg();
 
     // The launch image widget is automatically disposed, but we still have a
     // pointer to it.

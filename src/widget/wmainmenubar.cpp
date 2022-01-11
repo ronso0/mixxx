@@ -15,6 +15,9 @@ namespace {
 
 constexpr int kMaxLoadToDeckActions = 4;
 
+const ConfigKey kConfigkeyShowMenuBar(
+        "[Controls]", "show_menubar");
+
 QString buildWhatsThis(const QString& title, const QString& text) {
     QString preparedTitle = title;
     return QString("%1\n\n%2").arg(preparedTitle.remove("&"), text);
@@ -81,12 +84,10 @@ WMainMenuBar::WMainMenuBar(QWidget* pParent, UserSettingsPointer pConfig,
 void WMainMenuBar::initialize() {
     // Allow hiding the menu bar
     m_bShowMenuBar = std::make_unique<ControlPushButton>(
-            ConfigKey("[Controls]", "show_menubar"), false, 1.0);
+            kConfigkeyShowMenuBar, false, 1.0);
     m_bShowMenuBar->setButtonMode(ControlPushButton::TOGGLE);
-    connect(m_bShowMenuBar.get(),
-            &ControlPushButton::valueChanged,
-            this,
-            &WMainMenuBar::showHideMenuBar);
+    m_bShowMenuBar->connectValueChangeRequest(this, &WMainMenuBar::showHideMenuBar);
+    // Note: visibility is updated from config after startup when the skin is displayed
 
     // FILE MENU
     QMenu* pFileMenu = new QMenu(tr("&File"), this);
@@ -657,6 +658,16 @@ void WMainMenuBar::showHideMenuBar(double v) {
     } else {
         setFixedHeight(0);
     }
+    m_bShowMenuBar->forceSet(v);
+    // Store new value in config if visibility is changed with
+    // (re-enabled) skin toggles or in developer tools
+    m_pConfig->setValue(kConfigkeyShowMenuBar, v);
+}
+
+void WMainMenuBar::updateShowHideMenuBarFromCfg() {
+    double showMenuBarCfgVal = m_pConfig->getValue(
+            kConfigkeyShowMenuBar, 1.0);
+    m_bShowMenuBar->set(showMenuBarCfgVal);
 }
 
 void WMainMenuBar::onKeywheelChange(int state) {

@@ -41,6 +41,7 @@ class WMainMenuBar : public QMenuBar {
 
   public slots:
     void showHideMenuBar(double v);
+    void updateShowHideMenuBarFromCfg();
     void onLibraryScanStarted();
     void onLibraryScanFinished();
     void onRecordingStateChange(bool recording);
