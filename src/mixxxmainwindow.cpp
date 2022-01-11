@@ -296,13 +296,29 @@ void MixxxMainWindow::initialize() {
     // Show the menubar after the launch image is replaced by the skin widget,
     // otherwise it would shift the launch image shortly before the skin is visible.
     m_pMenuBar->show();
-    // ToDo Parse command line args for --hide-menu-bar
-    m_pMenuBar->updateShowHideMenuBarFromCfg();
+
+    // Hide the menu bar
+    // Note: all keyboard shortcuts still work (Ctrl+P for the preferences) and
+    // all menus can still be unrolled (Alt+F for the File menu, Alt+H for Help etc,)
+    // This is not the case if we simply remove m_pMenuBar->show above
+    // Var 1: via command line arg --hide-menu-bar
+    if (CmdlineArgs::Instance().getHideMenuBar()) {
+        m_pMenuBar->showHideMenuBar(0.0);
+    }
+    // Var 2: via mixxx.cfg:
+    // [Controls]
+    // show_menubar 0
+    //m_pMenuBar->updateShowHideMenuBarFromCfg();
 
     // The launch image widget is automatically disposed, but we still have a
     // pointer to it.
     m_pLaunchImage = nullptr;
 
+    // Note: if the menu bar should be hidden to achieve some kind of 'locked' mode
+    // i.e. keep users changing any settings, the below connections need to be
+    // disabled as well (popups that allow to configure previously unconfigured
+    // sound devices, for eaxmple when clicking the Passthrough button.
+    // >>>>
     connect(pPlayerManager.get(),
             &PlayerManager::noMicrophoneInputConfigured,
             this,
@@ -319,6 +335,7 @@ void MixxxMainWindow::initialize() {
             &PlayerManager::noVinylControlInputConfigured,
             this,
             &MixxxMainWindow::slotNoVinylControlInputConfigured);
+    // <<<<
 
     connect(&PlayerInfo::instance(),
             &PlayerInfo::currentPlayingTrackChanged,

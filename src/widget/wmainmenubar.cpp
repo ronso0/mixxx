@@ -659,9 +659,9 @@ void WMainMenuBar::showHideMenuBar(double v) {
         setFixedHeight(0);
     }
     m_bShowMenuBar->forceSet(v);
-    // Store new value in config if visibility is changed with
-    // (re-enabled) skin toggles or in developer tools
-    m_pConfig->setValue(kConfigkeyShowMenuBar, v);
+    // Uncomment this if yo want to store new value in config aftre visibility
+    // was changed with (re-enabled) skin toggles or in developer tools
+    //m_pConfig->setValue(kConfigkeyShowMenuBar, v);
 }
 
 void WMainMenuBar::updateShowHideMenuBarFromCfg() {

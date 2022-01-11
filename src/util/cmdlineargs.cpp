@@ -121,6 +121,13 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
     parser.addOption(fullScreen);
     parser.addOption(fullScreenDeprecated);
 
+    const QCommandLineOption hideMenuBar(
+            QStringList({QStringLiteral("hide-menu-bar")}),
+            forUserFeedback ? QCoreApplication::translate(
+                                      "CmdlineArgs", "Hide the main menu bar when Mixxx starts")
+                            : QString());
+    parser.addOption(hideMenuBar);
+
     const QCommandLineOption locale(QStringLiteral("locale"),
             forUserFeedback ? QCoreApplication::translate("CmdlineArgs",
                                       "Use a custom locale for loading translations. (e.g "
@@ -294,6 +301,8 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
     }
 
     m_startInFullscreen = parser.isSet(fullScreen) || parser.isSet(fullScreenDeprecated);
+
+    m_hideMenuBar = parser.isSet(hideMenuBar);
 
     if (parser.isSet(locale)) {
         m_locale = parser.value(locale);
