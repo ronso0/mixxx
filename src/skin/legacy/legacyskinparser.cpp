@@ -442,8 +442,6 @@ LaunchImage* LegacySkinParser::parseLaunchImage(const QString& skinPath, QWidget
     return pLaunchImage;
 }
 
-
-
 QList<QWidget*> wrapWidget(QWidget* pWidget) {
     QList<QWidget*> result;
     if (pWidget != nullptr) {
@@ -1218,7 +1216,7 @@ QWidget* LegacySkinParser::parseNumberRate(const QDomElement& node) {
 
 QWidget* LegacySkinParser::parseNumberPos(const QDomElement& node) {
     QString group = lookupNodeGroup(node);
-    WNumberPos* p = new WNumberPos(group, m_pParent);
+    WNumberPos* p = new WNumberPos(m_pParent, group, m_pConfig);
     setupLabelWidget(node, p);
     return p;
 }
