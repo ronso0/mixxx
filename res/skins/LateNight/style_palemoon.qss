@@ -602,7 +602,7 @@ WTrackProperty[selected="true"],
   }
 
 #DeckRow_2_3_ArtistTitleTime {
-  margin: 2px 0px 2px 0px;
+  margin: 0px 0px 2px 0px;
   }
   #ArtistText,
   #TitleText {
@@ -1241,6 +1241,7 @@ WEffectSelector:!editable:on {
 
 /************** font colors **************************************************/
 
+#CommentText,
 WLabel#FxUnitLabel,
 WLabel#MicAuxLabel,
 WLabel#MicAuxLabelUnconfigured,
@@ -1426,6 +1427,7 @@ WEffectChainPresetSelector:!editable:on,
 #MainMenu QMenu QCheckBox,
 #PlayPositionText, #PlayPositionTextSmall,
 #DurationText,
+#CommentText,
 #RateText, #RateRangePrefix, #RateRangeText,
 #MixerMainHeadphone #FxAssignButtons WPushButton[displayValue="0"],
 #PreviewLabel,
