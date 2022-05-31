@@ -267,6 +267,7 @@ WBeatSpinBox,
 #TitleTextSmall,
 #ArtistTextSmall,
 #PlayPositionText,
+#CommentText,
 #BpmText,
 #BpmTextSmall,
 #FxUnitLabel,
@@ -284,7 +285,9 @@ WRecordingDuration {
 }
 
 #ArtistText,
-#TitleText {
+#TitleText,
+#CommentText,
+WTrackProperty QLineEdit {
   font-size: 18px;
 }
 
