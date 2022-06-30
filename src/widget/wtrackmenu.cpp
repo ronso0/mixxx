@@ -198,14 +198,26 @@ void WTrackMenu::createActions() {
                     kPropertiesShortcutKey);
 
     if (featureIsEnabled(Feature::AutoDJ)) {
-        m_pAutoDJBottomAct = new QAction(tr("Add to Auto DJ Queue (bottom)"), this);
-        connect(m_pAutoDJBottomAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJBottom);
-
-        m_pAutoDJTopAct = new QAction(tr("Add to Auto DJ Queue (top)"), this);
-        connect(m_pAutoDJTopAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJTop);
-
-        m_pAutoDJReplaceAct = new QAction(tr("Add to Auto DJ Queue (replace)"), this);
-        connect(m_pAutoDJReplaceAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJReplace);
+        m_pAutoDJBtnAction = new QWidgetAction(this);
+        //m_pAutoDJBtnAction = make_parented<QWidgetAction>(this);
+        QWidget* pWidget = new QWidget();
+        QHBoxLayout* pLayout = new QHBoxLayout();
+        QLabel* pLabel = new QLabel("Add to AutoDJ queueu");
+        QPushButton* pBtn1 = new QPushButton("Top");
+        QPushButton* pBtn2 = new QPushButton("Bottom");
+        QPushButton* pBtn3 = new QPushButton("Replace");
+        pBtn1->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
+        pBtn2->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
+        pBtn3->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
+        connect(pBtn1, &QPushButton::clicked, this, &WTrackMenu::slotAddToAutoDJTop);
+        connect(pBtn2, &QPushButton::clicked, this, &WTrackMenu::slotAddToAutoDJBottom);
+        connect(pBtn3, &QPushButton::clicked, this, &WTrackMenu::slotAddToAutoDJReplace);
+        pLayout->addWidget(pLabel);
+        pLayout->addWidget(pBtn1);
+        pLayout->addWidget(pBtn2);
+        pLayout->addWidget(pBtn3);
+        pWidget->setLayout(pLayout);
+        m_pAutoDJBtnAction->setDefaultWidget(pWidget);
     }
 
     if (featureIsEnabled(Feature::LoadTo)) {
@@ -450,9 +462,7 @@ void WTrackMenu::setupActions() {
     }
 
     if (featureIsEnabled(Feature::AutoDJ)) {
-        addAction(m_pAutoDJBottomAct);
-        addAction(m_pAutoDJTopAct);
-        addAction(m_pAutoDJReplaceAct);
+        addAction(m_pAutoDJBtnAction);
         addSeparator();
     }
 
@@ -2041,14 +2051,17 @@ void WTrackMenu::slotShowDlgTagFetcher() {
 void WTrackMenu::slotAddToAutoDJBottom() {
     // append to auto DJ
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::BOTTOM);
+    this->close();
 }
 
 void WTrackMenu::slotAddToAutoDJTop() {
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::TOP);
+    this->close();
 }
 
 void WTrackMenu::slotAddToAutoDJReplace() {
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::REPLACE);
+    this->close();
 }
 
 void WTrackMenu::addToAutoDJ(PlaylistDAO::AutoDJSendLoc loc) {

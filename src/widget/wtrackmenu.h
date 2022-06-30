@@ -3,6 +3,7 @@
 #include <QMenu>
 #include <QModelIndex>
 #include <QPointer>
+#include <QWidgetAction>
 #include <memory>
 
 #include "library/coverart.h"
@@ -247,6 +248,7 @@ class WTrackMenu : public QMenu {
     QAction* m_pAutoDJBottomAct{};
     QAction* m_pAutoDJTopAct{};
     QAction* m_pAutoDJReplaceAct{};
+    QWidgetAction* m_pAutoDJBtnAction{};
 
     // Remove from table
     QAction* m_pRemoveAct{};
