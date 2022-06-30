@@ -1198,6 +1198,8 @@ WLibraryTextBrowser QMenu,
 WTrackMenu,
 WTrackMenu QMenu,
 WTrackMenu QMenu QCheckBox,
+WTrackMenu QLabel,
+WTrackMenu QPushButton,
 WEffectChainPresetButton QMenu,
 WEffectChainPresetButton QMenu QCheckBox,
 QLineEdit QMenu,
@@ -2923,6 +2925,8 @@ WTrackMenu::item,
 WTrackMenu QMenu,
 WTrackMenu QMenu::item,
 WTrackMenu QMenu QCheckBox,
+WTrackMenu QLabel,
+WTrackMenu QPushButton,
 QLineEdit QMenu,
 QLineEdit QMenu::item,
 WCoverArtMenu,
@@ -2957,6 +2961,9 @@ WTrackMenu QMenu::item:selected,
 WTrackMenu QMenu QCheckBox:selected,
 WTrackMenu QMenu QCheckBox:focus,
 WTrackMenu QMenu QCheckBox:hover,
+WTrackMenu QPushButton:selected,
+WTrackMenu QPushButton:focus,
+WTrackMenu QPushButton:hover,
 QLineEdit QMenu::item:selected,
 WCoverArtMenu::item:selected,
 WEffectSelector::item:selected,
@@ -3102,6 +3109,11 @@ WEffectChainPresetButton QMenu QCheckBox::indicator:unchecked:selected,
 WSearchLineEdit::indicator:unchecked,
 WSearchLineEdit::indicator:unchecked:selected {
   image: none;
+}
+
+#WTrackMenuAutoDJButtons QPushButton {
+  border: 1px solid grey;
+  background-color: transparent;
 }
 /************** common styles for WEffectSelector ******************************
 *************** QSpinBox, QMenu, QToolTip *************************************/

@@ -149,6 +149,14 @@ class WTrackMenu : public QMenu {
 
   private:
     void closeEvent(QCloseEvent* event) override;
+
+    bool focusNextPrevChild(bool next) override {
+        if (m_pWidgetAutoDJButtons) {
+            //return m_pWidgetAutoDJButtons->focusNextPrevChild(next);
+        }
+        return QWidget::focusNextPrevChild(next);
+    }
+
     // This getter verifies that m_pTrackModel is set when
     // invoked.
     const QModelIndexList& getTrackIndices() const;
@@ -245,10 +253,9 @@ class WTrackMenu : public QMenu {
     QAction* m_pAddToPreviewDeck{};
 
     // Send to Auto-DJ Action
-    QAction* m_pAutoDJBottomAct{};
-    QAction* m_pAutoDJTopAct{};
-    QAction* m_pAutoDJReplaceAct{};
     QWidgetAction* m_pAutoDJBtnAction{};
+    // widget containing the AutoDJ buttons
+    QWidget* m_pWidgetAutoDJButtons;
 
     // Remove from table
     QAction* m_pRemoveAct{};

@@ -199,25 +199,43 @@ void WTrackMenu::createActions() {
 
     if (featureIsEnabled(Feature::AutoDJ)) {
         m_pAutoDJBtnAction = new QWidgetAction(this);
-        //m_pAutoDJBtnAction = make_parented<QWidgetAction>(this);
-        QWidget* pWidget = new QWidget();
+
+        QWidget* pWidgetAutoDJButtons = new QWidget();
+        pWidgetAutoDJButtons->setObjectName("WTrackMenuAutoDJButtons");
         QHBoxLayout* pLayout = new QHBoxLayout();
-        QLabel* pLabel = new QLabel("Add to AutoDJ queueu");
+
+        QLabel* pLabel = new QLabel("Add to AutoDJ queue");
+
         QPushButton* pBtn1 = new QPushButton("Top");
         QPushButton* pBtn2 = new QPushButton("Bottom");
         QPushButton* pBtn3 = new QPushButton("Replace");
-        pBtn1->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
-        pBtn2->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
-        pBtn3->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Preferred);
+        pBtn1->setObjectName("AutoDJAddTopBtn");
+        pBtn2->setObjectName("AutoDJAddBottmBtn");
+        pBtn3->setObjectName("AutoDJReplaceBtn");
+        // TODO emit QWidgetAction/QAction::triggered instead of
+        // calling close() in the AutoDJ slots
         connect(pBtn1, &QPushButton::clicked, this, &WTrackMenu::slotAddToAutoDJTop);
         connect(pBtn2, &QPushButton::clicked, this, &WTrackMenu::slotAddToAutoDJBottom);
         connect(pBtn3, &QPushButton::clicked, this, &WTrackMenu::slotAddToAutoDJReplace);
+
         pLayout->addWidget(pLabel);
         pLayout->addWidget(pBtn1);
         pLayout->addWidget(pBtn2);
         pLayout->addWidget(pBtn3);
-        pWidget->setLayout(pLayout);
-        m_pAutoDJBtnAction->setDefaultWidget(pWidget);
+        pWidgetAutoDJButtons->setLayout(pLayout);
+
+        pWidgetAutoDJButtons->setFocusPolicy(Qt::TabFocus);
+        pBtn1->setFocusPolicy(Qt::StrongFocus);
+        pBtn2->setFocusPolicy(Qt::StrongFocus);
+        pBtn3->setFocusPolicy(Qt::StrongFocus);
+        //connect(pBtn3,
+        //        &QPushButton::focusPreviousChild);
+        // focus pBtn1 when pWidgetAutoDJButtons gets focused, regardless if this
+        // Up or Down was pressed
+        pWidgetAutoDJButtons->setFocusProxy(pBtn1);
+        //        pWidgetAutoDJButtons->setTabOrder(pBtn1, pBtn2);
+        //        pWidgetAutoDJButtons->setTabOrder(pBtn2, pBtn3);
+        m_pAutoDJBtnAction->setDefaultWidget(pWidgetAutoDJButtons);
     }
 
     if (featureIsEnabled(Feature::LoadTo)) {
@@ -2051,17 +2069,17 @@ void WTrackMenu::slotShowDlgTagFetcher() {
 void WTrackMenu::slotAddToAutoDJBottom() {
     // append to auto DJ
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::BOTTOM);
-    this->close();
+    close();
 }
 
 void WTrackMenu::slotAddToAutoDJTop() {
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::TOP);
-    this->close();
+    close();
 }
 
 void WTrackMenu::slotAddToAutoDJReplace() {
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::REPLACE);
-    this->close();
+    close();
 }
 
 void WTrackMenu::addToAutoDJ(PlaylistDAO::AutoDJSendLoc loc) {
