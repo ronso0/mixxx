@@ -618,7 +618,7 @@ WBpmEditor,
   qproperty-layoutAlignment: 'AlignRight | AlignTop';
 }
 #FxUnitControlsExpanded,
-#FxUnitControlsCollapsed,
+/*#FxUnitControlsCollapsed,*/
 #FxSlotContainer,
 #FxSlotControls,
 #FxFocusButtonBox,
@@ -634,6 +634,7 @@ WBpmEditor,
   qproperty-layoutAlignment: 'AlignRight | AlignVCenter';
 }
 
+#FxUnitControlsCollapsed,
 #FxParameterKnobBox {
   qproperty-layoutAlignment: 'AlignHCenter | AlignTop';
 }

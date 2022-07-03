@@ -3,7 +3,6 @@
   Description:
     An effect unit widget.
   Variables:
-    group: The group for the controls.
     FxRack
     FxUnit
 -->
@@ -28,7 +27,7 @@
           <Transform><Not/></Transform>
           <BindProperty>visible</BindProperty>
         </Connection>
-      </WidgetGroup><!-- FxSlotsCollapsed -->
+      </WidgetGroup>
 
       <WidgetGroup>
         <Layout>horizontal</Layout>
@@ -40,7 +39,7 @@
           <ConfigKey persist="true">[EffectRack1_EffectUnit<Variable name="FxUnit"/>],show_parameters</ConfigKey>
           <BindProperty>visible</BindProperty>
         </Connection>
-      </WidgetGroup><!-- FxUnitControlsCollapsed -->
+      </WidgetGroup>
 
     </Children>
   </WidgetGroup>
