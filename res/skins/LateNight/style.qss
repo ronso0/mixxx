@@ -608,7 +608,7 @@ WTrackProperty[selected="false"] {
   qproperty-layoutAlignment: 'AlignRight | AlignTop';
 }
 #FxUnitControlsExpanded,
-#FxUnitControlsCollapsed,
+/*#FxUnitControlsCollapsed,*/
 #FxSlotContainer,
 #FxSlotControls,
 #FxFocusButtonBox,
@@ -624,6 +624,7 @@ WTrackProperty[selected="false"] {
   qproperty-layoutAlignment: 'AlignRight | AlignVCenter';
 }
 
+#FxUnitControlsCollapsed,
 #FxParameterKnobBox {
   qproperty-layoutAlignment: 'AlignHCenter | AlignTop';
 }
