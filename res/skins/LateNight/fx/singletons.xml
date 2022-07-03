@@ -259,4 +259,31 @@
       </WidgetGroup>
     </Children>
   </SingletonDefinition>
+
+  <SingletonDefinition>
+    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotParameters1</ObjectName>
+    <Children>
+      <Template src="skin:/fx/slot_parameters.xml">
+        <SetVariable name="FxNum">1</SetVariable>
+      </Template>
+    </Children>
+  </SingletonDefinition>
+
+  <SingletonDefinition>
+    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotParameters2</ObjectName>
+    <Children>
+      <Template src="skin:/fx/slot_parameters.xml">
+        <SetVariable name="FxNum">2</SetVariable>
+      </Template>
+    </Children>
+  </SingletonDefinition>
+
+  <SingletonDefinition>
+    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotParameters3</ObjectName>
+    <Children>
+      <Template src="skin:/fx/slot_parameters.xml">
+        <SetVariable name="FxNum">3</SetVariable>
+      </Template>
+    </Children>
+  </SingletonDefinition>
 </Template>

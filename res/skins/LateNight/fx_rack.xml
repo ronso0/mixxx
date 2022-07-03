@@ -65,10 +65,6 @@
               <WidgetGroup>
                 <ObjectName>FxRackFillerL</ObjectName>
                 <SizePolicy>min,me</SizePolicy>
-                <Connection>
-                  <ConfigKey>[EffectRack1_EffectUnit2],show_parameters</ConfigKey>
-                  <BindProperty>visible</BindProperty>
-                </Connection>
               </WidgetGroup>
             </Children>
           </WidgetGroup>
@@ -85,10 +81,6 @@
               <WidgetGroup>
                 <ObjectName>FxRackFillerL</ObjectName>
                 <SizePolicy>min,me</SizePolicy>
-                <Connection>
-                  <ConfigKey>[EffectRack1_EffectUnit4],show_parameters</ConfigKey>
-                  <BindProperty>visible</BindProperty>
-                </Connection>
               </WidgetGroup>
             </Children>
             <Connection>
@@ -116,10 +108,6 @@
               <WidgetGroup>
                 <ObjectName>FxRackFillerR</ObjectName>
                 <SizePolicy>min,me</SizePolicy>
-                <Connection>
-                  <ConfigKey>[EffectRack1_EffectUnit1],show_parameters</ConfigKey>
-                  <BindProperty>visible</BindProperty>
-                </Connection>
               </WidgetGroup>
             </Children>
           </WidgetGroup>
@@ -136,10 +124,6 @@
               <WidgetGroup>
                 <ObjectName>FxRackFillerR</ObjectName>
                 <SizePolicy>min,me</SizePolicy>
-                <Connection>
-                  <ConfigKey>[EffectRack1_EffectUnit3],show_parameters</ConfigKey>
-                  <BindProperty>visible</BindProperty>
-                </Connection>
               </WidgetGroup>
             </Children>
             <Connection>

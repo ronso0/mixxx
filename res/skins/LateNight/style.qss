@@ -566,7 +566,7 @@ WSpinny { /*
   qproperty-layoutAlignment: 'AlignRight | AlignTop';
 }
 #FxUnitControlsExpanded,
-#FxUnitControlsCollapsed,
+/*#FxUnitControlsCollapsed,*/
 #FxSlotContainer,
 #FxSlotControls,
 #FxFocusButtonBox,
@@ -582,6 +582,7 @@ WSpinny { /*
   qproperty-layoutAlignment: 'AlignRight | AlignVCenter';
 }
 
+#FxUnitControlsCollapsed,
 #FxParameterKnobBox {
   qproperty-layoutAlignment: 'AlignHCenter | AlignTop';
 }
