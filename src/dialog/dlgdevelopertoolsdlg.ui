@@ -130,7 +130,7 @@ p, li { white-space: pre-wrap; }
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="statsTab">
+     <!--widget class="QWidget" name="statsTab">
       <attribute name="title">
        <string>Stats</string>
       </attribute>
@@ -158,7 +158,7 @@ p, li { white-space: pre-wrap; }
         </widget>
        </item>
       </layout>
-     </widget>
+     </widget-->
     </widget>
    </item>
   </layout>

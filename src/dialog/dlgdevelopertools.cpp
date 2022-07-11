@@ -6,7 +6,7 @@
 #include "moc_dlgdevelopertools.cpp"
 #include "util/cmdlineargs.h"
 #include "util/logging.h"
-#include "util/statsmanager.h"
+//#include "util/statsmanager.h"
 
 DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
                                      UserSettingsPointer pConfig)
@@ -19,17 +19,17 @@ DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
     controlsTable->hideColumn(ControlModel::CONTROL_COLUMN_DESCRIPTION);
     controlsTable->hideColumn(ControlModel::CONTROL_COLUMN_FILTER);
 
-    StatsManager* pManager = StatsManager::instance();
-    if (pManager) {
-        connect(pManager,
-                &StatsManager::statUpdated,
-                &m_statModel,
-                &StatModel::statUpdated);
-        pManager->emitAllStats();
-    }
+    //StatsManager* pManager = StatsManager::instance();
+    //if (pManager) {
+    //    connect(pManager,
+    //            &StatsManager::statUpdated,
+    //            &m_statModel,
+    //            &StatModel::statUpdated);
+    //    pManager->emitAllStats();
+    //}
 
-    m_statProxyModel.setSourceModel(&m_statModel);
-    statsTable->setModel(&m_statProxyModel);
+    //m_statProxyModel.setSourceModel(&m_statModel);
+    //statsTable->setModel(&m_statProxyModel);
 
     QString logFileName = QDir(pConfig->getSettingsPath()).filePath("mixxx.log");
     m_logFile.setFileName(logFileName);
@@ -93,11 +93,11 @@ void DlgDeveloperTools::timerEvent(QTimerEvent* pEvent) {
                 logTextView->append(newLines.join(""));
             }
         }
-    } else if (toolTabWidget->currentWidget() == statsTab) {
-        StatsManager* pManager = StatsManager::instance();
-        if (pManager) {
-            pManager->updateStats();
-        }
+        //} else if (toolTabWidget->currentWidget() == statsTab) {
+        //    StatsManager* pManager = StatsManager::instance();
+        //    if (pManager) {
+        //        pManager->updateStats();
+        //    }
     }
 }
 

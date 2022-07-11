@@ -441,104 +441,102 @@ void WMainMenuBar::initialize() {
     addMenu(pOptionsMenu);
 
     // DEVELOPER MENU
-    if (CmdlineArgs::Instance().getDeveloper()) {
-        QMenu* pDeveloperMenu = new QMenu(tr("&Developer"), this);
+    QMenu* pDeveloperMenu = new QMenu(tr("&Developer"), this);
 
-        QString reloadSkinTitle = tr("&Reload Skin");
-        QString reloadSkinText = tr("Reload the skin");
-        auto* pDeveloperReloadSkin = new QAction(reloadSkinTitle, this);
-        pDeveloperReloadSkin->setShortcut(
+    QString reloadSkinTitle = tr("&Reload Skin");
+    QString reloadSkinText = tr("Reload the skin");
+    auto* pDeveloperReloadSkin = new QAction(reloadSkinTitle, this);
+    pDeveloperReloadSkin->setShortcut(
             QKeySequence(m_pKbdConfig->getValue(
                     ConfigKey("[KeyboardShortcuts]", "OptionsMenu_ReloadSkin"),
                     tr("Ctrl+Shift+R"))));
-        pDeveloperReloadSkin->setShortcutContext(Qt::ApplicationShortcut);
-        pDeveloperReloadSkin->setStatusTip(reloadSkinText);
-        pDeveloperReloadSkin->setWhatsThis(buildWhatsThis(reloadSkinTitle, reloadSkinText));
-        connect(pDeveloperReloadSkin, &QAction::triggered, this, &WMainMenuBar::reloadSkin);
-        pDeveloperMenu->addAction(pDeveloperReloadSkin);
+    pDeveloperReloadSkin->setShortcutContext(Qt::ApplicationShortcut);
+    pDeveloperReloadSkin->setStatusTip(reloadSkinText);
+    pDeveloperReloadSkin->setWhatsThis(buildWhatsThis(reloadSkinTitle, reloadSkinText));
+    connect(pDeveloperReloadSkin, &QAction::triggered, this, &WMainMenuBar::reloadSkin);
+    pDeveloperMenu->addAction(pDeveloperReloadSkin);
 
-        QString developerToolsTitle = tr("Developer &Tools");
-        QString developerToolsText = tr("Opens the developer tools dialog");
-        auto* pDeveloperTools = new QAction(developerToolsTitle, this);
-        pDeveloperTools->setShortcut(
+    QString developerToolsTitle = tr("Developer &Tools");
+    QString developerToolsText = tr("Opens the developer tools dialog");
+    auto* pDeveloperTools = new QAction(developerToolsTitle, this);
+    pDeveloperTools->setShortcut(
             QKeySequence(m_pKbdConfig->getValue(
                     ConfigKey("[KeyboardShortcuts]", "OptionsMenu_DeveloperTools"),
                     tr("Ctrl+Shift+T"))));
-        pDeveloperTools->setShortcutContext(Qt::ApplicationShortcut);
-        pDeveloperTools->setCheckable(true);
-        pDeveloperTools->setChecked(false);
-        pDeveloperTools->setStatusTip(developerToolsText);
-        pDeveloperTools->setWhatsThis(buildWhatsThis(developerToolsTitle, developerToolsText));
-        connect(pDeveloperTools, &QAction::triggered, this, &WMainMenuBar::toggleDeveloperTools);
-        connect(this,
-                &WMainMenuBar::internalDeveloperToolsStateChange,
-                pDeveloperTools,
-                &QAction::setChecked);
-        pDeveloperMenu->addAction(pDeveloperTools);
+    pDeveloperTools->setShortcutContext(Qt::ApplicationShortcut);
+    pDeveloperTools->setCheckable(true);
+    pDeveloperTools->setChecked(false);
+    pDeveloperTools->setStatusTip(developerToolsText);
+    pDeveloperTools->setWhatsThis(buildWhatsThis(developerToolsTitle, developerToolsText));
+    connect(pDeveloperTools, &QAction::triggered, this, &WMainMenuBar::toggleDeveloperTools);
+    connect(this,
+            &WMainMenuBar::internalDeveloperToolsStateChange,
+            pDeveloperTools,
+            &QAction::setChecked);
+    pDeveloperMenu->addAction(pDeveloperTools);
 
-        QString enableExperimentTitle = tr("Stats: &Experiment Bucket");
-        QString enableExperimentToolsText = tr(
-            "Enables experiment mode. Collects stats in the EXPERIMENT tracking bucket.");
-        auto* pDeveloperStatsExperiment = new QAction(enableExperimentTitle, this);
-        pDeveloperStatsExperiment->setShortcut(
-            QKeySequence(m_pKbdConfig->getValue(
-                    ConfigKey("[KeyboardShortcuts]", "OptionsMenu_DeveloperStatsExperiment"),
-                    tr("Ctrl+Shift+E"))));
-        pDeveloperStatsExperiment->setShortcutContext(Qt::ApplicationShortcut);
-        pDeveloperStatsExperiment->setStatusTip(enableExperimentToolsText);
-        pDeveloperStatsExperiment->setWhatsThis(buildWhatsThis(
-            enableExperimentTitle, enableExperimentToolsText));
-        pDeveloperStatsExperiment->setCheckable(true);
-        pDeveloperStatsExperiment->setChecked(Experiment::isExperiment());
-        connect(pDeveloperStatsExperiment,
-                &QAction::triggered,
-                this,
-                &WMainMenuBar::slotDeveloperStatsExperiment);
-        pDeveloperMenu->addAction(pDeveloperStatsExperiment);
+    //QString enableExperimentTitle = tr("Stats: &Experiment Bucket");
+    //QString enableExperimentToolsText = tr(
+    //    "Enables experiment mode. Collects stats in the EXPERIMENT tracking bucket.");
+    //auto* pDeveloperStatsExperiment = new QAction(enableExperimentTitle, this);
+    //pDeveloperStatsExperiment->setShortcut(
+    //    QKeySequence(m_pKbdConfig->getValue(
+    //            ConfigKey("[KeyboardShortcuts]", "OptionsMenu_DeveloperStatsExperiment"),
+    //            tr("Ctrl+Shift+E"))));
+    //pDeveloperStatsExperiment->setShortcutContext(Qt::ApplicationShortcut);
+    //pDeveloperStatsExperiment->setStatusTip(enableExperimentToolsText);
+    //pDeveloperStatsExperiment->setWhatsThis(buildWhatsThis(
+    //    enableExperimentTitle, enableExperimentToolsText));
+    //pDeveloperStatsExperiment->setCheckable(true);
+    //pDeveloperStatsExperiment->setChecked(Experiment::isExperiment());
+    //connect(pDeveloperStatsExperiment,
+    //        &QAction::triggered,
+    //        this,
+    //        &WMainMenuBar::slotDeveloperStatsExperiment);
+    //pDeveloperMenu->addAction(pDeveloperStatsExperiment);
 
-        QString enableBaseTitle = tr("Stats: &Base Bucket");
-        QString enableBaseToolsText = tr(
-            "Enables base mode. Collects stats in the BASE tracking bucket.");
-        auto* pDeveloperStatsBase = new QAction(enableBaseTitle, this);
-        pDeveloperStatsBase->setShortcut(
-            QKeySequence(m_pKbdConfig->getValue(
-                    ConfigKey("[KeyboardShortcuts]", "OptionsMenu_DeveloperStatsBase"),
-                    tr("Ctrl+Shift+B"))));
-        pDeveloperStatsBase->setShortcutContext(Qt::ApplicationShortcut);
-        pDeveloperStatsBase->setStatusTip(enableBaseToolsText);
-        pDeveloperStatsBase->setWhatsThis(buildWhatsThis(
-            enableBaseTitle, enableBaseToolsText));
-        pDeveloperStatsBase->setCheckable(true);
-        pDeveloperStatsBase->setChecked(Experiment::isBase());
-        connect(pDeveloperStatsBase,
-                &QAction::triggered,
-                this,
-                &WMainMenuBar::slotDeveloperStatsBase);
-        pDeveloperMenu->addAction(pDeveloperStatsBase);
+    //QString enableBaseTitle = tr("Stats: &Base Bucket");
+    //QString enableBaseToolsText = tr(
+    //    "Enables base mode. Collects stats in the BASE tracking bucket.");
+    //auto* pDeveloperStatsBase = new QAction(enableBaseTitle, this);
+    //pDeveloperStatsBase->setShortcut(
+    //    QKeySequence(m_pKbdConfig->getValue(
+    //            ConfigKey("[KeyboardShortcuts]", "OptionsMenu_DeveloperStatsBase"),
+    //            tr("Ctrl+Shift+B"))));
+    //pDeveloperStatsBase->setShortcutContext(Qt::ApplicationShortcut);
+    //pDeveloperStatsBase->setStatusTip(enableBaseToolsText);
+    //pDeveloperStatsBase->setWhatsThis(buildWhatsThis(
+    //    enableBaseTitle, enableBaseToolsText));
+    //pDeveloperStatsBase->setCheckable(true);
+    //pDeveloperStatsBase->setChecked(Experiment::isBase());
+    //connect(pDeveloperStatsBase,
+    //        &QAction::triggered,
+    //        this,
+    //        &WMainMenuBar::slotDeveloperStatsBase);
+    //pDeveloperMenu->addAction(pDeveloperStatsBase);
 
-        // "D" cannot be used with Alt here as it is already by the Developer menu
-        QString scriptDebuggerTitle = tr("Deb&ugger Enabled");
-        QString scriptDebuggerText = tr("Enables the debugger during skin parsing");
-        bool scriptDebuggerEnabled = m_pConfig->getValueString(
-            ConfigKey("[ScriptDebugger]", "Enabled")) == "1";
-        auto* pDeveloperDebugger = new QAction(scriptDebuggerTitle, this);
-        pDeveloperDebugger->setShortcut(
-            QKeySequence(m_pKbdConfig->getValue(
-                    ConfigKey("[KeyboardShortcuts]", "DeveloperMenu_EnableDebugger"),
-                    tr("Ctrl+Shift+D"))));
-        pDeveloperDebugger->setShortcutContext(Qt::ApplicationShortcut);
-        pDeveloperDebugger->setWhatsThis(buildWhatsThis(keyboardShortcutTitle, keyboardShortcutText));
-        pDeveloperDebugger->setCheckable(true);
-        pDeveloperDebugger->setStatusTip(scriptDebuggerText);
-        pDeveloperDebugger->setChecked(scriptDebuggerEnabled);
-        connect(pDeveloperDebugger,
-                &QAction::triggered,
-                this,
-                &WMainMenuBar::slotDeveloperDebugger);
-        pDeveloperMenu->addAction(pDeveloperDebugger);
+    //// "D" cannot be used with Alt here as it is already by the Developer menu
+    //QString scriptDebuggerTitle = tr("Deb&ugger Enabled");
+    //QString scriptDebuggerText = tr("Enables the debugger during skin parsing");
+    //bool scriptDebuggerEnabled = m_pConfig->getValueString(
+    //    ConfigKey("[ScriptDebugger]", "Enabled")) == "1";
+    //auto* pDeveloperDebugger = new QAction(scriptDebuggerTitle, this);
+    //pDeveloperDebugger->setShortcut(
+    //    QKeySequence(m_pKbdConfig->getValue(
+    //            ConfigKey("[KeyboardShortcuts]", "DeveloperMenu_EnableDebugger"),
+    //            tr("Ctrl+Shift+D"))));
+    //pDeveloperDebugger->setShortcutContext(Qt::ApplicationShortcut);
+    //pDeveloperDebugger->setWhatsThis(buildWhatsThis(keyboardShortcutTitle, keyboardShortcutText));
+    //pDeveloperDebugger->setCheckable(true);
+    //pDeveloperDebugger->setStatusTip(scriptDebuggerText);
+    //pDeveloperDebugger->setChecked(scriptDebuggerEnabled);
+    //connect(pDeveloperDebugger,
+    //        &QAction::triggered,
+    //        this,
+    //        &WMainMenuBar::slotDeveloperDebugger);
+    //pDeveloperMenu->addAction(pDeveloperDebugger);
 
-        addMenu(pDeveloperMenu);
-    }
+    addMenu(pDeveloperMenu);
 
     addSeparator();
 

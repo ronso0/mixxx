@@ -9,7 +9,7 @@
 #include "control/controlsortfiltermodel.h"
 #include "dialog/ui_dlgdevelopertoolsdlg.h"
 #include "preferences/usersettings.h"
-#include "util/statmodel.h"
+//#include "util/statmodel.h"
 
 class DlgDeveloperTools : public QDialog, public Ui::DlgDeveloperTools {
     Q_OBJECT
@@ -28,8 +28,8 @@ class DlgDeveloperTools : public QDialog, public Ui::DlgDeveloperTools {
     UserSettingsPointer m_pConfig;
     ControlSortFilterModel m_controlProxyModel;
 
-    StatModel m_statModel;
-    QSortFilterProxyModel m_statProxyModel;
+    //StatModel m_statModel;
+    //QSortFilterProxyModel m_statProxyModel;
 
     QFile m_logFile;
     QTextCursor m_logCursor;
