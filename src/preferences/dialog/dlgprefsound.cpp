@@ -21,7 +21,7 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
         : DlgPreferencePage(pParent),
           m_pSoundManager(pSoundManager),
           m_pSettings(pSettings),
-          m_config(pSoundManager.get()),
+          m_soundConfig(pSoundManager.get()),
           m_settingsModified(false),
           m_bLatencyChanged(false),
           m_bSkipConfigClear(true),
@@ -295,9 +295,9 @@ void DlgPrefSound::slotApply() {
         return;
     }
 
-    m_config.clearInputs();
-    m_config.clearOutputs();
-    emit writePaths(&m_config);
+    m_soundConfig.clearInputs();
+    m_soundConfig.clearOutputs();
+    emit writePaths(&m_soundConfig);
 
     SoundDeviceError err = SOUNDDEVICE_ERROR_OK;
     {
@@ -306,7 +306,7 @@ void DlgPrefSound::slotApply() {
         m_pSettings->set(ConfigKey("[Master]", "keylock_engine"),
                        ConfigValue(keylockComboBox->currentIndex()));
 
-        err = m_pSoundManager->setConfig(m_config);
+        err = m_pSoundManager->setConfig(m_soundConfig);
     }
     if (err != SOUNDDEVICE_ERROR_OK) {
         QString error = m_pSoundManager->getLastErrorMessage(err);
@@ -438,12 +438,12 @@ void DlgPrefSound::loadSettings() {
 /// Loads the settings in the given SoundManagerConfig into the dialog.
 void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
     m_loading = true; // so settingsChanged ignores all our modifications here
-    m_config = config;
-    int apiIndex = apiComboBox->findData(m_config.getAPI());
+    m_soundConfig = config;
+    int apiIndex = apiComboBox->findData(m_soundConfig.getAPI());
     if (apiIndex != -1) {
         apiComboBox->setCurrentIndex(apiIndex);
     }
-    int sampleRateIndex = sampleRateComboBox->findData(m_config.getSampleRate());
+    int sampleRateIndex = sampleRateComboBox->findData(m_soundConfig.getSampleRate());
     if (sampleRateIndex != -1) {
         sampleRateComboBox->setCurrentIndex(sampleRateIndex);
         if (audioBufferComboBox->count() <= 0) {
@@ -453,7 +453,7 @@ void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
             // the updateLatencies slot won't run -- bkgood lp bug 689373
         }
     }
-    int sizeIndex = audioBufferComboBox->findData(m_config.getAudioBufferSizeIndex());
+    int sizeIndex = audioBufferComboBox->findData(m_soundConfig.getAudioBufferSizeIndex());
     if (sizeIndex != -1) {
         audioBufferComboBox->setCurrentIndex(sizeIndex);
     }
@@ -463,7 +463,7 @@ void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
     // buffer size or sample rate.
     m_bLatencyChanged = false;
 
-    int syncBuffers = m_config.getSyncBuffers();
+    int syncBuffers = m_soundConfig.getSyncBuffers();
     if (syncBuffers == 0) {
         // "Experimental (no delay)"))
         deviceSyncComboBox->setCurrentIndex(1);
@@ -475,7 +475,7 @@ void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
         deviceSyncComboBox->setCurrentIndex(0);
     }
 
-    if (m_config.getForceNetworkClock()) {
+    if (m_soundConfig.getForceNetworkClock()) {
         engineClockComboBox->setCurrentIndex(1);
     } else {
         engineClockComboBox->setCurrentIndex(0);
@@ -488,7 +488,7 @@ void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
 
     m_loading = false;
     // DlgPrefSoundItem has it's own inhibit flag
-    emit loadPaths(m_config);
+    emit loadPaths(m_soundConfig);
 }
 
 /// Slot called when the user selects a different API, or the
@@ -496,12 +496,12 @@ void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
 /// loads a value from SoundManager). Refreshes the device lists
 /// for the new API and pushes those to the path items.
 void DlgPrefSound::apiChanged(int index) {
-    m_config.setAPI(apiComboBox->itemData(index).toString());
+    m_soundConfig.setAPI(apiComboBox->itemData(index).toString());
     refreshDevices();
     // JACK sets its own buffer size and sample rate that Mixxx cannot change.
     // TODO(Be): Get the buffer size from JACK and update audioBufferComboBox.
     // PortAudio does not have a way to get the buffer size from JACK as of July 2017.
-    if (m_config.getAPI() == MIXXX_PORTAUDIO_JACK_STRING) {
+    if (m_soundConfig.getAPI() == MIXXX_PORTAUDIO_JACK_STRING) {
         sampleRateComboBox->setEnabled(false);
         latencyLabel->setEnabled(false);
         audioBufferComboBox->setEnabled(false);
@@ -533,7 +533,7 @@ void DlgPrefSound::updateAPIs() {
 /// Slot called when the sample rate combo box changes to update the
 /// sample rate in the config.
 void DlgPrefSound::sampleRateChanged(int index) {
-    m_config.setSampleRate(
+    m_soundConfig.setSampleRate(
             sampleRateComboBox->itemData(index).toUInt());
     m_bLatencyChanged = true;
     checkLatencyCompensation();
@@ -542,7 +542,7 @@ void DlgPrefSound::sampleRateChanged(int index) {
 /// Slot called when the latency combo box is changed to update the
 /// latency in the config.
 void DlgPrefSound::audioBufferChanged(int index) {
-    m_config.setAudioBufferSizeIndex(
+    m_soundConfig.setAudioBufferSizeIndex(
             audioBufferComboBox->itemData(index).toUInt());
     m_bLatencyChanged = true;
     checkLatencyCompensation();
@@ -551,23 +551,23 @@ void DlgPrefSound::audioBufferChanged(int index) {
 void DlgPrefSound::syncBuffersChanged(int index) {
     if (index == 0) {
         // "Default (long delay)" = 2 buffer
-        m_config.setSyncBuffers(2);
+        m_soundConfig.setSyncBuffers(2);
     } else if (index == 1) {
         // "Experimental (no delay)")) = 0 buffer
-        m_config.setSyncBuffers(0);
+        m_soundConfig.setSyncBuffers(0);
     } else {
         // "Disabled (short delay)")) = 1 buffer
-        m_config.setSyncBuffers(1);
+        m_soundConfig.setSyncBuffers(1);
     }
 }
 
 void DlgPrefSound::engineClockChanged(int index) {
     if (index == 0) {
         // "Soundcard Clock"
-        m_config.setForceNetworkClock(false);
+        m_soundConfig.setForceNetworkClock(false);
     } else {
         // "Network Clock"
-        m_config.setForceNetworkClock(true);
+        m_soundConfig.setForceNetworkClock(true);
     }
 }
 
@@ -607,14 +607,14 @@ void DlgPrefSound::updateAudioBufferSizes(int sampleRateIndex) {
 /// Slot called when device lists go bad to refresh them, or the API
 /// just changes and we need to display new devices.
 void DlgPrefSound::refreshDevices() {
-    if (m_config.getAPI() == SoundManagerConfig::kDefaultAPI) {
+    if (m_soundConfig.getAPI() == SoundManagerConfig::kDefaultAPI) {
         m_outputDevices.clear();
         m_inputDevices.clear();
     } else {
         m_outputDevices =
-            m_pSoundManager->getDeviceList(m_config.getAPI(), true, false);
+                m_pSoundManager->getDeviceList(m_soundConfig.getAPI(), true, false);
         m_inputDevices =
-            m_pSoundManager->getDeviceList(m_config.getAPI(), false, true);
+                m_pSoundManager->getDeviceList(m_soundConfig.getAPI(), false, true);
     }
     emit refreshOutputDevices(m_outputDevices);
     emit refreshInputDevices(m_inputDevices);
@@ -739,13 +739,13 @@ void DlgPrefSound::checkLatencyCompensation() {
 
     // Do not clear the SoundManagerConfig on startup, from slotApply, or from slotUpdate
     if (!m_bSkipConfigClear) {
-        m_config.clearInputs();
-        m_config.clearOutputs();
+        m_soundConfig.clearInputs();
+        m_soundConfig.clearOutputs();
     }
 
-    emit writePaths(&m_config);
+    emit writePaths(&m_soundConfig);
 
-    if (m_config.hasMicInputs() && !m_config.hasExternalRecordBroadcast()) {
+    if (m_soundConfig.hasMicInputs() && !m_soundConfig.hasExternalRecordBroadcast()) {
         micMonitorModeComboBox->setEnabled(true);
         if (configuredMicMonitorMode == EngineMaster::MicMonitorMode::DIRECT_MONITOR) {
             latencyCompensationSpinBox->setEnabled(true);
