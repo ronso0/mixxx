@@ -58,9 +58,6 @@ SoundManager::SoundManager(UserSettingsPointer pSettings,
             ConfigKey("[SoundManager]", "status"));
     m_pControlObjectSoundStatusCO->set(SOUNDMANAGER_DISCONNECTED);
 
-    m_pControlObjectVinylControlGainCO = new ControlObject(
-            ConfigKey(VINYL_PREF_KEY, "gain"));
-
     m_pMasterAudioLatencyOverloadCount = new ControlProxy("[Master]",
             "audio_latency_overload_count");
 
@@ -100,7 +97,6 @@ SoundManager::~SoundManager() {
     // by clearDeviceList -- bkgood
 
     delete m_pControlObjectSoundStatusCO;
-    delete m_pControlObjectVinylControlGainCO;
     delete m_pMasterAudioLatencyOverloadCount;
     delete m_pMasterAudioLatencyOverload;
 }
