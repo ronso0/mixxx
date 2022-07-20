@@ -64,6 +64,12 @@ class DlgPrefSound : public DlgPreferencePage, public Ui::DlgPrefSoundDlg  {
     void addPath(const AudioOutput& output);
     void addPath(const AudioInput& input);
     void loadSettings();
+
+    void soundProfileSelected(int index);
+    void createNewProfile();
+    void duplicateProfile();
+    void deleteProfile();
+
     void apiChanged(int index);
     void updateAPIs();
     void sampleRateChanged(int index);

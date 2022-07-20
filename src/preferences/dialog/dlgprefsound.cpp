@@ -35,6 +35,23 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
             this,
             &DlgPrefSound::refreshDevices);
 
+    connect(profileComboBox,
+            QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this,
+            &DlgPrefSound::soundProfileSelected);
+    //connect(newProfileButton,
+    //        &QAbstractButton::clicked,
+    //        this,
+    //        &DlgPrefSound::createNewProfile);
+    //connect(dupProfileButton,
+    //        &QAbstractButton::clicked,
+    //        this,
+    //        &DlgPrefSound::duplicateProfile);
+    //connect(delProfileButton,
+    //        &QAbstractButton::clicked,
+    //        this,
+    //        &DlgPrefSound::deleteProfile);
+
     apiComboBox->clear();
     apiComboBox->addItem(SoundManagerConfig::kEmptyComboBox,
             SoundManagerConfig::kDefaultAPI);
@@ -102,6 +119,8 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
     headDelaySpinBox->setValue(m_pHeadDelay->get());
     boothDelaySpinBox->setValue(m_pBoothDelay->get());
 
+    // TODO Don't apply these settings instantly, connect to
+    // &DlgPrefSound::settingChanged instead
     connect(latencyCompensationSpinBox,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this,
@@ -291,7 +310,10 @@ void DlgPrefSound::slotUpdate() {
 }
 
 void DlgPrefSound::slotApply() {
+    qDebug() << "   #";
+    qDebug() << "   # slotApply";
     if (!m_settingsModified) {
+        qDebug() << "   # !m_settingsModified, return";
         return;
     }
 
@@ -312,6 +334,8 @@ void DlgPrefSound::slotApply() {
         QString error = m_pSoundManager->getLastErrorMessage(err);
         QMessageBox::warning(nullptr, tr("Configuration error"), error);
     } else {
+        m_pSettings->setValue(ConfigKey("[Master]", "sound_profile"),
+                m_soundConfig.getCurrentProfile());
         m_settingsModified = false;
         m_bLatencyChanged = false;
     }
@@ -319,6 +343,7 @@ void DlgPrefSound::slotApply() {
     loadSettings(); // in case SM decided to change anything it didn't like
     checkLatencyCompensation();
     m_bSkipConfigClear = false;
+    qDebug() << "   #";
 }
 
 QUrl DlgPrefSound::helpUrl() const {
@@ -439,6 +464,21 @@ void DlgPrefSound::loadSettings() {
 void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
     m_loading = true; // so settingsChanged ignores all our modifications here
     m_soundConfig = config;
+
+    profileComboBox->clear();
+    profileComboBox->addItems(m_soundConfig.getSoundProfiles());
+    profileComboBox->setCurrentText(m_soundConfig.getCurrentProfile());
+    qDebug() << "     .";
+    qDebug() << "     .";
+    qDebug() << "     loadSettings:";
+    qDebug() << "       conf profile:" << m_soundConfig.getCurrentProfile();
+    qDebug() << "       sel. profile:" << profileComboBox->currentText();
+    qDebug() << "     .";
+    qDebug() << "     .";
+
+    // prohibit deleting default profile)
+    //delProfileButton->setEnabled(!m_soundConfig.defaultProfileSelected());
+
     int apiIndex = apiComboBox->findData(m_soundConfig.getAPI());
     if (apiIndex != -1) {
         apiComboBox->setCurrentIndex(apiIndex);
@@ -489,6 +529,85 @@ void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
     m_loading = false;
     // DlgPrefSoundItem has it's own inhibit flag
     emit loadPaths(m_soundConfig);
+}
+
+void DlgPrefSound::soundProfileSelected(int index) {
+    if (m_loading) {
+        return;
+    }
+    QString currentProfile(m_soundConfig.getCurrentProfile());
+    qDebug() << "   .";
+    qDebug() << "   .";
+    qDebug() << "   profile selected";
+    qDebug() << "     curr:" << currentProfile;
+    qDebug() << "     new :" << profileComboBox->currentText();
+    // ignore no-op
+    if (index == profileComboBox->findText(currentProfile)) {
+        qDebug() << "     ignore no-op";
+        return;
+    }
+    // profile changed.
+    if (m_settingsModified) {
+        qDebug() << "     (sett modified)";
+        // "Sound preferences have been edited"
+        // "Do you want to save the changes to profile %1?"
+        // * Cancel (select previous profile)
+        // * Discard
+        // * Save
+        if (QMessageBox::question(this,
+                    tr("Sound preferences have been edited"),
+                    tr("Do you want to save the changes to profile %1?")
+                            .arg(currentProfile)) ==
+                QMessageBox::Yes) {
+            slotApply();
+        }
+
+        QString changeProfileTitle = tr("Sound preferences have been edited.");
+        QString changeProfileLabel = tr("Do you want to save the changes to profile <b>%1</b>?")
+                                             .arg(currentProfile);
+
+        QMessageBox changeProfileMsgBox;
+        changeProfileMsgBox.setIcon(QMessageBox::Question);
+        changeProfileMsgBox.setWindowTitle(changeProfileTitle);
+        changeProfileMsgBox.setText(changeProfileLabel);
+        QPushButton* pSave = changeProfileMsgBox.addButton(
+                tr("Save"), QMessageBox::AcceptRole);
+        changeProfileMsgBox.addButton(
+                tr("Discard"), QMessageBox::ResetRole);
+        //QPushButton* pCancel = changeProfileMsgBox.addButton(
+        //        tr("Cancel"), QMessageBox::AcceptRole);
+        //changeProfileMsgBox.setDefaultButton(pCancel);
+        changeProfileMsgBox.exec();
+
+        if (changeProfileMsgBox.close()) {
+            profileComboBox->blockSignals(true);
+            profileComboBox->setCurrentText(currentProfile);
+            profileComboBox->blockSignals(false);
+            return;
+        } else if (changeProfileMsgBox.clickedButton() == pSave) {
+            slotApply();
+        }
+        // else discard changes, just load new profile
+    }
+
+    // select and read new profile
+    m_soundConfig.setSoundProfile(profileComboBox->currentText());
+    m_settingsModified = true;
+
+    slotApply();
+    // load settings, update GUI
+    qDebug() << "   .";
+    //slotUpdate();
+}
+
+void DlgPrefSound::createNewProfile() {
+}
+
+void DlgPrefSound::duplicateProfile() {
+}
+
+void DlgPrefSound::deleteProfile() {
+    // prohibit deleting default profile
 }
 
 /// Slot called when the user selects a different API, or the
