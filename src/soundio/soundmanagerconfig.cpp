@@ -39,6 +39,9 @@ const QString xmlElementOutput = "output";
 const QString xmlElementInput = "input";
 
 const QRegularExpression kLegacyFormatRegex("((\\d*), )(.*) \\((plug)?(hw:(\\d)+(,(\\d)+))?\\)");
+
+const QStringList kSoundConfigFileNamePattern(
+        SOUNDMANAGERCONFIG_DEFAULT_NAME + QStringLiteral("*") + SOUNDMANAGERCONFIG_EXTENSION);
 } // namespace
 
 SoundManagerConfig::SoundManagerConfig(SoundManager* pSoundManager)
@@ -52,25 +55,100 @@ SoundManagerConfig::SoundManagerConfig(SoundManager* pSoundManager)
       m_bExternalRecordBroadcastConnected(false),
       m_pSoundManager(pSoundManager) {
     CmdlineArgs& cla = CmdlineArgs::Instance();
-    QDir settDir = QDir(cla.getSettingsPath());
-    // Try to load custom sound config first
-    QString customCfg = cla.getSoundConfig();
-    if (!customCfg.isEmpty()) {
-        QFileInfo customCfgFileInfo = QFileInfo(settDir.filePath(customCfg));
-        if (customCfgFileInfo.exists() && customCfgFileInfo.isReadable()) {
-            m_configFile = customCfgFileInfo;
-            return;
+    m_settingsDir = QDir(cla.getSettingsPath());
+
+    // First, check if a sound config was set by command line argument
+    QString claProfile = cla.getSoundConfig();
+    bool claProfileAccessible = false;
+    if (!claProfile.isEmpty() && claProfile.endsWith(SOUNDMANAGERCONFIG_EXTENSION)) {
+        QFileInfo claProfileFileInfo(m_settingsDir.filePath(claProfile));
+        // TODO(ronso0) move this to bool isReadableAndValidXml(QString& profilePath)?
+        if (claProfileFileInfo.exists() && claProfileFileInfo.isReadable()) {
+            m_currentProfile = claProfileFileInfo;
+            // Add the custom profile to the profile names list.
+            // This allows adding it to the profile combobox in DlgPrefSound,
+            // even if it doesn't match kSoundConfigFileNamePattern, which in turn
+            // allows re-selecting it after checking out other profiles.
+            m_configProfileNames.append(claProfileFileInfo.completeBaseName());
+            claProfileAccessible = true;
         }
     }
-    // Else use the default file
-    m_configFile = QFileInfo(settDir.filePath(SOUNDMANAGERCONFIG_FILENAME));
+
+    // Find profiles in settings dir, incl. default 'soundconfig.xml'
+    collectSoundProfiles();
+
+    if (claProfileAccessible) {
+        return;
+    }
+
+    if (m_configProfileNames.isEmpty()) {
+        // notify?
+        // defaults are loaded when writeToDisk() called SoundManager fails
+        return;
+    }
+
+    // Try to load previously configured profile
+    // If none was configured, traditional 'soundconfig.xml' is is used.
+    // If that's not present it'll be created with the new user settings.
+    QString configuredProfileName = m_pSoundManager->getConfiguredSoundProfileName();
+    if (!configuredProfileName.isEmpty() ||
+            m_configProfileNames.contains(configuredProfileName)) {
+        m_currentProfile = QFileInfo(m_settingsDir.filePath(
+                configuredProfileName + SOUNDMANAGERCONFIG_EXTENSION));
+    } else {
+        // * notify user about missing profile?
+        // * show dialog to select alternative profile?
+        // * try to load soundconfig.xml?
+        // * loadDefaults()?
+    }
+}
+
+/// Look for files matching kSoundConfigFileNamePattern inside the settings directory
+/// and store their basenames in a QStringList
+void SoundManagerConfig::collectSoundProfiles() {
+    qDebug() << "   .";
+    qDebug() << "   .";
+    qDebug() << "   collectSoundProfiles:";
+    QFileInfoList soundProfiles = m_settingsDir.entryInfoList(
+            kSoundConfigFileNamePattern,
+            QDir::Files | QDir::Readable | QDir::Writable,
+            QDir::Name);
+    //.entryInfoList(kSoundConfigFileNamePattern, QDir::SortFlags(QDir::Name)));
+    // QDirIterator would also work but does not support sorting
+    for (const QFileInfo& profile : soundProfiles) {
+        // TODO store profile name in sound profile file?
+        m_configProfileNames.append(profile.completeBaseName());
+        qDebug() << "   * " << profile.fileName();
+    }
+    qDebug() << "   .";
+    qDebug() << "   .";
+}
+
+/// Called by DlgPrefSound to load the selected sound profile
+void SoundManagerConfig::setSoundProfile(const QString& profileName) {
+    qDebug() << "     *";
+    qDebug() << "     SMC setSoundProfile:" << profileName;
+    if (profileName.isEmpty() || !m_configProfileNames.contains(profileName)) {
+        return;
+    }
+    // TODO(ronso0): move path construction to helper function?
+    QFileInfo newProfile(m_settingsDir.filePath(profileName + SOUNDMANAGERCONFIG_EXTENSION));
+    if (newProfile.exists() && newProfile.isReadable()) {
+        m_currentProfile = newProfile;
+        qDebug() << "     * switched to" << getCurrentProfile();
+        qDebug() << "     * readFromDisk:" << readFromDisk();
+    } else {
+        qDebug() << "     *** !exists || !readable";
+    }
+    qDebug() << "     *";
+    //readFromDisk();
 }
 
 /// Read the SoundManagerConfig xml serialization at the predetermined
 /// path
 /// @returns false if the file can't be read or is invalid XML, true otherwise
 bool SoundManagerConfig::readFromDisk() {
-    QFile file(m_configFile.absoluteFilePath());
+    QFile file(m_currentProfile.absoluteFilePath());
     QDomDocument doc;
     QDomElement rootElement;
     if (!file.open(QIODevice::ReadOnly)) {
@@ -96,6 +174,7 @@ bool SoundManagerConfig::readFromDisk() {
     clearInputs();
     QDomNodeList devElements(rootElement.elementsByTagName(xmlElementSoundDevice));
 
+    // FIXME Why assert that late? Without SoundManager we're screwed anyway.
     VERIFY_OR_DEBUG_ASSERT(m_pSoundManager != nullptr) {
         return false;
     }
@@ -272,7 +351,7 @@ bool SoundManagerConfig::writeToDisk() const {
         docElement.appendChild(devElement);
     }
 
-    QFile file(m_configFile.absoluteFilePath());
+    QFile file(m_currentProfile.absoluteFilePath());
     if (!file.open(QIODevice::Truncate | QIODevice::WriteOnly)) {
         return false;
     }
@@ -313,7 +392,6 @@ void SoundManagerConfig::setSampleRate(unsigned int sampleRate) {
     // making sure we don't divide by zero elsewhere
     m_sampleRate = sampleRate != 0 ? sampleRate : kFallbackSampleRate;
 }
-
 
 unsigned int SoundManagerConfig::getSyncBuffers() const {
     return m_syncBuffers;

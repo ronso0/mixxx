@@ -586,6 +586,11 @@ void SoundManager::checkConfig() {
     // latency checks itself for validity on SMConfig::setLatency()
 }
 
+QString SoundManager::getConfiguredSoundProfileName() const {
+    return m_pSettings->getValue(ConfigKey("[Master]", "sound_profile"),
+            SOUNDMANAGERCONFIG_DEFAULT_NAME);
+}
+
 void SoundManager::onDeviceOutputCallback(const SINT iFramesPerBuffer) {
     // Produce a block of samples for output. EngineMaster expects stereo
     // samples so multiply iFramesPerBuffer by 2.

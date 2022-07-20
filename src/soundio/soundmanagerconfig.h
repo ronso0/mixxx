@@ -1,12 +1,12 @@
 #pragma once
 
-#ifndef SOUNDMANAGERCONFIG_FILENAME
-#define SOUNDMANAGERCONFIG_FILENAME "soundconfig.xml"
-#endif
+#define SOUNDMANAGERCONFIG_DEFAULT_NAME "soundconfig"
+#define SOUNDMANAGERCONFIG_EXTENSION ".xml"
 
-#include <QString>
-#include <QMultiHash>
+#include <QDir>
 #include <QFileInfo>
+#include <QMultiHash>
+#include <QString>
 
 #include "soundio/soundmanagerutil.h"
 
@@ -31,6 +31,16 @@ public:
   static const unsigned int kDefaultDeckCount;
   static const int kDefaultAudioBufferSizeIndex;
   static const int kDefaultSyncBuffers;
+
+  void collectSoundProfiles();
+  QStringList getSoundProfiles() const {
+      return m_configProfileNames;
+  }
+  // getCurrentProfileIndex ?
+  QString getCurrentProfile() const {
+      return m_currentProfile.completeBaseName();
+  }
+  void setSoundProfile(const QString& profileName);
 
   bool readFromDisk();
   bool writeToDisk() const;
@@ -68,22 +78,24 @@ public:
   void loadDefaults(SoundManager* soundManager, unsigned int flags);
 
 private:
-    QFileInfo m_configFile;
-    QString m_api;
-    // none of our sample rates are actually decimals, this avoids
-    // the weirdness using floating point can introduce
-    unsigned int m_sampleRate;
-    unsigned int m_deckCount;
-    // m_latency is an index > 0, where 1 is a latency of 1ms and
-    // higher indices represent subsequently higher latencies (storing
-    // latency as milliseconds or frames per buffer is bad because those
-    // values vary with sample rate) -- bkgood
-    unsigned int m_audioBufferSizeIndex;
-    unsigned int m_syncBuffers;
-    bool m_forceNetworkClock;
-    QMultiHash<SoundDeviceId, AudioOutput> m_outputs;
-    QMultiHash<SoundDeviceId, AudioInput> m_inputs;
-    int m_iNumMicInputs;
-    bool m_bExternalRecordBroadcastConnected;
-    SoundManager* m_pSoundManager;
+  QDir m_settingsDir;
+  QFileInfo m_currentProfile;
+  QStringList m_configProfileNames;
+  QString m_api;
+  // none of our sample rates are actually decimals, this avoids
+  // the weirdness using floating point can introduce
+  unsigned int m_sampleRate;
+  unsigned int m_deckCount;
+  // m_latency is an index > 0, where 1 is a latency of 1ms and
+  // higher indices represent subsequently higher latencies (storing
+  // latency as milliseconds or frames per buffer is bad because those
+  // values vary with sample rate) -- bkgood
+  unsigned int m_audioBufferSizeIndex;
+  unsigned int m_syncBuffers;
+  bool m_forceNetworkClock;
+  QMultiHash<SoundDeviceId, AudioOutput> m_outputs;
+  QMultiHash<SoundDeviceId, AudioInput> m_inputs;
+  int m_iNumMicInputs;
+  bool m_bExternalRecordBroadcastConnected;
+  SoundManager* m_pSoundManager;
 };

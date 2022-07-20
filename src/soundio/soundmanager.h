@@ -77,6 +77,9 @@ class SoundManager : public QObject {
     SoundManagerConfig getConfig() const;
     SoundDeviceError setConfig(const SoundManagerConfig& config);
     void checkConfig();
+    // read sound profile name from user settings
+    QString getConfiguredSoundProfileName() const;
+    //void setConfiguredSoundProfileName(const QString& profileName) const;
 
     void onDeviceOutputCallback(const SINT iFramesPerBuffer);
 
