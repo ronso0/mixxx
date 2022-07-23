@@ -262,3 +262,10 @@ bool ControllerScriptEngineLegacy::evaluateScriptFile(const QFileInfo& scriptFil
 QJSValue ControllerScriptEngineLegacy::wrapArrayBufferCallback(const QJSValue& callback) {
     return m_makeArrayBufferWrapperFunction.call(QJSValueList{callback});
 }
+
+void ControllerScriptEngineLegacy::setSoundProfileFunc(const QString& profileName) {
+    qInfo() << "     .";
+    qInfo() << "     csEl::setSoundProfile:" << profileName;
+    qInfo() << "     .";
+    emit setSoundProfile(profileName);
+}

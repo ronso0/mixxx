@@ -125,23 +125,25 @@ void SoundManagerConfig::collectSoundProfiles() {
 }
 
 /// Called by DlgPrefSound to load the selected sound profile
-void SoundManagerConfig::setSoundProfile(const QString& profileName) {
-    qDebug() << "     *";
-    qDebug() << "     SMC setSoundProfile:" << profileName;
+bool SoundManagerConfig::setSoundProfile(const QString& profileName) {
+    qDebug() << "      *";
+    qDebug() << "      * SMConfig setSoundProfile:" << profileName;
     if (profileName.isEmpty() || !m_configProfileNames.contains(profileName)) {
-        return;
+        qDebug() << "      * profile" << profileName << "is not in sett dir";
+        return false;
     }
     // TODO(ronso0): move path construction to helper function?
     QFileInfo newProfile(m_settingsDir.filePath(profileName + SOUNDMANAGERCONFIG_EXTENSION));
     if (newProfile.exists() && newProfile.isReadable()) {
         m_currentProfile = newProfile;
-        qDebug() << "     * switched to" << getCurrentProfile();
-        qDebug() << "     * readFromDisk:" << readFromDisk();
+        qDebug() << "      * switched to" << getCurrentProfile();
+        bool success = readFromDisk();
+        qDebug() << "      * readFromDisk:" << success;
+        return success;
     } else {
         qDebug() << "     *** !exists || !readable";
+        return false;
     }
-    qDebug() << "     *";
-    //readFromDisk();
 }
 
 /// Read the SoundManagerConfig xml serialization at the predetermined

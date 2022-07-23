@@ -67,6 +67,7 @@ class ControllerScriptInterfaceLegacy : public QObject {
             double factor = 1.8,
             const double rate = -10.0);
     Q_INVOKABLE void softStart(const int deck, bool activate, double factor = 1.0);
+    Q_INVOKABLE void setSoundProfile(const QString& profileName);
 
     bool removeScriptConnection(const ScriptConnection& conn);
     /// Execute a ScriptConnection's JS callback

@@ -105,14 +105,14 @@ void Controller::send(const QList<int>& data, unsigned int length) {
     sendBytes(msg);
 }
 
-void Controller::triggerActivity()
-{
-     // Inhibit Updates for 1000 milliseconds
+void Controller::triggerActivity() {
+    // Inhibit Updates for 1000 milliseconds
     if (m_userActivityInhibitTimer.elapsed() > 1000) {
         mixxx::ScreenSaverHelper::triggerUserActivity();
         m_userActivityInhibitTimer.start();
     }
 }
+
 void Controller::receive(const QByteArray& data, mixxx::Duration timestamp) {
     if (!m_pScriptEngineLegacy) {
         //qWarning() << "Controller::receive called with no active engine!";

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QDebug>
 #include <QFileSystemWatcher>
 #include <QJSEngine>
 #include <QJSValue>
@@ -25,6 +26,17 @@ class ControllerScriptEngineLegacy : public ControllerScriptEngineBase {
     /// string that evaluates to a function to be used in MIDI mapping XML files
     /// and ensures the function is executed with the correct 'this' object.
     QJSValue wrapFunctionCode(const QString& codeSnippet, int numberOfArgs);
+
+    void setSoundProfileFunc(const QString& profileName);
+    //    void setSoundProfileFunc(const QString& profileName) {
+    //        qInfo() << "     .";
+    //        qInfo() << "     csEl::setSoundProfile:" << profileName;
+    //        qInfo() << "     .";
+    //        emit setSoundProfile(profileName);
+    //    }
+
+  signals:
+    void setSoundProfile(const QString& profileName);
 
   public slots:
     void setScriptFiles(const QList<LegacyControllerMapping::ScriptFileInfo>& scripts);

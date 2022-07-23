@@ -52,6 +52,17 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
     //        this,
     //        &DlgPrefSound::deleteProfile);
 
+    connect(m_pSoundManager.get(),
+            &SoundManager::soundProfileChanged,
+            this,
+            //&DlgPrefSound::slotUpdate);
+            [this]() {
+                // load settings, update GUI
+                slotUpdate();
+                m_settingsModified = true;
+                slotApply();
+            });
+
     apiComboBox->clear();
     apiComboBox->addItem(SoundManagerConfig::kEmptyComboBox,
             SoundManagerConfig::kDefaultAPI);
@@ -462,15 +473,15 @@ void DlgPrefSound::loadSettings() {
 
 /// Loads the settings in the given SoundManagerConfig into the dialog.
 void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
+    qDebug() << "     .";
+    qDebug() << "     .";
+    qDebug() << "     Dlg loadSettings:";
     m_loading = true; // so settingsChanged ignores all our modifications here
     m_soundConfig = config;
 
     profileComboBox->clear();
     profileComboBox->addItems(m_soundConfig.getSoundProfiles());
     profileComboBox->setCurrentText(m_soundConfig.getCurrentProfile());
-    qDebug() << "     .";
-    qDebug() << "     .";
-    qDebug() << "     loadSettings:";
     qDebug() << "       conf profile:" << m_soundConfig.getCurrentProfile();
     qDebug() << "       sel. profile:" << profileComboBox->currentText();
     qDebug() << "     .";
@@ -500,8 +511,7 @@ void DlgPrefSound::loadSettings(const SoundManagerConfig &config) {
 
     // Setting the index of audioBufferComboBox here sets m_bLatencyChanged to true,
     // but m_bLatencyChanged should only be true when the user has edited the
-    // buffer size or sample rate.
-    m_bLatencyChanged = false;
+    // buffer size or sample rate.    m_bLatencyChanged = false;
 
     int syncBuffers = m_soundConfig.getSyncBuffers();
     if (syncBuffers == 0) {
@@ -591,13 +601,12 @@ void DlgPrefSound::soundProfileSelected(int index) {
     }
 
     // select and read new profile
-    m_soundConfig.setSoundProfile(profileComboBox->currentText());
-    m_settingsModified = true;
-
-    slotApply();
+    m_pSoundManager->setSoundProfile(profileComboBox->currentText());
     // load settings, update GUI
+    slotUpdate();
+    m_settingsModified = true;
+    slotApply();
     qDebug() << "   .";
-    //slotUpdate();
 }
 
 void DlgPrefSound::createNewProfile() {

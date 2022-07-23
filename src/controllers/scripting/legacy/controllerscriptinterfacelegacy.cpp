@@ -436,6 +436,7 @@ void ControllerScriptInterfaceLegacy::log(const QString& message) {
     qCDebug(m_logger) << "engine.log is deprecated. Use console.log instead.";
     qCDebug(m_logger) << message;
 }
+
 int ControllerScriptInterfaceLegacy::beginTimer(
         int intervalMillis, QJSValue timerCallback, bool oneShot) {
     if (timerCallback.isString()) {
@@ -978,4 +979,12 @@ void ControllerScriptInterfaceLegacy::softStart(int deck, bool activate, double 
 
     // activate the ramping in scratchProcess()
     m_ramp[deck] = true;
+}
+
+void ControllerScriptInterfaceLegacy::setSoundProfile(const QString& profileName) {
+    qInfo() << "   .";
+    qInfo() << "   .";
+    qInfo() << "   csIl::setSoundProfile:" << profileName;
+    qInfo() << "   .";
+    m_pScriptEngineLegacy->setSoundProfileFunc(profileName);
 }

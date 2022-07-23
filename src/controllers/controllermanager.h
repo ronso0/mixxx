@@ -47,9 +47,11 @@ class ControllerManager : public QObject {
     void requestSetUpDevices();
     void requestShutdown();
     void requestInitialize();
+    void setSoundProfile(const QString& profileName);
 
   public slots:
     void updateControllerList();
+    void setSoundProfileSlot(const QString& profileName);
 
     void slotApplyMapping(Controller* pController,
             std::shared_ptr<LegacyControllerMapping> pMapping,
@@ -71,6 +73,7 @@ class ControllerManager : public QObject {
     void startPolling();
     void stopPolling();
     void pollIfAnyControllersOpen();
+    void connectSetSoundProfileSignal(Controller* pController);
 
   private:
     UserSettingsPointer m_pConfig;

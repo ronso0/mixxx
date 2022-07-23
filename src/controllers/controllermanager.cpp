@@ -292,6 +292,7 @@ void ControllerManager::slotSetUpDevices() {
             continue;
         }
         pController->applyMapping();
+        connectSetSoundProfileSignal(pController);
     }
 
     pollIfAnyControllersOpen();
@@ -384,11 +385,38 @@ void ControllerManager::openController(Controller* pController) {
     // preference setting.
     if (result == 0) {
         pController->applyMapping();
+        connectSetSoundProfileSignal(pController);
 
         // Update configuration to reflect controller is enabled.
         m_pConfig->setValue(
                 ConfigKey("[Controller]", sanitizeDeviceName(pController->getName())), 1);
     }
+}
+
+void ControllerManager::connectSetSoundProfileSignal(Controller* pController) {
+    if (!pController) {
+        return;
+    }
+    qWarning() << "       .";
+    qWarning() << "       cm: connect sound profile signal" << pController->getName();
+    qWarning() << "       .";
+    ControllerScriptEngineLegacy* pEngine = pController->getScriptEngine();
+    // signal to signal, allows mappings to load sound profiles
+    static const QMetaMethod setSoundProfileSignal =
+            QMetaMethod::fromSignal(&ControllerScriptEngineLegacy::setSoundProfile);
+    if (!isSignalConnected(setSoundProfileSignal)) {
+        connect(pEngine,
+                &ControllerScriptEngineLegacy::setSoundProfile,
+                this,
+                &ControllerManager::setSoundProfileSlot);
+    }
+}
+
+void ControllerManager::setSoundProfileSlot(const QString& profileName) {
+    qWarning() << "       #";
+    qWarning() << "       cm: setSoundProfileSlot" << profileName;
+    qWarning() << "       #";
+    emit setSoundProfile(profileName);
 }
 
 void ControllerManager::closeController(Controller* pController) {

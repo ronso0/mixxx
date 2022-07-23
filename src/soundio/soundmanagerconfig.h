@@ -40,7 +40,7 @@ public:
   QString getCurrentProfile() const {
       return m_currentProfile.completeBaseName();
   }
-  void setSoundProfile(const QString& profileName);
+  bool setSoundProfile(const QString& profileName);
 
   bool readFromDisk();
   bool writeToDisk() const;

@@ -380,6 +380,18 @@ void CoreServices::initialize(QApplication* pApp) {
     qDebug() << "Creating ControllerManager";
     m_pControllerManager = std::make_shared<ControllerManager>(pConfig);
 
+    // TEST
+    // attempt to connect ControllerScriptInterfaceLegacy::setSoundProfile to
+    // SoundManager/SoundManagerConfig to allow mappings load a specific
+    // sound profile
+    connect(m_pControllerManager.get(),
+            &ControllerManager::setSoundProfile,
+            m_pSoundManager.get(),
+            &SoundManager::setSoundProfile);
+    //            this, [this](const QString& profileName) {
+    //                m_pSoundManager->setSoundProfile(profileName);
+    //            });
+
     // Wait until all other ControlObjects are set up before initializing
     // controllers
     m_pControllerManager->setUpDevices();

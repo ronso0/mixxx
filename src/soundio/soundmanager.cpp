@@ -591,6 +591,28 @@ QString SoundManager::getConfiguredSoundProfileName() const {
             SOUNDMANAGERCONFIG_DEFAULT_NAME);
 }
 
+void SoundManager::setSoundProfile(const QString& profileName) {
+    qInfo() << "     +";
+    qInfo() << "     + SM::setSoundProfile:" << profileName;
+    if (profileName.isEmpty()) {
+        qInfo() << "     + is empty, return";
+        return;
+    }
+    if (!m_soundConfig.setSoundProfile(profileName)) {
+        qInfo() << "     + failed";
+        qInfo() << "     + ";
+        return;
+    }
+    //    checkConfig();
+    //    setupDevices();
+
+    qInfo() << "     + success";
+    qInfo() << "     + save" << profileName << "to config";
+    m_pSettings->setValue(ConfigKey("[Master]", "sound_profile"), profileName);
+    emit soundProfileChanged();
+    qInfo() << "     +";
+}
+
 void SoundManager::onDeviceOutputCallback(const SINT iFramesPerBuffer) {
     // Produce a block of samples for output. EngineMaster expects stereo
     // samples so multiply iFramesPerBuffer by 2.
