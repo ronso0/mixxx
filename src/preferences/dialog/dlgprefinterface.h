@@ -10,6 +10,7 @@
 #include "preferences/dialog/ui_dlgprefinterfacedlg.h"
 #include "preferences/usersettings.h"
 #include "skin/skin.h"
+#include "util/parented_ptr.h"
 
 class ControlProxy;
 class ControlPotmeter;
@@ -63,9 +64,10 @@ class DlgPrefInterface : public DlgPreferencePage, public Ui::DlgPrefControlsDlg
     QScreen* getScreen() const;
 
     UserSettingsPointer m_pConfig;
-    ControlObject* m_pControlTrackTimeDisplay;
     std::shared_ptr<mixxx::ScreensaverManager> m_pScreensaverManager;
     std::shared_ptr<mixxx::skin::SkinLoader> m_pSkinLoader;
+    const std::unique_ptr<ControlObject> m_pClockFormatControl;
+    const std::unique_ptr<ControlObject> m_pClockAllowSecondsControl;
 
     QMap<QString, mixxx::skin::SkinPointer> m_skins;
     mixxx::skin::SkinPointer m_pSkin;

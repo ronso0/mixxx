@@ -17,4 +17,9 @@ enum class ScreenSaverPreference {
     PREVENT_ON_PLAY = 2
 };
 
+enum class ClockFormat {
+    HideSeconds,
+    ShowSeconds
+};
+
 }  // namespace mixxx

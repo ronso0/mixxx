@@ -1,6 +1,5 @@
 #include "library/autodj/autodjprocessor.h"
 
-#include "control/controlproxy.h"
 #include "control/controlpushbutton.h"
 #include "engine/engine.h"
 #include "library/trackcollection.h"

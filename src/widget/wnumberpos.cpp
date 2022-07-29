@@ -119,6 +119,7 @@ void WNumberPos::slotSetDisplayMode(double remain) {
 
     slotSetTimeElapsed(m_dOldTimeElapsed);
 }
+
 void WNumberPos::slotSetTimeFormat(double v) {
     m_displayFormat = static_cast<TrackTime::DisplayFormat>(static_cast<int>(v));
 

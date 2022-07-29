@@ -141,10 +141,11 @@
         <ObjectName>ClockWidget</ObjectName>
         <Layout>horizontal</Layout>
         <SizePolicy>min,min</SizePolicy>
+        <!-- <Size>80f,-1min-</Size> -->
         <Children>
           <Time>
             <TooltipId>time</TooltipId>
-            <CustomFormat>hh:mm</CustomFormat>
+            <!-- <CustomFormat>hh:mm:ss</CustomFormat> -->
           </Time>
         </Children>
       </WidgetGroup>

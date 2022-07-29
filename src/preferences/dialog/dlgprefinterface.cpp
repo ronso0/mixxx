@@ -34,6 +34,8 @@ const QString kSchemeKey = QStringLiteral("Scheme");
 const QString kResizableSkinKey = QStringLiteral("ResizableSkin");
 const QString kLocaleKey = QStringLiteral("Locale");
 const QString kTooltipsKey = QStringLiteral("Tooltips");
+const QString kClockSecondsKey = QStringLiteral("clock_show_seconds");
+const QString kClockAllowSecondsKey = QStringLiteral("clock_allow_seconds");
 
 } // namespace
 
@@ -51,6 +53,10 @@ DlgPrefInterface::DlgPrefInterface(
           m_minScaleFactor(1.0),
           m_dDevicePixelRatio(1.0),
           m_bStartWithFullScreen(false),
+          m_pClockFormatControl(std::make_unique<ControlObject>(
+                  ConfigKey(kControlsGroup, kClockSecondsKey))),
+          m_pClockAllowSecondsControl(std::make_unique<ControlObject>(
+                  ConfigKey(kControlsGroup, kClockAllowSecondsKey))),
           m_bRebootMixxxView(false) {
     setupUi(this);
 
@@ -205,6 +211,14 @@ DlgPrefInterface::DlgPrefInterface(
                 slotSetTooltips();
             });
 
+    // Clock format
+    // * add control [Controls],allow_clock_seconds
+    // * set value in WTime::setTimeFormat
+    // * connect valueChanged to slotUpdate
+    double clockFormat = m_pConfig->getValue(ConfigKey(kControlsGroup, kClockSecondsKey),
+            static_cast<double>(mixxx::ClockFormat::HideSeconds));
+    m_pClockFormatControl->set(clockFormat);
+
     slotUpdate();
 }
 
@@ -287,6 +301,9 @@ void DlgPrefInterface::slotUpdate() {
             ConfigKey(kConfigGroup, kStartInFullscreenKey), m_bStartWithFullScreen));
 
     loadTooltipPreferenceFromConfig();
+
+    checkBoxClockShowSeconds->setChecked(
+            m_pClockFormatControl->get() == static_cast<int>(mixxx::ClockFormat::ShowSeconds));
 
     int inhibitsettings = static_cast<int>(m_pScreensaverManager->status());
     comboBoxScreensaver->setCurrentIndex(comboBoxScreensaver->findData(inhibitsettings));
@@ -421,6 +438,12 @@ void DlgPrefInterface::slotApply() {
     m_pConfig->set(ConfigKey(kControlsGroup, kTooltipsKey),
             ConfigValue(static_cast<int>(m_tooltipMode)));
     emit tooltipModeChanged(m_tooltipMode);
+
+    double clockFormat = checkBoxClockShowSeconds->isChecked()
+            ? static_cast<double>(mixxx::ClockFormat::ShowSeconds)
+            : static_cast<double>(mixxx::ClockFormat::HideSeconds);
+    m_pConfig->setValue(ConfigKey(kControlsGroup, kClockSecondsKey), clockFormat);
+    m_pClockFormatControl->set(clockFormat);
 
     // screensaver mode update
     int screensaverComboBoxState = comboBoxScreensaver->itemData(

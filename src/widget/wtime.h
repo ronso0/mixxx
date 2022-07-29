@@ -5,8 +5,10 @@
 
 #include <QTimer>
 
-#include "widget/wlabel.h"
+#include "control/controlproxy.h"
+#include "preferences/constants.h"
 #include "skin/legacy/skincontext.h"
+#include "widget/wlabel.h"
 
 class WTime: public WLabel {
     Q_OBJECT
@@ -18,12 +20,17 @@ class WTime: public WLabel {
 
   private slots:
     void refreshTime();
+    void switchTimeFormat(double format);
 
   private:
     void setTimeFormat(const QDomNode& node, const SkinContext& context);
 
     QTimer* m_pTimer;
+    mixxx::ClockFormat m_eTimeFormat;
     QString m_sTimeFormat;
+    ControlProxy* m_timeFormatControl;
+    ControlProxy* m_allowSecondsControl;
+
     // m_iInterval defines how often the time will be updated
     short m_iInterval;
     // m_iInterval is set to s_iSecondInterval if seconds are shown
