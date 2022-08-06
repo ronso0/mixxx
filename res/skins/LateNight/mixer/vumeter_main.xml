@@ -46,6 +46,12 @@
           </VuMeter>
         </Children>
       </WidgetGroup><!-- VuMeterBoxMainSingle -->
+
+      <WidgetGroup>
+        <Size>1f,</Size>
+        <Children/>
+      </WidgetGroup>
+
       <!-- Right -->
       <WidgetGroup>
         <ObjectName>VuMeterBoxMainSingle</ObjectName>
