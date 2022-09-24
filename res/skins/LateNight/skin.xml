@@ -495,8 +495,8 @@
                           </Children>
                         </WidgetGroup>
 
-                        <Template src="skins:LateNight/fx_rack.xml"/>
                         <Template src="skins:LateNight/samplers_rack.xml"/>
+                        <Template src="skins:LateNight/fx_rack.xml"/>
                         <Template src="skins:LateNight/mic_aux_rack.xml"/>
 
                         <SingletonContainer>
