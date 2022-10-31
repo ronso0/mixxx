@@ -920,21 +920,21 @@ void WTrackMenu::slotPopulatePlaylistMenu() {
     QList<QPair<int, QString>> playlists =
             playlistDao.getPlaylists(PlaylistDAO::PLHT_NOT_HIDDEN);
 
-    QListIterator<QPair<int, QString>> it(playlists);
     for (const auto& [id, name] : playlists) {
         // No leak because making the menu the parent means they will be
         // auto-deleted
+        int plId = id;
         auto* pAction = new QAction(
                 mixxx::escapeTextPropertyWithoutShortcuts(name),
                 m_pPlaylistMenu);
-        bool locked = playlistDao.isPlaylistLocked(id);
+        bool locked = playlistDao.isPlaylistLocked(plId);
         pAction->setEnabled(!locked);
         m_pPlaylistMenu->addAction(pAction);
         connect(pAction,
                 &QAction::triggered,
                 this,
-                [this, id] {
-                    addSelectionToPlaylist(id);
+                [this, plId] {
+                    addSelectionToPlaylist(plId);
                 });
     }
     m_pPlaylistMenu->addSeparator();
