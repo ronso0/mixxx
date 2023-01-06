@@ -68,6 +68,7 @@ class WOverview : public WWidget, public TrackDropTarget {
     void onMarkRangeChange(double v);
     void onRateRatioChange(double v);
     void onPassthroughChange(double v);
+    void onEndOfTrackBlinkTimeout(double v);
     void receiveCuesUpdated();
 
     void slotWaveformSummaryUpdated();
@@ -150,6 +151,7 @@ class WOverview : public WWidget, public TrackDropTarget {
     float m_diffGain;
     qreal m_devicePixelRatio;
     bool m_endOfTrack;
+    bool m_drawEndOfTrack;
     bool m_bPassthroughEnabled;
 
     parented_ptr<WCueMenuPopup> m_pCueMenuPopup;
@@ -162,6 +164,7 @@ class WOverview : public WWidget, public TrackDropTarget {
     int m_iPickupPos;
     // Internal storage of slider position in pixels
     int m_iPlayPos;
+    int m_endOfTrackWarningTime;
     bool m_bTimeRulerActive;
     Qt::Orientation m_orientation;
     int m_iLabelFontSize;
@@ -189,6 +192,8 @@ class WOverview : public WWidget, public TrackDropTarget {
     PollingControlProxy m_trackSampleRateControl;
     PollingControlProxy m_trackSamplesControl;
     PollingControlProxy m_playpositionControl;
+    PollingControlProxy m_pTimeRemainingControl;
+    parented_ptr<ControlProxy> m_pEndOfTrackBlinkTimer;
     parented_ptr<ControlProxy> m_pPassthroughControl;
     parented_ptr<ControlProxy> m_pTypeControl;
     parented_ptr<ControlProxy> m_pMinuteMarkersControl;
