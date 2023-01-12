@@ -1,4 +1,4 @@
-//#pragma once
+#pragma once
 
 #include "waveform/renderers/allshader/waveformrenderersignalbase.h"
 #include "waveform/widgets/waveformwidgetabstract.h"
