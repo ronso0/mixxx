@@ -687,21 +687,21 @@ bool DlgPrefController::saveMapping() {
         overwriteMsgBox.setIcon(QMessageBox::Question);
         overwriteMsgBox.setWindowTitle(overwriteTitle);
         overwriteMsgBox.setText(overwriteLabel.arg(mappingName));
-        QCheckBox overwriteCheckBox;
-        overwriteCheckBox.setText(overwriteCheckLabel);
-        overwriteCheckBox.blockSignals(true);
-        overwriteCheckBox.setCheckState(Qt::Unchecked);
-        overwriteMsgBox.addButton(&overwriteCheckBox, QMessageBox::ActionRole);
+        QCheckBox alwaysOverwriteCheckBox;
+        alwaysOverwriteCheckBox.setText(overwriteCheckLabel);
+        alwaysOverwriteCheckBox.blockSignals(true);
+        alwaysOverwriteCheckBox.setCheckState(Qt::Unchecked);
+        overwriteMsgBox.setCheckBox(&alwaysOverwriteCheckBox);
         QPushButton* pSaveAsNew = overwriteMsgBox.addButton(
                 tr("Save As"), QMessageBox::AcceptRole);
         QPushButton* pOverwrite = overwriteMsgBox.addButton(
                 tr("Overwrite"), QMessageBox::AcceptRole);
         overwriteMsgBox.setDefaultButton(pSaveAsNew);
-        overwriteMsgBox.exec();
 
+        overwriteMsgBox.exec();
         if (overwriteMsgBox.clickedButton() == pOverwrite) {
             saveAsNew = false;
-            if (overwriteCheckBox.checkState() == Qt::Checked) {
+            if (alwaysOverwriteCheckBox.checkState() == Qt::Checked) {
                 m_pOverwriteMappings.insert(m_pMapping->filePath(), true);
             }
         } else if (overwriteMsgBox.close()) {
