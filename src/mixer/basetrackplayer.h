@@ -51,6 +51,7 @@ class BaseTrackPlayer : public BasePlayer {
     void loadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack);
     void playerEmpty();
     void noVinylControlInputConfigured();
+    void loadTrackById(TrackId trackId, const QString& group, bool play);
 };
 
 class BaseTrackPlayerImpl : public BaseTrackPlayer {
@@ -96,6 +97,7 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     void slotCloneChannel(EngineChannel* pChannel);
     void slotCloneFromDeck(double deck);
     void slotCloneFromSampler(double sampler);
+    void slotLoadTrackById(double trackId);
     void slotTrackColorChangeRequest(double value);
     void slotVinylControlEnabled(double v);
     void slotWaveformZoomValueChangeRequest(double pressed);
@@ -128,6 +130,7 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     // Deck clone control
     std::unique_ptr<ControlObject> m_pCloneFromDeck;
     std::unique_ptr<ControlObject> m_pCloneFromSampler;
+    std::unique_ptr<ControlObject> m_pLoadTrackById;
 
     // Track color control
     std::unique_ptr<ControlObject> m_pTrackColor;
@@ -146,6 +149,7 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     // This may lock the engine
     std::unique_ptr<ControlObject> m_pFileBPM;
     parented_ptr<ControlProxy> m_pKey;
+    std::unique_ptr<ControlObject> m_pTrackId;
 
     std::unique_ptr<ControlPushButton> m_pShiftCuesEarlier;
     std::unique_ptr<ControlPushButton> m_pShiftCuesEarlierSmall;

@@ -188,12 +188,14 @@ void PlayerManager::bindToLibrary(Library* pLibrary) {
     // analyzed.
     foreach(Deck* pDeck, m_decks) {
         connect(pDeck, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
+        connect(pDeck, &BaseTrackPlayer::loadTrackById, this, &PlayerManager::slotLoadTrackById);
     }
 
     // Connect the player to the analyzer queue so that loaded tracks are
     // analyzed.
     foreach(Sampler* pSampler, m_samplers) {
         connect(pSampler, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
+        connect(pSampler, &BaseTrackPlayer::loadTrackById, this, &PlayerManager::slotLoadTrackById);
     }
 
     // Connect the player to the analyzer queue so that loaded tracks are
@@ -203,6 +205,10 @@ void PlayerManager::bindToLibrary(Library* pLibrary) {
                 &BaseTrackPlayer::newTrackLoaded,
                 this,
                 &PlayerManager::slotAnalyzeTrack);
+        connect(pPreviewDeck,
+                &BaseTrackPlayer::loadTrackById,
+                this,
+                &PlayerManager::slotLoadTrackById);
     }
 }
 
@@ -637,6 +643,16 @@ void PlayerManager::slotCloneDeck(const QString& source_group, const QString& ta
     }
 
     pPlayer->slotCloneFromGroup(source_group);
+}
+
+void PlayerManager::slotLoadTrackById(TrackId trackId, const QString& group, bool play) {
+    BaseTrackPlayer* pPlayer = getPlayer(group);
+    if (pPlayer == nullptr) {
+        kLogger.warning() << "Invalid group argument " << group << " to slotLoadTrackById.";
+        return;
+    }
+    TrackPointer pTrack = m_pLibrary->trackCollectionManager()->getTrackById(trackId);
+    pPlayer->slotLoadTrack(pTrack, play);
 }
 
 void PlayerManager::slotLoadTrackToPlayer(TrackPointer pTrack, const QString& group, bool play) {

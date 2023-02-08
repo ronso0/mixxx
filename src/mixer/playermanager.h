@@ -191,6 +191,7 @@ class PlayerManager : public QObject, public PlayerManagerInterface {
     void slotLoadLocationToPlayerMaybePlay(const QString& location, const QString& group);
 
     void slotCloneDeck(const QString& source_group, const QString& target_group);
+    void slotLoadTrackById(TrackId trackId, const QString& group, bool play);
 
     // Slots for loading tracks to decks
     void slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack);

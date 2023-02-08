@@ -127,6 +127,14 @@ BaseTrackPlayerImpl::BaseTrackPlayerImpl(
             this,
             &BaseTrackPlayerImpl::slotCloneFromSampler);
 
+    m_pLoadTrackById = std::make_unique<ControlObject>(
+            ConfigKey(getGroup(), "load_track_by_id"),
+            false);
+    connect(m_pLoadTrackById.get(),
+            &ControlObject::valueChanged,
+            this,
+            &BaseTrackPlayerImpl::slotLoadTrackById);
+
     // Waveform controls
     // This acts somewhat like a ControlPotmeter, but the normal _up/_down methods
     // do not work properly with this CO.
@@ -195,6 +203,8 @@ BaseTrackPlayerImpl::BaseTrackPlayerImpl(
     // BPM of the current song
     m_pFileBPM = std::make_unique<ControlObject>(ConfigKey(getGroup(), "file_bpm"));
     m_pKey = make_parented<ControlProxy>(getGroup(), "file_key", this);
+    m_pTrackId = std::make_unique<ControlObject>(ConfigKey(getGroup(), "track_id"));
+    m_pTrackId->setReadOnly();
 
     m_pReplayGain = make_parented<ControlProxy>(getGroup(), "replaygain", this);
     m_pPlay = make_parented<ControlProxy>(getGroup(), "play", this);
@@ -494,6 +504,7 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
         m_pDuration->set(0);
         m_pFileBPM->set(0);
         m_pKey->set(0);
+        m_pTrackId->setAndConfirm(-1.0);
         setReplayGain(0);
         slotSetTrackColor(std::nullopt);
         m_pLoopInPoint->set(kNoTrigger);
@@ -515,6 +526,7 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
         m_pKey->set(m_pLoadedTrack->getKey());
         setReplayGain(m_pLoadedTrack->getReplayGain().getRatio());
         slotSetTrackColor(m_pLoadedTrack->getColor());
+        m_pTrackId->setAndConfirm(static_cast<double>(m_pLoadedTrack->getId().value()));
 
         if(m_pConfig->getValue(
                 ConfigKey("[Mixer Profile]", "EqAutoReset"), false)) {
@@ -648,6 +660,11 @@ void BaseTrackPlayerImpl::slotCloneChannel(EngineChannel* pChannel) {
     }
 
     slotLoadTrack(pTrack, false);
+}
+
+void BaseTrackPlayerImpl::slotLoadTrackById(double dTrackId) {
+    TrackId trackId(static_cast<int>(dTrackId));
+    emit loadTrackById(trackId, getGroup(), false);
 }
 
 void BaseTrackPlayerImpl::slotSetReplayGain(mixxx::ReplayGain replayGain) {
