@@ -6,6 +6,7 @@
 #include <QHeaderView>
 #include <QHelpEvent>
 #include <QScrollBar>
+#include <QTimer>
 #include <QToolTip>
 
 #include "moc_wlibrarytableview.cpp"
@@ -24,7 +25,9 @@ WLibraryTableView::WLibraryTableView(QWidget* parent,
           m_prevRow(-1),
           m_prevColumn(-1),
           m_pConfig(pConfig),
-          m_modelStateCache(kModelCacheSize) {
+          m_modelStateCache(kModelCacheSize),
+          m_pMoveUpTimer(new QTimer(this)),
+          m_pMoveDownTimer(new QTimer(this)) {
     // Setup properties for table
 
     // Editing starts when clicking on an already selected item.
@@ -55,6 +58,11 @@ WLibraryTableView::WLibraryTableView(QWidget* parent,
             &WLibraryTableView::scrollValueChanged);
 
     setTabKeyNavigation(false);
+
+    m_pMoveUpTimer->setSingleShot(true);
+    m_pMoveUpTimer->setInterval(1000);
+    m_pMoveDownTimer->setSingleShot(true);
+    m_pMoveDownTimer->setInterval(1000);
 }
 
 WLibraryTableView::~WLibraryTableView() {
@@ -287,14 +295,33 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
                 const int column = currentIndex().column();
                 if (cursorAction == QAbstractItemView::MoveDown) {
                     if (row + 1 < pModel->rowCount()) {
+                        if (row + 2 == pModel->rowCount()) {
+                            // We're selecting the last item, start pause timer.
+                            m_pMoveDownTimer->start();
+                        }
                         return pModel->index(row + 1, column);
                     } else if (!modifiers.testFlag(Qt::ShiftModifier)) {
+                        // Wrap around, select first item.
+                        // Wrap-around is blocked as long as the pause timer is
+                        // running.
+                        if (m_pMoveDownTimer->isActive()) {
+                            return pModel->index(row, column);
+                        }
                         return pModel->index(0, column);
                     }
                 } else {
                     if (row - 1 >= 0) {
+                        if (row - 1 == 0) {
+                            m_pMoveUpTimer->start();
+                        }
                         return pModel->index(row - 1, column);
                     } else if (!modifiers.testFlag(Qt::ShiftModifier)) {
+                        // Wrap around, select last item.
+                        // Wrap-around is blocked as long as the pause timer is
+                        // running.
+                        if (m_pMoveUpTimer->isActive()) {
+                            return pModel->index(row, column);
+                        }
                         return pModel->index(pModel->rowCount() - 1, column);
                     }
                 }
