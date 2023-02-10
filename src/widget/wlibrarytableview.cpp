@@ -23,7 +23,9 @@ WLibraryTableView::WLibraryTableView(QWidget* parent,
           m_prevRow(0),
           m_prevColumn(0),
           m_pConfig(pConfig),
-          m_modelStateCache(kModelCacheSize) {
+          m_modelStateCache(kModelCacheSize),
+          m_pMoveUpTimer(new QTimer(this)),
+          m_pMoveDownTimer(new QTimer(this)) {
     // Setup properties for table
 
     // Editing starts when clicking on an already selected item.
@@ -54,6 +56,11 @@ WLibraryTableView::WLibraryTableView(QWidget* parent,
             &WLibraryTableView::scrollValueChanged);
 
     setTabKeyNavigation(false);
+
+    m_pMoveUpTimer->setSingleShot(true);
+    m_pMoveUpTimer->setInterval(1000);
+    m_pMoveDownTimer->setSingleShot(true);
+    m_pMoveDownTimer->setInterval(1000);
 }
 
 WLibraryTableView::~WLibraryTableView() {
@@ -330,14 +337,36 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
                 const int column = currentIndex().column();
                 if (cursorAction == QAbstractItemView::MoveDown) {
                     if (row + 1 < pModel->rowCount()) {
+                        if (row + 2 == pModel->rowCount()) {
+                            // about to move to the last item, start timer
+                            m_pMoveDownTimer->start();
+                        }
+
                         return pModel->index(row + 1, column);
                     } else {
+                        // wrap around, select first item
+                        // if we moved to the last item quickly, pause for a second
+                        // before wrapping around
+                        if (m_pMoveDownTimer->isActive()) {
+                            m_pMoveDownTimer->start();
+                            return pModel->index(row, column);
+                        }
                         return pModel->index(0, column);
                     }
                 } else {
                     if (row - 1 >= 0) {
+                        if (row - 1 == 0) {
+                            m_pMoveUpTimer->start();
+                        }
                         return pModel->index(row - 1, column);
                     } else {
+                        // wrap around, select last item
+                        // if we moved to the first item quickly, pause for a second
+                        // before wrapping around
+                        if (m_pMoveUpTimer->isActive()) {
+                            m_pMoveUpTimer->start();
+                            return pModel->index(row, column);
+                        }
                         return pModel->index(pModel->rowCount() - 1, column);
                     }
                 }

@@ -76,4 +76,8 @@ class WLibraryTableView : public QTableView, public virtual LibraryView {
   private:
     const UserSettingsPointer m_pConfig;
     QCache<QString, ModelState> m_modelStateCache;
+
+    // timers used for cursor move wrap-around delay
+    QTimer* m_pMoveUpTimer;
+    QTimer* m_pMoveDownTimer;
 };
