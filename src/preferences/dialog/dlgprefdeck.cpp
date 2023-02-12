@@ -66,7 +66,7 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
     const int cueModeIndex = cueDefaultIndexByData(cueDefaultValue);
     ComboBoxCueMode->setCurrentIndex(cueModeIndex);
     slotCueModeCombobox(cueModeIndex);
-    for (ControlProxy* pControl : std::as_const(m_cueControls)) {
+    for (ControlProxy* pControl : std::as_const(m_cueModeControls)) {
         pControl->set(static_cast<int>(m_cueMode));
     }
     connect(ComboBoxCueMode,
@@ -74,11 +74,26 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
             this,
             &DlgPrefDeck::slotCueModeCombobox);
 
+    // Loop cue activation mode
+    int loopCueActivationMode = m_pConfig->getValue(
+            ConfigKey("[Controls]", "loop_cue_activation_mode"),
+            static_cast<int>(LoopCueActivationMode::Reloop));
+    m_loopCueActivationMode = static_cast<LoopCueActivationMode>(loopCueActivationMode);
+    for (ControlProxy* pControl : qAsConst(m_loopCueActivationModeControls)) {
+        pControl->set(loopCueActivationMode);
+    }
+    connect(buttonGroupLoopCueMode,
+            QOverload<QAbstractButton*>::of(&QButtonGroup::buttonClicked),
+            this,
+            QOverload<QAbstractButton*>::of(
+                    &DlgPrefDeck::slotLoopCueActivationModeSelected));
+
     // Track time display configuration
     connect(m_pControlTrackTimeDisplay.get(),
             &ControlObject::valueChanged,
             this,
             QOverload<double>::of(&DlgPrefDeck::slotSetTrackTimeDisplay));
+    slotSetTrackTimeDisplay(m_pControlTrackTimeDisplay->get());
 
     double positionDisplayType = m_pConfig->getValue(
             ConfigKey("[Controls]", "PositionDisplay"),
@@ -418,7 +433,8 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
 DlgPrefDeck::~DlgPrefDeck() {
     qDeleteAll(m_rateControls);
     qDeleteAll(m_rateDirectionControls);
-    qDeleteAll(m_cueControls);
+    qDeleteAll(m_cueModeControls);
+    qDeleteAll(m_loopCueActivationModeControls);
     qDeleteAll(m_rateRangeControls);
     qDeleteAll(m_keylockModeControls);
     qDeleteAll(m_keyunlockModeControls);
@@ -428,7 +444,20 @@ void DlgPrefDeck::slotUpdate() {
     checkBoxIntroStartMove->setChecked(m_pConfig->getValue(
             ConfigKey("[Controls]", "SetIntroStartAtMainCue"), false));
 
-    slotSetTrackTimeDisplay(m_pControlTrackTimeDisplay->get());
+    // Note: "PositionDisplay" is updated immediately when changed by clicking
+    // the skin widget.
+    // slotSetTrackTimeDisplay(m_pControlTrackTimeDisplay->get());
+
+    // int loopCueActivationMode = m_loopCueActivationModeControls[0]->get();
+    m_loopCueActivationMode =
+            static_cast<LoopCueActivationMode>(static_cast<int>(
+                    m_loopCueActivationModeControls[0]->get()));
+    //        static_cast<LoopCueActivationMode>(static_cast<int>(v));
+    if (m_loopCueActivationMode == LoopCueActivationMode::Reloop) {
+        radioButtonLoopCueReloop->setChecked(true);
+    } else {
+        radioButtonLoopCueJumpOrToggle->setChecked(true);
+    }
 
     checkBoxCloneDeckOnLoadDoubleTap->setChecked(m_pConfig->getValue(
             ConfigKey("[Controls]", "CloneDeckOnLoadDoubleTap"), true));
@@ -444,7 +473,7 @@ void DlgPrefDeck::slotUpdate() {
     double rateDirection = m_rateDirectionControls[0]->get();
     checkBoxInvertSpeedSlider->setChecked(rateDirection == kRateDirectionInverted);
 
-    double cueMode = m_cueControls[0]->get();
+    double cueMode = m_cueModeControls[0]->get();
     index = ComboBoxCueMode->findData(static_cast<int>(cueMode));
     ComboBoxCueMode->setCurrentIndex(index);
 
@@ -509,6 +538,9 @@ void DlgPrefDeck::slotUpdate() {
 void DlgPrefDeck::slotResetToDefaults() {
     // Track time display mode
     radioButtonRemaining->setChecked(true);
+
+    // Loop cue activation mode
+    radioButtonLoopCueReloop->setChecked(true);
 
     // Up increases speed.
     checkBoxInvertSpeedSlider->setChecked(false);
@@ -606,6 +638,14 @@ void DlgPrefDeck::slotCueModeCombobox(int index) {
     m_cueMode = static_cast<CueMode>(ComboBoxCueMode->itemData(index).toInt());
 }
 
+void DlgPrefDeck::slotLoopCueActivationModeSelected(QAbstractButton* pressedButton) {
+    if (pressedButton == radioButtonLoopCueReloop) {
+        m_loopCueActivationMode = LoopCueActivationMode::Reloop;
+    } else {
+        m_loopCueActivationMode = LoopCueActivationMode::JumpOrToggle;
+    }
+}
+
 void DlgPrefDeck::slotCloneDeckOnLoadDoubleTapCheckbox(bool checked) {
     m_bCloneDeckOnLoadDoubleTap = checked;
 }
@@ -621,6 +661,9 @@ void DlgPrefDeck::slotSetTrackTimeDisplay(QAbstractButton* b) {
 }
 
 void DlgPrefDeck::slotSetTrackTimeDisplay(double v) {
+    // Write to config instantly when the control value changes (not only in
+    // slotApply) because the time display can also be changed by clicking
+    // the actual display in skins.
     m_timeDisplayMode = static_cast<TrackTime::DisplayMode>(static_cast<int>(v));
     m_pConfig->set(ConfigKey("[Controls]","PositionDisplay"), ConfigValue(v));
     if (m_timeDisplayMode == TrackTime::DisplayMode::REMAINING) {
@@ -662,6 +705,8 @@ void DlgPrefDeck::slotRateRampingModeLinearButton(bool checked) {
 
 void DlgPrefDeck::slotTimeFormatChanged(double v) {
     int i = static_cast<int>(v);
+    // TODO(xxx) Write to config only in slotApply. Note: while writing instantly
+    // makes sense for "PositionDisplay" which
     m_pConfig->set(ConfigKey("[Controls]","TimeFormat"), ConfigValue(v));
     comboBoxTimeFormat->setCurrentIndex(
                 comboBoxTimeFormat->findData(i));
@@ -691,7 +736,7 @@ void DlgPrefDeck::slotApply() {
     m_pConfig->setValue(ConfigKey("[Controls]", "TimeFormat"), timeFormat);
 
     // Set cue mode for every deck
-    for (ControlProxy* pControl : std::as_const(m_cueControls)) {
+    for (ControlProxy* pControl : std::as_const(m_cueModeControls)) {
         pControl->set(static_cast<int>(m_cueMode));
     }
     m_pConfig->setValue(ConfigKey("[Controls]", "CueDefault"), m_cueMode);
@@ -701,6 +746,13 @@ void DlgPrefDeck::slotApply() {
     m_pConfig->setValue(ConfigKey("[Controls]", "CueRecall"), m_seekOnLoadMode);
     m_pConfig->setValue(ConfigKey("[Controls]", "CloneDeckOnLoadDoubleTap"),
             m_bCloneDeckOnLoadDoubleTap);
+
+    // loop cue activation mode
+    for (ControlProxy* pControl : std::as_const(m_loopCueActivationModeControls)) {
+        pControl->set(static_cast<int>(m_loopCueActivationMode));
+    }
+    m_pConfig->setValue(ConfigKey("[Controls]", "loop_cue_activation_mode"),
+            static_cast<int>(m_loopCueActivationMode));
 
     // Set rate range
     // Set the config value before setting the CO values in setRateRangeForAllDecks()
@@ -781,8 +833,10 @@ void DlgPrefDeck::slotNumDecksChanged(double new_count, bool initializing) {
                 group, "rateRange"));
         m_rateDirectionControls.push_back(new ControlProxy(
                 group, "rate_dir"));
-        m_cueControls.push_back(new ControlProxy(
+        m_cueModeControls.push_back(new ControlProxy(
                 group, "cue_mode"));
+        m_loopCueActivationModeControls.push_back(new ControlProxy(
+                group, "loop_cue_activation_mode"));
         m_keylockModeControls.push_back(new ControlProxy(
                 group, "keylockMode"));
         m_keylockModeControls.last()->set(static_cast<double>(m_keylockMode));
@@ -814,8 +868,10 @@ void DlgPrefDeck::slotNumSamplersChanged(double new_count, bool initializing) {
                 group, "rateRange"));
         m_rateDirectionControls.push_back(new ControlProxy(
                 group, "rate_dir"));
-        m_cueControls.push_back(new ControlProxy(
+        m_cueModeControls.push_back(new ControlProxy(
                 group, "cue_mode"));
+        m_loopCueActivationModeControls.push_back(new ControlProxy(
+                group, "loop_cue_activation_mode"));
         m_keylockModeControls.push_back(new ControlProxy(
                 group, "keylockMode"));
         m_keylockModeControls.last()->set(static_cast<double>(m_keylockMode));
