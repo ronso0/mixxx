@@ -67,6 +67,10 @@ void WHotcueButton::setup(const QDomNode& node, const SkinContext& context) {
     m_pCoType->connectValueChanged(this, &WHotcueButton::slotTypeChanged);
     slotTypeChanged(m_pCoType->get());
 
+    // used in mousePressEvent() to trigger the secondary loop cue activation
+    m_pCoActivateSecondary = std::make_unique<PollingControlProxy>(
+            createConfigKey(QStringLiteral("activate_secondary")));
+
     auto* pLeftConnection = new ControlParameterWidgetConnection(
             this,
             getLeftClickConfigKey(), // "activate"
@@ -92,6 +96,8 @@ void WHotcueButton::setup(const QDomNode& node, const SkinContext& context) {
 
 void WHotcueButton::mousePressEvent(QMouseEvent* e) {
     const bool rightClick = e->button() == Qt::RightButton;
+    const bool leftClick = e->button() == Qt::LeftButton;
+    const bool shift = e->modifiers().testFlag(Qt::ShiftModifier);
     if (rightClick) {
         if (isPressed()) {
             // Discard right clicks when already left clicked.
@@ -125,6 +131,12 @@ void WHotcueButton::mousePressEvent(QMouseEvent* e) {
             // use the bottom left corner as starting point for popup
             m_pCueMenuPopup->popup(mapToGlobal(QPoint(0, height())));
         }
+        return;
+    } else if (leftClick && shift) {
+        if (isPressed()) {
+            return;
+        }
+        m_pCoActivateSecondary->set(1.0);
         return;
     }
 
