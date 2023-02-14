@@ -324,20 +324,51 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
         // keys are held down.
         case QAbstractItemView::MoveUp:
         case QAbstractItemView::MoveDown: {
+            // Provide more context when browsing, i.e. show surrounding rows when
+            // the cursor moves towards the top or bottom end of the track view.
+            // That way, it's easier to notice if the next cursor move would wrap
+            // around to the other end of the list.
+            int n = 3; // number of extra rows
             const QModelIndex current = currentIndex();
             if (current.isValid()) {
                 const int row = currentIndex().row();
                 const int column = currentIndex().column();
                 if (cursorAction == QAbstractItemView::MoveDown) {
-                    if (row + 1 < pModel->rowCount()) {
-                        return pModel->index(row + 1, column);
+                    int nextRow = row + 1;
+                    if (nextRow < pModel->rowCount()) { // move down one row
+                        int lastVisRow = rowAt(viewport()->height());
+                        // check if the last row is fully visible
+                        if (visualRect(pModel->index(lastVisRow, column)).bottom() >
+                                viewport()->height() /* -1 ?? */) {
+                            lastVisRow--;
+                        }
+                        if (lastVisRow < nextRow + n &&
+                                pModel->rowCount() - 1 >= nextRow + n) {
+                            // if there are less than n rows visible below the next
+                            // row, and there are enough rows left to scroll down
+                            scrollTo(pModel->index(nextRow + n, column));
+                        }
+                        return pModel->index(nextRow, column);
                     } else {
+                        // wrap around
                         return pModel->index(0, column);
                     }
-                } else {
-                    if (row - 1 >= 0) {
-                        return pModel->index(row - 1, column);
+                } else { // MoveUp
+                    int prevRow = row - 1;
+                    if (prevRow >= 0) { // move up one row
+                        int firstVisRow = rowAt(0);
+                        // check if the first row is fully visible
+                        if (visualRect(pModel->index(firstVisRow, column)).top() < 0) {
+                            firstVisRow++;
+                        }
+                        if (firstVisRow > prevRow - n && prevRow - n >= 0) {
+                            // if there are less than n rows visible above the previous
+                            // row, and there are enough rows left to scroll up
+                            scrollTo(pModel->index(prevRow - n, column));
+                        }
+                        return pModel->index(prevRow, column);
                     } else {
+                        // wrap around
                         return pModel->index(pModel->rowCount() - 1, column);
                     }
                 }
@@ -358,6 +389,27 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
 
                 return pModel->index(row, column);
             }
+        } break;
+        case QAbstractItemView::MovePageUp:
+        case QAbstractItemView::MovePageDown: {
+            QModelIndex idx = QTableView::moveCursor(cursorAction, modifiers);
+            int newRow = idx.row();
+            const int column = currentIndex().column();
+            int n = 3;
+            if (cursorAction == QAbstractItemView::MovePageDown) {
+                if (pModel->rowCount() - 1 >= newRow + n) {
+                    // if there are less than n rows visible below the next
+                    // row, and there are enough rows left to scroll down
+                    scrollTo(pModel->index(newRow + n, column));
+                }
+            } else { // MovePageDown
+                if (newRow - n >= 0) {
+                    // if there are less than n rows visible above the previous
+                    // row, and there are enough rows left to scroll up
+                    scrollTo(pModel->index(newRow - n, column));
+                }
+            }
+            return idx;
         } break;
         // Make the home and end keys move to the first and last row rather than
         // the first and last column (QAbstractItemView default)
