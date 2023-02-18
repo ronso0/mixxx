@@ -713,15 +713,18 @@ VisibilityControlConnection::VisibilityControlConnection(
         : QObject(pParent),
           m_key(key),
           m_pAction(pAction) {
+    qWarning() << "     vis# create";
     connect(m_pAction, &QAction::triggered, this, &VisibilityControlConnection::slotActionToggled);
 }
 
 void VisibilityControlConnection::slotClearControl() {
+    qWarning() << "     vis# clear";
     m_pControl.reset();
     m_pAction->setEnabled(false);
 }
 
 void VisibilityControlConnection::slotReconnectControl() {
+    qWarning() << "     vis# recon";
     m_pControl.reset(new ControlProxy(m_key, this, ControlFlag::NoAssertIfMissing));
     m_pControl->connectValueChanged(this, &VisibilityControlConnection::slotControlChanged);
     m_pAction->setEnabled(m_pControl->valid());
@@ -730,12 +733,18 @@ void VisibilityControlConnection::slotReconnectControl() {
 
 void VisibilityControlConnection::slotControlChanged() {
     if (m_pControl) {
+        qWarning() << "     vis# changed";
         m_pAction->setChecked(m_pControl->toBool());
+    } else {
+        qWarning() << "     vis# !!! changed";
     }
 }
 
 void VisibilityControlConnection::slotActionToggled(bool toggle) {
     if (m_pControl) {
+        qWarning() << "     vis# toggled";
         m_pControl->set(toggle ? 1.0 : 0.0);
+    } else {
+        qWarning() << "     vis# toggled";
     }
 }
