@@ -326,7 +326,7 @@ jobs:
         # No need to do the PPA build for both Ubuntu versions
         if: matrix.os == 'ubuntu-22.04' && matrix.container == null
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]] && [[ "${{ github.repository }}" == "mixxxdj/mixxx" ]]; then
+          if [[ [[ "${{ github.ref }}" == "refs/heads/2.4" ]] || [[ "${{ github.ref }}" == "refs/heads/main" ]] ]] && [[ "${{ github.repository }}" == "mixxxdj/mixxx" ]]; then
             CPACK_ARGS="-D DEB_UPLOAD_PPA=ppa:mixxx/nightlies -D CPACK_DEBIAN_DEBIAN_VERSION=0ubuntu2"
           elif [[ "${{ github.ref }}" =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+$ ]] && [[ "${{ github.repository }}" == "mixxxdj/mixxx" ]]; then
             CPACK_ARGS="-D DEB_UPLOAD_PPA=ppa:mixxx/mixxx"
