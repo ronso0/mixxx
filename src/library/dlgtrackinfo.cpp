@@ -256,6 +256,7 @@ void DlgTrackInfo::init() {
             &WStarRating::ratingChanged,
             this,
             [this](int rating) {
+                m_pWStarRating->slotSetRating(rating);
                 m_trackRecord.setRating(rating);
             });
 
