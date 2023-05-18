@@ -82,16 +82,16 @@ void WStarRating::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void WStarRating::slotStarsUp(double v) {
-    if (v > 0 && m_starRating.starCount() < m_starRating.maxStarCount()) {
-        int star = m_starRating.starCount() + 1;
-        emit ratingChangeRequest(star);
+    if (v > 0 && m_currRating < m_starRating.maxStarCount()) {
+        int star = m_currRating + 1;
+        emit ratingChanged(star);
     }
 }
 
 void WStarRating::slotStarsDown(double v) {
-    if (v > 0 && m_starRating.starCount() > 0) {
-        int star = m_starRating.starCount() - 1;
-        emit ratingChangeRequest(star);
+    if (v > 0 && m_currRating > 0) {
+        int star = m_currRating - 1;
+        emit ratingChanged(star);
     }
 }
 
