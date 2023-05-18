@@ -744,7 +744,7 @@ void BaseTrackPlayerImpl::slotTrackColorChangeRequest(double v) {
     m_pLoadedTrack->setColor(color);
 }
 
-void BaseTrackPlayerImpl::slotRatingChangeRequest(int rating) {
+void BaseTrackPlayerImpl::slotSetTrackRating(int rating) {
     if (!m_pLoadedTrack) {
         return;
     }

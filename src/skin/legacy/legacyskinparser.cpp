@@ -1167,9 +1167,9 @@ QWidget* LegacySkinParser::parseStarRating(const QDomElement& node) {
             pStarRating,
             &WStarRating::slotSetRating);
     connect(pStarRating,
-            &WStarRating::ratingChangeRequest,
+            &WStarRating::ratingChanged,
             pPlayer,
-            &BaseTrackPlayer::slotRatingChangeRequest);
+            &BaseTrackPlayer::slotSetTrackRating);
 
     TrackPointer pTrack = pPlayer->getLoadedTrack();
     if (pTrack) {

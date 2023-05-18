@@ -44,7 +44,7 @@ class BaseTrackPlayer : public BasePlayer {
     virtual void slotCloneFromGroup(const QString& group) = 0;
     virtual void slotCloneDeck() = 0;
     virtual void slotEjectTrack(double) = 0;
-    virtual void slotRatingChangeRequest(int rating) = 0;
+    virtual void slotSetTrackRating(int rating) = 0;
 
   signals:
     void newTrackLoaded(TrackPointer pLoadedTrack);
@@ -92,7 +92,7 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     // to compensate so there is no audible change in volume.
     void slotAdjustReplayGain(mixxx::ReplayGain replayGain);
     void slotSetTrackColor(const mixxx::RgbColor::optional_t& color);
-    void slotRatingChangeRequest(int rating) final;
+    void slotSetTrackRating(int rating) final;
     void slotPlayToggled(double);
 
   private slots:

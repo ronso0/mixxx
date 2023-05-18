@@ -118,7 +118,7 @@ int WStarRating::starAtPosition(int x) {
 }
 
 void WStarRating::mouseReleaseEvent(QMouseEvent* /*unused*/) {
-    emit ratingChangeRequest(m_starRating.starCount());
+    emit ratingChanged(m_starRating.starCount());
 }
 
 void WStarRating::fillDebugTooltip(QStringList* debug) {

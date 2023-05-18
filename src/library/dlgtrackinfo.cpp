@@ -253,7 +253,7 @@ void DlgTrackInfo::init() {
             &DlgTrackInfo::slotReloadCoverArt);
 
     connect(m_pWStarRating,
-            &WStarRating::ratingChangeRequest,
+            &WStarRating::ratingChanged,
             this,
             [this](int rating) {
                 m_trackRecord.setRating(rating);

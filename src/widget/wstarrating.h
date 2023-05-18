@@ -26,7 +26,7 @@ class WStarRating : public WWidget {
     void slotSetRating(int rating);
 
   signals:
-    void ratingChangeRequest(int rating);
+    void ratingChanged(int rating);
 
   private slots:
     void slotStarsUp(double v);
