@@ -5,7 +5,7 @@
 #include "moc_softwarewaveformwidget.cpp"
 #include "waveform/renderers/waveformrenderbackground.h"
 #include "waveform/renderers/waveformrenderbeat.h"
-#include "waveform/renderers/waveformrendererendoftrack.h"
+// #include "waveform/renderers/waveformrendererendoftrack.h"
 #include "waveform/renderers/waveformrendererfilteredsignal.h"
 #include "waveform/renderers/waveformrendererpreroll.h"
 #include "waveform/renderers/waveformrendermark.h"
@@ -14,7 +14,7 @@
 SoftwareWaveformWidget::SoftwareWaveformWidget(const QString& group, QWidget* parent)
         : NonGLWaveformWidgetAbstract(group, parent) {
     addRenderer<WaveformRenderBackground>();
-    addRenderer<WaveformRendererEndOfTrack>();
+    // addRenderer<WaveformRendererEndOfTrack>();
     addRenderer<WaveformRendererPreroll>();
     addRenderer<WaveformRenderMarkRange>();
     addRenderer<WaveformRendererFilteredSignal>();

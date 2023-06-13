@@ -6,7 +6,7 @@
 #include "moc_qthsvwaveformwidget.cpp"
 #include "waveform/renderers/glwaveformrenderbackground.h"
 #include "waveform/renderers/waveformrenderbeat.h"
-#include "waveform/renderers/waveformrendererendoftrack.h"
+// #include "waveform/renderers/waveformrendererendoftrack.h"
 #include "waveform/renderers/waveformrendererhsv.h"
 #include "waveform/renderers/waveformrendererpreroll.h"
 #include "waveform/renderers/waveformrendermark.h"
@@ -16,7 +16,7 @@
 QtHSVWaveformWidget::QtHSVWaveformWidget(const QString& group, QWidget* parent)
         : GLWaveformWidgetAbstract(group, parent) {
     addRenderer<GLWaveformRenderBackground>();
-    addRenderer<WaveformRendererEndOfTrack>();
+    // addRenderer<WaveformRendererEndOfTrack>();
     addRenderer<WaveformRendererPreroll>();
     addRenderer<WaveformRenderMarkRange>();
     addRenderer<WaveformRendererHSV>();

@@ -7,7 +7,7 @@
 #include "waveform/renderers/deprecated/glwaveformrenderbackground.h"
 #include "waveform/renderers/deprecated/glwaveformrendererfilteredsignal.h"
 #include "waveform/renderers/waveformrenderbeat.h"
-#include "waveform/renderers/waveformrendererendoftrack.h"
+// #include "waveform/renderers/waveformrendererendoftrack.h"
 #include "waveform/renderers/waveformrendererpreroll.h"
 #include "waveform/renderers/waveformrendermark.h"
 #include "waveform/renderers/waveformrendermarkrange.h"
@@ -15,7 +15,7 @@
 GLWaveformWidget::GLWaveformWidget(const QString& group, QWidget* parent)
         : GLWaveformWidgetAbstract(group, parent) {
     addRenderer<GLWaveformRenderBackground>();
-    addRenderer<WaveformRendererEndOfTrack>();
+    // addRenderer<WaveformRendererEndOfTrack>();
     addRenderer<WaveformRendererPreroll>();
     addRenderer<WaveformRenderMarkRange>();
 #if !defined(QT_NO_OPENGL) && !defined(QT_OPENGL_ES_2)

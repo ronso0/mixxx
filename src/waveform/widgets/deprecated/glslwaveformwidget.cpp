@@ -7,7 +7,7 @@
 #include "waveform/renderers/deprecated/glslwaveformrenderersignal.h"
 #include "waveform/renderers/deprecated/glwaveformrenderbackground.h"
 #include "waveform/renderers/waveformrenderbeat.h"
-#include "waveform/renderers/waveformrendererendoftrack.h"
+// #include "waveform/renderers/waveformrendererendoftrack.h"
 #include "waveform/renderers/waveformrendererpreroll.h"
 #include "waveform/renderers/waveformrendermark.h"
 #include "waveform/renderers/waveformrendermarkrange.h"
@@ -39,7 +39,7 @@ GLSLWaveformWidget::GLSLWaveformWidget(
     makeCurrentIfNeeded();
 
     addRenderer<GLWaveformRenderBackground>();
-    addRenderer<WaveformRendererEndOfTrack>();
+    // addRenderer<WaveformRendererEndOfTrack>();
     addRenderer<WaveformRendererPreroll>();
     addRenderer<WaveformRenderMarkRange>();
 #if !defined(QT_NO_OPENGL) && !defined(QT_OPENGL_ES_2)
