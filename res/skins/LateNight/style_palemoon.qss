@@ -1977,7 +1977,7 @@ WPushButton#PlayDeck[value="0"] {
   #PlayDeckMini[value="1"] {
     image: url(skins:LateNight/palemoon/buttons/btn__pause_deck_mini.svg) no-repeat center center;
   }
-#PlaySampler[value="0"],
+/*#PlaySampler[value="0"],*/
 #PlayPreview[displayValue="0"] {
   image: url(skins:LateNight/palemoon/buttons/btn__play_sampler.svg) no-repeat center center;
   }
@@ -2585,9 +2585,11 @@ WPushButton#PlayDeck[value="0"] {
     image: url(skins:LateNight/palemoon/buttons/btn__beat_curpos_active_34.svg) no-repeat center center;
   }
 
+  #PlaySampler[value="0"],
   #EjectButton12[displayValue="0"], #EjectButton34[displayValue="0"] {
     image: url(skins:LateNight/palemoon/buttons/btn__eject.svg) no-repeat center center;
     }
+    #PlaySampler[value="1"],
     #EjectButton12[value="1"] {
       image: url(skins:LateNight/palemoon/buttons/btn__eject_active_12.svg) no-repeat center center;
     }
