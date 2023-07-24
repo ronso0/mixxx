@@ -12,7 +12,7 @@
 class DlgDeveloperTools : public QDialog, public Ui::DlgDeveloperTools {
     Q_OBJECT
   public:
-    DlgDeveloperTools(QWidget* pParent, UserSettingsPointer pConfig);
+    DlgDeveloperTools(QWidget* pParent, UserSettingsPointer pConfig, bool devMode);
 
     bool eventFilter(QObject* pObj, QEvent* pEvent) override;
 
@@ -33,4 +33,6 @@ class DlgDeveloperTools : public QDialog, public Ui::DlgDeveloperTools {
 
     QFile m_logFile;
     QTextCursor m_logCursor;
+
+    bool m_fullDevMode;
 };
