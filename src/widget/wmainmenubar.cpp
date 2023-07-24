@@ -332,6 +332,21 @@ void WMainMenuBar::initialize() {
 
     pViewMenu->addSeparator();
 
+    QString reloadSkinTitle = tr("&Reload Skin");
+    QString reloadSkinText = tr("Reload the skin");
+    auto* pDeveloperReloadSkin = new QAction(reloadSkinTitle, this);
+    pDeveloperReloadSkin->setShortcut(
+            QKeySequence(m_pKbdConfig->getValue(
+                    ConfigKey("[KeyboardShortcuts]", "OptionsMenu_ReloadSkin"),
+                    tr("Ctrl+Shift+R"))));
+    pDeveloperReloadSkin->setShortcutContext(Qt::ApplicationShortcut);
+    pDeveloperReloadSkin->setStatusTip(reloadSkinText);
+    pDeveloperReloadSkin->setWhatsThis(buildWhatsThis(reloadSkinTitle, reloadSkinText));
+    connect(pDeveloperReloadSkin, &QAction::triggered, this, &WMainMenuBar::reloadSkin);
+    pViewMenu->addAction(pDeveloperReloadSkin);
+
+    pViewMenu->addSeparator();
+
     QString fullScreenTitle = tr("&Full Screen");
     QString fullScreenText = tr("Display Mixxx using the full screen");
     auto* pViewFullScreen = new QAction(fullScreenTitle, this);
@@ -468,7 +483,6 @@ void WMainMenuBar::initialize() {
     pOptionsKeyboard->setStatusTip(keyboardShortcutText);
     pOptionsKeyboard->setWhatsThis(buildWhatsThis(keyboardShortcutTitle, keyboardShortcutText));
     connect(pOptionsKeyboard, &QAction::triggered, this, &WMainMenuBar::toggleKeyboardShortcuts);
-
     pOptionsMenu->addAction(pOptionsKeyboard);
 
     pOptionsMenu->addSeparator();
@@ -495,19 +509,6 @@ void WMainMenuBar::initialize() {
 #ifndef __APPLE__
         connectMenuToSlotShowMenuBar(pDeveloperMenu);
 #endif
-
-        QString reloadSkinTitle = tr("&Reload Skin");
-        QString reloadSkinText = tr("Reload the skin");
-        auto* pDeveloperReloadSkin = new QAction(reloadSkinTitle, this);
-        pDeveloperReloadSkin->setShortcut(
-            QKeySequence(m_pKbdConfig->getValue(
-                    ConfigKey("[KeyboardShortcuts]", "OptionsMenu_ReloadSkin"),
-                    tr("Ctrl+Shift+R"))));
-        pDeveloperReloadSkin->setShortcutContext(Qt::ApplicationShortcut);
-        pDeveloperReloadSkin->setStatusTip(reloadSkinText);
-        pDeveloperReloadSkin->setWhatsThis(buildWhatsThis(reloadSkinTitle, reloadSkinText));
-        connect(pDeveloperReloadSkin, &QAction::triggered, this, &WMainMenuBar::reloadSkin);
-        pDeveloperMenu->addAction(pDeveloperReloadSkin);
 
         QString developerToolsTitle = tr("Developer &Tools");
         QString developerToolsText = tr("Opens the developer tools dialog");
