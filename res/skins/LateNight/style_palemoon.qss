@@ -1241,7 +1241,7 @@ WEffectSelector:!editable:on {
 
 /************** font colors **************************************************/
 
-#CommentText,
+WLabel#CommentText,
 WLabel#FxUnitLabel,
 WLabel#MicAuxLabel,
 WLabel#MicAuxLabelUnconfigured,
