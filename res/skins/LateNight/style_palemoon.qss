@@ -3054,7 +3054,10 @@ WTrackPropertyEditor {
 
 #LibraryPlayedCheckbox::indicator:unchecked {
   image: url(skins:LateNight/palemoon/buttons/btn__lib_checkbox.svg);
-}
+  }
+  #LibraryPlayedCheckbox::indicator:unchecked:selected { /* black outline, no fill */
+    image: url(skins:LateNight/palemoon/buttons/btn__lib_checkbox_selected.svg);
+  }
 
 /* Button in library "Preview" column */
 #LibraryPreviewButton {
