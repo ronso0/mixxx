@@ -2332,7 +2332,8 @@ void WTrackMenu::slotRemoveFromDisk() {
                 tr("Okay"),
 #endif
                 QDialogButtonBox::AcceptRole);
-        cancelBtn->setDefault(true);
+        // cancelBtn->setDefault(true);
+        deleteBtn->setDefault(true);
 
         // Populate the main layout
         QVBoxLayout* delLayout = new QVBoxLayout();
@@ -2396,46 +2397,46 @@ void WTrackMenu::slotRemoveFromDisk() {
         m_pLibrary->trackCollectionManager()->purgeTracks(tracksToPurge);
 
         // Show purge summary message
-        QMessageBox msgBoxPurgeTracks;
-        msgBoxPurgeTracks.setIcon(QMessageBox::Information);
-        QString msgTitle;
-        QString msgText;
-        if (m_pTrackModel) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-            msgTitle = tr("Track Files Deleted");
-#else
-            msgTitle = tr("Track Files Moved To Trash");
-#endif
-            msgText =
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-                    tr("%1 track files were moved to trash and purged "
-                       "from the Mixxx database.")
-#else
-                    tr("%1 track files were deleted from disk and purged "
-                       "from the Mixxx database.")
-#endif
-                            .arg(QString::number(tracksToPurge.length())) +
-                    QStringLiteral("<br><br>") +
-                    tr("Note: if you are in the Computer or Recording view you "
-                       "need to click the current view again to see changes.");
-        } else {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-            msgTitle = tr("Track File Moved To Trash");
-            msgText = tr(
-                    "Track file was moved to trash and purged "
-                    "from the Mixxx database.");
-#else
-            msgTitle = tr("Track File Deleted");
-            msgText = tr(
-                    "Track file was deleted from disk and purged "
-                    "from the Mixxx database.");
-#endif
-        }
-        msgBoxPurgeTracks.setWindowTitle(msgTitle);
-        msgBoxPurgeTracks.setText(msgText);
-        msgBoxPurgeTracks.setTextFormat(Qt::RichText);
-        msgBoxPurgeTracks.setStandardButtons(QMessageBox::Ok);
-        msgBoxPurgeTracks.exec();
+        //        QMessageBox msgBoxPurgeTracks;
+        //        msgBoxPurgeTracks.setIcon(QMessageBox::Information);
+        //        QString msgTitle;
+        //        QString msgText;
+        //        if (m_pTrackModel) {
+        //#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        //            msgTitle = tr("Track Files Deleted");
+        //#else
+        //            msgTitle = tr("Track Files Moved To Trash");
+        //#endif
+        //            msgText =
+        //#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        //                    tr("%1 track files were moved to trash and purged "
+        //                       "from the Mixxx database.")
+        //#else
+        //                    tr("%1 track files were deleted from disk and purged "
+        //                       "from the Mixxx database.")
+        //#endif
+        //                            .arg(QString::number(tracksToPurge.length())) +
+        //                    QStringLiteral("<br><br>") +
+        //                    tr("Note: if you are in the Computer or Recording view you "
+        //                       "need to click the current view again to see changes.");
+        //        } else {
+        //#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        //            msgTitle = tr("Track File Moved To Trash");
+        //            msgText = tr(
+        //                    "Track file was moved to trash and purged "
+        //                    "from the Mixxx database.");
+        //#else
+        //            msgTitle = tr("Track File Deleted");
+        //            msgText = tr(
+        //                    "Track file was deleted from disk and purged "
+        //                    "from the Mixxx database.");
+        //#endif
+        //        }
+        //        msgBoxPurgeTracks.setWindowTitle(msgTitle);
+        //        msgBoxPurgeTracks.setText(msgText);
+        //        msgBoxPurgeTracks.setTextFormat(Qt::RichText);
+        //        msgBoxPurgeTracks.setStandardButtons(QMessageBox::Ok);
+        //        msgBoxPurgeTracks.exec();
     }
 
     const QList<QString> tracksToKeep(trackOperator.getTracksToKeep());
