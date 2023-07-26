@@ -2531,7 +2531,8 @@ void WTrackMenu::slotRemoveFromDisk() {
                 tr("Okay"),
 #endif
                 QDialogButtonBox::AcceptRole);
-        cancelBtn->setDefault(true);
+        // cancelBtn->setDefault(true);
+        deleteBtn->setDefault(true);
 
         // Populate the main layout
         auto pDelLayout = make_parented<QVBoxLayout>(&dlgDelConfirm);
@@ -2593,56 +2594,56 @@ void WTrackMenu::slotRemoveFromDisk() {
         // Purge only those tracks whose files have actually been deleted.
         m_pLibrary->trackCollectionManager()->purgeTracks(tracksToPurge);
 
-        if (s_showPurgeSuccessPopup) {
-            // Show purge summary message
-            QMessageBox msgBoxPurgeTracks;
-            msgBoxPurgeTracks.setIcon(QMessageBox::Information);
-            QString msgTitle;
-            QString msgText;
-            if (m_pTrackModel) {
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-                msgTitle = tr("Track Files Deleted");
-#else
-                msgTitle = tr("Track Files Moved To Trash");
-#endif
-                msgText =
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-                        tr("%1 track files were deleted from disk and purged "
-                           "from the Mixxx database.")
-#else
-                        tr("%1 track files were moved to trash and purged "
-                           "from the Mixxx database.")
-#endif
-                                .arg(QString::number(tracksToPurge.length())) +
-                        QStringLiteral("<br><br>") +
-                        tr("Note: if you are in the Computer or Recording view you "
-                           "need to click the current view again to see changes.");
-            } else {
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-                msgTitle = tr("Track File Deleted");
-                msgText = tr(
-                        "Track file was deleted from disk and purged "
-                        "from the Mixxx database.");
-#else
-                msgTitle = tr("Track File Moved To Trash");
-                msgText = tr(
-                        "Track file was moved to trash and purged "
-                        "from the Mixxx database.");
-#endif
-            }
-            QCheckBox notAgainCB(tr("Don't show again during this session"));
-            notAgainCB.setCheckState(Qt::Unchecked);
-            msgBoxPurgeTracks.setWindowTitle(msgTitle);
-            msgBoxPurgeTracks.setText(msgText);
-            msgBoxPurgeTracks.setTextFormat(Qt::RichText);
-            msgBoxPurgeTracks.setCheckBox(&notAgainCB);
-            msgBoxPurgeTracks.setStandardButtons(QMessageBox::Ok);
-            msgBoxPurgeTracks.exec();
-
-            if (notAgainCB.isChecked()) {
-                s_showPurgeSuccessPopup = false;
-            }
-        }
+    //if (s_showPurgeSuccessPopup) {
+    //     // Show purge summary message
+    //     QMessageBox msgBoxPurgeTracks;
+    //     msgBoxPurgeTracks.setIcon(QMessageBox::Information);
+    //     QString msgTitle;
+    //     QString msgText;
+    //     if (m_pTrackModel) {
+    // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+    //         msgTitle = tr("Track Files Deleted");
+    // #else
+    //         msgTitle = tr("Track Files Moved To Trash");
+    // #endif
+    //         msgText =
+    // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+    //                 tr("%1 track files were deleted from disk and purged "
+    //                    "from the Mixxx database.")
+    // #else
+    //                 tr("%1 track files were moved to trash and purged "
+    //                    "from the Mixxx database.")
+    // #endif
+    //                         .arg(QString::number(tracksToPurge.length())) +
+    //                 QStringLiteral("<br><br>") +
+    //                 tr("Note: if you are in the Computer or Recording view you "
+    //                    "need to click the current view again to see changes.");
+    //     } else {
+    // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+    //         msgTitle = tr("Track File Deleted");
+    //         msgText = tr(
+    //                 "Track file was deleted from disk and purged "
+    //                 "from the Mixxx database.");
+    // #else
+    //         msgTitle = tr("Track File Moved To Trash");
+    //         msgText = tr(
+    //                 "Track file was moved to trash and purged "
+    //                 "from the Mixxx database.");
+    // #endif
+    //     }
+    //     QCheckBox notAgainCB(tr("Don't show again during this session"));
+    //     notAgainCB.setCheckState(Qt::Unchecked);
+    //     msgBoxPurgeTracks.setWindowTitle(msgTitle);
+    //     msgBoxPurgeTracks.setText(msgText);
+    //     msgBoxPurgeTracks.setTextFormat(Qt::RichText);
+    //     msgBoxPurgeTracks.setCheckBox(&notAgainCB);
+    //     msgBoxPurgeTracks.setStandardButtons(QMessageBox::Ok);
+    //     msgBoxPurgeTracks.exec();
+    //
+    //     if (notAgainCB.isChecked()) {
+    //         s_showPurgeSuccessPopup = false;
+    //     }
+    // }
     }
 
     const QList<QString> tracksToKeep(trackOperator.getTracksToKeep());
