@@ -1,0 +1,33 @@
+<svg width="40" height="34" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="a" x1="7.9756808" x2="32.023882" y1="18.998186" y2="18.998186" gradientTransform="rotate(81.096627,19.999781,18.998186)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" offset="0"/>
+      <stop stop-color="#656565" offset="1"/>
+    </linearGradient>
+    <linearGradient id="c" x1="16.610512" x2="35.440517" y1="16.797213" y2="25.710094" gradientTransform="translate(6.0172914,-28.666155)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" offset="0"/>
+      <stop stop-color="#ababab" offset="1"/>
+    </linearGradient>
+    <filter id="d" x="-.046778089" y="-.056396979" width="1.0935562" height="1.112794" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="4.3462556"/>
+    </filter>
+    <linearGradient id="b" x1="373.39062" x2="416.78003" y1="518.01624" y2="674.26617" gradientUnits="userSpaceOnUse">
+      <stop offset="0"/>
+      <stop stop-opacity="0" offset="1"/>
+    </linearGradient>
+  </defs>
+  <rect y="-40" width="40" height="34" fill="#f40fff" fill-opacity=".502646"/>
+  <path d="m-31.477877 30.470032c-6.023868-6.482134-6.202935-16.846274 0.114954-23.0401577 6.31789-6.1938831 16.407953-6.193883 22.725842 3e-7 6.317889 6.1938834 6.157924 16.6344274 0.134056 23.1165614l-2.71145-2.546436-17.55832-0.114953z" fill="none" stroke="#050505" stroke-linecap="round" stroke-width="1.1" style="paint-order:fill markers stroke"/>
+  <g transform="matrix(.10917053 .02939117 -.03053427 .10508357 -5.9075736 -42.079395)" opacity=".493">
+    <path d="m270.69379 536.40673c18.79626 60.43726 85.31772 92.31846 145.17067 71.75942 60.21816-19.46338 89.33556-86.34203 69.32123-146.38692-0.32054-0.34436-250.98009-42.69617-214.4919 74.6275z" color="#000000" color-rendering="auto" dominant-baseline="auto" fill="url(#b)" image-rendering="auto" opacity="1" shape-rendering="auto" solid-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;isolation:auto;mix-blend-mode:normal;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+  </g>
+  <g>
+    <g transform="matrix(.13816844 -.03344219 -.03864478 -.11956736 -11.97813 89.35853)" fill="#fff" filter="url(#d)" opacity=".830378" style="mix-blend-mode:normal">
+      <path d="m278.58864 512.88013c9.08759 71.21324 72.8993 104.08595 121.52287 90.71721 48.62356-13.36874 88.99012-80.94209 55.77656-143.06036-17.95935-33.58881-34.72127-16.6733-94.77899-0.64903-60.05773 16.02428-97.17357-61.8345-82.52044 52.99218z" color="#000000" color-rendering="auto" dominant-baseline="auto" fill="#fff" image-rendering="auto" opacity="1" shape-rendering="auto" solid-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;isolation:auto;mix-blend-mode:normal;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+    </g>
+    <path d="m21.009263 6.2439565c-1.649544-0.1160709-3.348064 0.0959292-5.008824 0.6763057-6.6985643 2.1625905-10.3572531 9.4330628-8.1343974 16.1543428 2.2229964 6.721705 9.4848944 10.324777 16.1314524 8.003298 6.698563-2.16259 10.359332-9.430982 8.136477-16.152262-1.667758-5.0428215-6.17204-8.333188-11.124708-8.6816845z" color="#000000" color-rendering="auto" dominant-baseline="auto" image-rendering="auto" shape-rendering="auto" solid-color="#000000" stroke-width=".98431355" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;isolation:auto;mix-blend-mode:normal;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+    <path d="m15.824818 7.7386645c-1.450477 0.5522514-2.81317 1.4032037-3.998305 2.5529405-4.8505456 4.485539-5.0963609 12.120809-0.550537 16.966912 4.546113 4.84641 12.152129 5.048249 16.895674 0.447937 4.850546-4.485541 5.098954-12.11986 0.55313-16.965962-3.410627-3.6359205-8.544977-4.6599353-12.899962-3.0018275z" color="#000000" color-rendering="auto" dominant-baseline="auto" fill="url(#a)" image-rendering="auto" shape-rendering="auto" solid-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;isolation:auto;mix-blend-mode:normal;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+    <text x="44.084747" y="-35.947918" fill="#000000" font-family="sans-serif" font-size="3.33333325px" letter-spacing="0px" word-spacing="0px" style="line-height:0px" xml:space="preserve"><tspan x="44.084747" y="-35.947918" style="line-height:0px">Align this rectangle with page borders to copy all paths to btn_embedded</tspan><tspan x="44.084747" y="-26.423178" style="line-height:0px"/><tspan x="44.084747" y="-26.423178" style="line-height:0px"/><tspan x="44.084747" y="-26.423178" style="line-height:0px"/><tspan x="44.084747" y="-26.423178" style="line-height:0px">(shift + Up/Down),</tspan><tspan x="44.084747" y="-16.898439" style="line-height:0px"/></text>
+    <circle transform="rotate(63.732805)" cx="26.065825" cy="-9.4931622" r="10.8475" fill="url(#c)" fill-rule="evenodd" style="paint-order:markers fill stroke"/>
+  </g>
+</svg>
