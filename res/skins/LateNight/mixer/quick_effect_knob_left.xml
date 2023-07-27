@@ -52,7 +52,6 @@
                 <Pos>0,0</Pos>
                 <Size>40f,34f</Size>
                 <Knob>skins:LateNight/<Variable name="KnobScheme"/>/knobs/knob_indicator_<Variable name="KnobIndicator"/>_<Variable name="KnobColorQuickEffect"/>.svg</Knob>
-                <BackPath>skins:LateNight/<Variable name="KnobScheme"/>/knobs/knob_bg_<Variable name="KnobBg"/>.svg</BackPath>
                 <MinAngle><Variable name="PotiMinAngle"/></MinAngle>
                 <MaxAngle><Variable name="PotiMaxAngle"/></MaxAngle>
                 <ArcRadius><Variable name="ArcRadius"/></ArcRadius>
@@ -60,6 +59,8 @@
                 <ArcReversed><Variable name="ArcReversed"/></ArcReversed>
                 <ArcColor><Variable name="ArcColorFx12Quick"/></ArcColor>
                 <ArcThickness><Variable name="ArcThickness"/></ArcThickness>
+                <ArcBgThickness><Variable name="ArcBgThickness"/></ArcBgThickness>
+                <ArcBgColor><Variable name="ArcBgColor"/></ArcBgColor>
                 <ArcRoundCaps><Variable name="ArcRoundCaps"/></ArcRoundCaps>
                 <KnobCenterYOffset>1.998</KnobCenterYOffset>
                 <Connection>

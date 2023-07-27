@@ -56,12 +56,13 @@
                 <Size>40f,34f</Size>
                 <TooltipId>filter<Variable name="EqRange"/></TooltipId>
                 <Knob>skins:LateNight/<Variable name="KnobScheme"/>/knobs/knob_indicator_regular_<Variable name="KnobColorEq"/>.svg</Knob>
-                <BackPath>skins:LateNight/<Variable name="KnobScheme"/>/knobs/knob_bg_regular.svg</BackPath>
                 <MinAngle><Variable name="PotiMinAngle"/></MinAngle>
                 <MaxAngle><Variable name="PotiMaxAngle"/></MaxAngle>
                 <ArcRadius><Variable name="ArcRadius"/></ArcRadius>
                 <ArcThickness><Variable name="ArcThickness"/></ArcThickness>
                 <ArcColor><Variable name="ArcColorEq"/></ArcColor>
+                <ArcBgThickness><Variable name="ArcBgThickness"/></ArcBgThickness>
+                <ArcBgColor><Variable name="ArcBgColor"/></ArcBgColor>
                 <ArcRoundCaps><Variable name="ArcRoundCaps"/></ArcRoundCaps>
                 <KnobCenterYOffset>1.998</KnobCenterYOffset>
                 <EffectUnitGroup><Variable name="EqFxUnit"/></EffectUnitGroup>
