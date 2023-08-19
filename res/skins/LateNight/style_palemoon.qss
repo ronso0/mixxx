@@ -653,7 +653,7 @@ WTrackProperty[selected="true"],
 /************** RateControls ********************************************/
 
 #RateContainer {
-  padding: 2px 0px 0px 0px;
+  padding: 0px 0px 0px 0px;
   }
 
   #RateText {
@@ -750,11 +750,15 @@ WBpmEditor QDoubleSpinBox:focus {
   border-radius: 2px;
   margin: 0px;
   /* top/bottom padding is required to make room for the buttons! */
-  padding: 2px 0px 16px 0px;
+  /* no buttons in rop3210 -> disable */
+  /*padding: 2px 0px 16px 0px;*/
+  padding: 1px 0px 1px 0px;
   font-size: 14px/14px;
 }
+WBpmEditor QDoubleSpinBox,
 WBpmEditor QDoubleSpinBox QLineEdit {
   text-align: center;
+  font-size: 16px;
 }
 
 WBpmEditor QDoubleSpinBox::up-button,
@@ -762,11 +766,13 @@ WBpmEditor QDoubleSpinBox::down-button {
   subcontrol-origin: padding;
   subcontrol-position: bottom;
   position: absolute;
-  height: 16px;
-  width: 30px;
+  height: 0;
+  width: 0;
+  /*height: 16px;
+  width: 30px;*/
   background-color: #171719;
 }
-WBpmEditor QDoubleSpinBox::up-button {
+/*WBpmEditor QDoubleSpinBox::up-button {
   image: url(skins:LateNight/palemoon/buttons/btn__bpm_spinbox_plus.svg) no-repeat;
   bottom: 0px;
   left: 30px;
@@ -777,7 +783,7 @@ WBpmEditor QDoubleSpinBox::down-button {
   left: 0px;
   right: 30px;
   image: url(skins:LateNight/palemoon/buttons/btn__bpm_spinbox_minus.svg) no-repeat;
-}
+}*/
 
 
 /************** Mixer ***************************************************/
