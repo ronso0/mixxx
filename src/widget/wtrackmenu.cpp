@@ -284,16 +284,6 @@ void WTrackMenu::createMenus() {
                             !m_pFindOnWebMenu->isEmpty());
                 });
     }
-
-    if (featureIsEnabled(Feature::RemoveFromDisk)) {
-        // Qt added QFile::MoveToTrash() in 5.15. If that's not available we
-        // permanently delete files, put the action into a submenu for safety
-        // reasons and display different messages in the delete dialogs.
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-        m_pRemoveFromDiskMenu = make_parented<QMenu>(this);
-        m_pRemoveFromDiskMenu->setTitle(tr("Delete Track Files"));
-#endif
-    }
 }
 
 void WTrackMenu::createActions() {
@@ -771,8 +761,7 @@ void WTrackMenu::setupActions() {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         addAction(m_pRemoveFromDiskAct);
 #else
-        m_pRemoveFromDiskMenu->addAction(m_pRemoveFromDiskAct);
-        addMenu(m_pRemoveFromDiskMenu);
+        addAction(m_pRemoveFromDiskAct);
 #endif
     }
 
