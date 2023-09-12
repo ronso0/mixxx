@@ -181,7 +181,20 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
             this,
             &DlgPrefSound::settingChanged);
 
+    // 'Duplicate' the "Query Devices" button in the Outputs tab to the Inputs tab.
+    // Avoid the creation of new tr sources by copying the translated label of
+    // the existing button.
+    auto* pQueryButtonIn = new QPushButton(this);
+    pQueryButtonIn->setText(queryButton->text());
+    auto* pQueryBtnSpacer =
+            new QSpacerItem(40, 20, QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
+    auto* queryBtnLayout = new QHBoxLayout();
+    queryBtnLayout->addWidget(pQueryButtonIn);
+    queryBtnLayout->addSpacerItem(pQueryBtnSpacer);
+    inputVLayout->insertLayout(0, queryBtnLayout);
+
     connect(queryButton, &QAbstractButton::clicked, this, &DlgPrefSound::queryClicked);
+    connect(pQueryButtonIn, &QAbstractButton::clicked, this, &DlgPrefSound::queryClicked);
 
     connect(m_pSoundManager.get(),
             &SoundManager::outputRegistered,
