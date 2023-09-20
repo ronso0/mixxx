@@ -1,5 +1,8 @@
 #include "widget/wtracktext.h"
 
+#include <QApplication>
+
+#include "control/controlobject.h"
 #include "moc_wtracktext.cpp"
 #include "track/track.h"
 #include "util/dnd.h"
@@ -101,6 +104,11 @@ void WTrackText::contextMenuEvent(QContextMenuEvent* event) {
         ensureTrackMenuIsCreated();
         m_pTrackMenu->loadTrack(m_pCurrentTrack, m_group);
         m_pTrackMenu->popup(event->globalPos());
+        // Unset the hover state manually (stuck state is probably a Qt bug)
+        // TODO(ronso0) Test whether this is still required with Qt6
+        QEvent lev = QEvent(QEvent::Leave);
+        qApp->sendEvent(this, &lev);
+        update();
     }
 }
 
