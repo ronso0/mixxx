@@ -52,12 +52,10 @@ using ::testing::_;
 class TestEngineMixer : public EngineMixer {
   public:
     TestEngineMixer(UserSettingsPointer _config,
-            const QString& group,
             EffectsManager* pEffectsManager,
             ChannelHandleFactoryPointer pChannelHandleFactory,
             bool bEnableSidechain)
             : EngineMixer(_config,
-                      group,
                       pEffectsManager,
                       pChannelHandleFactory,
                       bEnableSidechain) {
@@ -76,7 +74,6 @@ class BaseSignalPathTest : public MixxxTest, SoundSourceProviderRegistration {
                 QStringLiteral("[App]"), QStringLiteral("num_decks")));
         m_pEffectsManager = new EffectsManager(config(), m_pChannelHandleFactory);
         m_pEngineMixer = new TestEngineMixer(m_pConfig,
-                m_sMainGroup,
                 m_pEffectsManager,
                 m_pChannelHandleFactory,
                 false);
