@@ -168,10 +168,13 @@ QString NotNode::toSql() const {
 
 TextFilterNode::TextFilterNode(const QSqlDatabase& database,
         const QStringList& sqlColumns,
-        const QString& argument)
+        const QString& argument,
+        const StringMatch matchMode)
         : m_database(database),
           m_sqlColumns(sqlColumns),
-          m_argument(argument) {
+          m_argument(argument),
+          m_matchMode(matchMode) {
+    qRegisterMetaType<StringMatch>("StringMatch");
     mixxx::DbConnection::makeStringLatinLow(&m_argument);
 }
 
@@ -184,8 +187,14 @@ bool TextFilterNode::match(const TrackPointer& pTrack) const {
 
         QString strValue = value.toString();
         mixxx::DbConnection::makeStringLatinLow(&strValue);
-        if (strValue.contains(m_argument)) {
-            return true;
+        if (m_matchMode == StringMatch::Equals) {
+            if (strValue == m_argument) {
+                return true;
+            }
+        } else {
+            if (strValue.contains(m_argument)) {
+                return true;
+            }
         }
     }
     return false;
@@ -201,8 +210,13 @@ QString TextFilterNode::toSql() const {
             argument.append('_');
         }
     }
-    QString escapedArgument = escaper.escapeString(
-            kSqlLikeMatchAll + argument + kSqlLikeMatchAll);
+    QString escapedArgument;
+    if (m_matchMode == StringMatch::Equals) {
+        escapedArgument = escaper.escapeString(argument);
+    } else {
+        escapedArgument = escaper.escapeString(
+                kSqlLikeMatchAll + argument + kSqlLikeMatchAll);
+    }
     QStringList searchClauses;
     for (const auto& sqlColumn : m_sqlColumns) {
         searchClauses << QString("%1 LIKE %2").arg(sqlColumn, escapedArgument);

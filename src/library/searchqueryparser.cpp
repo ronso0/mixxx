@@ -69,6 +69,8 @@ SearchQueryParser::SearchQueryParser(TrackCollection* pTrackCollection, QStringL
             QString("^-?(%1):(.*)$").arg(m_numericFilters.join("|")));
     m_specialFilterMatcher = QRegularExpression(
             QString("^[~-]?(%1):(.*)$").arg(m_specialFilters.join("|")));
+
+    qRegisterMetaType<StringMatch>("StringMatch");
 }
 
 SearchQueryParser::~SearchQueryParser() {
@@ -88,7 +90,11 @@ void SearchQueryParser::setSearchColumns(QStringList searchColumns) {
 }
 
 QString SearchQueryParser::getTextArgument(QString argument,
-                                           QStringList* tokens) const {
+        QStringList* tokens,
+        StringMatch* matchMode) const {
+    if (matchMode != nullptr) {
+        *matchMode = StringMatch::Contains;
+    }
     // If the argument is empty, assume the user placed a space after an
     // advanced search command. Consume another token and treat that as the
     // argument.
@@ -99,6 +105,11 @@ QString SearchQueryParser::getTextArgument(QString argument,
         }
     }
 
+    bool shouldMatchExactly = false;
+    if (argument.startsWith("=")) {
+        argument = argument.mid(1);
+        shouldMatchExactly = true;
+    }
     // Deal with quoted arguments. If this token started with a quote, then
     // search for the closing quote.
     if (argument.startsWith("\"")) {
@@ -128,8 +139,12 @@ QString SearchQueryParser::getTextArgument(QString argument,
             // return it as "" to distinguish it from an unfinished empty string
             argument = kMissingFieldSearchTerm;
         } else {
+            // Found a closing quote.
             // Slice off the quote and everything after.
             argument = argument.left(quote_index);
+            if (matchMode != nullptr && shouldMatchExactly) {
+                *matchMode = StringMatch::Equals;
+            }
         }
     }
 
@@ -155,8 +170,8 @@ void SearchQueryParser::parseTokens(QStringList tokens,
             // TODO(XXX): implement this feature.
         } else if (textFilterMatch.hasMatch()) {
             QString field = textFilterMatch.captured(1);
-            QString argument = getTextArgument(
-                    textFilterMatch.captured(2), &tokens);
+            StringMatch matchMode = StringMatch::Contains;
+            QString argument = getTextArgument(textFilterMatch.captured(2), &tokens, &matchMode);
 
             if (argument == kMissingFieldSearchTerm) {
                 qDebug() << "argument explicit empty";
@@ -176,7 +191,9 @@ void SearchQueryParser::parseTokens(QStringList tokens,
                 } else {
                     pNode = std::make_unique<TextFilterNode>(
                             m_pTrackCollection->database(),
-                            m_fieldToSqlColumns[field], argument);
+                            m_fieldToSqlColumns[field],
+                            argument,
+                            matchMode);
                 }
             }
         } else if (numericFilterMatch.hasMatch()) {
