@@ -1,12 +1,20 @@
 #include "library/searchqueryparser.h"
 
 #include <QRegularExpression>
+#include <utility>
 
+#include "library/searchquery.h"
 #include "track/keyutils.h"
 #include "util/assert.h"
 
 namespace {
-QString consumeQuotedArgument(QString argument,
+
+enum class Quoted : bool {
+    Incomplete,
+    Complete,
+};
+
+std::pair<QString, Quoted> consumeQuotedArgument(QString argument,
         QStringList* tokens) {
     DEBUG_ASSERT(argument.startsWith("\""));
 
@@ -22,7 +30,7 @@ QString consumeQuotedArgument(QString argument,
         // No ending quote found. Since we think they are going to close the
         // quote eventually, treat the entire token list as the argument for
         // now.
-        return argument;
+        return {argument, Quoted::Incomplete};
     }
 
     // Stuff the rest of the argument after the quote back into tokens.
@@ -40,7 +48,7 @@ QString consumeQuotedArgument(QString argument,
         // Slice off the quote and everything after.
         argument = argument.left(quote_index);
     }
-    return argument;
+    return {argument, Quoted::Complete};
 }
 
 } // anonymous namespace
@@ -136,13 +144,18 @@ SearchQueryParser::TextArgumentResult SearchQueryParser::getTextArgument(QString
             argument = tokens->takeFirst();
         }
     }
+    StringMatch mode = StringMatch::Contains;
     if (argument.startsWith("=")) {
-        return {argument.mid(1), StringMatch::Equals};
-    } else if (argument.startsWith("\"")) {
-        return {consumeQuotedArgument(argument, tokens), StringMatch::Contains};
-    } else {
-        return {argument, StringMatch::Contains};
+        // strip the '=' from the argument
+        argument = argument.mid(1);
+        mode = StringMatch::Equals;
     }
+    if (argument.startsWith("\"")) {
+        Quoted quoted;
+        std::tie(argument, quoted) = consumeQuotedArgument(argument, tokens);
+        mode = quoted == Quoted::Complete ? StringMatch::Equals : StringMatch::Contains;
+    }
+    return {argument, mode};
 }
 
 void SearchQueryParser::parseTokens(QStringList tokens,
