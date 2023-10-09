@@ -73,9 +73,6 @@ SearchQueryParser::SearchQueryParser(TrackCollection* pTrackCollection, QStringL
     qRegisterMetaType<StringMatch>("StringMatch");
 }
 
-SearchQueryParser::~SearchQueryParser() {
-}
-
 void SearchQueryParser::setSearchColumns(QStringList searchColumns) {
     m_queryColumns = std::move(searchColumns);
 
