@@ -25,6 +25,61 @@ Description:
         <Size>240f,1me</Size>
         <Children>
 
+          <!--  Waveforms -->
+          <WidgetGroup>
+            <SizePolicy>me,f</SizePolicy>
+            <Layout>stacked</Layout>
+            <Children>
+              <!-- translucent cover when Library is not maximized -->
+              <Template src="skin:../LateNight/helpers/skin_settings_cover.xml">
+                <SetVariable name="Setting">[Skin],show_maximized_library</SetVariable>
+              </Template>
+
+              <WidgetGroup>
+                <SizePolicy>me,min</SizePolicy>
+                <Layout>vertical</Layout>
+                <Children>
+                  <Template src="skin:../LateNight/helpers/skin_settings_labelbutton_2state.xml">
+                    <SetVariable name="Text">Waveforms</SetVariable>
+                    <SetVariable name="Setting">[Skin],show_waveforms</SetVariable>
+                    <SetVariable name="TooltipId">show_waveforms</SetVariable>
+                    <SetVariable name="Width">190me</SetVariable>
+                  </Template>
+
+                  <!-- Cue shift buttons in beatgrid editing section -->
+                  <WidgetGroup>
+                    <ObjectName>SkinSettingsCategory</ObjectName>
+                    <SizePolicy>me,f</SizePolicy>
+                    <Layout>stacked</Layout>
+                    <Children>
+                      <!-- translucent cover when waveforms are hidden -->
+                      <Template src="skin:../LateNight/helpers/skin_settings_cover_inverted.xml">
+                        <SetVariable name="Setting">[Skin],show_waveforms</SetVariable>
+                      </Template>
+
+                      <!-- translucent cover when beatgrid controls are hidden -->
+                      <Template src="skin:../LateNight/helpers/skin_settings_cover_inverted.xml">
+                        <SetVariable name="Setting">[Skin],show_beatgrid_controls</SetVariable>
+                      </Template>
+
+                      <Template src="skin:../LateNight/helpers/skin_settings_button_2state.xml">
+                        <SetVariable name="TooltipId">show_intro_outro_cues</SetVariable>
+                        <SetVariable name="Text">Hotcue Shift Buttons</SetVariable>
+                        <SetVariable name="Setting">[Skin],timing_shift_buttons</SetVariable>
+                      </Template>
+
+                    </Children>
+                  </WidgetGroup>
+                </Children>
+              </WidgetGroup>
+            </Children>
+          </WidgetGroup><!-- Waveforms -->
+
+          <WidgetGroup>
+            <ObjectName>SkinSettingsSeparator</ObjectName>
+            <Size>1min,12f</Size>
+          </WidgetGroup>
+
           <!-- Decks -->
           <WidgetGroup>
             <Layout>horizontal</Layout>
@@ -217,61 +272,6 @@ Description:
 
 
 <!-- Other skin options -->
-          <WidgetGroup>
-            <ObjectName>SkinSettingsSeparator</ObjectName>
-            <Size>1min,12f</Size>
-          </WidgetGroup>
-
-          <!--  Waveforms -->
-          <WidgetGroup>
-            <SizePolicy>me,f</SizePolicy>
-            <Layout>stacked</Layout>
-            <Children>
-              <!-- translucent cover when Library is not maximized -->
-              <Template src="skin:../LateNight/helpers/skin_settings_cover.xml">
-                <SetVariable name="Setting">[Skin],show_maximized_library</SetVariable>
-              </Template>
-
-              <WidgetGroup>
-                <SizePolicy>me,min</SizePolicy>
-                <Layout>vertical</Layout>
-                <Children>
-                  <Template src="skin:../LateNight/helpers/skin_settings_labelbutton_2state.xml">
-                    <SetVariable name="Text">Waveforms</SetVariable>
-                    <SetVariable name="Setting">[Skin],show_waveforms</SetVariable>
-                    <SetVariable name="TooltipId">show_waveforms</SetVariable>
-                    <SetVariable name="Width">190me</SetVariable>
-                  </Template>
-
-                  <!-- Cue shift buttons in beatgrid editing section -->
-                  <WidgetGroup>
-                    <ObjectName>SkinSettingsCategory</ObjectName>
-                    <SizePolicy>me,f</SizePolicy>
-                    <Layout>stacked</Layout>
-                    <Children>
-                      <!-- translucent cover when waveforms are hidden -->
-                      <Template src="skin:../LateNight/helpers/skin_settings_cover_inverted.xml">
-                        <SetVariable name="Setting">[Skin],show_waveforms</SetVariable>
-                      </Template>
-
-                      <!-- translucent cover when beatgrid controls are hidden -->
-                      <Template src="skin:../LateNight/helpers/skin_settings_cover_inverted.xml">
-                        <SetVariable name="Setting">[Skin],show_beatgrid_controls</SetVariable>
-                      </Template>
-
-                      <Template src="skin:../LateNight/helpers/skin_settings_button_2state.xml">
-                        <SetVariable name="TooltipId">show_intro_outro_cues</SetVariable>
-                        <SetVariable name="Text">Hotcue Shift Buttons</SetVariable>
-                        <SetVariable name="Setting">[Skin],timing_shift_buttons</SetVariable>
-                      </Template>
-
-                    </Children>
-                  </WidgetGroup>
-                </Children>
-              </WidgetGroup>
-            </Children>
-          </WidgetGroup><!-- Waveforms -->
-
           <WidgetGroup>
             <ObjectName>SkinSettingsSeparator</ObjectName>
             <Size>1min,12f</Size>
