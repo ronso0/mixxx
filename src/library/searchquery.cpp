@@ -211,11 +211,15 @@ QString TextFilterNode::toSql() const {
         }
     }
     QString escapedArgument;
-    if (m_matchMode == StringMatch::Equals) {
-        escapedArgument = escaper.escapeString(argument);
-    } else {
+    // Using a switch-case without default case to get a compile-time -Wswitch warning
+    switch (m_matchMode) {
+    case StringMatch::Contains:
         escapedArgument = escaper.escapeString(
                 kSqlLikeMatchAll + argument + kSqlLikeMatchAll);
+        break;
+    case StringMatch::Equals:
+        escapedArgument = escaper.escapeString(argument);
+        break;
     }
     QStringList searchClauses;
     for (const auto& sqlColumn : m_sqlColumns) {
