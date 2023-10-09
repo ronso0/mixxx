@@ -169,21 +169,21 @@ Description:
                           <WidgetGroup trigger="[LateNight],show_mini_deck">
                             <Layout>horizontal</Layout>
                             <Children>
-                              <Template src="skin:../LateNight/helpers/skin_settings_mini_deck.xml"/>
+                              <Template src="skin:../LateNight/helpers/skin_settings_deck_mini.xml"/>
                             </Children>
                           </WidgetGroup>
                           <!-- Compact deck selected -->
                           <WidgetGroup trigger="[LateNight],show_compact_deck">
                             <Layout>horizontal</Layout>
                             <Children>
-                              <Template src="skin:../LateNight/helpers/skin_settings_compact_deck.xml"/>
+                              <Template src="skin:../LateNight/helpers/skin_settings_deck_compact.xml"/>
                             </Children>
                           </WidgetGroup>
                           <!-- Full deck selected -->
                           <WidgetGroup trigger="[LateNight],show_full_deck">
                             <Layout>horizontal</Layout>
                             <Children>
-                              <Template src="skin:../LateNight/helpers/skin_settings_full_deck.xml"/>
+                              <Template src="skin:../LateNight/helpers/skin_settings_deck_full.xml"/>
                             </Children>
                           </WidgetGroup>
                         </Children>
@@ -192,7 +192,7 @@ Description:
                       <WidgetGroup trigger="[Skin],show_mixer" on_hide_select="0">
                         <Layout>horizontal</Layout>
                         <Children>
-                          <Template src="skin:../LateNight/helpers/skin_settings_full_deck.xml"/>
+                          <Template src="skin:../LateNight/helpers/skin_settings_deck_full.xml"/>
                         </Children>
                       </WidgetGroup>
                     </Children>
@@ -205,7 +205,7 @@ Description:
                       <Template src="skin:../LateNight/helpers/skin_settings_cover_inverted.xml">
                         <SetVariable name="Setting">[LateNight],max_lib_show_decks</SetVariable>
                       </Template>
-                      <Template src="skin:../LateNight/helpers/skin_settings_mini_deck.xml"/>
+                      <Template src="skin:../LateNight/helpers/skin_settings_deck_mini.xml"/>
                     </Children>
                   </WidgetGroup>
                 </Children>
