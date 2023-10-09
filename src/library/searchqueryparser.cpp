@@ -3,6 +3,47 @@
 #include <QRegularExpression>
 
 #include "track/keyutils.h"
+#include "util/assert.h"
+
+namespace {
+QString consumeQuotedArgument(QString argument,
+        QStringList* tokens) {
+    DEBUG_ASSERT(argument.startsWith("\""));
+
+    argument = argument.mid(1);
+
+    int quote_index = argument.indexOf("\"");
+    while (quote_index == -1 && tokens->length() > 0) {
+        argument += " " + tokens->takeFirst();
+        quote_index = argument.indexOf("\"");
+    }
+
+    if (quote_index == -1) {
+        // No ending quote found. Since we think they are going to close the
+        // quote eventually, treat the entire token list as the argument for
+        // now.
+        return argument;
+    }
+
+    // Stuff the rest of the argument after the quote back into tokens.
+    QString remaining = argument.mid(quote_index + 1).trimmed();
+    if (remaining.size() != 0) {
+        tokens->push_front(remaining);
+    }
+
+    if (quote_index == 0) {
+        // We have found an explicit empty string ""
+        // return it as "" to distinguish it from an unfinished empty string
+        argument = kMissingFieldSearchTerm;
+    } else {
+        // Found a closing quote.
+        // Slice off the quote and everything after.
+        argument = argument.left(quote_index);
+    }
+    return argument;
+}
+
+} // anonymous namespace
 
 constexpr char kNegatePrefix[] = "-";
 constexpr char kFuzzyPrefix[] = "~";
@@ -84,12 +125,8 @@ void SearchQueryParser::setSearchColumns(QStringList searchColumns) {
     }
 }
 
-QString SearchQueryParser::getTextArgument(QString argument,
-        QStringList* tokens,
-        StringMatch* matchMode) const {
-    if (matchMode != nullptr) {
-        *matchMode = StringMatch::Contains;
-    }
+SearchQueryParser::TextArgumentResult SearchQueryParser::getTextArgument(QString argument,
+        QStringList* tokens) const {
     // If the argument is empty, assume the user placed a space after an
     // advanced search command. Consume another token and treat that as the
     // argument.
@@ -99,51 +136,13 @@ QString SearchQueryParser::getTextArgument(QString argument,
             argument = tokens->takeFirst();
         }
     }
-
-    bool shouldMatchExactly = false;
     if (argument.startsWith("=")) {
-        argument = argument.mid(1);
-        shouldMatchExactly = true;
+        return {argument.mid(1), StringMatch::Equals};
+    } else if (argument.startsWith("\"")) {
+        return {consumeQuotedArgument(argument, tokens), StringMatch::Contains};
+    } else {
+        return {argument, StringMatch::Contains};
     }
-    // Deal with quoted arguments. If this token started with a quote, then
-    // search for the closing quote.
-    if (argument.startsWith("\"")) {
-        argument = argument.mid(1);
-
-        int quote_index = argument.indexOf("\"");
-        while (quote_index == -1 && tokens->length() > 0) {
-            argument += " " + tokens->takeFirst();
-            quote_index = argument.indexOf("\"");
-        }
-
-        if (quote_index == -1) {
-            // No ending quote found. Since we think they are going to close the
-            // quote eventually, treat the entire token list as the argument for
-            // now.
-            return argument;
-        }
-
-        // Stuff the rest of the argument after the quote back into tokens.
-        QString remaining = argument.mid(quote_index+1).trimmed();
-        if (remaining.size() != 0) {
-            tokens->push_front(remaining);
-        }
-
-        if (quote_index == 0) {
-            // We have found an explicit empty string ""
-            // return it as "" to distinguish it from an unfinished empty string
-            argument = kMissingFieldSearchTerm;
-        } else {
-            // Found a closing quote.
-            // Slice off the quote and everything after.
-            argument = argument.left(quote_index);
-            if (matchMode != nullptr && shouldMatchExactly) {
-                *matchMode = StringMatch::Equals;
-            }
-        }
-    }
-
-    return argument;
 }
 
 void SearchQueryParser::parseTokens(QStringList tokens,
@@ -165,8 +164,7 @@ void SearchQueryParser::parseTokens(QStringList tokens,
             // TODO(XXX): implement this feature.
         } else if (textFilterMatch.hasMatch()) {
             QString field = textFilterMatch.captured(1);
-            StringMatch matchMode = StringMatch::Contains;
-            QString argument = getTextArgument(textFilterMatch.captured(2), &tokens, &matchMode);
+            auto [argument, matchMode] = getTextArgument(textFilterMatch.captured(2), &tokens);
 
             if (argument == kMissingFieldSearchTerm) {
                 qDebug() << "argument explicit empty";
@@ -193,9 +191,7 @@ void SearchQueryParser::parseTokens(QStringList tokens,
             }
         } else if (numericFilterMatch.hasMatch()) {
             QString field = numericFilterMatch.captured(1);
-            QString argument = getTextArgument(
-                    numericFilterMatch.captured(2), &tokens)
-                                       .trimmed();
+            QString argument = getTextArgument(numericFilterMatch.captured(2), &tokens).argument;
 
             if (!argument.isEmpty()) {
                 if (argument == kMissingFieldSearchTerm) {
@@ -211,7 +207,7 @@ void SearchQueryParser::parseTokens(QStringList tokens,
             QString field = specialFilterMatch.captured(1);
             QString argument = getTextArgument(
                     specialFilterMatch.captured(2), &tokens)
-                                       .trimmed();
+                                       .argument;
             if (!argument.isEmpty()) {
                 if (field == "key") {
                     mixxx::track::io::key::ChromaticKey key =
@@ -249,7 +245,7 @@ void SearchQueryParser::parseTokens(QStringList tokens,
             }
             // Don't trigger on a lone minus sign.
             if (!token.isEmpty()) {
-                QString argument = getTextArgument(token, &tokens);
+                QString argument = getTextArgument(token, &tokens).argument;
                 // For untagged strings we search the track fields as well
                 // as the crate names the track is in. This allows the user
                 // to use crates like tags
