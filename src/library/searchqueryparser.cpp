@@ -69,8 +69,6 @@ SearchQueryParser::SearchQueryParser(TrackCollection* pTrackCollection, QStringL
             QString("^-?(%1):(.*)$").arg(m_numericFilters.join("|")));
     m_specialFilterMatcher = QRegularExpression(
             QString("^[~-]?(%1):(.*)$").arg(m_specialFilters.join("|")));
-
-    qRegisterMetaType<StringMatch>("StringMatch");
 }
 
 void SearchQueryParser::setSearchColumns(QStringList searchColumns) {

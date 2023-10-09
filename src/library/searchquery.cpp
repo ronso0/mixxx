@@ -174,7 +174,6 @@ TextFilterNode::TextFilterNode(const QSqlDatabase& database,
           m_sqlColumns(sqlColumns),
           m_argument(argument),
           m_matchMode(matchMode) {
-    qRegisterMetaType<StringMatch>("StringMatch");
     mixxx::DbConnection::makeStringLatinLow(&m_argument);
 }
 
