@@ -38,17 +38,28 @@ Description:
       <WidgetGroup>
         <ObjectName>SkinSettingsSubMenu</ObjectName>
         <Layout>stacked</Layout>
-        <Size>180min,18f</Size>
+        <Size>180min,36f</Size>
         <Children>
           <!-- translucent cover when rate controls are hidden -->
           <Template src="skin:../LateNight/helpers/skin_settings_cover_inverted.xml">
             <SetVariable name="Setting">[Skin],show_rate_controls_compact</SetVariable>
           </Template>
-          <Template src="skin:../LateNight/helpers/skin_settings_button_2state.xml">
-            <SetVariable name="TooltipId">rate_toggle</SetVariable>
-            <SetVariable name="Text">Sync Button</SetVariable>
-            <SetVariable name="Setting">[LateNight],show_sync_button_compact</SetVariable>
-          </Template>
+          <WidgetGroup>
+            <Layout>vertical</Layout>
+            <Size>0me,1min</Size>
+            <Children>
+              <Template src="skin:../LateNight/helpers/skin_settings_button_2state.xml">
+                <SetVariable name="TooltipId">rate_toggle</SetVariable>
+                <SetVariable name="Text">Sync Button</SetVariable>
+                <SetVariable name="Setting">[LateNight],show_sync_button_compact</SetVariable>
+              </Template>
+              <Template src="skin:../LateNight/helpers/skin_settings_button_2state.xml">
+                <SetVariable name="TooltipId">rate_toggle</SetVariable>
+                <SetVariable name="Text">BPM</SetVariable>
+                <SetVariable name="Setting">[LateNight],show_bpm</SetVariable>
+              </Template>
+            </Children>
+          </WidgetGroup>
         </Children>
       </WidgetGroup>
 
