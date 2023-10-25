@@ -3067,13 +3067,6 @@ WTrackPropertyEditor {
       image: url(skins:LateNight/palemoon/buttons/btn__lib_spinbox_down.svg) no-repeat center center;
       }
 
-#LibraryPlayedCheckbox::indicator:unchecked {
-  image: url(skins:LateNight/palemoon/buttons/btn__lib_checkbox.svg);
-  }
-  #LibraryPlayedCheckbox::indicator:unchecked:selected { /* black outline, no fill */
-    image: url(skins:LateNight/palemoon/buttons/btn__lib_checkbox_selected.svg);
-  }
-
 /* Button in library "Preview" column */
 #LibraryPreviewButton {
   margin: 0px;
@@ -3549,10 +3542,19 @@ QPlainTextEdit QMenu::item:disabled {
       image: url(skins:LateNight/palemoon/buttons/btn__menu_checkbox.svg);
     }
 
+  WLibrarySidebar QMenu::indicator:unchecked,
+  WTrackTableViewHeader QMenu::indicator:unchecked,
+  WTrackMenu QMenu QCheckBox::indicator:unchecked,
+  #LibraryPlayedCheckbox::indicator:unchecked {
+    image: url(skins:LateNight/palemoon/buttons/btn__lib_checkbox.svg);
+    }
+    #LibraryPlayedCheckbox::indicator:unchecked:selected { /* black outline, no fill */
+      image: url(skins:LateNight/palemoon/buttons/btn__lib_checkbox_selected.svg);
+    }
   WLibrarySidebar QMenu::indicator:checked,
   WTrackTableViewHeader QMenu QCheckBox::indicator:checked,
-  #LibraryPlayedCheckbox::indicator:checked,
   WTrackMenu QMenu QCheckBox::indicator:checked,
+  #LibraryPlayedCheckbox::indicator:checked,
   WEffectChainPresetButton QMenu QCheckBox::indicator:checked {
     image: url(skins:LateNight/palemoon/buttons/btn__lib_checkmark_blue.svg);
   }
