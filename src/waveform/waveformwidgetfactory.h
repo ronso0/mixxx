@@ -180,7 +180,6 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     std::vector<WaveformWidgetHolder> m_waveformWidgetHolders;
 
     WaveformWidgetType::Type m_type;
-    WaveformWidgetType::Type m_configType;
 
     UserSettingsPointer m_config;
 

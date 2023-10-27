@@ -108,7 +108,6 @@ WaveformWidgetFactory::WaveformWidgetFactory()
         // Concretely, we want to set a non-GL waveform when loading the skin so that the window
         // loads correctly.
         : m_type(WaveformWidgetType::EmptyWaveform),
-          m_configType(WaveformWidgetType::EmptyWaveform),
           m_config(nullptr),
           m_skipRender(false),
           m_frameRate(60),
@@ -380,13 +379,7 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
     int beatGridAlpha = m_config->getValue(ConfigKey("[Waveform]", "beatGridAlpha"), m_beatGridAlpha);
     setDisplayBeatGridAlpha(beatGridAlpha);
 
-    WaveformWidgetType::Type type = static_cast<WaveformWidgetType::Type>(
-            m_config->getValueString(ConfigKey("[Waveform]","WaveformType")).toInt(&ok));
-    // Store the widget type on m_configType for later initialization.
-    // We will initialize the objects later because of a problem with GL on QT 5.14.2 on Windows
-    if (!ok || !setWidgetType(type, &m_configType)) {
-        setWidgetType(autoChooseWidgetType(), &m_configType);
-    }
+    setWidgetTypeFromConfig();
 
     for (int i = 0; i < FilterCount; i++) {
         double visualGain = m_config->getValueString(
@@ -549,7 +542,6 @@ bool WaveformWidgetFactory::setWidgetType(
         // type is acceptable
         *pCurrentType = type;
         if (m_config) {
-            m_configType = type;
             m_config->setValue(
                     ConfigKey("[Waveform]", "WaveformType"),
                     static_cast<int>(*pCurrentType));
@@ -560,7 +552,6 @@ bool WaveformWidgetFactory::setWidgetType(
     // fallback
     *pCurrentType = WaveformWidgetType::EmptyWaveform;
     if (m_config) {
-        m_configType = *pCurrentType;
         m_config->setValue(
                 ConfigKey("[Waveform]", "WaveformType"),
                 static_cast<int>(*pCurrentType));
@@ -570,14 +561,16 @@ bool WaveformWidgetFactory::setWidgetType(
 
 bool WaveformWidgetFactory::setWidgetTypeFromConfig() {
     // qDebug() << "WaveformWidgetFactory::setWidgetTypeFromConfig";
-    int empty = findHandleIndexFromType(WaveformWidgetType::EmptyWaveform);
-    int desired = findHandleIndexFromType(m_configType);
-    if (desired == -1) {
-        // qDebug() << "waveform type not found in config, use empty";
-        desired = empty;
+    bool ok = false;
+    WaveformWidgetType::Type type = static_cast<WaveformWidgetType::Type>(
+            m_config->getValueString(ConfigKey("[Waveform]", "WaveformType")).toInt(&ok));
+    // Store the widget type on m_tyype for later initialization.
+    // We will initialize the objects later because of a problem with GL on QT 5.14.2 on Windows
+    if (!ok || !setWidgetType(type, &m_type)) {
+        // qDebug() << "waveform type not found in config or invalid, use auto type";
+        return setWidgetType(autoChooseWidgetType(), &m_type);
     }
-    // qDebug() << "found valid waveform type" << getDisplayNameFromType(m_configType);
-    return setWidgetTypeFromHandle(desired, true);
+    return true;
 }
 
 bool WaveformWidgetFactory::setWidgetTypeFromHandle(int handleIndex, bool force) {
