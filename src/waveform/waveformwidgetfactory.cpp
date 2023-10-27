@@ -447,6 +447,7 @@ void WaveformWidgetFactory::addVuMeter(WVuMeterBase* pVuMeter) {
 }
 
 void WaveformWidgetFactory::slotSkinLoaded() {
+    // qDebug() << "WaveformWidgetFactory::slotSkinLoaded";
     setWidgetTypeFromConfig();
 #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && defined __WINDOWS__
     // This regenerates the waveforms twice because of a bug found on Windows
@@ -537,6 +538,8 @@ bool WaveformWidgetFactory::setWidgetType(
         WaveformWidgetType::Type type,
         WaveformWidgetType::Type* pCurrentType) {
     if (type == *pCurrentType) {
+        qDebug() << "WaveformWidgetFactory::setWidgetType - type"
+                 << getDisplayNameFromType(type) << " already in use";
         return true;
     }
 
@@ -564,17 +567,22 @@ bool WaveformWidgetFactory::setWidgetType(
 }
 
 bool WaveformWidgetFactory::setWidgetTypeFromConfig() {
+    // qDebug() << "WaveformWidgetFactory::setWidgetTypeFromConfig";
     int empty = findHandleIndexFromType(WaveformWidgetType::EmptyWaveform);
     int desired = findHandleIndexFromType(m_configType);
     if (desired == -1) {
+        // qDebug() << "waveform type not found in config, use empty";
         desired = empty;
     }
+    // qDebug() << "found valid waveform type" << getDisplayNameFromType(m_configType);
     return setWidgetTypeFromHandle(desired, true);
 }
 
 bool WaveformWidgetFactory::setWidgetTypeFromHandle(int handleIndex, bool force) {
+    // qDebug() << "WaveformWidgetFactory::setWidgetTypeFromHandle" << handleIndex;
     if (handleIndex < 0 || handleIndex >= m_waveformWidgetHandles.size()) {
-        qDebug() << "WaveformWidgetFactory::setWidgetType - invalid handle --> use of 'EmptyWaveform'";
+        qDebug() << "WaveformWidgetFactory::setWidgetTypeFromHandle"
+                    " - invalid handle --> use of 'EmptyWaveform'";
         // fallback empty type
         setWidgetType(WaveformWidgetType::EmptyWaveform);
         return false;
@@ -582,7 +590,8 @@ bool WaveformWidgetFactory::setWidgetTypeFromHandle(int handleIndex, bool force)
 
     WaveformWidgetAbstractHandle& handle = m_waveformWidgetHandles[handleIndex];
     if (handle.m_type == m_type && !force) {
-        qDebug() << "WaveformWidgetFactory::setWidgetType - type already in use";
+        qDebug() << "WaveformWidgetFactory::setWidgetTypeFromHandle - type"
+                 << handle.getDisplayName() << "already in use";
         return true;
     }
 
@@ -1161,6 +1170,16 @@ int WaveformWidgetFactory::findHandleIndexFromType(WaveformWidgetType::Type type
         }
     }
     return index;
+}
+
+QString WaveformWidgetFactory::getDisplayNameFromType(WaveformWidgetType::Type type) {
+    for (int i = 0; i < m_waveformWidgetHandles.size(); i++) {
+        WaveformWidgetAbstractHandle& handle = m_waveformWidgetHandles[i];
+        if (handle.m_type == type) {
+            return handle.m_displayString;
+        }
+    }
+    return QString();
 }
 
 template<typename WaveformT>
