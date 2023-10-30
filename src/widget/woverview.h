@@ -128,6 +128,7 @@ class WOverview : public WWidget, public TrackDropTarget {
     void drawAnalyzerProgress(QPainter* pPainter);
     void drawRangeMarks(QPainter* pPainter, const float& offset, const float& gain);
     void drawMarks(QPainter* pPainter, const float offset, const float gain);
+    void drawMarkRangesOnly(QPainter* pPainter, const float offset, const float gain);
     void drawPickupPosition(QPainter* pPainter);
     void drawTimeRuler(QPainter* pPainter);
     void drawMarkLabels(QPainter* pPainter, const float offset, const float gain);

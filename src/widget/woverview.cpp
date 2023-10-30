@@ -642,13 +642,22 @@ void WOverview::paintEvent(QPaintEvent* pEvent) {
         // ScopePainter.
         drawEndOfTrackBackground(&painter);
         drawAxis(&painter);
+
+        double trackSamples = getTrackSamples();
+        if (trackSamples > 0) {
+            const float offset = 1.0f;
+            const auto gain = static_cast<CSAMPLE_GAIN>(length() - 2) /
+                    static_cast<CSAMPLE_GAIN>(trackSamples);
+
+            drawMarkRangesOnly(&painter, offset, gain);
+        }
+
         drawWaveformPixmap(&painter);
         drawPlayedOverlay(&painter);
         drawPlayPosition(&painter);
         drawEndOfTrackFrame(&painter);
         drawAnalyzerProgress(&painter);
 
-        double trackSamples = getTrackSamples();
         if (trackSamples > 0) {
             const float offset = 1.0f;
             const auto gain = static_cast<CSAMPLE_GAIN>(length() - 2) /
@@ -852,6 +861,41 @@ void WOverview::drawRangeMarks(QPainter* pPainter, const float& offset, const fl
     }
 }
 
+void WOverview::drawMarkRangesOnly(QPainter* pPainter, const float offset, const float gain) {
+    for (auto it = m_marks.begin(); it != m_marks.end(); ++it) {
+        PainterScope painterScope(pPainter);
+        const WaveformMarkPointer& pMark = *it;
+        double samplePosition = pMark->getSamplePosition();
+        const float markPosition = math_clamp(
+                offset + static_cast<float>(samplePosition) * gain,
+                0.0f,
+                static_cast<float>(width()));
+        // pMark->m_linePosition = markPosition;
+
+        QRectF rect;
+        double sampleEndPosition = pMark->getSampleEndPosition();
+        if (sampleEndPosition > 0) {
+            const float markEndPosition = math_clamp(
+                    offset + static_cast<float>(sampleEndPosition) * gain,
+                    0.0f,
+                    static_cast<float>(width()));
+
+            if (m_orientation == Qt::Horizontal) {
+                rect.setCoords(markPosition, 0, markEndPosition, height());
+            } else {
+                rect.setCoords(0, markPosition, width(), markEndPosition);
+            }
+        }
+
+        if (rect.isValid()) {
+            QColor loopColor = pMark->fillColor();
+            // deactivated for full opacity
+            // loopColor.setAlphaF(0.5);
+            pPainter->fillRect(rect, loopColor);
+        }
+    }
+}
+
 void WOverview::drawMarks(QPainter* pPainter, const float offset, const float gain) {
     QFont markerFont = pPainter->font();
     markerFont.setPixelSize(static_cast<int>(m_iLabelFontSize * m_scaleFactor));
@@ -892,32 +936,11 @@ void WOverview::drawMarks(QPainter* pPainter, const float offset, const float ga
             bgLine.setLine(0.0, markPosition - 1.0, width(), markPosition - 1.0);
         }
 
-        QRectF rect;
-        double sampleEndPosition = pMark->getSampleEndPosition();
-        if (sampleEndPosition > 0) {
-            const float markEndPosition = math_clamp(
-                    offset + static_cast<float>(sampleEndPosition) * gain,
-                    0.0f,
-                    static_cast<float>(width()));
-
-            if (m_orientation == Qt::Horizontal) {
-                rect.setCoords(markPosition, 0, markEndPosition, height());
-            } else {
-                rect.setCoords(0, markPosition, width(), markEndPosition);
-            }
-        }
-
         pPainter->setPen(pMark->borderColor());
         pPainter->drawLine(bgLine);
 
         pPainter->setPen(pMark->fillColor());
         pPainter->drawLine(line);
-
-        if (rect.isValid()) {
-            QColor loopColor = pMark->fillColor();
-            loopColor.setAlphaF(0.5);
-            pPainter->fillRect(rect, loopColor);
-        }
 
         if (!pMark->m_text.isEmpty()) {
             Qt::Alignment halign = pMark->m_align & Qt::AlignHorizontal_Mask;
