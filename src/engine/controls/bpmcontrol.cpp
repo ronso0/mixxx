@@ -89,6 +89,13 @@ BpmControl::BpmControl(const QString& group,
             this, &BpmControl::slotTranslateBeatsLater,
             Qt::DirectConnection);
 
+    m_pBeatsDouble = new ControlPushButton(ConfigKey(group, "beats_set_double"), false);
+    connect(m_pBeatsDouble,
+            &ControlObject::valueChanged,
+            this,
+            &BpmControl::slotDoubleBpm,
+            Qt::DirectConnection);
+
     // Pick a wide range (kBpmRangeMin to kBpmRangeMax) and allow out of bounds sets. This lets you
     // map a soft-takeover MIDI knob to the BPM. This also creates bpm_up and
     // bpm_down controls.
@@ -221,6 +228,29 @@ void BpmControl::slotTranslateBeatsLater(double v) {
             pTrack->trySetBeats(*translatedBeats);
         }
     }
+}
+
+void BpmControl::slotScaleBpm(mixxx::Beats::BpmScale bpmScale) {
+    const TrackPointer pTrack = getEngineBuffer()->getLoadedTrack();
+    if (!pTrack) {
+        return;
+    }
+    const mixxx::BeatsPointer pBeats = pTrack->getBeats();
+    if (!pBeats) {
+        return;
+    }
+    const auto newBeats = pBeats->tryScale(bpmScale);
+    if (!newBeats) {
+        return;
+    }
+    pTrack->trySetBeats(*newBeats);
+}
+
+void BpmControl::slotDoubleBpm(double v) {
+    if (v <= 0) {
+        return;
+    }
+    slotScaleBpm(mixxx::Beats::BpmScale::Double);
 }
 
 void BpmControl::slotBpmTap(double v) {

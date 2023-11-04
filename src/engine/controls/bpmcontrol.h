@@ -103,6 +103,9 @@ class BpmControl : public EngineControl {
     void slotAdjustBeatsSlower(double);
     void slotTranslateBeatsEarlier(double);
     void slotTranslateBeatsLater(double);
+
+    void slotDoubleBpm(double v);
+
     void slotTapFilter(double,int);
     void slotBpmTap(double);
     void slotUpdateRateSlider(double v = 0.0);
@@ -119,6 +122,7 @@ class BpmControl : public EngineControl {
     }
     double calcSyncAdjustment(bool userTweakingSync);
     void adjustBeatsBpm(double deltaBpm);
+    void slotScaleBpm(mixxx::Beats::BpmScale bpmScale);
 
     friend class SyncControl;
 
@@ -144,6 +148,8 @@ class BpmControl : public EngineControl {
     ControlPushButton* m_pAdjustBeatsSlower;
     ControlPushButton* m_pTranslateBeatsEarlier;
     ControlPushButton* m_pTranslateBeatsLater;
+
+    ControlPushButton* m_pBeatsDouble;
 
     // The current effective BPM of the engine
     ControlLinPotmeter* m_pEngineBpm;
