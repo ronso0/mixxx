@@ -22,7 +22,7 @@ constexpr unsigned int kMaxEngineChannels = 2;
 constexpr unsigned int kMaxEngineSamples = kMaxEngineChannels * kMaxEngineFrames;
 constexpr unsigned int MAX_BUFFER_LEN = 160000;
 
-constexpr int kMaxNumberOfDecks = 4;
+constexpr int kMaxNumberOfDecks = 8;
 
 // Keyboard shortcut components for showing the Track Properties dialog and
 // for displaying the shortcut in the track context menu

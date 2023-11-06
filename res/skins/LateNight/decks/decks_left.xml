@@ -11,11 +11,17 @@
       </SingletonContainer>
 
       <WidgetGroup>
-        <Layout>horizontal</Layout>
+        <Layout>vertical</Layout>
         <SizePolicy>me,min</SizePolicy>
         <Children>
           <SingletonContainer>
             <ObjectName>Deck3_Src</ObjectName>
+          </SingletonContainer>
+          <SingletonContainer>
+            <ObjectName>Deck5_Src</ObjectName>
+          </SingletonContainer>
+          <SingletonContainer>
+            <ObjectName>Deck7_Src</ObjectName>
           </SingletonContainer>
         </Children>
         <Connection>

@@ -130,11 +130,11 @@ DlgPreferences::DlgPreferences(
 #ifdef __VINYLCONTROL__
     // It's important for this to be before the connect for wsound.
     // TODO(rryan) determine why/if this is still true
-    addPageWidget(PreferencesPage(
-                          new DlgPrefVinyl(this, pVCManager, m_pConfig),
-                          new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type)),
-            tr("Vinyl Control"),
-            "ic_preferences_vinyl.svg");
+    // addPageWidget(PreferencesPage(
+    //                       new DlgPrefVinyl(this, pVCManager, m_pConfig),
+    //                       new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type)),
+    //         tr("Vinyl Control"),
+    //         "ic_preferences_vinyl.svg");
 #endif // __VINYLCONTROL__
 
     DlgPrefInterface* pInterfacePage = new DlgPrefInterface(this,
