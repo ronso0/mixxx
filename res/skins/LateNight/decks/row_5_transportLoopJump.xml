@@ -166,7 +166,7 @@
                         <SetVariable name="number">7</SetVariable>
                       </Template>
                       <Template src="skin:../LateNight/controls/button_hotcue.xml">
-                        <SetVariable name="number">8</SetVariable>
+                        <SetVariable name="number">0</SetVariable>
                       </Template>
                     </Children>
                   </WidgetGroup>
