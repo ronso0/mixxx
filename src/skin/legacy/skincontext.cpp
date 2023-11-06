@@ -137,12 +137,7 @@ PixmapSource SkinContext::getPixmapSourceInner(const QString& filename) const {
 
 QDebug SkinContext::logWarning(const char* file, const int line,
                                const QDomNode& node) const {
-    return qWarning() << QString("%1:%2 SKIN ERROR at %3:%4 <%5>:")
-                             .arg(file, QString::number(line), m_xmlPath,
-                                  QString::number(node.lineNumber()),
-                                  node.nodeName())
-                             .toUtf8()
-                             .constData();
+    return SkinWarning(file, line, m_xmlPath, node);
 }
 
 int SkinContext::scaleToWidgetSize(QString& size) const {

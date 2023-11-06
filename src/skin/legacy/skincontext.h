@@ -17,16 +17,37 @@
 
 #define SKIN_WARNING(node, context) (context).logWarning(__FILE__, __LINE__, (node))
 
+class SkinWarning : public QDebug {
+  public:
+    SkinWarning(const char* file,
+            const int line,
+            const QString xmlPath,
+            const QDomNode& node)
+            : QDebug(QtWarningMsg),
+              m_file(file),
+              m_line(line) {
+        noquote();
+        *this << "Skin parsing failed at"
+              << QString(xmlPath) + QChar(':') +
+                        QString::number(node.lineNumber());
+    }
+
+    ~SkinWarning() {
+        *this << QString(m_file) + QChar(':') + QString::number(m_line);
+    }
+
+  private:
+    const char* m_file;
+    const int m_line;
+};
+
 // A class for managing the current context/environment when processing a
 // skin. Used hierarchically by LegacySkinParser to create new contexts and
 // evaluate skin XML nodes while loading the skin.
 class SkinContext {
   public:
-    SkinContext(
-            UserSettingsPointer pConfig,
-            const QString& xmlPath);
-    SkinContext(
-            const SkinContext* parent);
+    SkinContext(UserSettingsPointer pConfig, const QString& xmlPath);
+    SkinContext(const SkinContext* parent);
     virtual ~SkinContext() = default;
 
     // Not copiable
