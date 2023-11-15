@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QCache>
 #include <QDialog>
 #include <QList>
 #include <future>
@@ -111,7 +112,7 @@ class DlgTagFetcher : public QDialog, public Ui::DlgTagFetcher {
 
     QByteArray m_fetchedCoverArtByteArrays;
 
-    QMap<QString, QPixmap> m_coverCache;
+    QCache<QString, QPixmap> m_coverCache;
 
     QScopedPointer<CoverArtCopyWorker> m_pWorker;
 };

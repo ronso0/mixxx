@@ -56,6 +56,9 @@ constexpr int kPercentForCoverArtImageTask = 70;
 // Original Index of the track tag, listed all the time below 'Original Tags'.
 constexpr int kOriginalTrackIndex = -1;
 
+// Max size of the cache for fetched covers
+constexpr int kCoverCacheLimit = 30720;
+
 QStringList trackColumnValues(
         const Track& track) {
     const mixxx::TrackMetadata trackMetadata = track.getMetadata();
@@ -125,7 +128,8 @@ DlgTagFetcher::DlgTagFetcher(UserSettingsPointer pConfig, const TrackModel* pTra
           m_tagFetcher(this),
           m_isCoverArtCopyWorkerRunning(false),
           m_pWCurrentCoverArtLabel(make_parented<WCoverArtLabel>(this)),
-          m_pWFetchedCoverArtLabel(make_parented<WCoverArtLabel>(this)) {
+          m_pWFetchedCoverArtLabel(make_parented<WCoverArtLabel>(this)),
+          m_coverCache(kCoverCacheLimit) {
     init();
 }
 
@@ -541,11 +545,13 @@ void DlgTagFetcher::tagSelected() {
 
     // Check if we already fetched the cover for this release earlier
     QString cacheKey = selectedTagAlbumId.toString();
-    auto it = m_coverCache.find(cacheKey);
-    if (it != m_coverCache.constEnd()) {
+    // QCache<QString, QPixmap>
+    if (m_coverCache.contains(cacheKey)) {
         qWarning() << "     .";
         qWarning() << "     found cached cover for release" << cacheKey;
-        QPixmap pix = it.value();
+        QPixmap* pCachedPixmap = m_coverCache.object(cacheKey);
+        qWarning() << "     pCachedPixmap" << pCachedPixmap;
+        QPixmap pix = *pCachedPixmap;
         qWarning() << "     pix is null?" << pix.isNull() << pix.size();
         qWarning() << "     load";
         loadPixmapToLabel(pix);
@@ -626,15 +632,15 @@ void DlgTagFetcher::slotLoadFetchedCoverArt(const QUuid& albumReleaseId,
     qWarning() << "     cache size:" << m_coverCache.size();
     QString cacheKey = albumReleaseId.toString();
     qWarning() << "     cache cover for release" << cacheKey;
-    m_coverCache.insert(cacheKey, fetchedCoverArtPixmap);
+    m_coverCache.insert(cacheKey, &fetchedCoverArtPixmap);
     qWarning() << "     cache size:" << m_coverCache.size();
     // Test
-    auto it = m_coverCache.find(cacheKey);
+    // QCache<QString, QPixmap>
     qWarning() << "     TEST";
-    if (it != m_coverCache.constEnd()) {
-        qWarning() << "     .";
-        qWarning() << "     found cached cover for release" << cacheKey;
-        QPixmap pix = it.value();
+    if (m_coverCache.contains(cacheKey)) {
+        qWarning() << "     is cached" << cacheKey;
+        QPixmap* pCachedPixmap = m_coverCache.object(cacheKey);
+        QPixmap pix = *pCachedPixmap;
         qWarning() << "     pix is okay:" << !pix.isNull() << pix.size();
         qWarning() << "     .";
     }
