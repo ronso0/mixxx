@@ -82,6 +82,8 @@ class DlgTagFetcher : public QDialog, public Ui::DlgTagFetcher {
 
     void loadPixmapToLabel(const QPixmap& pPixmap);
 
+    bool testCache(const QUuid& albumReleaseId);
+
     UserSettingsPointer m_pConfig;
 
     const TrackModel* const m_pTrackModel;

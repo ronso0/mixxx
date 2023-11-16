@@ -546,7 +546,7 @@ void DlgTagFetcher::tagSelected() {
     // Check if we already fetched the cover for this release earlier
     QString cacheKey = selectedTagAlbumId.toString();
     // QCache<QString, QPixmap>
-    if (m_coverCache.contains(cacheKey)) {
+    if (testCache(selectedTagAlbumId)) {
         qWarning() << "     .";
         qWarning() << "     found cached cover for release" << cacheKey;
         QPixmap* pCachedPixmap = m_coverCache.object(cacheKey);
@@ -627,24 +627,41 @@ void DlgTagFetcher::slotLoadFetchedCoverArt(const QUuid& albumReleaseId,
     // Bytes to be eventually applied as track cover art
     m_fetchedCoverArtByteArrays = data;
 
+    loadPixmapToLabel(fetchedCoverArtPixmap);
+
     // Cache the fetched cover image
     qWarning() << "     .";
     qWarning() << "     cache size:" << m_coverCache.size();
+    qWarning() << "     cache cost:" << m_coverCache.totalCost();
     QString cacheKey = albumReleaseId.toString();
     qWarning() << "     cache cover for release" << cacheKey;
-    m_coverCache.insert(cacheKey, &fetchedCoverArtPixmap);
+    // QPixmap copy(fetchedCoverArtPixmap);
+    qWarning() << "     insert";
+    // m_coverCache.insert(cacheKey, &copy);
+    // m_coverCache.insert(cacheKey, &fetchedCoverArtPixmap);
+    QPixmap copy = fetchedCoverArtPixmap.copy();
+    m_coverCache.insert(cacheKey, &copy);
     qWarning() << "     cache size:" << m_coverCache.size();
+    qWarning() << "     cache cost:" << m_coverCache.totalCost();
+    testCache(albumReleaseId);
+}
+
+bool DlgTagFetcher::testCache(const QUuid& albumReleaseId) {
     // Test
+    bool hit = false;
     // QCache<QString, QPixmap>
     qWarning() << "     TEST";
+    qWarning() << "     cache cost:" << m_coverCache.totalCost();
+    QString cacheKey = albumReleaseId.toString();
     if (m_coverCache.contains(cacheKey)) {
         qWarning() << "     is cached" << cacheKey;
         QPixmap* pCachedPixmap = m_coverCache.object(cacheKey);
         QPixmap pix = *pCachedPixmap;
         qWarning() << "     pix is okay:" << !pix.isNull() << pix.size();
         qWarning() << "     .";
+        hit = (!pix.isNull() && pix.size().height() > 0 && pix.size().height() < 3000);
     }
-    loadPixmapToLabel(fetchedCoverArtPixmap);
+    return hit;
 }
 
 void DlgTagFetcher::loadPixmapToLabel(const QPixmap& pixmap) {

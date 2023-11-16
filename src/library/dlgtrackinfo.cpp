@@ -38,7 +38,7 @@ DlgTrackInfo::DlgTrackInfo(
         UserSettingsPointer pUserSettings,
         const TrackModel* trackModel)
         // No parent because otherwise it inherits the style parent's
-        // style which can make it unreadable. Bug #673411
+        // style which can make it unreadable. Bug #5650
         : QDialog(nullptr),
           m_pUserSettings(std::move(pUserSettings)),
           m_pTrackModel(trackModel),
