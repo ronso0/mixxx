@@ -1,4 +1,3 @@
-
 #include "waveform/widgets/allshader/waveformwidget.h"
 
 #include <QApplication>
