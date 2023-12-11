@@ -981,7 +981,9 @@ void Track::shiftCuePositionsMillis(double milliseconds) {
     VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
         return;
     }
-    double frames = m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(milliseconds);
+    const double frames =
+            m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(
+                    milliseconds);
     for (const CuePointer& pCue : std::as_const(m_cuePoints)) {
         pCue->shiftPositionFrames(frames);
     }
@@ -1054,6 +1056,19 @@ void Track::setHotcueIndicesSortedByPosition(HotcueSortMode sortMode) {
 
     markDirtyAndUnlock(&locked);
     emit cuesUpdated();
+}
+
+void Track::shiftBeatsMillis(double milliseconds) {
+    if (milliseconds == 0 || !m_pBeats) {
+        return;
+    }
+    const double frames =
+            m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(
+                    milliseconds);
+    const auto translatedBeats = m_pBeats->tryTranslate(frames);
+    if (translatedBeats) {
+        trySetBeats(*translatedBeats);
+    }
 }
 
 void Track::analysisFinished() {
