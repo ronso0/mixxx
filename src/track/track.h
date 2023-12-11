@@ -301,6 +301,9 @@ class Track : public QObject {
     /// Set false to sort only, ie. keep empty hotcues before and in between.
     void setHotcueIndicesSortedByPosition(HotcueSortMode sortMode);
 
+    /// Shift beatgrid by a constant offset
+    void shiftBeatsMillis(double milliseconds);
+
     // Call when analysis is done.
     void analysisFinished();
 
