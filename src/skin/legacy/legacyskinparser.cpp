@@ -77,7 +77,6 @@
 #include "widget/wstatuslight.h"
 #include "widget/wtime.h"
 #include "widget/wtrackproperty.h"
-#include "widget/wtracktext.h"
 #include "widget/wtrackwidgetgroup.h"
 #include "widget/wvumeter.h"
 #include "widget/wvumeterglsl.h"
@@ -1054,32 +1053,13 @@ QWidget* LegacySkinParser::parseVisual(const QDomElement& node) {
 
 QWidget* LegacySkinParser::parseText(const QDomElement& node) {
     QString group = lookupNodeGroup(node);
-    BaseTrackPlayer* pPlayer = m_pPlayerManager->getPlayer(group);
-    if (!pPlayer) {
-        SKIN_WARNING(node, *m_pContext, QStringLiteral("No player found for group:").arg(group));
-        return nullptr;
+    if (group.isEmpty()) {
+        // use WLabel, try to parse 'Text' node
+        return parseLabelWidget<WLabel>(node);
+    } else {
+        // use WTrackProperty to show a track tag / file name
+        return parseTrackProperty(node);
     }
-
-    WTrackText* pTrackText = new WTrackText(m_pParent,
-            m_pConfig,
-            m_pLibrary,
-            group);
-    setupLabelWidget(node, pTrackText);
-
-    connect(pPlayer, &BaseTrackPlayer::newTrackLoaded, pTrackText, &WTrackText::slotTrackLoaded);
-    connect(pPlayer, &BaseTrackPlayer::loadingTrack, pTrackText, &WTrackText::slotLoadingTrack);
-    connect(pTrackText,
-            &WTrackText::trackDropped,
-            m_pPlayerManager,
-            &PlayerManager::slotLoadLocationToPlayerMaybePlay);
-    connect(pTrackText, &WTrackText::cloneDeck, m_pPlayerManager, &PlayerManager::slotCloneDeck);
-
-    TrackPointer pTrack = pPlayer->getLoadedTrack();
-    if (pTrack) {
-        pTrackText->slotTrackLoaded(pTrack);
-    }
-
-    return pTrackText;
 }
 
 QWidget* LegacySkinParser::parseTrackProperty(const QDomElement& node) {
