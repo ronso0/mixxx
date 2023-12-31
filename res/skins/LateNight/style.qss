@@ -651,6 +651,7 @@ WEffectSelector {
   padding: 4px 0px 4px 4px;
   /* The 3D frame on the combo box becomes flat when you give it a border
   border-radius: 3px; */
+  text-align: center;
   }
 WEffectChainPresetSelector {
   border:  0px;

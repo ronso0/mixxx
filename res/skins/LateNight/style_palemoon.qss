@@ -306,8 +306,8 @@ WSearchLineEdit {
     margin-left: 3px;
   }
   #FxFlowIndicatorCollapsed {
-    min-width: 12px;
-    max-width: 12px;
+    min-width: 18px;
+    max-width: 18px;
   }
   #DeckRateSeparator,
   #DeckRateSeparatorCompact,
