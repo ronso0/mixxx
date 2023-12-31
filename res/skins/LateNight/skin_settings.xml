@@ -484,6 +484,16 @@ Description:
             </Children>
           </WidgetGroup><!-- /Library -->
 
+
+          <WidgetGroup>
+            <ObjectName>SkinSettingsCategory</ObjectName>
+            <SizePolicy>me,me</SizePolicy>
+            <Layout>vertical</Layout>
+            <Children>
+
+            </Children>
+          </WidgetGroup>
+
         </Children>
       </WidgetGroup><!-- /SkinSettings -->
     </Children>
