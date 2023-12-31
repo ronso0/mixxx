@@ -258,6 +258,7 @@ WEffectChainPresetSelector QAbstractScrollArea,
 #SamplerTitleMini, #SamplerBpm,
 #MicAuxLabel, #MicAuxLabelUnconfigured,
 #PreviewTitle,
+#PreviewTitle WTrackPropertyEditor,
 #PreviewLabel,
 WBeatSpinBox,
 #spinBoxTransition {
