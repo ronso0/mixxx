@@ -76,7 +76,7 @@
         <Layout>stacked</Layout>
         <SizePolicy>max,max</SizePolicy>
         <Children>
-          <Template src="skin:../LateNight/controls/button_1state.xml">
+          <Template src="skins:/LateNight/controls/button_1state.xml">
             <SetVariable name="TooltipId">eject</SetVariable>
             <SetVariable name="ObjectName">PlaySampler</SetVariable>
             <SetVariable name="Size">34f,34f</SetVariable>
