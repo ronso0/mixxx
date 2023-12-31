@@ -57,10 +57,10 @@
         <SizePolicy>me,f</SizePolicy>
         <MinimumSize>40,10</MinimumSize>
         <MaximumSize>58,10</MaximumSize>
+        <Alignment>center</Alignment>
         <EffectUnitGroup><Variable name="FxUnitGroup"/></EffectUnitGroup>
         <Effect><Variable name="FxNum"/></Effect>
         <EffectButtonParameter><Variable name="FxParameter"/></EffectButtonParameter>
-        <Alignment>center</Alignment>
       </EffectButtonParameterName>
 
     </Children>
