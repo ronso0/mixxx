@@ -831,6 +831,7 @@ WEffectChainPresetButton::menu-indicator {
 
 /************** Skin settings *************************************************/
 
+#SkinSettingsContainer,
 #SkinSettings {
   qproperty-layoutAlignment: 'AlignLeft | AlignTop';
   }
