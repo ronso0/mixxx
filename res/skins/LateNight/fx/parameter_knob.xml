@@ -49,12 +49,11 @@
         <ObjectName>FxKnobLabel</ObjectName>
         <SizePolicy>me,f</SizePolicy>
         <MinimumSize>40,10</MinimumSize>
-        <MaximumSize>60,10</MaximumSize>
-        <EffectRack>1</EffectRack>
+        <MaximumSize>58,10</MaximumSize>
+        <Alignment>center</Alignment>
         <EffectUnit><Variable name="FxUnit"/></EffectUnit>
         <Effect><Variable name="FxNum"/></Effect>
         <EffectParameter><Variable name="FxParameter"/></EffectParameter>
-        <Elide>right</Elide>
       </EffectParameterName>
 
       <WidgetGroup>
