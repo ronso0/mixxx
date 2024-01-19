@@ -21,6 +21,7 @@ class StarEditor : public QWidget {
     QSize sizeHint() const override;
     void setStarRating(const StarRating& starRating) {
         m_starRating = starRating;
+        m_starRating.setStarBreadth(m_styleOption.fontMetrics.ascent());
         int stars = m_starRating.starCount();
         VERIFY_OR_DEBUG_ASSERT(m_starRating.verifyStarCount(stars)) {
             return;
