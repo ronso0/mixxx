@@ -2558,6 +2558,13 @@ if(NOT ANDROID)
     DESTINATION "${MIXXX_INSTALL_DATADIR}"
   )
 
+  # Script for cpu pinning of the engine thread
+  install(
+    FILES tools/mixxx-isolate.py
+    DESTINATION "${MIXXX_INSTALL_BINDIR}"
+    RENAME "mixxx-isolate"
+  )
+
   # Controller mappings
   install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/controllers"
