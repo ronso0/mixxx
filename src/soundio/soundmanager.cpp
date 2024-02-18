@@ -4,15 +4,12 @@
 
 #include <QLibrary>
 #include <QThread>
-#include <QtDebug>
+#include <QtGlobal>
 #include <cstring> // for memcpy and strcmp
 
 #include "control/controlobject.h"
-#include "control/controlproxy.h"
-#include "engine/enginebuffer.h"
 #include "engine/enginemixer.h"
 #include "engine/sidechain/enginenetworkstream.h"
-#include "engine/sidechain/enginesidechain.h"
 #include "moc_soundmanager.cpp"
 #include "soundio/sounddevice.h"
 #include "soundio/sounddevicenetwork.h"
@@ -25,6 +22,10 @@
 #include "util/sample.h"
 #include "util/versionstore.h"
 #include "vinylcontrol/defs_vinylcontrol.h"
+
+#ifdef Q_OS_IOS
+#include "soundio/soundmanagerios.h"
+#endif
 
 typedef PaError (*SetJackClientName)(const char *name);
 
@@ -66,9 +67,9 @@ SoundManager::SoundManager(UserSettingsPointer pConfig,
             ConfigKey(VINYL_PREF_KEY, "gain"));
 
     //Hack because PortAudio samplerate enumeration is slow as hell on Linux (ALSA dmix sucks, so we can't blame PortAudio)
-    m_samplerates.push_back(44100);
-    m_samplerates.push_back(48000);
-    m_samplerates.push_back(96000);
+    m_samplerates.push_back(mixxx::audio::SampleRate(44100));
+    m_samplerates.push_back(mixxx::audio::SampleRate(48000));
+    m_samplerates.push_back(mixxx::audio::SampleRate(96000));
 
     m_pNetworkStream = QSharedPointer<EngineNetworkStream>(
             new EngineNetworkStream(2, 0));
@@ -118,8 +119,8 @@ QList<SoundDevicePointer> SoundManager::getDeviceList(
         // we want input devices, or don't have output channels when we want
         // output devices. If searching for both input and output devices,
         // make sure to include any devices that have >0 channels.
-        bool hasOutputs = pDevice->getNumOutputChannels() >= 0;
-        bool hasInputs = pDevice->getNumInputChannels() >= 0;
+        const bool hasOutputs = pDevice->getNumOutputChannels().isValid();
+        const bool hasInputs = pDevice->getNumInputChannels().isValid();
         if (pDevice->getHostAPI() != filterAPI ||
                 (bOutputDevices && !bInputDevices && !hasOutputs) ||
                 (bInputDevices && !bOutputDevices && !hasInputs) ||
@@ -148,7 +149,7 @@ void SoundManager::closeDevices(bool sleepAfterClosing) {
     //qDebug() << "SoundManager::closeDevices()";
 
     bool closed = false;
-    for (const auto& pDevice: qAsConst(m_devices)) {
+    for (const auto& pDevice : std::as_const(m_devices)) {
         if (pDevice->isOpen()) {
             // NOTE(rryan): As of 2009 (?) it has been safe to close() a SoundDevice
             // while callbacks are active.
@@ -168,7 +169,7 @@ void SoundManager::closeDevices(bool sleepAfterClosing) {
     // TODO(rryan): Should we do this before SoundDevice::close()? No! Because
     // then the callback may be running when we call
     // onInputDisconnected/onOutputDisconnected.
-    for (const auto& pDevice: qAsConst(m_devices)) {
+    for (const auto& pDevice : std::as_const(m_devices)) {
         for (const auto& in: pDevice->inputs()) {
             // Need to tell all registered AudioDestinations for this AudioInput
             // that the input was disconnected.
@@ -216,11 +217,11 @@ void SoundManager::clearDeviceList(bool sleepAfterClosing) {
     }
 }
 
-QList<unsigned int> SoundManager::getSampleRates(const QString& api) const {
+QList<mixxx::audio::SampleRate> SoundManager::getSampleRates(const QString& api) const {
     if (api == MIXXX_PORTAUDIO_JACK_STRING) {
         // queryDevices must have been called for this to work, but the
         // ctor calls it -bkgood
-        QList<unsigned int> samplerates;
+        QList<mixxx::audio::SampleRate> samplerates;
         if (m_jackSampleRate.isValid()) {
             samplerates.append(m_jackSampleRate);
         }
@@ -229,7 +230,7 @@ QList<unsigned int> SoundManager::getSampleRates(const QString& api) const {
     return m_samplerates;
 }
 
-QList<unsigned int> SoundManager::getSampleRates() const {
+QList<mixxx::audio::SampleRate> SoundManager::getSampleRates() const {
     return getSampleRates("");
 }
 
@@ -253,6 +254,9 @@ void SoundManager::queryDevicesPortaudio() {
     if (!m_paInitialized) {
 #ifdef Q_OS_LINUX
         setJACKName();
+#endif
+#ifdef Q_OS_IOS
+        mixxx::initializeAVAudioSession();
 #endif
         err = Pa_Initialize();
         m_paInitialized = true;
@@ -361,7 +365,7 @@ SoundDeviceStatus SoundManager::setupDevices() {
     QVector<DeviceMode> toOpen;
     bool haveOutput = false;
     // loop over all available devices
-    for (const auto& pDevice: qAsConst(m_devices)) {
+    for (const auto& pDevice : std::as_const(m_devices)) {
         DeviceMode mode = {pDevice, false, false};
         pDevice->clearInputs();
         pDevice->clearOutputs();
@@ -371,7 +375,7 @@ SoundDeviceStatus SoundManager::setupDevices() {
             mode.isInput = true;
             // TODO(bkgood) look into allocating this with the frames per
             // buffer value from SMConfig
-            AudioInputBuffer aib(in, SampleUtil::alloc(MAX_BUFFER_LEN));
+            AudioInputBuffer aib(in, SampleUtil::alloc(kMaxEngineSamples));
             status = pDevice->addInput(aib);
             if (status != SoundDeviceStatus::Ok) {
                 SampleUtil::free(aib.getBuffer());
@@ -394,14 +398,17 @@ SoundDeviceStatus SoundManager::setupDevices() {
 
         // Statically connect the Network Device to the Sidechain
         if (pDevice->getDeviceId().name == kNetworkDeviceInternalName) {
-            AudioOutput out(AudioPathType::RecordBroadcast, 0, 2, 0);
+            AudioOutput out(AudioPathType::RecordBroadcast,
+                    0,
+                    mixxx::audio::ChannelCount::stereo(),
+                    0);
             outputs.append(out);
             if (m_config.getForceNetworkClock() && !jackApiUsed()) {
                 pNewMainClockRef = pDevice;
             }
         }
 
-        for (const auto& out: qAsConst(outputs)) {
+        for (const auto& out : std::as_const(outputs)) {
             mode.isOutput = true;
             if (pDevice->getDeviceId().name != kNetworkDeviceInternalName) {
                 haveOutput = true;
@@ -560,8 +567,8 @@ SoundDeviceStatus SoundManager::setConfig(const SoundManagerConfig& config) {
     // certain parts of mixxx rely on this being here, for the time being, just
     // letting those be -- bkgood
     // Do this first so vinyl control gets the right samplerate -- Owen W.
-    m_pConfig->set(ConfigKey("[Soundcard]","Samplerate"),
-                   ConfigValue(static_cast<int>(m_config.getSampleRate())));
+    m_pConfig->set(ConfigKey("[Soundcard]", "Samplerate"),
+            ConfigValue(static_cast<int>(m_config.getSampleRate().value())));
 
     status = setupDevices();
     if (status == SoundDeviceStatus::Ok) {

@@ -416,8 +416,8 @@ class DeckClass {
             } else {
                 this.wheelTouchInertiaTimer = engine.beginTimer(
                     inertiaTime,
-                    this.finishJogPress.bind(this)
-                    , true);
+                    this.finishJogPress.bind(this),
+                    true);
             }
         }
     }
@@ -795,10 +795,10 @@ class EffectUnit {
                 engine.setValue(this.group, "loaded_chain_preset", 1);
                 return;
             }
-            this.effectFocusLongPressTimer = engine.beginTimer(longPressTimeoutMilliseconds, function() {
+            this.effectFocusLongPressTimer = engine.beginTimer(longPressTimeoutMilliseconds, () => {
                 this.effectFocusChooseModeActive = true;
                 this.connectEffectButtonLedsFocused();
-            }.bind(this));
+            });
             if (!showParameters) {
                 engine.setValue(this.group, "show_parameters", 1);
                 this.effectFocusButtonPressedWhenParametersHidden = true;
@@ -930,10 +930,10 @@ class EffectParameter {
                 } else {
                     this.toggle();
                     this.longPressTimer = engine.beginTimer(longPressTimeoutMilliseconds,
-                        function() {
+                        () => {
                             this.isLongPressed = true;
                             this.longPressTimer= 0;
-                        }.bind(this),
+                        },
                         true
                     );
                 }
@@ -1012,6 +1012,9 @@ class EffectParameter {
 class TraktorS2MK1Class {
     constructor() {
         this.controller = new HIDController();
+        if (engine.getValue("[App]", "num_samplers") < 8) {
+            engine.setValue("[App]", "num_samplers", 8);
+        }
 
         // When true, packets will not be sent to the controller.
         // Used when updating multiple LEDs simultaneously.

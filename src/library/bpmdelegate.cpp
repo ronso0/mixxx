@@ -1,14 +1,12 @@
 #include "library/bpmdelegate.h"
 
+#include <QCheckBox>
 #include <QDoubleSpinBox>
 #include <QItemEditorCreatorBase>
 #include <QItemEditorFactory>
 #include <QPainter>
-#include <QPalette>
-#include <QRect>
 #include <QTableView>
 
-#include "library/trackmodel.h"
 #include "moc_bpmdelegate.cpp"
 
 // We override the typical QDoubleSpinBox editor by registering this class with
@@ -37,7 +35,6 @@ class BpmEditorCreator : public QItemEditorCreatorBase {
 
 BPMDelegate::BPMDelegate(QTableView* pTableView)
         : TableItemDelegate(pTableView),
-          m_pTableView(pTableView),
           m_pCheckBox(new QCheckBox(m_pTableView)) {
     m_pCheckBox->setObjectName("LibraryBPMButton");
     // NOTE(rryan): Without ensurePolished the first render of the QTableView
@@ -81,14 +78,22 @@ void BPMDelegate::paintItem(QPainter* painter,const QStyleOptionViewItem &option
     // #LibraryBPMButton::indicator:unchecked {
     //  image: url(:/images/library/ic_library_unlocked.svg);
     // }
+
+    // Actually QAbstractTableModel::data(index, BackgroundRole) provides the
+    // correct custom background color (track color).
+    // Though, since Qt6 the above style rules would not apply for some reason,
+    // (see bug #11630) which can be fixed by also setting
+    // #LibraryBPMButton::item { border: 0px;}
+    // This however enables some default styles and clears the custom background
+    // color (track color), see bug #12355 ¯\_(ツ)_/¯ Qt is fun!
+    // Fix that by setting the bg color explicitly here.
+    paintItemBackground(painter, option, index);
+
     QStyleOptionViewItem opt = option;
     initStyleOption(&opt, index);
 
-    if (m_pTableView != nullptr) {
-        QStyle* style = m_pTableView->style();
-        if (style != nullptr) {
-            style->drawControl(QStyle::CE_ItemViewItem, &opt, painter,
-                               m_pCheckBox);
-        }
+    QStyle* style = m_pTableView->style();
+    if (style != nullptr) {
+        style->drawControl(QStyle::CE_ItemViewItem, &opt, painter, m_pCheckBox);
     }
 }

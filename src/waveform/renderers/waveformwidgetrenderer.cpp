@@ -3,14 +3,12 @@
 #include <QPainter>
 #include <QPainterPath>
 
-#include "control/controlobject.h"
 #include "control/controlproxy.h"
 #include "track/track.h"
 #include "util/math.h"
-#include "util/performancetimer.h"
+#include "waveform/renderers/waveformrendererabstract.h"
 #include "waveform/visualplayposition.h"
 #include "waveform/waveform.h"
-#include "widget/wwidget.h"
 
 const double WaveformWidgetRenderer::s_waveformMinZoom = 1.0;
 const double WaveformWidgetRenderer::s_waveformMaxZoom = 10.0;
@@ -118,9 +116,7 @@ void WaveformWidgetRenderer::onPreRender(VSyncThread* vsyncThread) {
     //Fetch parameters before rendering in order the display all sub-renderers with the same values
     double rateRatio = m_pRateRatioCO->get();
 
-    // This gain adjustment compensates for an arbitrary /2 gain chop in
-    // EnginePregain. See the comment there.
-    m_gain = m_pGainControlObject->get() * 2;
+    m_gain = m_pGainControlObject->get();
 
     // Compute visual sample to pixel ratio
     // Allow waveform to spread one visual sample across a hundred pixels
@@ -319,7 +315,11 @@ void WaveformWidgetRenderer::drawPassthroughLabel(QPainter* painter) {
     font.setFamily("Open Sans"); // default label font
     // Make the label always fit
     font.setPixelSize(math_min(25, int(m_height * 0.8)));
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     font.setWeight(75); // bold
+#else
+    font.setWeight(QFont::Bold); // bold
+#endif
     font.setItalic(false);
 
     QString label = QObject::tr("Passthrough");
@@ -352,7 +352,7 @@ void WaveformWidgetRenderer::setPassThroughEnabled(bool enabled) {
     }
 }
 
-void WaveformWidgetRenderer::resize(int width, int height, float devicePixelRatio) {
+void WaveformWidgetRenderer::resizeRenderer(int width, int height, float devicePixelRatio) {
     m_width = width;
     m_height = height;
     m_devicePixelRatio = devicePixelRatio;
@@ -413,13 +413,21 @@ ConstWaveformPointer WaveformWidgetRenderer::getWaveform() const {
 }
 
 WaveformMarkPointer WaveformWidgetRenderer::getCueMarkAtPoint(QPoint point) const {
-    for (auto it = m_markPositions.constBegin(); it != m_markPositions.constEnd(); ++it) {
-        WaveformMarkPointer pMark = it.key();
+    // The m_markPositions list follows the order of drawing, so we search the
+    // list in reverse order to find the hovered mark.
+    //
+    // TODO It would be preferable to use WaveformMarkSet::findHoveredMark here,
+    // as done by WOverview, but that requires a) making WaveformMarkSet m_marks
+    // a member of this class and b) decoupling the calculation of the
+    // drawoffset from the drawing and c) storing it in WaveformMark.
+
+    for (auto it = m_markPositions.crbegin(); it != m_markPositions.crend(); ++it) {
+        const WaveformMarkPointer& pMark = it->m_pMark;
         VERIFY_OR_DEBUG_ASSERT(pMark) {
             continue;
         }
 
-        int markImagePositionInWidgetSpace = it.value();
+        int markImagePositionInWidgetSpace = it->m_offsetOnScreen;
         QPoint pointInImageSpace;
         if (getOrientation() == Qt::Horizontal) {
             pointInImageSpace = QPoint(point.x() - markImagePositionInWidgetSpace, point.y());
@@ -428,6 +436,24 @@ WaveformMarkPointer WaveformWidgetRenderer::getCueMarkAtPoint(QPoint point) cons
             pointInImageSpace = QPoint(point.x(), point.y() - markImagePositionInWidgetSpace);
         }
         if (pMark->contains(pointInImageSpace, getOrientation())) {
+            return pMark;
+        }
+    }
+    for (auto it = m_markPositions.crbegin(); it != m_markPositions.crend(); ++it) {
+        const WaveformMarkPointer& pMark = it->m_pMark;
+        VERIFY_OR_DEBUG_ASSERT(pMark) {
+            continue;
+        }
+
+        int markImagePositionInWidgetSpace = it->m_offsetOnScreen;
+        QPoint pointInImageSpace;
+        if (getOrientation() == Qt::Horizontal) {
+            pointInImageSpace = QPoint(point.x() - markImagePositionInWidgetSpace, point.y());
+        } else {
+            DEBUG_ASSERT(getOrientation() == Qt::Vertical);
+            pointInImageSpace = QPoint(point.x(), point.y() - markImagePositionInWidgetSpace);
+        }
+        if (pMark->lineHovered(pointInImageSpace, getOrientation())) {
             return pMark;
         }
     }

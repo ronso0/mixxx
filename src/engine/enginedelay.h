@@ -1,8 +1,9 @@
 #pragma once
 
 #include "engine/engineobject.h"
-#include "preferences/usersettings.h"
+#include "util/samplebuffer.h"
 
+class ConfigKey;
 class ControlPotmeter;
 class ControlProxy;
 
@@ -10,9 +11,9 @@ class EngineDelay : public EngineObject {
     Q_OBJECT
   public:
     EngineDelay(const ConfigKey& delayControl, bool bPersist = true);
-    virtual ~EngineDelay();
+    ~EngineDelay() override;
 
-    void process(CSAMPLE* pInOut, const int iBufferSize);
+    void process(CSAMPLE* pInOut, const int iBufferSize) override;
 
     void setDelay(double newDelay);
 
@@ -22,7 +23,7 @@ class EngineDelay : public EngineObject {
   private:
     ControlPotmeter* m_pDelayPot;
     ControlProxy* m_pSampleRate;
-    CSAMPLE* m_pDelayBuffer;
+    mixxx::SampleBuffer m_delayBuffer;
     int m_iDelayPos;
     int m_iDelay;
 };

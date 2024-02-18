@@ -2,7 +2,6 @@
 
 #include <QtDebug>
 
-#include "control/controlobject.h"
 #include "engine/readaheadmanager.h"
 #include "moc_enginebufferscalerubberband.cpp"
 #include "util/counter.h"
@@ -155,8 +154,8 @@ SINT EngineBufferScaleRubberBand::retrieveAndDeinterleave(
 
     DEBUG_ASSERT(received_frames <= frames);
     SampleUtil::interleaveBuffer(pBuffer,
-            m_buffers[0].data() + frame_offset,
-            m_buffers[1].data() + frame_offset,
+            m_buffers[0].data(frame_offset),
+            m_buffers[1].data(frame_offset),
             received_frames);
 
     return received_frames;

@@ -1,11 +1,10 @@
 #include "widget/wtrackwidgetgroup.h"
 
-#include <QDebug>
 #include <QStylePainter>
-#include <QUrl>
 
 #include "control/controlobject.h"
 #include "moc_wtrackwidgetgroup.cpp"
+#include "skin/legacy/skincontext.h"
 #include "track/track.h"
 #include "util/dnd.h"
 #include "widget/wtrackmenu.h"
@@ -13,21 +12,6 @@
 namespace {
 
 constexpr int kDefaultTrackColorAlpha = 255;
-
-constexpr WTrackMenu::Features kTrackMenuFeatures =
-        WTrackMenu::Feature::SearchRelated |
-        WTrackMenu::Feature::Playlist |
-        WTrackMenu::Feature::Crate |
-        WTrackMenu::Feature::Metadata |
-        WTrackMenu::Feature::Reset |
-        WTrackMenu::Feature::Analyze |
-        WTrackMenu::Feature::BPM |
-        WTrackMenu::Feature::Color |
-        WTrackMenu::Feature::FileBrowser |
-        WTrackMenu::Feature::Properties |
-        WTrackMenu::Feature::UpdateReplayGainFromPregain |
-        WTrackMenu::Feature::FindOnWeb |
-        WTrackMenu::Feature::SelectInLibrary;
 
 } // anonymous namespace
 
@@ -38,9 +22,8 @@ WTrackWidgetGroup::WTrackWidgetGroup(QWidget* pParent,
         : WWidgetGroup(pParent),
           m_group(group),
           m_pConfig(pConfig),
-          m_trackColorAlpha(kDefaultTrackColorAlpha),
-          m_pTrackMenu(make_parented<WTrackMenu>(
-                  this, pConfig, pLibrary, kTrackMenuFeatures)) {
+          m_pLibrary(pLibrary),
+          m_trackColorAlpha(kDefaultTrackColorAlpha) {
     setAcceptDrops(true);
 }
 
@@ -125,8 +108,25 @@ void WTrackWidgetGroup::dropEvent(QDropEvent* event) {
 void WTrackWidgetGroup::contextMenuEvent(QContextMenuEvent* event) {
     event->accept();
     if (m_pCurrentTrack) {
+        ensureTrackMenuIsCreated();
         m_pTrackMenu->loadTrack(m_pCurrentTrack, m_group);
         // Create the right-click menu
         m_pTrackMenu->popup(event->globalPos());
+    }
+}
+
+void WTrackWidgetGroup::ensureTrackMenuIsCreated() {
+    if (m_pTrackMenu.get() == nullptr) {
+        m_pTrackMenu = make_parented<WTrackMenu>(
+                this, m_pConfig, m_pLibrary, WTrackMenu::kDeckTrackMenuFeatures);
+
+        // See WTrackProperty for info
+        connect(m_pTrackMenu,
+                &WTrackMenu::trackMenuVisible,
+                this,
+                [this](bool visible) {
+                    ControlObject::set(ConfigKey(m_group, kShowTrackMenuKey),
+                            visible ? 1.0 : 0.0);
+                });
     }
 }

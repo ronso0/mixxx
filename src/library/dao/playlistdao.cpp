@@ -2,15 +2,13 @@
 
 #include <QRandomGenerator>
 #include <QtDebug>
-#include <QtSql>
 
 #include "library/autodj/autodjprocessor.h"
 #include "library/queryutil.h"
-#include "library/trackcollection.h"
 #include "moc_playlistdao.cpp"
-#include "track/track.h"
 #include "util/db/dbconnection.h"
 #include "util/db/fwdsqlquery.h"
+#include "util/make_const_iterator.h"
 #include "util/math.h"
 
 PlaylistDAO::PlaylistDAO()
@@ -212,10 +210,10 @@ void PlaylistDAO::deletePlaylist(const int playlistId) {
     transaction.commit();
     //TODO: Crap, we need to shuffle the positions of all the playlists?
 
-    for (QMultiHash<TrackId, int>::iterator it = m_playlistsTrackIsIn.begin();
-            it != m_playlistsTrackIsIn.end();) {
+    for (auto it = m_playlistsTrackIsIn.constBegin();
+            it != m_playlistsTrackIsIn.constEnd();) {
         if (it.value() == playlistId) {
-            it = m_playlistsTrackIsIn.erase(it);
+            it = constErase(&m_playlistsTrackIsIn, it);
         } else {
             ++it;
         }
@@ -523,6 +521,9 @@ int PlaylistDAO::getPlaylistId(const int index) const {
 PlaylistDAO::HiddenType PlaylistDAO::getHiddenType(const int playlistId) const {
     // qDebug() << "PlaylistDAO::getHiddenType"
     //          << QThread::currentThread() << m_database.connectionName();
+    if (playlistId != kInvalidPlaylistId) { // type is known, save a query
+        return PlaylistDAO::PLHT_UNKNOWN;
+    }
 
     QSqlQuery query(m_database);
     query.prepare(QStringLiteral(
@@ -536,8 +537,8 @@ PlaylistDAO::HiddenType PlaylistDAO::getHiddenType(const int playlistId) const {
     } else {
         LOG_FAILED_QUERY(query);
     }
-    qDebug() << "PlaylistDAO::getHiddenType returns PLHT_UNKNOWN for playlistId "
-             << playlistId;
+    // qDebug() << "PlaylistDAO::getHiddenType returns PLHT_UNKNOWN for playlist"
+    //          << playlistId << getPlaylistName(playlistId);
     return PLHT_UNKNOWN;
 }
 
@@ -626,7 +627,7 @@ void PlaylistDAO::removeTracksFromPlaylist(int playlistId, const QList<int>& pos
     //qDebug() << "PlaylistDAO::removeTrackFromPlaylist"
     //         << QThread::currentThread() << m_database.connectionName();
     ScopedTransaction transaction(m_database);
-    for (const auto position : qAsConst(sortedPositons)) {
+    for (const auto position : std::as_const(sortedPositons)) {
         removeTracksFromPlaylistInner(playlistId, position);
     }
     transaction.commit();
@@ -1080,7 +1081,7 @@ void PlaylistDAO::shuffleTracks(const int playlistId,
     QList<int> newPositions = positions;
     const int searchDistance = math_max(static_cast<int>(trackPositionIds.count()) / 4, 1);
 
-    qDebug() << "Shuffling Tracks";
+    qDebug() << "Shuffling tracks of playlist" << playlistId << getPlaylistName(playlistId);
     qDebug() << "*** Search Distance: " << searchDistance;
     //for (int z = 0; z < positions.count(); z++) {
     //qDebug() << "*** Position: " << positions[z] << " | ID: " << allIds.value(positions[z]);

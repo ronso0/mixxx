@@ -1,13 +1,12 @@
 #pragma once
 
-#include <QAction>
 #include <QPointer>
-#include <QSqlTableModel>
 
 #include "library/trackset/baseplaylistfeature.h"
 #include "preferences/usersettings.h"
 
 class Library;
+class QAction;
 
 class SetlogFeature : public BasePlaylistFeature {
     Q_OBJECT
@@ -62,8 +61,6 @@ class SetlogFeature : public BasePlaylistFeature {
 
     int m_currentPlaylistId;
     int m_yearNodeId;
-
-    QPointer<WLibrary> m_libraryWidget;
     Library* m_pLibrary;
     UserSettingsPointer m_pConfig;
 };

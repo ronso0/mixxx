@@ -4,8 +4,6 @@
 #include "control/pollingcontrolproxy.h"
 #include "engine/engineobject.h"
 
-class ControlPotmeter;
-
 class EngineVuMeter : public EngineObject {
     Q_OBJECT
   public:
@@ -25,7 +23,7 @@ class EngineVuMeter : public EngineObject {
     CSAMPLE m_fRMSvolumeSumL;
     CSAMPLE m_fRMSvolumeR;
     CSAMPLE m_fRMSvolumeSumR;
-    int m_iSamplesCalculated;
+    unsigned int m_samplesCalculated;
 
     ControlObject m_peakIndicator;
     ControlObject m_peakIndicatorLeft;

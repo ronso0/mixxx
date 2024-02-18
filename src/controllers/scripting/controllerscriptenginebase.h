@@ -1,17 +1,13 @@
 #pragma once
 
-#include <QFileSystemWatcher>
-#include <QJSEngine>
 #include <QJSValue>
 #include <QMessageBox>
 #include <memory>
 
-#include "controllers/legacycontrollermapping.h"
-#include "util/duration.h"
 #include "util/runtimeloggingcategory.h"
 
 class Controller;
-class EvaluationException;
+class QJSEngine;
 
 /// ControllerScriptEngineBase manages the JavaScript engine for controller scripts.
 /// ControllerScriptModuleEngine implements the current system using JS modules.
@@ -25,7 +21,7 @@ class ControllerScriptEngineBase : public QObject {
 
     virtual bool initialize();
 
-    bool executeFunction(QJSValue functionObject, const QJSValueList& arguments = {});
+    bool executeFunction(QJSValue* pFunctionObject, const QJSValueList& arguments = {});
 
     /// Shows a UI dialog notifying of a script evaluation error.
     /// Precondition: QJSValue.isError() == true

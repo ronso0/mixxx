@@ -2,12 +2,11 @@
 
 #include <QtDebug>
 
-#include "control/control.h"
+#include "audio/types.h"
 #include "control/controlaudiotaperpot.h"
 #include "effects/effectsmanager.h"
 #include "engine/effects/engineeffectsmanager.h"
 #include "moc_enginemicrophone.cpp"
-#include "preferences/usersettings.h"
 #include "util/sample.h"
 
 EngineMicrophone::EngineMicrophone(const ChannelHandleAndGroup& handleGroup,
@@ -78,10 +77,11 @@ void EngineMicrophone::process(CSAMPLE* pOut, const int iBufferSize) {
         SampleUtil::copyWithGain(pOut, sampleBuffer, pregain, iBufferSize);
         EngineEffectsManager* pEngineEffectsManager = m_pEffectsManager->getEngineEffectsManager();
         if (pEngineEffectsManager != nullptr) {
-            pEngineEffectsManager->processPreFaderInPlace(
-                    m_group.handle(), m_pEffectsManager->getMainHandle(), pOut, iBufferSize,
-                    // TODO(jholthuis): Use mixxx::audio::SampleRate instead
-                    static_cast<unsigned int>(m_sampleRate.get()));
+            pEngineEffectsManager->processPreFaderInPlace(m_group.handle(),
+                    m_pEffectsManager->getMainHandle(),
+                    pOut,
+                    iBufferSize,
+                    mixxx::audio::SampleRate::fromDouble(m_sampleRate.get()));
         }
     } else {
         SampleUtil::clear(pOut, iBufferSize);

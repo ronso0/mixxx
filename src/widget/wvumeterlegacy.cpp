@@ -1,6 +1,7 @@
 #include "widget/wvumeterlegacy.h"
 
 #include "moc_wvumeterlegacy.cpp"
+#include "skin/legacy/skincontext.h"
 #include "util/math.h"
 #include "util/timer.h"
 #include "util/widgethelper.h"
@@ -164,7 +165,7 @@ void WVuMeterLegacy::showEvent(QShowEvent* e) {
 }
 
 void WVuMeterLegacy::paintEvent(QPaintEvent* /*unused*/) {
-    ScopedTimer t("WVuMeterLegacy::paintEvent");
+    ScopedTimer t(u"WVuMeterLegacy::paintEvent");
 
     QPainter p(this);
 

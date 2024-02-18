@@ -5,7 +5,6 @@
 #include <QObject>
 #include <QSharedPointer>
 #include <QString>
-#include <memory>
 
 #include "audio/types.h"
 #include "control/pollingcontrolproxy.h"
@@ -17,19 +16,17 @@
 #include "util/types.h"
 
 class EngineMixer;
-class AudioOutput;
-class AudioInput;
-class AudioSource;
-class AudioDestination;
 class ControlObject;
-class ControlProxy;
-class SoundDeviceNotFound;
 
 #define MIXXX_PORTAUDIO_JACK_STRING "JACK Audio Connection Kit"
 #define MIXXX_PORTAUDIO_ALSA_STRING "ALSA"
 #define MIXXX_PORTAUDIO_OSS_STRING "OSS"
 #define MIXXX_PORTAUDIO_ASIO_STRING "ASIO"
 #define MIXXX_PORTAUDIO_DIRECTSOUND_STRING "Windows DirectSound"
+// NOTE: This is what our patched version of PortAudio uses for the Core Audio
+// backend on iOS. If/when upstream supports iOS officially
+// (https://github.com/PortAudio/portaudio/pull/881), we may have to update this
+#define MIXXX_PORTAUDIO_IOSAUDIO_STRING "iOS Audio"
 #define MIXXX_PORTAUDIO_COREAUDIO_STRING "Core Audio"
 
 #define SOUNDMANAGER_DISCONNECTED 0
@@ -68,10 +65,10 @@ class SoundManager : public QObject {
     QString getLastErrorMessage(SoundDeviceStatus status) const;
 
     // Returns a list of samplerates we will attempt to support for a given API.
-    QList<unsigned int> getSampleRates(const QString& api) const;
+    QList<mixxx::audio::SampleRate> getSampleRates(const QString& api) const;
 
     // Convenience overload for SoundManager::getSampleRates(QString)
-    QList<unsigned int> getSampleRates() const;
+    QList<mixxx::audio::SampleRate> getSampleRates() const;
 
     // Get a list of host APIs supported by PortAudio.
     QList<QString> getHostAPIList() const;
@@ -135,7 +132,7 @@ class SoundManager : public QObject {
     bool m_paInitialized;
     mixxx::audio::SampleRate m_jackSampleRate;
     QList<SoundDevicePointer> m_devices;
-    QList<unsigned int> m_samplerates;
+    QList<mixxx::audio::SampleRate> m_samplerates;
     QList<CSAMPLE*> m_inputBuffers;
 
     SoundManagerConfig m_config;

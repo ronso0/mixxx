@@ -5,9 +5,9 @@
 #include "config.h"
 #include "control/controlproxy.h"
 #include "defs_urls.h"
-#include "mixer/playermanager.h"
 #include "moc_wmainmenubar.cpp"
 #include "util/cmdlineargs.h"
+#include "util/desktophelper.h"
 #include "util/experiment.h"
 #include "vinylcontrol/defs_vinylcontrol.h"
 
@@ -734,7 +734,7 @@ void WMainMenuBar::slotDeveloperDebugger(bool toggle) {
 }
 
 void WMainMenuBar::slotVisitUrl(const QUrl& url) {
-    QDesktopServices::openUrl(url);
+    mixxx::DesktopHelper::openUrl(url);
 }
 
 void WMainMenuBar::createVisibilityControl(QAction* pAction,
@@ -760,11 +760,11 @@ void WMainMenuBar::createVisibilityControl(QAction* pAction,
 
 void WMainMenuBar::onNumberOfDecksChanged(int decks) {
     int deck = 0;
-    for (QAction* pVinylControlEnabled : qAsConst(m_vinylControlEnabledActions)) {
+    for (QAction* pVinylControlEnabled : std::as_const(m_vinylControlEnabledActions)) {
         pVinylControlEnabled->setVisible(deck++ < decks);
     }
     deck = 0;
-    for (QAction* pLoadToDeck : qAsConst(m_loadToDeckActions)) {
+    for (QAction* pLoadToDeck : std::as_const(m_loadToDeckActions)) {
         pLoadToDeck->setVisible(deck++ < decks);
     }
 }

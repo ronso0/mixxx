@@ -1,8 +1,7 @@
 #include "library/dlgtrackinfo.h"
 
 #include <QSignalBlocker>
-#include <QStringBuilder>
-#include <QTreeWidget>
+#include <QStyleFactory>
 #include <QtDebug>
 
 #include "defs_urls.h"
@@ -15,10 +14,8 @@
 #include "preferences/colorpalettesettings.h"
 #include "sources/soundsourceproxy.h"
 #include "track/beatutils.h"
-#include "track/keyfactory.h"
-#include "track/keyutils.h"
 #include "track/track.h"
-#include "util/color/colorpalette.h"
+#include "util/color/color.h"
 #include "util/datetime.h"
 #include "util/desktophelper.h"
 #include "util/duration.h"
@@ -48,7 +45,7 @@ DlgTrackInfo::DlgTrackInfo(
           m_tapFilter(this, kFilterLength, kMaxInterval),
           m_pWCoverArtMenu(make_parented<WCoverArtMenu>(this)),
           m_pWCoverArtLabel(make_parented<WCoverArtLabel>(this, m_pWCoverArtMenu)),
-          m_pWStarRating(make_parented<WStarRating>(nullptr, this)),
+          m_pWStarRating(make_parented<WStarRating>(this)),
           m_pColorPicker(make_parented<WColorPickerAction>(
                   WColorPicker::Option::AllowNoColor |
                           // TODO(xxx) remove this once the preferences are themed via QSS
@@ -428,6 +425,13 @@ void DlgTrackInfo::updateTrackMetadataFields() {
     txtReplayGain->setText(
             mixxx::ReplayGain::ratioToString(
                     m_trackRecord.getMetadata().getTrackInfo().getReplayGain().getRatio()));
+
+    auto samplerate = m_trackRecord.getMetadata().getStreamInfo().getSignalInfo().getSampleRate();
+    if (samplerate.isValid()) {
+        txtSamplerate->setText(QString::number(samplerate.value()) + " Hz");
+    } else {
+        txtSamplerate->clear();
+    }
 }
 
 void DlgTrackInfo::updateSpinBpmFromBeats() {
@@ -514,11 +518,7 @@ void DlgTrackInfo::focusField(const QString& property) {
 void DlgTrackInfo::slotCoverFound(
         const QObject* pRequester,
         const CoverInfo& coverInfo,
-        const QPixmap& pixmap,
-        mixxx::cache_key_t requestedCacheKey,
-        bool coverInfoUpdated) {
-    Q_UNUSED(requestedCacheKey);
-    Q_UNUSED(coverInfoUpdated);
+        const QPixmap& pixmap) {
     if (pRequester == this &&
             m_pLoadedTrack &&
             m_pLoadedTrack->getLocation() == coverInfo.trackLocation) {
@@ -599,14 +599,13 @@ void DlgTrackInfo::saveTrack() {
         }
     }
 
-    // First, disconnect the track changed signal. Otherwise we signal ourselves
-    // and repopulate all these fields.
-    const QSignalBlocker signalBlocker(this);
-
     // Special case handling for the comment field that is not
     // updated by the editingFinished signal.
     m_trackRecord.refMetadata().refTrackInfo().setComment(txtComment->toPlainText());
 
+    // First, disconnect the track changed signal. Otherwise we signal ourselves
+    // and repopulate all these fields.
+    const QSignalBlocker signalBlocker(this);
     // If the user is editing the bpm or key and hits enter to close DlgTrackInfo,
     // the editingFinished signal will not fire in time. Invoke the connected
     // handlers manually to capture any changes. If the bpm or key was unchanged
@@ -615,10 +614,8 @@ void DlgTrackInfo::saveTrack() {
     static_cast<void>(updateKeyText()); // discard result
 
     // Update the cached track
+    // The dialog is updated and repopulated by the Track::changed() signal.
     m_pLoadedTrack->replaceRecord(std::move(m_trackRecord), std::move(m_pBeatsClone));
-
-    // Repopulate the dialog and update the UI
-    updateFromTrack(*m_pLoadedTrack);
 }
 
 void DlgTrackInfo::clear() {

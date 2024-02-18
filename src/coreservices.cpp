@@ -2,8 +2,8 @@
 
 #include <QApplication>
 #include <QFileDialog>
-#include <QPushButton>
 #include <QStandardPaths>
+#include <QtGlobal>
 
 #ifdef __BROADCAST__
 #include "broadcast/broadcastmanager.h"
@@ -22,16 +22,17 @@
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
 #include "moc_coreservices.cpp"
+#include "preferences/dialog/dlgpreferences.h"
 #include "preferences/settingsmanager.h"
 #ifdef __MODPLUG__
 #include "preferences/dialog/dlgprefmodplug.h"
 #endif
+#include "skin/skincontrols.h"
 #include "soundio/soundmanager.h"
 #include "sources/soundsourceproxy.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/font.h"
 #include "util/logger.h"
-#include "util/screensaver.h"
 #include "util/screensavermanager.h"
 #include "util/statsmanager.h"
 #include "util/time.h"
@@ -60,6 +61,7 @@ namespace {
 const mixxx::Logger kLogger("CoreServices");
 constexpr int kMicrophoneCount = 4;
 constexpr int kAuxiliaryCount = 4;
+constexpr int kSamplerCount = 4;
 
 #define CLEAR_AND_CHECK_DELETED(x) clearHelper(x, #x);
 
@@ -110,7 +112,7 @@ CoreServices::CoreServices(const CmdlineArgs& args, QApplication* pApp)
           m_isInitialized(false) {
     m_runtime_timer.start();
     mixxx::Time::start();
-    ScopedTimer t("CoreServices::CoreServices");
+    ScopedTimer t(u"CoreServices::CoreServices");
     // All this here is running without without start up screen
     // Defer long initializations to CoreServices::initialize() which is
     // called after the GUI is initialized
@@ -178,7 +180,7 @@ CoreServices::~CoreServices() {
 }
 
 void CoreServices::initializeSettings() {
-#ifdef __APPLE__
+#ifdef Q_OS_MACOS
     // TODO: At this point it is too late to provide the same settings path to all components
     // and too early to log errors and give users advises in their system language.
     // Calling this from main.cpp before the QApplication is initialized may cause a crash
@@ -210,7 +212,7 @@ void CoreServices::initialize(QApplication* pApp) {
         return;
     }
 
-    ScopedTimer t("CoreServices::initialize");
+    ScopedTimer t(u"CoreServices::initialize");
 
     VERIFY_OR_DEBUG_ASSERT(SoundSourceProxy::registerProviders()) {
         qCritical() << "Failed to register any SoundSource providers";
@@ -303,10 +305,11 @@ void CoreServices::initialize(QApplication* pApp) {
     }
 
     m_pPlayerManager->addConfiguredDecks();
-    m_pPlayerManager->addSampler();
-    m_pPlayerManager->addSampler();
-    m_pPlayerManager->addSampler();
-    m_pPlayerManager->addSampler();
+
+    for (int i = 0; i < kSamplerCount; ++i) {
+        m_pPlayerManager->addSampler();
+    }
+
     m_pPlayerManager->addPreviewDeck();
 
     m_pEffectsManager->setup();
@@ -526,6 +529,21 @@ bool CoreServices::initializeDatabase() {
     return MixxxDb::initDatabaseSchema(dbConnection);
 }
 
+std::shared_ptr<QDialog> CoreServices::makeDlgPreferences() const {
+    // Note: We return here the base class pointer to make the coreservices.h usable
+    // in test classes where header included from dlgpreferences.h are not accessible.
+    std::shared_ptr<DlgPreferences> pDlgPreferences = std::make_shared<DlgPreferences>(
+            getScreensaverManager(),
+            nullptr,
+            getSoundManager(),
+            getControllerManager(),
+            getVinylControlManager(),
+            getEffectsManager(),
+            getSettingsManager(),
+            getLibrary());
+    return pDlgPreferences;
+}
+
 void CoreServices::finalize() {
     VERIFY_OR_DEBUG_ASSERT(m_isInitialized) {
         qDebug() << "Skipping CoreServices finalization because it was never initialized.";
@@ -567,11 +585,6 @@ void CoreServices::finalize() {
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting PlayerManager";
     CLEAR_AND_CHECK_DELETED(m_pPlayerManager);
 
-    // Destroy PlayerInfo explicitly to release the track
-    // pointers of tracks that were still loaded in decks
-    // or samplers when PlayerManager was destroyed!
-    PlayerInfo::destroy();
-
     // Delete the library after the view so there are no dangling pointers to
     // the data models.
     // Depends on RecordingManager and PlayerManager
@@ -591,6 +604,13 @@ void CoreServices::finalize() {
     // EngineMixer depends on Config and m_pEffectsManager.
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting EngineMixer";
     CLEAR_AND_CHECK_DELETED(m_pEngine);
+
+    // Destroy PlayerInfo explicitly to release the track
+    // pointers of tracks that were still loaded in decks
+    // or samplers when PlayerManager was destroyed!
+    // Do this after deleting EngineMixer which makes use of
+    // PlayerInfo in EngineRecord.
+    PlayerInfo::destroy();
 
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting EffectsManager";
     CLEAR_AND_CHECK_DELETED(m_pEffectsManager);

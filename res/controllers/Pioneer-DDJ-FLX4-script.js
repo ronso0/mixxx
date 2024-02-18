@@ -169,6 +169,11 @@ PioneerDDJFLX4.lights = {
 // Store timer IDs
 PioneerDDJFLX4.timers = {};
 
+// Keep alive timer
+PioneerDDJFLX4.sendKeepAlive = function() {
+    midi.sendSysexMsg([0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x04, 0x05, 0x00, 0x50, 0x02, 0xf7], 12); // This was reverse engineered with Wireshark
+};
+
 // Jog wheel constants
 PioneerDDJFLX4.vinylMode = true;
 PioneerDDJFLX4.alpha = 1.0/8;
@@ -239,7 +244,11 @@ PioneerDDJFLX4.init = function() {
     engine.softTakeover("[EffectRack1_EffectUnit1_Effect3]", "meta", true);
     engine.softTakeover("[EffectRack1_EffectUnit1]", "mix", true);
 
-    for (var i = 1; i <= 16; ++i) {
+    const samplerCount = 16;
+    if (engine.getValue("[App]", "num_samplers") < samplerCount) {
+        engine.setValue("[App]", "num_samplers", samplerCount);
+    }
+    for (let i = 1; i <= samplerCount; ++i) {
         engine.makeConnection("[Sampler" + i + "]", "play", PioneerDDJFLX4.samplerPlayOutputCallbackFunction);
     }
 
@@ -261,8 +270,10 @@ PioneerDDJFLX4.init = function() {
     }
     engine.makeConnection("[EffectRack1_EffectUnit1]", "focused_effect", PioneerDDJFLX4.toggleFxLight);
 
+    PioneerDDJFLX4.keepAliveTimer = engine.beginTimer(200, PioneerDDJFLX4.sendKeepAlive);
+
     // query the controller for current control positions on startup
-    midi.sendSysexMsg([0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x02, 0x06, 0x00, 0x03, 0x01, 0xf7], 12);
+    PioneerDDJFLX4.sendKeepAlive(); // the query seems to double as a keep alive message
 };
 
 //
@@ -423,7 +434,7 @@ PioneerDDJFLX4.startLoopLightsBlink = function(channel, control, status, group) 
 
     PioneerDDJFLX4.stopLoopLightsBlink(group, control, status);
 
-    PioneerDDJFLX4.timers[group][control] = engine.beginTimer(500, function() {
+    PioneerDDJFLX4.timers[group][control] = engine.beginTimer(500, () => {
         blink = 0x7F - blink;
 
         // When adjusting the loop out position, turn the loop in light off
@@ -718,7 +729,7 @@ PioneerDDJFLX4.startSamplerBlink = function(channel, control, group) {
     let val = 0x7f;
 
     PioneerDDJFLX4.stopSamplerBlink(channel, control);
-    PioneerDDJFLX4.timers[channel][control] = engine.beginTimer(250, function() {
+    PioneerDDJFLX4.timers[channel][control] = engine.beginTimer(250, () => {
         val = 0x7f - val;
 
         // blink the appropriate pad
@@ -803,4 +814,7 @@ PioneerDDJFLX4.shutdown = function() {
     // stop any flashing lights
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.beatFx, false);
     PioneerDDJFLX4.toggleLight(PioneerDDJFLX4.lights.shiftBeatFx, false);
+
+    // stop the keepalive timer
+    engine.stopTimer(PioneerDDJFLX4.keepAliveTimer);
 };
