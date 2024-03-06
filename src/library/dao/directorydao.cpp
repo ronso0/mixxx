@@ -30,12 +30,16 @@ QList<mixxx::FileInfo> DirectoryDAO::loadAllDirectories(
         return {};
     }
 
+    qWarning() << "     .";
+    qWarning() << "     diDAO loadAllDirectories";
     QList<mixxx::FileInfo> allDirs;
     const auto locationIndex = query.fieldIndex(kLocationColumn);
     while (query.next()) {
         const auto locationValue =
                 query.fieldValue(locationIndex).toString();
         auto fileInfo = mixxx::FileInfo(locationValue);
+        qWarning() << "     loc val" << locationValue;
+        qWarning() << "     has loc:" << fileInfo.hasLocation();
         if (skipInvalidOrMissing) {
             if (!fileInfo.exists() || !fileInfo.isDir()) {
                 kLogger.debug()
@@ -144,7 +148,16 @@ DirectoryDAO::RemoveResult DirectoryDAO::removeDirectory(
 QList<RelocatedTrack> DirectoryDAO::relocateDirectory(
         const QString& oldDirectory,
         const QString& newDirectory) const {
-    DEBUG_ASSERT(oldDirectory == mixxx::FileInfo(oldDirectory).location());
+    auto fi = mixxx::FileInfo(oldDirectory);
+    if (!fi.hasLocation()) {
+        qWarning() << "     diDAO relocate: oldDir has no location";
+        qWarning() << "     " << oldDirectory;
+    } else if (oldDirectory == mixxx::FileInfo(oldDirectory).location()) {
+        qWarning() << "     .";
+        qWarning() << "     diDAO relocate: str != FileInfo.location()";
+        qWarning() << "     " << oldDirectory << mixxx::FileInfo(oldDirectory).location();
+        qWarning() << "     .";
+    }
     DEBUG_ASSERT(newDirectory == mixxx::FileInfo(newDirectory).location());
     // TODO(rryan): This method could use error reporting. It can fail in
     // mysterious ways for example if a track in the oldDirectory also has a zombie
