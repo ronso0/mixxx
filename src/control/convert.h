@@ -29,7 +29,9 @@ inline RgbColor::optional_t doubleToRgbColor(double value) {
         // check with a debug assertion that the given value
         // is in range as expected. Out of range values indicate
         // programming errors in other components.
-        DEBUG_ASSERT(RgbColor::isValidCode(code));
+        VERIFY_OR_DEBUG_ASSERT(RgbColor::isValidCode(code)) {
+            return RgbColor::nullopt();
+        }
         return RgbColor::optional(code);
     } else {
         // < 0 or NaN (if non-signalling)

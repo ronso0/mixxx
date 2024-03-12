@@ -3,6 +3,7 @@
 #include "control/controlindicator.h"
 #include "control/controlobject.h"
 #include "control/controlpushbutton.h"
+#include "control/convert.h"
 #include "engine/enginebuffer.h"
 #include "moc_cuecontrol.cpp"
 #include "preferences/colorpalettesettings.h"
@@ -25,20 +26,6 @@ constexpr double CUE_MODE_CUP = 5.0;
 constexpr int kNoHotCueNumber = 0;
 /// Used for a common tracking of the previewing Hotcue in m_currentlyPreviewingIndex
 constexpr int kMainCueIndex = NUM_HOT_CUES;
-
-// Helper function to convert control values (i.e. doubles) into RgbColor
-// instances (or nullopt if value < 0). This happens by using the integer
-// component as RGB color codes (e.g. 0xFF0000).
-inline mixxx::RgbColor::optional_t doubleToRgbColor(double value) {
-    if (value < 0) {
-        return std::nullopt;
-    }
-    auto colorCode = static_cast<mixxx::RgbColor::code_t>(value);
-    if (value != mixxx::RgbColor::validateCode(colorCode)) {
-        return std::nullopt;
-    }
-    return mixxx::RgbColor::optional(colorCode);
-}
 
 /// Convert hot cue index to 1-based number
 ///
@@ -86,6 +73,8 @@ void appendCueHint(gsl::not_null<HintVector*> pHintList, const double playPos, H
 }
 
 } // namespace
+
+using namespace mixxx::control;
 
 CueControl::CueControl(const QString& group,
         UserSettingsPointer pConfig)
