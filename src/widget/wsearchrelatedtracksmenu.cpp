@@ -204,22 +204,16 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
                 const auto actionTextPrefix = tr("Artist");
                 const auto searchQueryPrefix = QStringLiteral("artist:");
                 {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(primaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            primaryArtist,
                             actionTextPrefix,
                             primaryArtist);
                 }
                 if (!secondaryArtist.isEmpty()) {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(secondaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            secondaryArtist,
                             actionTextPrefix,
                             secondaryArtist);
                 }
@@ -228,22 +222,16 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
                 const auto actionTextPrefix = tr("Album Artist");
                 const auto searchQueryPrefix = QStringLiteral("album_artist:");
                 {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(primaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            primaryArtist,
                             actionTextPrefix,
                             primaryArtist);
                 }
                 if (!secondaryArtist.isEmpty()) {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(secondaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            secondaryArtist,
                             actionTextPrefix,
                             secondaryArtist);
                 }
@@ -253,12 +241,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto composer = track.getComposer();
         if (!composer.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("composer:") +
-                    quoteSearchQueryText(composer);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    composer,
                     tr("Composer"),
                     composer);
         }
@@ -269,12 +254,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto title = track.getTitle();
         if (!title.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("title:") +
-                    quoteSearchQueryText(title);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    title,
                     tr("Title"),
                     title);
         }
@@ -282,12 +264,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto album = track.getAlbum();
         if (!album.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("album:") +
-                    quoteSearchQueryText(album);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    album,
                     tr("Album"),
                     album);
         }
@@ -295,12 +274,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto grouping = track.getGrouping();
         if (!grouping.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("grouping:") +
-                    quoteSearchQueryText(grouping);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    grouping,
                     tr("Grouping"),
                     grouping);
         }
@@ -312,12 +288,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
         const auto releaseYearNumber =
                 extractCalendarYearNumberFromReleaseDate(track.getYear());
         if (!releaseYearNumber.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("year:") +
-                    releaseYearNumber;
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    releaseYearNumber,
                     tr("Year"),
                     releaseYearNumber);
         }
@@ -325,12 +298,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto genre = track.getGenre();
         if (!genre.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("genre:") +
-                    quoteSearchQueryText(genre);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    genre,
                     tr("Genre"),
                     genre);
         }
@@ -343,12 +313,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
             DEBUG_ASSERT(!locationPath.endsWith(QChar('/')));
             const QString locationPathWithTerminator =
                     locationPath + QChar('/');
-            const QString searchQuery =
-                    QStringLiteral("location:") +
-                    quoteSearchQueryText(locationPathWithTerminator);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    locationPathWithTerminator,
                     tr("Directory"),
                     locationPathWithTerminator);
         }
