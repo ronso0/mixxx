@@ -16,7 +16,7 @@ Variables:
   <PushButton>
     <TooltipId>EffectUnit_<Variable name="Type"/>_enabled</TooltipId>
     <ObjectName>FxAssignButton<Variable name="FxUnit"/></ObjectName>
-    <Size><Variable name="Width"/>f,20f</Size>
+    <Size><Variable name="Width"/>,<Variable name="Height"/></Size>
     <NumberStates>2</NumberStates>
     <RightClickIsPushButton>false</RightClickIsPushButton>
     <State>
