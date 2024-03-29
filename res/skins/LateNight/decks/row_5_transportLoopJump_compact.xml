@@ -187,7 +187,7 @@
 
       <WidgetGroup><Size>20f,0min</Size></WidgetGroup>
 
-      <Template src="skins:LateNight/fx/assign_buttons.xml"/>
+      <Template src="skins:LateNight/fx/assign_buttons_big.xml"/>
 
       <WidgetGroup><Size>2f,0min</Size></WidgetGroup>
       <WidgetGroup>
