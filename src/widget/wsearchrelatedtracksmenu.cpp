@@ -207,22 +207,16 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
                 const auto actionTextPrefix = tr("Artist");
                 const auto searchQueryPrefix = QStringLiteral("a:");
                 {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(primaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            primaryArtist,
                             actionTextPrefix,
                             primaryArtist);
                 }
                 if (!secondaryArtist.isEmpty()) {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(secondaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            secondaryArtist,
                             actionTextPrefix,
                             secondaryArtist);
                 }
@@ -231,22 +225,16 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
                 const auto actionTextPrefix = tr("Album Artist");
                 const auto searchQueryPrefix = QStringLiteral("aa:");
                 {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(primaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            primaryArtist,
                             actionTextPrefix,
                             primaryArtist);
                 }
                 if (!secondaryArtist.isEmpty()) {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(secondaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            secondaryArtist,
                             actionTextPrefix,
                             secondaryArtist);
                 }
@@ -256,12 +244,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto composer = track.getComposer();
         if (!composer.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("cp:") +
-                    quoteSearchQueryText(composer);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    composer,
                     tr("Composer"),
                     composer);
         }
@@ -272,12 +257,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto title = track.getTitle();
         if (!title.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("t:") +
-                    quoteSearchQueryText(title);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    title,
                     tr("Title"),
                     title);
         }
@@ -285,12 +267,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto album = track.getAlbum();
         if (!album.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("al:") +
-                    quoteSearchQueryText(album);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    album,
                     tr("Album"),
                     album);
         }
