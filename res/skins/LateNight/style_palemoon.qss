@@ -1457,7 +1457,8 @@ WPushButton#VinylStatus[displayValue="0"],
 #VinylCueButton[displayValue="0"],
 #VinylModeButton,
 #PassthroughButton[displayValue="0"],
-#FxAssignButtons WPushButton[displayValue="0"] {
+#FxAssignButtons WPushButton[displayValue="0"],
+#FxAssignButtonsBig WPushButton[displayValue="0"] {
   color: #666;
   }
 
@@ -1478,6 +1479,7 @@ WPushButton#VinylStatus[displayValue="3"], /* needle skip detected (pink bg) */
 #VinylCueButton[displayValue="2"],
 #PassthroughButton[displayValue="1"],
 #FxAssignButtons WPushButton[displayValue="1"],
+#FxAssignButtonsBig WPushButton[displayValue="1"],
 #GuiToggleButton[displayValue="1"],
 #GuiToggleButton[displayValue="2"],
 #BroadcastButton[displayValue="1"], /* connecting */
@@ -1524,7 +1526,8 @@ QPushButton#pushButtonRecording:checked {
 #VinylCueButton[displayValue="0"],
 #PassthroughButton[displayValue="0"],
 #SyncLeader[value="0"],
-#FxAssignButtons WPushButton[displayValue="0"] {
+#FxAssignButtons WPushButton[displayValue="0"],
+#FxAssignButtonsBig WPushButton[displayValue="0"] {
   outline: none;
   border-width: 2px 2px 2px 1px;
   border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_grid.svg) 2 2 2 1;
@@ -1535,7 +1538,8 @@ QPushButton#pushButtonRecording:checked {
   #PassthroughButton[displayValue="1"],
   #SyncLeader[value="1"],
   #SyncLeader[value="2"],
-  #FxAssignButtons WPushButton[displayValue="1"] {
+  #FxAssignButtons WPushButton[displayValue="1"],
+  #FxAssignButtonsBig WPushButton[displayValue="1"] {
     outline: none;
     border-width: 2px 2px 2px 1px;
     border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_grid_active.svg) 2 2 2 1;
@@ -1643,6 +1647,7 @@ WPushButton#PlayPreview {
 WPushButton#FxExpand,
 WPushButton#SamplerExpand,
 #FxAssignButtons WPushButton,
+#FxAssignButtonsBig WPushButton,
 #VinylControls WPushButton,
 #KeyControls WPushButton,
 WPushButton#SyncDeck,
@@ -1701,6 +1706,7 @@ WBpmEditor QDoubleSpinBox {
 
   /* even buttons in 2nd level containers */
   #FxAssignButtons WPushButton[displayValue="0"],
+  #FxAssignButtonsBig WPushButton[displayValue="0"],
   #VinylControls WPushButton[displayValue="0"],
   #KeyControls WPushButton[displayValue="0"],
   WPushButton#VinylModeButton[displayValue="1"],
