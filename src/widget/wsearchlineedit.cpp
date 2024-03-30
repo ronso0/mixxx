@@ -117,6 +117,7 @@ WSearchLineEdit::WSearchLineEdit(QWidget* pParent, UserSettingsPointer pConfig)
     m_clearButton->setObjectName(QStringLiteral("SearchClearButton"));
 
     m_clearButton->hide();
+    m_clearButton->setFocusPolicy(Qt::NoFocus);
     connect(m_clearButton,
             &QAbstractButton::clicked,
             this,
