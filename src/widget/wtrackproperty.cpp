@@ -88,11 +88,13 @@ void WTrackProperty::updateLabel() {
 }
 
 void WTrackProperty::mousePressEvent(QMouseEvent* pEvent) {
+    qWarning() << "     WTrackP mousePress";
     DragAndDropHelper::mousePressed(pEvent);
 }
 
 void WTrackProperty::mouseMoveEvent(QMouseEvent* pEvent) {
     if (m_pCurrentTrack && DragAndDropHelper::mouseMoveInitiatesDrag(pEvent)) {
+        qWarning() << "     WTrackP mouseMove";
         DragAndDropHelper::dragTrack(m_pCurrentTrack, this, m_group);
     }
 }

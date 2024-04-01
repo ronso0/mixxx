@@ -337,6 +337,11 @@ WSearchLineEdit {
   border-color: #0c0c0c;
 }
 
+/* :hover causes unintended drag on hover (without click) */
+WTrackProperty:hover,
+/*WTrackProperty:hover[selected="false"],
+WTrackProperty:hover[selected="true"],*/
+/*WTrackProperty[selected="true"],*/
 #BpmTapContainer:hover,
 #PlayPositionText:hover, #PlayPositionTextSmall:hover {
   background-color: #151517;

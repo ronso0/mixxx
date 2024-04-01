@@ -109,11 +109,17 @@ bool mouseMoveInitiatesDragHelper(QMouseEvent* pEvent, bool isPress) {
     const qreal x = pEvent->x();
     const qreal y = pEvent->y();
 #endif
-
     static qreal pressX{};
     static qreal pressY{};
 
+    qWarning() << "     dndInitDragHelper: press?" << isPress;
+    qWarning() << "       ev coord   :" << x << y;
+    qWarning() << "       press coord:" << pressX << pressY;
+    qWarning() << "       threshold:" << static_cast<qreal>(QApplication::startDragDistance());
+    ;
+
     if (isPress) {
+        qWarning() << "     >> store x + y";
         pressX = x;
         pressY = y;
         return false;
@@ -128,6 +134,9 @@ bool mouseMoveInitiatesDragHelper(QMouseEvent* pEvent, bool isPress) {
     // distance = sqrt(dx^2 + dy^2)
     // We can avoid the sqrt by squaring the threshold.
 
+    qWarning() << "     drag:"
+               << QString(dx * dx + dy * dy >= threshold * threshold ? "yes"
+                                                                     : "no");
     return dx * dx + dy * dy >= threshold * threshold;
 }
 
@@ -210,6 +219,7 @@ bool DragAndDropHelper::allowDeckCloneAttempt(
 // static
 void DragAndDropHelper::mousePressed(QMouseEvent* pEvent) {
     if (pEvent->button() == Qt::LeftButton) {
+        qWarning() << "     dnd mousePressed";
         mouseMoveInitiatesDragHelper(pEvent, true);
     }
 }
