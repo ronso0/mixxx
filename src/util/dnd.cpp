@@ -109,11 +109,15 @@ bool mouseMoveInitiatesDragHelper(QMouseEvent* pEvent, bool isPress) {
     const qreal x = pEvent->x();
     const qreal y = pEvent->y();
 #endif
-
     static qreal pressX{};
     static qreal pressY{};
 
+    qWarning() << "     dndInitDragHelper: press?" << isPress;
+    qWarning() << "       " << x << y;
+    qWarning() << "       " << pressX << pressY;
+
     if (isPress) {
+        qWarning() << "     >> store x + y";
         pressX = x;
         pressY = y;
         return false;
@@ -210,6 +214,7 @@ bool DragAndDropHelper::allowDeckCloneAttempt(
 // static
 void DragAndDropHelper::mousePressed(QMouseEvent* pEvent) {
     if (pEvent->button() == Qt::LeftButton) {
+        qWarning() << "     dnd mousePressed";
         mouseMoveInitiatesDragHelper(pEvent, true);
     }
 }
