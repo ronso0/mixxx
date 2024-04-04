@@ -17,12 +17,19 @@ namespace {
 const QRegularExpression kHwbtnRe(QStringLiteral(":hwbtn:`([^`]*)`"));
 
 const QString kHwbtnStyleWrapper = QStringLiteral(
-        "<span style='background-color: #111111; "
-        "color: #d9d9d9; "
-        "font-weight: 700;'>"
-        // wrapping the string in &nbsp; is apparently the only way to get a padding
-        // \\1 is the RegEx match group 1
-        "&nbsp;\\1&nbsp;</span>");
+        "<span style='"
+        "background: #343131;"
+        "color: #d9d9d9;"
+        "font-size: 70%;"
+        "font-weight: 600;"
+        "line-height: 120%;"
+        "text-transform: uppercase;"
+        // Padding does only work with block and table-cell elements, not
+        // inline span. Hence, wrapping the string in `&nbsp;` is the only way
+        // to get the desired look here. See the Qt documentation for details:
+        // https://doc.qt.io/qt-6/richtext-html-subset.html#css-properties
+        // \\1 is the RegEx match group 1.
+        "'>&nbsp;\\1&nbsp;</span>");
 
 QString replaceMarkupStyleStr(QString str) {
     return str.replace(kHwbtnRe, kHwbtnStyleWrapper);
