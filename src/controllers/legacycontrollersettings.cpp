@@ -11,6 +11,25 @@
 
 #include "moc_legacycontrollersettings.cpp"
 
+namespace {
+
+// Regex that allows to use :hwbtn:`LABELSTRING` in xml controller settings xml
+const QRegularExpression kHwbtnRe(QStringLiteral(":hwbtn:`([^`]*)`"));
+
+const QString kHwbtnStyleWrapper = QStringLiteral(
+        "<span style='background-color: #111111; "
+        "color: #d9d9d9; "
+        "font-weight: 700;'>"
+        // wrapping the string in &nbsp; is apparently the only way to get a padding
+        // \\1 is the RegEx match group 1
+        "&nbsp;\\1&nbsp;</span>");
+
+QString replaceMarkupStyleStr(QString str) {
+    return str.replace(kHwbtnRe, kHwbtnStyleWrapper);
+}
+
+} // namespace
+
 LegacyControllerSettingBuilder* LegacyControllerSettingBuilder::instance() {
     static LegacyControllerSettingBuilder* s_self = nullptr;
 
@@ -32,11 +51,11 @@ LegacyControllerSettingBuilder::LegacyControllerSettingBuilder() {
 
 AbstractLegacyControllerSetting::AbstractLegacyControllerSetting(const QDomElement& element) {
     m_variableName = element.attribute("variable").trimmed();
-    m_label = element.attribute("label", m_variableName).trimmed();
+    m_label = replaceMarkupStyleStr(element.attribute("label", m_variableName).trimmed());
 
     QDomElement description = element.firstChildElement("description");
     if (!description.isNull()) {
-        m_description = description.text().trimmed();
+        m_description = replaceMarkupStyleStr(description.text().trimmed());
     }
 }
 
