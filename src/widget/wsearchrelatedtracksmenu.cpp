@@ -8,6 +8,7 @@
 #include <QStylePainter>
 #include <QWidgetAction>
 
+#include "control/controlobject.h"
 #include "library/searchquery.h"
 #include "moc_wsearchrelatedtracksmenu.cpp"
 #include "track/track.h"
@@ -158,7 +159,14 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
         }
     }
     {
-        const auto bpm = track.getBpm();
+        double bpm = 0.0;
+        if (m_deckGroup.isEmpty()) {
+            // use the track's originl BPM
+            bpm = track.getBpm();
+        } else {
+            // use the deck's current BPM
+            bpm = ControlObject::get(ConfigKey(m_deckGroup, "bpm"));
+        }
         if (bpm > 0) {
             QString bpmStr = QString::number(bpm);
             // BpmFilterNode has the user value for the fuzzy range, set in DlgPrefLibrary
