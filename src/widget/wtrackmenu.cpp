@@ -247,6 +247,7 @@ void WTrackMenu::createMenus() {
                         return;
                     }
                     m_pSearchRelatedMenu->clear();
+                    m_pSearchRelatedMenu->setDeckGroup(m_deckGroup);
                     const auto pTrack = getFirstTrackPointer();
                     if (pTrack) {
                         // Ensure it's enabled, else we can't add actions.
