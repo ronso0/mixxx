@@ -230,6 +230,7 @@ void WTrackMenu::createMenus() {
                     // Clear in closeEvent() only? And create actions on aboutToShow
                     // only if it's empty?
                     m_pSearchRelatedMenu->clear();
+                    m_pSearchRelatedMenu->setDeckGroup(m_deckGroup);
                     const auto pTrack = getFirstTrackPointer();
                     if (pTrack) {
                         m_pSearchRelatedMenu->addActionsForTrack(*pTrack);
