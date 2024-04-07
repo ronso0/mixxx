@@ -12,7 +12,8 @@ WEffectSelector::WEffectSelector(QWidget* pParent, EffectsManager* pEffectsManag
         : QComboBox(pParent),
           WBaseWidget(this),
           m_pEffectsManager(pEffectsManager),
-          m_pVisibleEffectsList(pEffectsManager->getVisibleEffectsList()) {
+          m_pVisibleEffectsList(pEffectsManager->getVisibleEffectsList()),
+          m_effectEnabled(false) {
     // Prevent this widget from getting focused by Tab/Shift+Tab
     // to avoid interfering with using the library via keyboard.
     // Allow click focus though so the list can always be opened by mouse,
@@ -36,6 +37,11 @@ void WEffectSelector::setup(const QDomNode& node, const SkinContext& context) {
                 &EffectSlot::effectChanged,
                 this,
                 &WEffectSelector::slotEffectUpdated);
+        connect(m_pEffectSlot.data(),
+                &EffectSlot::enabledChanged,
+                this,
+                &WEffectSelector::slotEffectEnabledChanged);
+        slotEffectEnabledChanged(m_pEffectSlot.data()->isEnabled());
         connect(this,
                 QOverload<int>::of(&QComboBox::activated),
                 this,
@@ -119,6 +125,16 @@ void WEffectSelector::slotEffectUpdated() {
         setCurrentIndex(newIndex);
         setBaseTooltip(itemData(newIndex, Qt::ToolTipRole).toString());
     }
+}
+
+void WEffectSelector::slotEffectEnabledChanged(bool enabled) {
+    if (m_effectEnabled == enabled) {
+        return;
+    }
+    m_effectEnabled = enabled;
+    style()->polish(this);
+    update();
+    emit effectEnabledChanged(m_effectEnabled);
 }
 
 bool WEffectSelector::event(QEvent* pEvent) {

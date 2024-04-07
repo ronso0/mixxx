@@ -73,6 +73,14 @@ EffectSlot::EffectSlot(const QString& group,
             &ControlObject::valueChanged,
             this,
             &EffectSlot::updateEngineState);
+    connect(
+            m_pControlEnabled.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this](double value) {
+                emit enabledChanged(value > 0.0);
+            },
+            Qt::DirectConnection);
 
     m_pControlNextEffect = std::make_unique<ControlPushButton>(
             ConfigKey(m_group, "next_effect"));
@@ -229,6 +237,10 @@ void EffectSlot::addEffectParameterSlot(EffectParameterType parameterType) {
 unsigned int EffectSlot::numParameters(
         EffectParameterType parameterType) const {
     return m_allParameters.value(parameterType).size();
+}
+
+bool EffectSlot::isEnabled() const {
+    return m_pControlEnabled->get() > 0.0;
 }
 
 void EffectSlot::setEnabled(bool enabled) {

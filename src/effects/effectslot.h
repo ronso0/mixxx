@@ -123,6 +123,7 @@ class EffectSlot : public QObject {
 
     unsigned int numParameters(EffectParameterType parameterType) const;
 
+    bool isEnabled() const;
     void setEnabled(bool enabled);
 
   public slots:
@@ -137,6 +138,7 @@ class EffectSlot : public QObject {
 
   signals:
     void effectChanged();
+    void enabledChanged(bool enabled);
     void parametersChanged();
 
   private slots:
