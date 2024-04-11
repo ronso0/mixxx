@@ -828,13 +828,23 @@ void WTrackTableView::dropEvent(QDropEvent * event) {
     verticalScrollBar()->setValue(vScrollBarPos);
 }
 
-QModelIndexList WTrackTableView::getSelectedRows() const {
+QModelIndexList WTrackTableView::getSelectedRows(bool sort) const {
     QItemSelectionModel* pSelectionModel = selectionModel();
     VERIFY_OR_DEBUG_ASSERT(pSelectionModel != nullptr) {
         qWarning() << "No selection model available";
         return {};
     }
-    return pSelectionModel->selectedRows();
+    QModelIndexList indices = pSelectionModel->selectedRows();
+    // Especially with a non-continuous selection, first() and
+    // last() won't return the expected results.
+    // Sort if required.
+    if (sort) {
+        std::sort(indices.begin(),
+                indices.end(),
+                [](const QModelIndex& a, const QModelIndex& b)
+                        -> bool { return a.row() < b.row(); });
+    }
+    return indices;
 }
 
 TrackModel* WTrackTableView::getTrackModel() const {

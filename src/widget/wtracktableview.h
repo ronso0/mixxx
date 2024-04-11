@@ -135,7 +135,7 @@ class WTrackTableView : public WLibraryTableView {
     void mouseMoveEvent(QMouseEvent *pEvent) override;
 
     // Returns the list of selected rows, or an empty list if none are selected.
-    QModelIndexList getSelectedRows() const;
+    QModelIndexList getSelectedRows(bool sorted = false) const;
 
     // Returns the current TrackModel, or returns NULL if none is set.
     TrackModel* getTrackModel() const;
