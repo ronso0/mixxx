@@ -52,6 +52,7 @@ class WTrackTableView : public WLibraryTableView {
     void cutSelectedTracks();
     void copySelectedTracks();
     void pasteTracks(const QModelIndex& index);
+    void moveSelectedTracks(QKeyEvent* event);
     void selectTracksById(const QList<TrackId>& tracks, int prevColumn);
 
     double getBackgroundColorOpacity() const {

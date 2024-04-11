@@ -927,6 +927,66 @@ void WTrackTableView::pasteTracks(const QModelIndex& index) {
     }
 }
 
+void WTrackTableView::moveSelectedTracks(QKeyEvent* event) {
+    QModelIndexList indices = getSelectedRows(true);
+    if (indices.isEmpty()) {
+        return;
+    }
+    bool up = event->key() == Qt::Key_Up || event->key() == Qt::Key_PageUp;
+    bool down = event->key() == Qt::Key_Down;
+    bool pageDown = event->key() == Qt::Key_PageDown;
+    bool top = event->key() == Qt::Key_Home;
+    bool bottom = event->key() == Qt::Key_End;
+    // Check if we have a continuous selection.
+    int firstSelRow = indices.first().row();
+    int lastSelRow = indices.last().row();
+    int rowCount = model()->rowCount();
+    bool continuous = indices.length() == lastSelRow - firstSelRow + 1;
+    if (continuous &&
+            ((up && firstSelRow == 0) ||
+                    ((down || pageDown) && lastSelRow == rowCount - 1))) {
+        // Continuous selection with no more rows to skip in the desired
+        // direction, further Up/Down would wrap around the current index.
+        // Ignore.
+        return;
+    }
+
+    cutSelectedTracks();
+
+    auto pasteIndex = currentIndex(); // invalid = paste at end
+
+    // If the last selection item is not at the end or top of the selection
+    // range (e.g. Ctrl+click to add a track near the bottom), the current
+    // index is at an arbitrary row after cutting.
+    // Special handling of some cases is required to yield desired results.
+    if (top) {
+        pasteIndex = pasteIndex.siblingAtRow(0);
+    } else if (bottom || (down && pasteIndex.row() == model()->rowCount() - 1)) {
+        // With currentIndex in the last row, Down would wrap around to first row
+        // and we'd paste at the top which is not the intention.
+        // Invalidate the paste index in order to move the selection to the end.
+        pasteIndex = pasteIndex.siblingAtRow(-1);
+    } else if (continuous) {
+        // Continuous selection with rows above/below: move
+        QTableView::keyPressEvent(event);
+        pasteIndex = currentIndex();
+        if (pageDown && pasteIndex.row() == model()->rowCount() - 1) {
+            pasteIndex = pasteIndex.siblingAtRow(-1);
+        }
+    } else if (up) {
+        // non-continuous:
+        // Up shall consolidate selection at firstSelRow first, then move.
+        pasteIndex = pasteIndex.siblingAtRow(firstSelRow);
+    } else { // Key_Down
+        // Down shall consolidate selection at lastSelRow first, then move.
+        // How many tracks below end of selection?
+        int prevDist = rowCount - lastSelRow - 1;
+        pasteIndex = pasteIndex.siblingAtRow(model()->rowCount() - prevDist);
+    }
+
+    pasteTracks(pasteIndex);
+}
+
 void WTrackTableView::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
     case kPropertiesShortcutKey: {
@@ -958,8 +1018,8 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
     default:
         break;
     }
-    TrackModel* trackModel = getTrackModel();
-    if (trackModel && !trackModel->isLocked()) {
+    TrackModel* pTrackModel = getTrackModel();
+    if (pTrackModel && !pTrackModel->isLocked()) {
         if (event->matches(QKeySequence::Delete) || event->key() == Qt::Key_Backspace) {
             removeSelectedTracks();
             return;
@@ -974,6 +1034,17 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         }
         if (event->matches(QKeySequence::Paste)) {
             pasteTracks(currentIndex());
+            return;
+        }
+        if (event->modifiers().testFlag(Qt::AltModifier) &&
+                (event->key() == Qt::Key_Up ||
+                        event->key() == Qt::Key_Down ||
+                        event->key() == Qt::Key_PageUp ||
+                        event->key() == Qt::Key_PageDown ||
+                        event->key() == Qt::Key_Home ||
+                        event->key() == Qt::Key_End) &&
+                pTrackModel->hasCapabilities(TrackModel::Capability::Reorder)) {
+            moveSelectedTracks(event);
             return;
         }
         if (event->key() == Qt::Key_Escape) {
