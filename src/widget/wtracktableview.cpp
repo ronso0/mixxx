@@ -881,6 +881,10 @@ void WTrackTableView::cutSelectedTracks() {
     const QModelIndex newIndex = calculateCutIndex(currentIndex(), indices);
     getTrackModel()->cutTracks(indices);
     setCurrentIndex(newIndex);
+    qWarning() << "       .";
+    qWarning() << "       Cut. currIndex: [" << newIndex.row() + 1 << newIndex.column() + 1 << "/"
+               << model()->rowCount();
+    qWarning() << "       .";
 }
 
 void WTrackTableView::copySelectedTracks() {
@@ -928,6 +932,8 @@ void WTrackTableView::pasteTracks(const QModelIndex& index) {
 }
 
 void WTrackTableView::moveSelectedTracks(QKeyEvent* event) {
+    qWarning() << "       .";
+    qWarning() << "       Alt move";
     QModelIndexList indices = getSelectedRows(true);
     if (indices.isEmpty()) {
         return;
@@ -942,12 +948,19 @@ void WTrackTableView::moveSelectedTracks(QKeyEvent* event) {
     int lastSelRow = indices.last().row();
     int rowCount = model()->rowCount();
     bool continuous = indices.length() == lastSelRow - firstSelRow + 1;
+    qWarning() << "       rows:" << indices.length()
+               << "[" << firstSelRow + 1 << "-" << lastSelRow + 1 << "]"
+               << "continuous" << QString(continuous ? "YES" : "NO");
     if (continuous &&
             ((up && firstSelRow == 0) ||
                     ((down || pageDown) && lastSelRow == rowCount - 1))) {
         // Continuous selection with no more rows to skip in the desired
         // direction, further Up/Down would wrap around the current index.
         // Ignore.
+        qWarning().noquote() << "       (ignore move"
+                             << QString(up ? "Up" : "Down")
+                             << ": continuous selection already at"
+                             << QString(up ? "top" : "botom");
         return;
     }
 
@@ -961,12 +974,15 @@ void WTrackTableView::moveSelectedTracks(QKeyEvent* event) {
     // Special handling of some cases is required to yield desired results.
     if (top) {
         pasteIndex = pasteIndex.siblingAtRow(0);
+        qWarning() << "       paste at top";
     } else if (bottom || (down && pasteIndex.row() == model()->rowCount() - 1)) {
         // With currentIndex in the last row, Down would wrap around to first row
         // and we'd paste at the top which is not the intention.
         // Invalidate the paste index in order to move the selection to the end.
+        qWarning() << "       non-cont at end + Down: ignore, paste at end";
         pasteIndex = pasteIndex.siblingAtRow(-1);
     } else if (continuous) {
+        qWarning() << "       cont with rows above/below: move to" << pasteIndex.row() + 1;
         // Continuous selection with rows above/below: move
         QTableView::keyPressEvent(event);
         pasteIndex = currentIndex();
@@ -976,15 +992,23 @@ void WTrackTableView::moveSelectedTracks(QKeyEvent* event) {
     } else if (up) {
         // non-continuous:
         // Up shall consolidate selection at firstSelRow first, then move.
+        qWarning() << "       non-cont Up, pasteIndex:" << pasteIndex.row() + 1;
         pasteIndex = pasteIndex.siblingAtRow(firstSelRow);
+        qWarning() << "            >> mod. pasteIndex:" << pasteIndex.row() + 1;
     } else { // Key_Down
         // Down shall consolidate selection at lastSelRow first, then move.
         // How many tracks below end of selection?
         int prevDist = rowCount - lastSelRow - 1;
+        qWarning() << "       non-cont Down, pasteIndex:" << pasteIndex.row() + 1;
+        qWarning() << "             prev dist to bottom:" << prevDist;
         pasteIndex = pasteIndex.siblingAtRow(model()->rowCount() - prevDist);
+        qWarning() << "              >> mod. pasteIndex:"
+                   << pasteIndex.row() + 1 << "/"
+                   << model()->rowCount();
     }
 
     pasteTracks(pasteIndex);
+    qWarning() << "       .";
 }
 
 void WTrackTableView::keyPressEvent(QKeyEvent* event) {
