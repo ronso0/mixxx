@@ -166,6 +166,29 @@ LibraryControl::LibraryControl(Library* pLibrary)
                 &LibraryControl::slotMoveFocus);
     }
 
+    // Controls to move tracks on playlist
+    // Track move controls (emulate Alt+up/down button press)
+    m_pMoveTrackForward = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveTrackForward"));
+    m_pMoveTrackBackward = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveTrackBackward"));
+    m_pMoveTrack = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "MoveTrack"), false);
+#ifdef MIXXX_USE_QML
+    if (!CmdlineArgs::Instance().isQml())
+#endif
+    {
+        connect(m_pMoveTrackForward.get(),
+                &ControlPushButton::valueChanged,
+                this,
+                &LibraryControl::slotMoveTrackForward);
+        connect(m_pMoveTrackBackward.get(),
+                &ControlPushButton::valueChanged,
+                this,
+                &LibraryControl::slotMoveTrackBackward);
+        connect(m_pMoveTrack.get(),
+                &ControlEncoder::valueChanged,
+                this,
+                &LibraryControl::slotMoveTrack);
+    }
+
     // Direct focus control, read/write
     m_pFocusedWidgetCO = std::make_unique<ControlPushButton>(
             ConfigKey("[Library]", "focused_widget"));
@@ -791,6 +814,25 @@ void LibraryControl::slotMoveFocus(double v) {
     const auto times = static_cast<unsigned short>(std::abs(v));
     emitKeyEvent(QKeyEvent{
             QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times});
+}
+
+void LibraryControl::slotMoveTrackForward(double v) {
+    if (v > 0) {
+        slotMoveTrack(1);
+    }
+}
+
+void LibraryControl::slotMoveTrackBackward(double v) {
+    if (v > 0) {
+        slotMoveTrack(-1);
+    }
+}
+
+void LibraryControl::slotMoveTrack(double v) {
+    const auto key = (v < 0) ? Qt::Key_Up : Qt::Key_Down;
+    const auto times = static_cast<unsigned short>(std::abs(v));
+    emitKeyEvent(QKeyEvent{
+            QEvent::KeyPress, key, Qt::AltModifier, QString(), false, times});
 }
 
 void LibraryControl::emitKeyEvent(QKeyEvent&& event) {
