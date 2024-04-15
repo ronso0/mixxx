@@ -829,10 +829,16 @@ void LibraryControl::slotMoveTrackBackward(double v) {
 }
 
 void LibraryControl::slotMoveTrack(double v) {
+    if (!m_pLibraryWidget) {
+        return;
+    }
+
     const auto key = (v < 0) ? Qt::Key_Up : Qt::Key_Down;
     const auto times = static_cast<unsigned short>(std::abs(v));
-    emitKeyEvent(QKeyEvent{
-            QEvent::KeyPress, key, Qt::AltModifier, QString(), false, times});
+    QKeyEvent event = QKeyEvent{
+      QEvent::KeyPress, key, Qt::AltModifier, QString(), false, times};
+    QApplication::sendEvent(m_pLibraryWidget, &event);
+
 }
 
 void LibraryControl::emitKeyEvent(QKeyEvent&& event) {
