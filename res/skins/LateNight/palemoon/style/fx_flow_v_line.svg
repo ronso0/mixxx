@@ -1,0 +1,22 @@
+<svg width="90" height="20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="b" x1="9.3457003" x2="9.3457003" y1="17.507799" y2="16.492201" gradientTransform="rotate(90,27,35)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0c0c0c" offset="0"/>
+      <stop offset="1"/>
+    </linearGradient>
+    <linearGradient id="c" x1="10.2456" x2="10.2456" y1="17.507799" y2="16.492201" gradientTransform="matrix(0,1,1,0,28,9.2227)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#363636" offset="0"/>
+      <stop stop-color="#313131" offset="1"/>
+    </linearGradient>
+  </defs>
+  <path d="m61 11-0.357429-1.014957-15.134772 8.792247v1.22267z" color="#000000" color-rendering="auto" dominant-baseline="auto" fill="#3b3b3b" image-rendering="auto" shape-rendering="auto" solid-color="#000000" stop-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;font-variation-settings:normal;inline-size:0;isolation:auto;mix-blend-mode:normal;shape-margin:0;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+  <path d="m60.642571 9.985043-0.387936-0.997305-14.746835 8.566952v1.22267z" color="#000000" color-rendering="auto" dominant-baseline="auto" image-rendering="auto" shape-rendering="auto" solid-color="#000000" stop-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;font-variation-settings:normal;inline-size:0;isolation:auto;mix-blend-mode:normal;shape-margin:0;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+  <path d="m29 11 0.35742-1.01496 15.134781 8.79225v1.22267z" color="#000000" color-rendering="auto" dominant-baseline="auto" fill="#383838" image-rendering="auto" shape-rendering="auto" solid-color="#000000" stop-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;font-variation-settings:normal;inline-size:0;isolation:auto;mix-blend-mode:normal;shape-margin:0;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+  <path d="m29.35742 9.98504 0.38794-0.997302 14.74684 8.566952v1.22267z" color="#000000" color-rendering="auto" dominant-baseline="auto" fill="#0c0c0c" image-rendering="auto" shape-rendering="auto" solid-color="#000000" stop-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-east-asian:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;font-variation-settings:normal;inline-size:0;isolation:auto;mix-blend-mode:normal;shape-margin:0;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+  <path d="m45.5078 18.7773 1e-6 -1.22267h-1.01563v1.22267z" fill="url(#b)"/>
+  <path d="m44.4922 20-1e-6 -1.22267h1.01563v1.22267z" fill="url(#c)"/>
+  <path d="M 60.254635,8.987738 105,9 v 1 L 60.642571,9.98504 Z" stroke-linejoin="round" stroke-width="5" style="paint-order:fill markers stroke"/>
+  <path d="m61 11h44v-1l-44.357429-0.01496z" fill="#333" stroke-linejoin="round" stroke-width="5" style="paint-order:fill markers stroke"/>
+  <path d="M 29.74536,8.987738 -15.000005,9 v 1 L 29.35742,9.98504 Z" stroke-linejoin="round" stroke-width="5" style="paint-order:fill markers stroke"/>
+  <path d="m29 11h-44.000005v-1l44.357425-0.01496z" fill="#333" stroke-linejoin="round" stroke-width="5" style="paint-order:fill markers stroke"/>
+</svg>
