@@ -39,9 +39,7 @@
 #Deck3, #DeckCompact3, #DeckMini3,
 #Deck4, #DeckCompact4, #DeckMini4,
 #MixerDecks,
-#FxUnitControlsCollapsed,
 #FxUnitControlsExpanded,
-#FxSlotsCollapsed,
 #FxSlotsExpanded,
 #MicDuckingContainer, #MicAuxUnit, #MicAuxAddFrame,
 #Sampler, #SamplerMini {
@@ -57,6 +55,16 @@
     border-bottom-right-radius: 1px;
     border-right: 1px solid #0c0c0c;
   }
+  #FxSlotsCollapsed #FxSlotControls[highlight="0"],
+  #FxFlowTopBottomBorder {
+    border-top: 1px solid #333;
+/*    border-bottom: 1px solid #0c0c0c;*/
+    margin-bottom: 1px;
+  }
+  #FxFlowLine {
+    border-bottom: 1px solid #0c0c0c;
+  }
+
 
 /* dim 1st-level containers */
 #ToolBar,
@@ -253,7 +261,11 @@ WSearchLineEdit {
 
 
 #FxParametersFocusBg {
-  border: 1px solid #257B82;
+  border: 1px solid #023D4A;
+/*  background-color: rgba(0,0,1,50);*/
+  background-color: #1e1e20;
+}
+#FxSlotParameterHolder {
   background-color: rgba(0,0,1,50);
 }
 
@@ -305,10 +317,124 @@ WSearchLineEdit {
   #FxMixerSeparatorCollapsed {
     margin-left: 3px;
   }
-  #FxFlowIndicatorCollapsed {
-    min-width: 18px;
-    max-width: 18px;
+  /* Fx flow indicator is a stack of (top to bottom)
+     /fx/flow_indicator.xml
+     [ FxFlowStackH ]
+     * separator FxFlowLine
+     * FxFlowBgLeft
+     * FxFlowBgRight
+     * FxFlowTopBottomBorder */
+  #FxFlowStackH, /* parent layout *for the following children */
+  #FxFlowLine,
+  #FxFlowBgLeft,
+  #FxFlowBgRight,
+  #FxFlowTopBottomBorder,
+  #FxFlowHeader {
+    min-width: 13px;
+    max-width: 13px;
+    min-height: 34px;
+    max-height: 34px;
+    background-color: transparent;
   }
+  #FxParamsToHeaderSpacer {
+    min-width: 11px; /* + 2px left border = 13 px */
+    max-width: 11px;
+    }
+    #FxUnit1 #FxFlowBgLeft[highlight="0"],
+    #FxUnit2 #FxFlowBgLeft[highlight="0"],
+    #FxUnit1 #FxFlowBgRight[highlight="0"],
+    #FxUnit2 #FxFlowBgRight[highlight="0"],
+    #FxUnit3 #FxFlowBgLeft[highlight="0"],
+    #FxUnit4 #FxFlowBgLeft[highlight="0"],
+    #FxUnit3 #FxFlowBgRight[highlight="0"],
+    #FxUnit4 #FxFlowBgRight[highlight="0"] {
+      image: none;
+    }
+
+    #FxFlowLine {
+      image: url(skins:LateNight/palemoon/style/fx_flow_h_line.svg) no-repeat center center;
+    }
+    #FxUnit1 #FxFlowBgLeft[highlight="1"],
+    #FxUnit2 #FxFlowBgLeft[highlight="1"] {
+      image: url(skins:LateNight/palemoon/style/fx_flow_h_12_left.svg) no-repeat center center;
+    }
+    #FxUnit1 #FxFlowBgRight[highlight="1"],
+    #FxUnit2 #FxFlowBgRight[highlight="1"] {
+      image: url(skins:LateNight/palemoon/style/fx_flow_h_12_right.svg) no-repeat center center;
+    }
+
+    #FxUnit3 #FxFlowBgLeft[highlight="1"],
+    #FxUnit4 #FxFlowBgLeft[highlight="1"] {
+      image: url(skins:LateNight/palemoon/style/fx_flow_h_34_left.svg) no-repeat center center;
+    }
+    #FxUnit3 #FxFlowBgRight[highlight="1"],
+    #FxUnit4 #FxFlowBgRight[highlight="1"] {
+      image: url(skins:LateNight/palemoon/style/fx_flow_h_34_right.svg) no-repeat center center;
+    }
+    #FxParamsToHeaderSpacer {
+      /* same bgcolor as #FxUnitControlsCollapsed */
+      border-left: 3px solid #0c0c0c;
+    }
+
+/* When the Fx unit is currently focused = accessible from the controller
+  indicate that with a bright colored bar and colorize the unit label */
+#FxUnit1 #FxUnitLabel,
+#FxUnit2 #FxUnitLabel {
+  color: #028392;
+  }
+  #FxUnit1 #FxUnitControlsCollapsed,
+  #FxUnit2 #FxUnitControlsCollapsed,
+  #FxUnit1 #FxSlotControls[highlight="1"],
+  #FxUnit2 #FxSlotControls[highlight="1"],
+  #FxUnit1 #FxParamsToHeaderSpacer,
+  #FxUnit2 #FxParamsToHeaderSpacer {
+    background-color: #023d4a;
+    }
+  #FxUnit1 #FxUnitControlsCollapsed,
+  #FxUnit2 #FxUnitControlsCollapsed {
+    border-top: 2px solid transparent;
+    }
+    #FxUnit1 #FxFlowHeader,
+    #FxUnit2 #FxFlowHeader { /* top/bottom + left border */
+      image: url(skins:LateNight/palemoon/style/fx_flow_h_12_header.svg) no-repeat center center;
+    }
+  #FxUnit1 #FxUnitHeader[highlight="1"],
+  #FxUnit2 #FxUnitHeader[highlight="1"] {
+    border: 1px solid #028392;
+    border-left: 0px;
+  }
+#FxUnit3 #FxUnitLabel,
+#FxUnit4 #FxUnitLabel {
+  color: #b802c5;
+  }
+  /* Dark purple for effect ON highlight Fx34 */
+  #FxUnit3 #FxUnitControlsCollapsed,
+  #FxUnit4 #FxUnitControlsCollapsed,
+  #FxUnit3 #FxSlotControls[highlight="1"],
+  #FxUnit4 #FxSlotControls[highlight="1"],
+  #FxUnit3 #FxParamsToHeaderSpacer,
+  #FxUnit4 #FxParamsToHeaderSpacer {
+    background-color: #500857;
+    }
+    #FxUnit3 #FxUnitControlsCollapsed,
+    #FxUnit4 #FxUnitControlsCollapsed {
+      border-top: 2px solid transparent;
+    }
+    #FxUnit3 #FxFlowHeader,
+    #FxUnit4 #FxFlowHeader { /* top/bottom + left border */
+      image: url(skins:LateNight/palemoon/style/fx_flow_h_34_header.svg) no-repeat center center;
+    }
+  #FxUnit3 #FxUnitHeader[highlight="1"],
+  #FxUnit4 #FxUnitHeader[highlight="1"] {
+    border: 1px solid #b802c5;
+    }
+    #FxUnit3 #FxUnitHeader[highlight="1"] {
+      border-left: 0px;
+    }
+    #FxUnit4 #FxUnitHeader[highlight="1"] {
+      border-right: 0px;
+    }
+
   #DeckRateSeparator,
   #DeckRateSeparatorCompact,
   #FxMixerSeparatorCollapsed,
@@ -320,15 +446,12 @@ WSearchLineEdit {
     border-left: 1px solid #0c0c0c;
     border-right: 1px solid #222;
   }
+  /* for expanded Fx units */
   #FxSlotSeparatorH {
     border-top: 1px solid #0c0c0c;
     border-bottom: 1px solid #333;
   }
 
-  #FxFlowIndicatorCollapsed {
-    margin: 0px 0px 0px 0px;
-    image: url(skins:LateNight/palemoon/style/fx_flow_horizontal.svg) no-repeat center center;
-  }
   #ToolbarSeparator {
     margin: 0px 5px;
   }
@@ -898,8 +1021,9 @@ WBpmEditor QDoubleSpinBox::down-button {
   }
 
 #FxUnitControlsCollapsed {
-  padding: 1px 2px 3px 2px;
-  qproperty-layoutSpacing: 2;
+  qproperty-layoutAlignment: 'AlignTop';
+  padding: 0px 2px 2px 2px;
+  /*  qproperty-layoutSpacing: 2;*/
   border-left: 0px;
   border-right: 0px;
   border-radius: 0px;
@@ -930,7 +1054,9 @@ WEffectChainPresetButton::menu-indicator {
   border-right: 0px;
   border-top-right-radius: 0px;
   border-bottom-right-radius: 0px;
-  background: #1e1e20 url(skins:LateNight/palemoon/style/fx_flow_vertical.svg) no-repeat center right;
+  /* this img has 2 fx flow arrows pointing down
+     it's prepared for the actual height */
+  background: #1e1e20 url(skins:LateNight/palemoon/style/fx_flow_v.svg) no-repeat center right;
   }
   #FxSlot1,
   #FxSlot2,
@@ -948,7 +1074,7 @@ WEffectChainPresetButton::menu-indicator {
 }
 
 #FxSlotsCollapsed #FxSlotControls {
-  padding: 2px 3px 1px 3px;
+  padding: 0px 3px 0px 3px;
 }
 
 #FxSlotsExpanded #FxSlotControls {
@@ -971,7 +1097,7 @@ WEffectSelector:!editable,
 WEffectSelector:!editable:on {
   /* If you use margin top/bottom 0, the combo box shrinks in width (go figure) and
       names start getting cut off. Adding explicit padding improves this. */
-  padding: 3px 0px 1px 5px;
+  padding: 0px 0px 2px 5px;
   margin: 0px;
   }
 
@@ -999,6 +1125,9 @@ WEffectSelector:!editable:on {
     image: url(skins:LateNight/palemoon/buttons/btn__fx_selector_down.svg);
     width: 16px;
     height: 24px;
+  }
+  WEffectSelector[effectEnabled="true"]::down-arrow {
+    image: url(skins:LateNight/palemoon/buttons/btn__fx_selector_down_black.svg);
   }
 
 
@@ -1339,20 +1468,28 @@ WCoverArtMenu {
   #SkinSettingsNumToggleHeader[displayValue="0"] {
     color: #756e6c;
   }
-WEffectSelector:!editable,
-WEffectSelector:!editable:on,
 WEffectChainPresetSelector:!editable,
 WEffectChainPresetSelector:!editable:on,
+WEffectSelector[effectEnabled="false"],
+WEffectSelector::item[effectEnabled="true"],
 #fadeModeCombobox:!editable,
 #fadeModeCombobox:!editable:on {
   color: #918273;
   }
-  WEffectSelector:!editable,
-  WEffectSelector:!editable:on,
+  WEffectSelector[effectEnabled="true"] {
+  /* Note: also affects effects list WEffectSelector::item
+     overwrite that with WEffectSelector::item[effectEnabled="true"]
+     see above */
+    color: black;
+  }
   #fadeModeCombobox:!editable,
   #fadeModeCombobox:!editable:on {
     /* use slightly larger labels than in Classic */
     font-size: 14px;
+  }
+  WEffectSelector:!editable,
+  WEffectSelector:!editable:on {
+    font-size: 17px;
   }
   /* dim² ivory */
   #SamplerBpm, #SamplerBpmMini,
@@ -1399,28 +1536,8 @@ WEffectChainPresetSelector:!editable:on,
   }
 
 /* Grey for FxUnit labels */
-#FxUnitLabel,
 #MicAuxLabelUnconfigured {
   color: #686666;
-  }
-
-/* When the Fx unit is currently focused = accessible from the controller
-  indicate that with a bright colored bar and colorize the unit label */
-#FxUnit1 #FxUnitLabel[highlight="1"],
-#FxUnit2 #FxUnitLabel[highlight="1"] {
-  color: #518f00;
-  }
-  #FxUnit1 #FxUnitControllerInputIndicator[highlight="1"],
-  #FxUnit2 #FxUnitControllerInputIndicator[highlight="1"] {
-    background-color: #518f00;
-  }
-#FxUnit3 #FxUnitLabel[highlight="1"],
-#FxUnit4 #FxUnitLabel[highlight="1"] {
-  color: #028392;
-  }
-  #FxUnit3 #FxUnitControllerInputIndicator[highlight="1"],
-  #FxUnit4 #FxUnitControllerInputIndicator[highlight="1"] {
-    background-color: #028392;
   }
 
 #MainMenu,
@@ -1554,7 +1671,6 @@ QPushButton#pushButtonRecording:checked {
 WPushButton#VinylStatus[displayValue="0"],
 #SyncDeck[displayValue="0"],
 WPushButton#FxAssignButton1[displayValue="0"],
-WEffectSelector:!editable,
 #fadeModeCombobox:!editable,
 #LibraryFeatureControls QPushButton:enabled,
 #CueDeleteButton,
@@ -1565,6 +1681,13 @@ WEffectSelector:!editable,
   border-width: 2px;
   border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library.svg) 2 2 2 2;
   }
+    WEffectSelector:!editable {
+      outline: none;
+      border-width: 0px;
+      /* TODO find a cleaner way to eliminate the default styles */
+      border-image: url(skins:LateNight/palemoon/buttons/btn_.svg) 1 1 1 1;
+      }
+  /* WPushButton#BpmTap[displayValue="1"], */
   WPushButton#VinylStatus[displayValue="1"],
   WPushButton#VinylStatus[displayValue="2"],
   WPushButton#VinylStatus[displayValue="3"],
@@ -1585,7 +1708,6 @@ WEffectSelector:!editable,
   QPushButton#pushButtonRepeatPlaylist:checked,
   QPushButton#pushButtonAnalyze:checked,
   QPushButton#pushButtonRecording:checked,
-  WEffectSelector:!editable:on,
   #fadeModeCombobox:!editable:on,
   #CueDeleteButton[pressed="true"],
   #CueStandardButton[pressed="true"],
@@ -1677,7 +1799,6 @@ WPushButton#LoopActivate[displayValue="0"],
 #EQKillButtonBox WPushButton[displayValue="0"],
 WPushButton#StemMuteButton[displayValue="0"],
 WPushButton#QuickEffectButton[displayValue="0"],
-WPushButton#FxToggleButton[displayValue="0"],
 #MicAuxUnit WPushButton[displayValue="0"],
 #MicDuckingContainer WPushButton[displayValue="0"],
 WBeatSpinBox,
@@ -1716,9 +1837,8 @@ WBpmEditor QDoubleSpinBox {
   WPushButton#SpecialCueButton[displayValue="0"],
   #RateControls WPushButton[displayValue="0"],
   WPushButton#PflButton[displayValue="0"],
-  WPushButton#MixModeButton[displayValue="0"],
-  WPushButton#MixModeButton[displayValue="1"],
-  WEffectSelector,
+  /*WPushButton#MixModeButton[displayValue="0"],
+  WPushButton#MixModeButton[displayValue="1"],*/
   WEffectChainPresetSelector,
   #fadeModeCombobox,
   #SamplerContainer WPushButton#SyncSampler[displayValue="0"],
@@ -1805,33 +1925,27 @@ QPushButton#pushButtonRecording:checked,
 }
 
 /* Green for Fx toggles, QuickEffect + Fx12 */
-#FxUnit1 #FxToggleButton[displayValue="1"],
-#FxUnit2 #FxToggleButton[displayValue="1"],
 WPushButton#VinylStatus[displayValue="1"], /* enabled, OK */
 #BroadcastButton[displayValue="2"] {
   background-color: #438225;
   }
-  /* Dim green for assign buttons Fx12 */
-  WPushButton#QuickEffectButton[displayValue="1"],
-  #FxAssignButton1[displayValue="1"],
-  #FxAssignButton2[displayValue="1"] {
-    background-color: #236b00;
+  /* Green border for Play buttons when previewing from Cue or Hotcue */
+  WPushButton#PreviewIndicator[value="1"] {
+    border: 3px solid #45aa12;
+    /* work around round borders being painted outside the actual border area */
+    border-radius: 0px;
   }
 /* Blue for Fx buttons 3/4 */
-#FxUnit3 #FxToggleButton[displayValue="1"],
-#FxUnit4 #FxToggleButton[displayValue="1"],
-WBpmEditor QDoubleSpinBox::up-button:pressed,
-WBpmEditor QDoubleSpinBox::down-button:pressed,
 WBeatSpinBox::up-button:pressed,
 WBeatSpinBox::down-button:pressed,
 #spinBoxTransition::up-button:pressed,
 #spinBoxTransition::down-button:pressed {
   background-color: #257b82;
   }
-  /* Dim blue for assign buttons Fx34 */
+  /* Dim purple for assign buttons Fx34 */
   #FxAssignButton3[displayValue="1"],
   #FxAssignButton4[displayValue="1"] {
-    background-color: #146674;
+    background-color: #862F8C;
   }
 
 WPushButton#FxSuperLinkButton[value="0"],
@@ -1842,44 +1956,18 @@ WPushButton#FxSuperLinkInvertButton[displayValue="0"] {
     background-color: #9C0900;
     }
 
-/* Green for Fx1 / Fx2 */
-#FxUnit1 #FxSuperLinkButton[value="1"],
-#FxUnit2 #FxSuperLinkButton[value="1"] {
-  background-color: #236b00;
-  }
-#FxUnit1 #FxSuperLinkButton[value="2"],
-#FxUnit2 #FxSuperLinkButton[value="2"] {
-/* a simple way to achieve a partitioning in thirds  */
-  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-    stop: 0 #236b00,
-    stop: 0.33 #236b00,
-    stop: 0.34 #333,
-    stop: 1 #333);
-  }
-#FxUnit1 #FxSuperLinkButton[value="3"],
-#FxUnit2 #FxSuperLinkButton[value="3"] {
-  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-    stop: 0 #333,
-    stop: 0.66 #333,
-    stop: 0.67 #236b00,
-    stop: 1 #236b00);
-  }
-#FxUnit1 #FxSuperLinkButton[value="4"],
-#FxUnit2 #FxSuperLinkButton[value="4"] {
-  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-    stop: 0 #236b00,
-    stop: 0.330000 #236b00,
-    stop: 0.340000 #333,
-    stop: 0.660000 #333,
-    stop: 0.670000 #236b00,
-    stop: 1 #236b00);
-  }
-
 /* Blue for Fx3 / Fx4 */
+WPushButton#QuickEffectButton[displayValue="1"],
+#FxAssignButton1[displayValue="1"],
+#FxAssignButton2[displayValue="1"],
+#FxUnit1 #FxSuperLinkButton[value="1"],
+#FxUnit2 #FxSuperLinkButton[value="1"],
 #FxUnit3 #FxSuperLinkButton[value="1"],
 #FxUnit4 #FxSuperLinkButton[value="1"] {
   background-color: #146674;
   }
+#FxUnit1 #FxSuperLinkButton[value="2"],
+#FxUnit2 #FxSuperLinkButton[value="2"],
 #FxUnit3 #FxSuperLinkButton[value="2"],
 #FxUnit4 #FxSuperLinkButton[value="2"] {  /*
   a simple way to achieve a partitioning in thirds  */
@@ -1889,6 +1977,8 @@ WPushButton#FxSuperLinkInvertButton[displayValue="0"] {
     stop: 0.34 #333,
     stop: 1 #333);
   }
+#FxUnit1 #FxSuperLinkButton[value="3"],
+#FxUnit2 #FxSuperLinkButton[value="3"],
 #FxUnit3 #FxSuperLinkButton[value="3"],
 #FxUnit4 #FxSuperLinkButton[value="3"] {
   background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
@@ -1897,6 +1987,8 @@ WPushButton#FxSuperLinkInvertButton[displayValue="0"] {
     stop: 0.67 #146674,
     stop: 1 #146674);
   }
+#FxUnit1 #FxSuperLinkButton[value="4"],
+#FxUnit2 #FxSuperLinkButton[value="4"],
 #FxUnit3 #FxSuperLinkButton[value="4"],
 #FxUnit4 #FxSuperLinkButton[value="4"] {
   background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
@@ -2509,6 +2601,12 @@ WPushButton#PlayDeck[value="0"] {
   #PflButton[value="1"] {
     image: url(skins:LateNight/palemoon/buttons/btn__pfl_active.svg) no-repeat center center;
   }
+#FxPflButton[value="0"] {
+  image: url(skins:LateNight/palemoon/buttons/btn__pfl_fx.svg) no-repeat center center;
+  }
+  #FxPflButton[value="1"] {
+    image: url(skins:LateNight/palemoon/buttons/btn__pfl_fx_active.svg) no-repeat center center;
+  }
 
 #StemMuteButton[displayValue="0"] {
   image: url(skins:LateNight/palemoon/buttons/btn__stem_mute.svg) no-repeat center center;
@@ -2581,7 +2679,7 @@ WPushButton#PlayDeck[value="0"] {
   }
 
 #FxFocusButton[value="0"] {
-  image: url(skins:LateNight/palemoon/buttons/btn__fx_focus.svg) no-repeat center center;
+/*  image: url(skins:LateNight/palemoon/buttons/btn__fx_focus.svg) no-repeat center center;*/
   }
   #FxFocusButton[value="1"] {
     image: url(skins:LateNight/palemoon/buttons/btn__fx_focus_active.svg) no-repeat center center;
@@ -3416,6 +3514,7 @@ WCueMenuPopup,
 WCueMenuPopup QLabel,
 WEffectSelector QAbstractScrollArea,
 WEffectSelector::item,
+/* WEffectSelector::item[effectEnabled="true"], */
 WEffectChainPresetSelector QAbstractScrollArea,
 WEffectChainPresetSelector::item,
 WEffectChainPresetButton QMenu,
@@ -3469,6 +3568,7 @@ WSearchLineEdit::item:selected,
   outline: none;
   }
   WEffectSelector QAbstractItemView,
+  WEffectSelector[effectEnabled="true"] QAbstractItemView,
   WEffectChainPresetSelector QAbstractItemView,
   WSearchLineEdit QAbstractItemView {
     selection-color: #fff;
@@ -3479,6 +3579,7 @@ WSearchLineEdit::item:selected,
   }
   /* checked item */
   WEffectSelector::item:checked,
+  WEffectSelector::item:checked[effectEnabled="true"],
   WEffectChainPresetSelector::item:checked,
   WSearchLineEdit::item:checked,
   #fadeModeCombobox::item:checked {
@@ -3486,6 +3587,7 @@ WSearchLineEdit::item:selected,
   }
   /* hover over checked item */
   WEffectSelector::item:checked:selected,
+  WEffectSelector::item:checked:selected[effectEnabled="true"],
   WEffectChainPresetSelector::item:checked:selected,
   WSearchLineEdit::item:checked:selected,
   #fadeModeCombobox::item:checked:selected {
