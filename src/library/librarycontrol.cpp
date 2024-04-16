@@ -168,21 +168,21 @@ LibraryControl::LibraryControl(Library* pLibrary)
 
     // Controls to move tracks on playlist
     // Track move controls (emulate Alt+up/down button press)
-    m_pMoveTrackForward = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveTrackForward"));
-    m_pMoveTrackBackward = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveTrackBackward"));
+    m_pMoveTrackUp = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveTrack-Up"));
+    m_pMoveTrackDown = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveTrack-Down"));
     m_pMoveTrack = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "MoveTrack"), false);
 #ifdef MIXXX_USE_QML
     if (!CmdlineArgs::Instance().isQml())
 #endif
     {
-        connect(m_pMoveTrackForward.get(),
+        connect(m_pMoveTrackUp.get(),
                 &ControlPushButton::valueChanged,
                 this,
-                &LibraryControl::slotMoveTrackForward);
-        connect(m_pMoveTrackBackward.get(),
+                &LibraryControl::slotMoveTrackUp);
+        connect(m_pMoveTrackDown.get(),
                 &ControlPushButton::valueChanged,
                 this,
-                &LibraryControl::slotMoveTrackBackward);
+                &LibraryControl::slotMoveTrackDown);
         connect(m_pMoveTrack.get(),
                 &ControlEncoder::valueChanged,
                 this,
@@ -816,18 +816,19 @@ void LibraryControl::slotMoveFocus(double v) {
             QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times});
 }
 
-void LibraryControl::slotMoveTrackForward(double v) {
-    if (v > 0) {
-        slotMoveTrack(1);
-    }
-}
-
-void LibraryControl::slotMoveTrackBackward(double v) {
+void LibraryControl::slotMoveTrackUp(double v) {
     if (v > 0) {
         slotMoveTrack(-1);
     }
 }
 
+void LibraryControl::slotMoveTrackDown(double v) {
+    if (v > 0) {
+        slotMoveTrack(1);
+    }
+}
+
+/// Move a selected track up or down a playlist by emulating Alt + Up/Down keypresses
 void LibraryControl::slotMoveTrack(double v) {
     if (!m_pLibraryWidget) {
         return;

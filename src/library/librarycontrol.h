@@ -79,8 +79,8 @@ class LibraryControl : public QObject {
     void slotMoveFocusForward(double);
     void slotMoveFocusBackward(double);
     void slotMoveFocus(double);
-    void slotMoveTrackForward(double);
-    void slotMoveTrackBackward(double);
+    void slotMoveTrackUp(double);
+    void slotMoveTrackDown(double);
     void slotMoveTrack(double);
     void slotGoToItem(double v);
 
@@ -144,8 +144,8 @@ class LibraryControl : public QObject {
     FocusWidget m_prevFocusedWidget;
 
     // Controls to move tracks (alt+up/down buttons)
-    std::unique_ptr<ControlPushButton> m_pMoveTrackForward;
-    std::unique_ptr<ControlPushButton> m_pMoveTrackBackward;
+    std::unique_ptr<ControlPushButton> m_pMoveTrackUp;
+    std::unique_ptr<ControlPushButton> m_pMoveTrackDown;
     std::unique_ptr<ControlEncoder> m_pMoveTrack;
 
     // Control to choose the currently selected item in focused widget (double click)
