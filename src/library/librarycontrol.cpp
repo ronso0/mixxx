@@ -241,7 +241,7 @@ LibraryControl::LibraryControl(Library* pLibrary)
     }
 
     // Auto DJ controls
-    m_pAutoDjAddTop = std::make_unique<ControlPushButton>(ConfigKey("[Library]","AutoDjAddTop"));
+    m_pAutoDjAddTop = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "AutoDjAddTop"));
     m_pAutoDjAddTop->addAlias(ConfigKey(
             QStringLiteral("[Playlist]"), QStringLiteral("AutoDjAddTop")));
 #ifdef MIXXX_USE_QML
@@ -254,7 +254,7 @@ LibraryControl::LibraryControl(Library* pLibrary)
                 &LibraryControl::slotAutoDjAddTop);
     }
 
-    m_pAutoDjAddBottom = std::make_unique<ControlPushButton>(ConfigKey("[Library]","AutoDjAddBottom"));
+    m_pAutoDjAddBottom = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "AutoDjAddBottom"));
     m_pAutoDjAddBottom->addAlias(ConfigKey(
             QStringLiteral("[Playlist]"), QStringLiteral("AutoDjAddBottom")));
 #ifdef MIXXX_USE_QML
@@ -441,7 +441,7 @@ LibraryControl::LibraryControl(Library* pLibrary)
             &LibraryControl::slotSelectPrevTrack);
 
     // Ignoring no-ops is important since this is for +/- tickers.
-    m_pSelectTrack = std::make_unique<ControlObject>(ConfigKey("[Playlist]","SelectTrackKnob"), false);
+    m_pSelectTrack = std::make_unique<ControlObject>(ConfigKey("[Playlist]", "SelectTrackKnob"), false);
     connect(m_pSelectTrack.get(),
             &ControlObject::valueChanged,
             this,
@@ -472,7 +472,7 @@ LibraryControl::LibraryControl(Library* pLibrary)
             this,
             &LibraryControl::slotToggleSelectedSidebarItem);
 
-    m_pLoadSelectedIntoFirstStopped = std::make_unique<ControlPushButton>(ConfigKey("[Playlist]","LoadSelectedIntoFirstStopped"));
+    m_pLoadSelectedIntoFirstStopped = std::make_unique<ControlPushButton>(ConfigKey("[Playlist]", "LoadSelectedIntoFirstStopped"));
     connect(m_pLoadSelectedIntoFirstStopped.get(),
             &ControlPushButton::valueChanged,
             this,
@@ -769,7 +769,7 @@ void LibraryControl::slotScrollDown(double v) {
 }
 
 void LibraryControl::slotScrollVertical(double v) {
-    const auto key = (v < 0) ? Qt::Key_PageUp: Qt::Key_PageDown;
+    const auto key = (v < 0) ? Qt::Key_PageUp : Qt::Key_PageDown;
     const auto times = static_cast<unsigned short>(std::abs(v));
     emitKeyEvent(QKeyEvent{QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times});
 }
@@ -787,7 +787,7 @@ void LibraryControl::slotMoveRight(double v) {
 }
 
 void LibraryControl::slotMoveHorizontal(double v) {
-    const auto key = (v < 0) ? Qt::Key_Left: Qt::Key_Right;
+    const auto key = (v < 0) ? Qt::Key_Left : Qt::Key_Right;
     const auto times = static_cast<unsigned short>(std::abs(v));
     emitKeyEvent(QKeyEvent{QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times});
 }
@@ -837,9 +837,8 @@ void LibraryControl::slotMoveTrack(double v) {
     const auto key = (v < 0) ? Qt::Key_Up : Qt::Key_Down;
     const auto times = static_cast<unsigned short>(std::abs(v));
     QKeyEvent event = QKeyEvent{
-      QEvent::KeyPress, key, Qt::AltModifier, QString(), false, times};
+            QEvent::KeyPress, key, Qt::AltModifier, QString(), false, times};
     QApplication::sendEvent(m_pLibraryWidget, &event);
-
 }
 
 void LibraryControl::emitKeyEvent(QKeyEvent&& event) {
