@@ -169,7 +169,8 @@ LibraryControl::LibraryControl(Library* pLibrary)
     // Controls to move tracks on playlist
     // Track move controls (emulate Alt+up/down button press)
     m_pMoveTrackUp = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveTrack-Up"));
-    m_pMoveTrackDown = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveTrack-Down"));
+    m_pMoveTrackDown = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "MoveTrack-Down"));
     m_pMoveTrack = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "MoveTrack"), false);
 #ifdef MIXXX_USE_QML
     if (!CmdlineArgs::Instance().isQml())
@@ -254,7 +255,8 @@ LibraryControl::LibraryControl(Library* pLibrary)
                 &LibraryControl::slotAutoDjAddTop);
     }
 
-    m_pAutoDjAddBottom = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "AutoDjAddBottom"));
+    m_pAutoDjAddBottom = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "AutoDjAddBottom"));
     m_pAutoDjAddBottom->addAlias(ConfigKey(
             QStringLiteral("[Playlist]"), QStringLiteral("AutoDjAddBottom")));
 #ifdef MIXXX_USE_QML
@@ -441,7 +443,8 @@ LibraryControl::LibraryControl(Library* pLibrary)
             &LibraryControl::slotSelectPrevTrack);
 
     // Ignoring no-ops is important since this is for +/- tickers.
-    m_pSelectTrack = std::make_unique<ControlObject>(ConfigKey("[Playlist]", "SelectTrackKnob"), false);
+    m_pSelectTrack = std::make_unique<ControlObject>(
+            ConfigKey("[Playlist]", "SelectTrackKnob"), false);
     connect(m_pSelectTrack.get(),
             &ControlObject::valueChanged,
             this,
@@ -472,7 +475,8 @@ LibraryControl::LibraryControl(Library* pLibrary)
             this,
             &LibraryControl::slotToggleSelectedSidebarItem);
 
-    m_pLoadSelectedIntoFirstStopped = std::make_unique<ControlPushButton>(ConfigKey("[Playlist]", "LoadSelectedIntoFirstStopped"));
+    m_pLoadSelectedIntoFirstStopped = std::make_unique<ControlPushButton>(
+            ConfigKey("[Playlist]", "LoadSelectedIntoFirstStopped"));
     connect(m_pLoadSelectedIntoFirstStopped.get(),
             &ControlPushButton::valueChanged,
             this,
