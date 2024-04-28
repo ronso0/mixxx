@@ -1738,11 +1738,6 @@ WBeatSpinBox::down-button {
   }
 
 /* Orange for 'active' status */
-WPushButton#PlayDeck[displayValue="1"],
-WPushButton#PlayDeckMini[displayValue="1"],
-WPushButton#PlaySampler[displayValue="1"],
-WPushButton#PlayPreview[displayValue="1"],
-WPushButton#PlayIndicator[displayValue="1"],
 #LibraryPreviewButton:checked,
 #CueDeck[displayValue="1"],
 WPushButton#Reverse[pressed="true"],
@@ -1790,6 +1785,11 @@ QPushButton#pushButtonRecording:checked,
 }
 
 /* Green for Fx toggles, QuickEffect + Fx12 */
+WPushButton#PlayDeck[displayValue="1"],
+WPushButton#PlayDeckMini[displayValue="1"],
+WPushButton#PlaySampler[displayValue="1"],
+WPushButton#PlayPreview[displayValue="1"],
+WPushButton#PlayIndicator[displayValue="1"],
 WPushButton#VinylStatus[displayValue="1"], /* enabled, OK */
 #BroadcastButton[displayValue="2"] {
   background-color: #438225;
