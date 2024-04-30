@@ -10,8 +10,8 @@
       <WidgetGroup><!-- Play, Cue, Loop, Jump, Fx1-4, VinylControls -->
         <ObjectName>DeckRow_5_LoopCuesTransportCompact</ObjectName>
         <Layout>horizontal</Layout>
-        <SizePolicy>p,max</SizePolicy>
-        <MaximumSize>360,</MaximumSize>
+        <SizePolicy>me,max</SizePolicy>
+        <!-- <MaximumSize>360,</MaximumSize> -->
         <Children>
 
           <WidgetGroup><!-- Play + PlayBlink + default dark background -->
@@ -84,6 +84,43 @@
 
           <WidgetGroup>
             <SizePolicy>me,min</SizePolicy>
+            <MinimumSize>4,</MinimumSize>
+            <MaximumSize>4,</MaximumSize>
+          </WidgetGroup>
+
+          <WidgetGroup><!-- HotCues 1 - 8 -->
+            <Layout>horizontal</Layout>
+            <SizePolicy>me,min</SizePolicy>
+            <Children>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">1</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">2</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">3</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">4</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">5</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">6</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">7</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">8</SetVariable>
+              </Template>
+            </Children>
+          </WidgetGroup>
+
+          <WidgetGroup>
+            <SizePolicy>me,min</SizePolicy>
             <MinimumSize>2,</MinimumSize>
             <MaximumSize>40,</MaximumSize>
           </WidgetGroup>
@@ -91,7 +128,7 @@
           <WidgetGroup>
             <ObjectName>LoopControls</ObjectName>
             <Layout>horizontal</Layout>
-            <SizePolicy>me,min</SizePolicy>
+            <SizePolicy>min,min</SizePolicy>
             <Children>
               <Template src="skins:LateNight/controls/button_2state_right_display.xml">
                 <SetVariable name="TooltipId">beatloop_activate</SetVariable>
@@ -132,7 +169,7 @@
           <WidgetGroup>
             <ObjectName>BeatjumpControls</ObjectName>
             <Layout>horizontal</Layout>
-            <SizePolicy>me,min</SizePolicy>
+            <SizePolicy>min,min</SizePolicy>
             <Children>
               <BeatSpinBox>
                 <TooltipId>beatjump_size</TooltipId>
@@ -155,39 +192,42 @@
               <BindProperty>visible</BindProperty>
             </Connection>
           </WidgetGroup>
+
+          <WidgetGroup>
+            <SizePolicy>me,min</SizePolicy>
+            <MinimumSize>2,</MinimumSize>
+            <MaximumSize>20,</MaximumSize>
+          </WidgetGroup>
+
+          <Template src="skins:LateNight/decks/vinyl_controls.xml"/>
+
+          <WidgetGroup>
+            <SizePolicy>me,min</SizePolicy>
+            <MinimumSize>2,</MinimumSize>
+            <MaximumSize>20,</MaximumSize>
+          </WidgetGroup>
+
+          <WidgetGroup>
+            <SizePolicy>me,min</SizePolicy>
+            <MaximumSize>111,</MaximumSize>
+            <Layout>vertical</Layout>
+            <Children>
+              <SingletonContainer>
+                <ObjectName>KeyControls<Variable name="ChanNum"/></ObjectName>
+              </SingletonContainer>
+            </Children>
+            <Connection>
+              <ConfigKey persist="true">[Skin],show_key_controls_compact</ConfigKey>
+              <BindProperty>visible</BindProperty>
+            </Connection>
+          </WidgetGroup>
+
+          <WidgetGroup><Size>20f,0min</Size></WidgetGroup>
+
+          <Template src="skins:LateNight/fx/assign_buttons_big.xml"/>
+
         </Children>
       </WidgetGroup><!-- DeckRow_5_LoopCuesTransportCompact -->
-
-      <WidgetGroup><Size>1f,0min</Size></WidgetGroup>
-      <WidgetGroup><SizePolicy>min,min</SizePolicy></WidgetGroup>
-      <WidgetGroup><Size>1f,0min</Size></WidgetGroup>
-
-      <Template src="skins:LateNight/decks/vinyl_controls.xml"/>
-
-      <WidgetGroup>
-        <SizePolicy>me,min</SizePolicy>
-        <MinimumSize>2,</MinimumSize>
-        <MaximumSize>40,</MaximumSize>
-      </WidgetGroup>
-
-      <WidgetGroup>
-        <SizePolicy>me,min</SizePolicy>
-        <MaximumSize>111,</MaximumSize>
-        <Layout>vertical</Layout>
-        <Children>
-          <SingletonContainer>
-            <ObjectName>KeyControls<Variable name="ChanNum"/></ObjectName>
-          </SingletonContainer>
-        </Children>
-        <Connection>
-          <ConfigKey persist="true">[Skin],show_key_controls_compact</ConfigKey>
-          <BindProperty>visible</BindProperty>
-        </Connection>
-      </WidgetGroup>
-
-      <WidgetGroup><Size>20f,0min</Size></WidgetGroup>
-
-      <Template src="skins:LateNight/fx/assign_buttons_big.xml"/>
 
       <WidgetGroup><Size>2f,0min</Size></WidgetGroup>
       <WidgetGroup>
