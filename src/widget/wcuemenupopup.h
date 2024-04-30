@@ -41,6 +41,9 @@ class WCueMenuPopup : public QWidget {
         delete m_pEditLabel;
         delete m_pColorPicker;
         delete m_pDeleteCue;
+        delete m_pStandardCue;
+        delete m_pSavedLoopCue;
+        delete m_pSavedJumpCue;
     }
 
     void setTrackCueGroup(TrackPointer pTrack, const CuePointer& pCue, const QString& group);
@@ -75,6 +78,7 @@ class WCueMenuPopup : public QWidget {
     void slotUpdate();
     void slotSavedLoopCue();
     void slotAdjustSavedLoopCue();
+    void slotSavedJumpCue();
     void slotChangeCueColor(mixxx::RgbColor::optional_t color);
 
   private:
@@ -91,7 +95,9 @@ class WCueMenuPopup : public QWidget {
     QLineEdit* m_pEditLabel;
     WColorPicker* m_pColorPicker;
     QPushButton* m_pDeleteCue;
+    QPushButton* m_pStandardCue;
     CueTypePushButton* m_pSavedLoopCue;
+    CueTypePushButton* m_pSavedJumpCue;
 
   protected:
     void closeEvent(QCloseEvent* event) override;

@@ -136,6 +136,27 @@ CueControl::~CueControl() {
     qDeleteAll(m_hotcueControls);
 }
 
+void CueControl::process(const double,
+        mixxx::audio::FramePos currentPosition,
+        const int) {
+    for (const auto& pCue : std::as_const(m_hotcueControls)) {
+        if (pCue->getStatus() != HotcueControl::Status::Active ||
+                pCue->getCue()->getType() != mixxx::CueType::Jump) {
+            continue;
+        }
+        if (pCue->getPosition() > m_lastProcessedPosition &&
+                pCue->getPosition() <= currentPosition) {
+            auto delta = pCue->getPosition() - currentPosition;
+            seekAbs(pCue->getEndPosition() + delta);
+        }
+    }
+    m_lastProcessedPosition = currentPosition;
+}
+
+void CueControl::notifySeek(mixxx::audio::FramePos position) {
+    m_lastProcessedPosition = position;
+}
+
 void CueControl::createControls() {
     m_pCueSet = std::make_unique<ControlPushButton>(ConfigKey(m_group, "cue_set"));
     m_pCueSet->setButtonMode(ControlPushButton::TRIGGER);
@@ -628,6 +649,7 @@ void CueControl::loadCuesFromTrack() {
             pOutroCue = pCue;
             break;
         case mixxx::CueType::HotCue:
+        case mixxx::CueType::Jump:
         case mixxx::CueType::Loop: {
             if (pCue->getHotCue() == Cue::kNoHotCue) {
                 continue;
@@ -665,7 +687,6 @@ void CueControl::loadCuesFromTrack() {
             break;
         }
         case mixxx::CueType::Beat:
-        case mixxx::CueType::Jump:
         case mixxx::CueType::Invalid:
         default:
             break;
@@ -1121,6 +1142,14 @@ void CueControl::hotcueActivate(HotcueControl* pControl, double value, HotcueSet
                         setLoop(pos.startPosition, pos.endPosition, !loopActive);
                     }
                     break;
+                case mixxx::CueType::Jump:
+                    // TODO if playposition is past endPos, rewind, otherwise activate
+                    if (pControl->getStatus() != HotcueControl::Status::Active) {
+                        pControl->setStatus(HotcueControl::Status::Active);
+                    } else {
+                        pControl->setStatus(HotcueControl::Status::Set);
+                    }
+                    break;
                 default:
                     DEBUG_ASSERT(!"Invalid CueType!");
                 }
@@ -1272,6 +1301,11 @@ void CueControl::hintReader(gsl::not_null<HintVector*> pHintList) {
     // constructor and getPosition()->get() is a ControlObject
     for (const auto& pControl : std::as_const(m_hotcueControls)) {
         appendCueHint(pHintList, pControl->getPosition(), Hint::Type::HotCue);
+        if (pControl->getCue() &&
+                pControl->getCue()->getType() == mixxx::CueType::Jump &&
+                pControl->getStatus() != HotcueControl::Status::Active) {
+            appendCueHint(pHintList, pControl->getEndPosition(), Hint::Type::HotCue);
+        }
     }
 
     appendCueHint(pHintList, m_n60dBSoundStartPosition.getValue(), Hint::Type::FirstSound);

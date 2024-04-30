@@ -71,6 +71,14 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
             this,
             &WCueMenuPopup::slotAdjustSavedLoopCue);
 
+    m_pSavedJumpCue = new QPushButton("", this);
+    m_pSavedJumpCue->setToolTip(
+            tr("Toggle this cue type between normal cue and saved jump, to "
+               "the current play position"));
+    m_pSavedJumpCue->setObjectName("CueSavedJumpButton");
+    m_pSavedJumpCue->setCheckable(true);
+    connect(m_pSavedJumpCue, &QPushButton::clicked, this, &WCueMenuPopup::slotSavedJumpCue);
+
     QHBoxLayout* pLabelLayout = new QHBoxLayout();
     pLabelLayout->addWidget(m_pCueNumber);
     pLabelLayout->addStretch(1);
@@ -85,6 +93,8 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
     pRightLayout->addWidget(m_pDeleteCue);
     pRightLayout->addStretch(1);
     pRightLayout->addWidget(m_pSavedLoopCue);
+    pRightLayout->addStretch(1);
+    pRightLayout->addWidget(m_pSavedJumpCue);
 
     QHBoxLayout* pMainLayout = new QHBoxLayout();
     pMainLayout->addLayout(pLeftLayout);
@@ -117,6 +127,18 @@ void WCueMenuPopup::setTrackCueGroup(
     if (m_pQuantizeEnabled.getKey().group != group) {
         m_pQuantizeEnabled = PollingControlProxy(group, "quantize");
     }
+
+    if (!m_pPlayPos || m_pPlayPos->getKey().group != group) {
+        m_pPlayPos = std::make_unique<ControlProxy>(group, "playposition", this);
+    }
+
+    if (!m_pTrackSample || m_pTrackSample->getKey().group != group) {
+        m_pTrackSample = std::make_unique<ControlProxy>(group, "track_samples", this);
+    }
+
+    if (!m_pQuantizeEnabled || m_pQuantizeEnabled->getKey().group != group) {
+        m_pQuantizeEnabled = std::make_unique<ControlProxy>(group, "quantize", this);
+    }
     slotUpdate();
 }
 
@@ -137,10 +159,17 @@ void WCueMenuPopup::slotUpdate() {
             positionText = mixxx::Duration::formatTime(startPositionSeconds, mixxx::Duration::Precision::CENTISECONDS);
             if (pos.endPosition.isValid()) {
                 double endPositionSeconds = pos.endPosition.value() / m_pTrack->getSampleRate();
-                positionText = QString("%1 - %2").arg(
-                    positionText,
-                    mixxx::Duration::formatTime(endPositionSeconds, mixxx::Duration::Precision::CENTISECONDS)
-                );
+                positionText =
+                        QString("%1 %2 %3")
+                                .arg(positionText,
+                                        m_pCue->getType() ==
+                                                        mixxx::CueType::Loop
+                                                ? "-"
+                                                : "->",
+                                        mixxx::Duration::formatTime(
+                                                endPositionSeconds,
+                                                mixxx::Duration::Precision::
+                                                        CENTISECONDS));
             }
         }
         m_pCuePosition->setText(positionText);
@@ -148,6 +177,7 @@ void WCueMenuPopup::slotUpdate() {
         m_pEditLabel->setText(m_pCue->getLabel());
         m_pColorPicker->setSelectedColor(m_pCue->getColor());
         m_pSavedLoopCue->setChecked(m_pCue->getType() == mixxx::CueType::Loop);
+        m_pSavedJumpCue->setChecked(m_pCue->getType() == mixxx::CueType::Jump);
     } else {
         m_pTrack.reset();
         m_pCue.reset();
@@ -157,6 +187,7 @@ void WCueMenuPopup::slotUpdate() {
         m_pColorPicker->setSelectedColor(std::nullopt);
     }
 }
+
 void WCueMenuPopup::slotEditLabel() {
     VERIFY_OR_DEBUG_ASSERT(m_pCue != nullptr) {
         return;
@@ -242,6 +273,40 @@ void WCueMenuPopup::slotAdjustSavedLoopCue() {
             return;
         }
         m_pCue->setEndPosition(position);
+    }
+    slotUpdate();
+}
+
+void WCueMenuPopup::slotSavedJumpCue() {
+    VERIFY_OR_DEBUG_ASSERT(m_pCue != nullptr) {
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(m_pTrack != nullptr) {
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(m_pPlayPos != nullptr) {
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(m_pTrackSample != nullptr) {
+        return;
+    }
+    if (m_pCue->getType() == mixxx::CueType::Jump) {
+        m_pCue->setType(mixxx::CueType::HotCue);
+        m_pCue->setEndPosition(mixxx::audio::FramePos());
+    } else {
+        const mixxx::BeatsPointer pBeats = m_pTrack->getBeats();
+        const auto position = mixxx::audio::FramePos::fromEngineSamplePos(
+                m_pPlayPos->get() * m_pTrackSample->get());
+        if (!m_pQuantizeEnabled->toBool() || !pBeats) {
+            m_pCue->setEndPosition(position);
+        } else {
+            mixxx::audio::FramePos nextBeatPosition, prevBeatPosition;
+            pBeats->findPrevNextBeats(position, &prevBeatPosition, &nextBeatPosition, false);
+            m_pCue->setEndPosition((nextBeatPosition - position > position - prevBeatPosition)
+                            ? prevBeatPosition
+                            : nextBeatPosition);
+        }
+        m_pCue->setType(mixxx::CueType::Jump);
     }
     slotUpdate();
 }
