@@ -272,18 +272,24 @@ void WTrackMenu::createActions() {
             QKeySequence(static_cast<int>(kHideRemoveShortcutModifier) |
                     kHideRemoveShortcutKey);
 
-    if (featureIsEnabled(Feature::AutoDJ)) {
-        m_pAutoDJBottomAct = new QAction(tr("Add to Auto DJ Queue (bottom)"), this);
-        connect(m_pAutoDJBottomAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJBottom);
-
-        m_pAutoDJTopAct = new QAction(tr("Add to Auto DJ Queue (top)"), this);
-        connect(m_pAutoDJTopAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJTop);
-
-        m_pAutoDJReplaceAct = new QAction(tr("Add to Auto DJ Queue (replace)"), this);
-        connect(m_pAutoDJReplaceAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJReplace);
-    }
-
     if (featureIsEnabled(Feature::LoadTo)) {
+        if (featureIsEnabled(Feature::AutoDJ)) {
+            m_pAutoDJBottomAct = new QAction(tr("Auto DJ (bottom)"), m_pLoadToMenu);
+            connect(m_pAutoDJBottomAct,
+                    &QAction::triggered,
+                    this,
+                    &WTrackMenu::slotAddToAutoDJBottom);
+
+            m_pAutoDJTopAct = new QAction(tr("Auto DJ (top)"), m_pLoadToMenu);
+            connect(m_pAutoDJTopAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJTop);
+
+            m_pAutoDJReplaceAct = new QAction(tr("Auto DJ (replace)"), m_pLoadToMenu);
+            connect(m_pAutoDJReplaceAct,
+                    &QAction::triggered,
+                    this,
+                    &WTrackMenu::slotAddToAutoDJReplace);
+        }
+
         m_pAddToPreviewDeck = new QAction(tr("Preview Deck"), m_pLoadToMenu);
         // currently there is only one preview deck so just map it here.
         QString previewDeckGroup = PlayerManager::groupForPreviewDeck(0);
@@ -564,14 +570,14 @@ void WTrackMenu::setupActions() {
         addSeparator();
     }
 
-    if (featureIsEnabled(Feature::AutoDJ)) {
-        addAction(m_pAutoDJBottomAct);
-        addAction(m_pAutoDJTopAct);
-        addAction(m_pAutoDJReplaceAct);
-        addSeparator();
-    }
-
     if (featureIsEnabled(Feature::LoadTo)) {
+        if (featureIsEnabled(Feature::AutoDJ)) {
+            m_pLoadToMenu->addAction(m_pAutoDJBottomAct);
+            m_pLoadToMenu->addAction(m_pAutoDJTopAct);
+            m_pLoadToMenu->addAction(m_pAutoDJReplaceAct);
+            m_pLoadToMenu->addSeparator();
+        }
+
         m_pLoadToMenu->addMenu(m_pDeckMenu);
 
         m_pLoadToMenu->addMenu(m_pSamplerMenu);
@@ -702,6 +708,15 @@ void WTrackMenu::setupActions() {
 
     addSeparator();
 
+    if (featureIsEnabled(Feature::Properties)) {
+        addAction(m_pPropertiesAct);
+        addSeparator();
+    }
+
+    if (featureIsEnabled(Feature::FileBrowser)) {
+        addAction(m_pFileBrowserAct);
+    }
+
     if (featureIsEnabled(Feature::HideUnhidePurge)) {
         if (m_pTrackModel->hasCapabilities(TrackModel::Capability::Hide)) {
             addAction(m_pHideAct);
@@ -720,15 +735,6 @@ void WTrackMenu::setupActions() {
 #else
         addAction(m_pRemoveFromDiskAct);
 #endif
-    }
-
-    if (featureIsEnabled(Feature::FileBrowser)) {
-        addAction(m_pFileBrowserAct);
-    }
-
-    if (featureIsEnabled(Feature::Properties)) {
-        addSeparator();
-        addAction(m_pPropertiesAct);
     }
 }
 
