@@ -569,18 +569,18 @@ void WTrackMenu::setupActions() {
         addSeparator();
     }
 
-    if (featureIsEnabled(Feature::LoadTo)) {
-        m_pLoadToMenu->addMenu(m_pDeckMenu);
-
-        m_pLoadToMenu->addMenu(m_pSamplerMenu);
-
-        if (m_pNumPreviewDecks.get() > 0.0) {
-            m_pLoadToMenu->addAction(m_pAddToPreviewDeck);
-        }
-
-        addMenu(m_pLoadToMenu);
-        addSeparator();
-    }
+    // if (featureIsEnabled(Feature::LoadTo)) {
+    //     m_pLoadToMenu->addMenu(m_pDeckMenu);
+    //
+    //     m_pLoadToMenu->addMenu(m_pSamplerMenu);
+    //
+    //     if (m_pNumPreviewDecks.get() > 0.0) {
+    //         m_pLoadToMenu->addAction(m_pAddToPreviewDeck);
+    //     }
+    //
+    //     addMenu(m_pLoadToMenu);
+    //     addSeparator();
+    // }
 
     if (featureIsEnabled(Feature::Playlist)) {
         addMenu(m_pPlaylistMenu);
@@ -700,6 +700,15 @@ void WTrackMenu::setupActions() {
 
     addSeparator();
 
+    if (featureIsEnabled(Feature::Properties)) {
+        addAction(m_pPropertiesAct);
+        addSeparator();
+    }
+
+    if (featureIsEnabled(Feature::FileBrowser)) {
+        addAction(m_pFileBrowserAct);
+    }
+
     if (featureIsEnabled(Feature::HideUnhidePurge)) {
         if (m_pTrackModel->hasCapabilities(TrackModel::Capability::Hide)) {
             addAction(m_pHideAct);
@@ -718,15 +727,6 @@ void WTrackMenu::setupActions() {
 #else
         addAction(m_pRemoveFromDiskAct);
 #endif
-    }
-
-    if (featureIsEnabled(Feature::FileBrowser)) {
-        addAction(m_pFileBrowserAct);
-    }
-
-    if (featureIsEnabled(Feature::Properties)) {
-        addSeparator();
-        addAction(m_pPropertiesAct);
     }
 }
 
