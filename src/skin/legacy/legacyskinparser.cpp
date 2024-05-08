@@ -399,8 +399,8 @@ QWidget* LegacySkinParser::parseSkin(const QString& skinPath, QWidget* pParent) 
     // that use the same template inheritance scheme like official skins, but we
     // don't because unfortunately there is no reliable way to apply equivalent
     // path replacement in stylesheetAbsIconPaths().
-    QString systemSkinsPath(m_pConfig->getResourcePath() + "/skins/");
-    QDir::addSearchPath("skins", systemSkinsPath);
+    QString systemSkinsPath(m_pConfig->getResourcePath() + "skins/");
+    QDir::setSearchPaths("skins", QStringList{systemSkinsPath});
 
     ColorSchemeParser::setupLegacyColorSchemes(skinDocument, m_pConfig, &m_style, m_pContext.get());
 
@@ -1081,12 +1081,47 @@ QWidget* LegacySkinParser::parseTrackProperty(const QDomElement& node) {
         return nullptr;
     }
 
+    bool isMainDeck = PlayerManager::isDeckGroup(group);
     WTrackProperty* pTrackProperty = new WTrackProperty(
             m_pParent,
             m_pConfig,
             m_pLibrary,
-            group);
+            group,
+            isMainDeck);
     setupLabelWidget(node, pTrackProperty);
+
+    // Ensure 'show_track_menu' control is created for each main deck and
+    // valueChangeRequest hook is set up.
+    if (isMainDeck) {
+        // Only the first WTrackProperty that is created connects the signals,
+        // for later attempts this returns false.
+        if (pPlayer->isTrackMenuControlAvailable()) {
+            connect(pPlayer,
+                    &BaseTrackPlayer::trackMenuChangeRequest,
+                    pTrackProperty,
+                    &WTrackProperty::slotShowTrackMenuChangeRequest,
+                    Qt::DirectConnection);
+            connect(pTrackProperty,
+                    &WTrackProperty::setAndConfirmTrackMenuControl,
+                    pPlayer,
+                    &BaseTrackPlayer::slotSetAndConfirmTrackMenuControl,
+                    Qt::DirectConnection);
+        }
+    }
+
+    // Relay for the label's WTrackMenu (which is created only on demand):
+    // Emitted before/after deleting a track file via that menu
+    // IF that track is in the current view.
+    connect(pTrackProperty,
+            &WTrackProperty::saveCurrentViewState,
+            m_pLibrary,
+            &Library::slotSaveCurrentViewState,
+            Qt::DirectConnection);
+    connect(pTrackProperty,
+            &WTrackProperty::restoreCurrentViewState,
+            m_pLibrary,
+            &Library::slotRestoreCurrentViewState,
+            Qt::DirectConnection);
 
     connect(pPlayer,
             &BaseTrackPlayer::newTrackLoaded,
@@ -1125,7 +1160,8 @@ QWidget* LegacySkinParser::parseTrackWidgetGroup(const QDomElement& node) {
             m_pParent,
             m_pConfig,
             m_pLibrary,
-            group);
+            group,
+            PlayerManager::isDeckGroup(group));
     commonWidgetSetup(node, pGroup);
     pGroup->setup(node, *m_pContext);
     pGroup->Init();
@@ -1163,7 +1199,7 @@ QWidget* LegacySkinParser::parseStarRating(const QDomElement& node) {
         return nullptr;
     }
 
-    WStarRating* pStarRating = new WStarRating(group, m_pParent);
+    WStarRating* pStarRating = new WStarRating(m_pParent);
     commonWidgetSetup(node, pStarRating, false);
     pStarRating->setup(node, *m_pContext);
 
@@ -1172,9 +1208,9 @@ QWidget* LegacySkinParser::parseStarRating(const QDomElement& node) {
             pStarRating,
             &WStarRating::slotSetRating);
     connect(pStarRating,
-            &WStarRating::ratingChanged,
+            &WStarRating::ratingChangeRequest,
             pPlayer,
-            &BaseTrackPlayer::slotSetTrackRating);
+            &BaseTrackPlayer::slotTrackRatingChangeRequest);
 
     TrackPointer pTrack = pPlayer->getLoadedTrack();
     if (pTrack) {
@@ -1537,6 +1573,12 @@ QWidget* LegacySkinParser::parseLibrary(const QDomElement& node) {
                     mixxx::library::prefs::kBpmColumnPrecisionConfigKey,
                     BaseTrackTableModel::kBpmColumnPrecisionDefault);
     BaseTrackTableModel::setBpmColumnPrecision(bpmColumnPrecision);
+
+    const auto applyPlayedTrackColor =
+            m_pConfig->getValue(
+                    mixxx::library::prefs::kApplyPlayedTrackColorConfigKey,
+                    BaseTrackTableModel::kApplyPlayedTrackColorDefault);
+    BaseTrackTableModel::setApplyPlayedTrackColor(applyPlayedTrackColor);
 
     // Connect Library search signals to the WLibrary
     connect(m_pLibrary,
@@ -2380,12 +2422,13 @@ void LegacySkinParser::setupConnections(const QDomNode& node, WBaseWidget* pWidg
                     subkey.item += "_toggle";
                     shortcut = m_pKeyboard->getKeyboardConfig()->getValueString(subkey);
                     addShortcutToToolTip(pWidget, shortcut, tr("toggle"));
-                } else if ((pSlider = qobject_cast<const WSliderComposed*>(pWidget->toQWidget()))) {
+                } else if ((pSlider = qobject_cast<const WSliderComposed*>(pWidget->toQWidget())) ||
+                        qobject_cast<const WKnobComposed*>(pWidget->toQWidget())) {
                     // check for "_up", "_down", "_up_small", "_down_small"
                     ConfigKey subkey;
                     QString shortcut;
 
-                    if (pSlider->isHorizontal()) {
+                    if (pSlider && pSlider->tryParseHorizontal(node)) {
                         subkey = configKey;
                         subkey.item += "_up";
                         shortcut = m_pKeyboard->getKeyboardConfig()->getValueString(subkey);
@@ -2405,7 +2448,7 @@ void LegacySkinParser::setupConnections(const QDomNode& node, WBaseWidget* pWidg
                         subkey.item += "_down_small";
                         shortcut = m_pKeyboard->getKeyboardConfig()->getValueString(subkey);
                         addShortcutToToolTip(pWidget, shortcut, tr("left small"));
-                    } else {
+                    } else { // vertical slider of knob
                         subkey = configKey;
                         subkey.item += "_up";
                         shortcut = m_pKeyboard->getKeyboardConfig()->getValueString(subkey);

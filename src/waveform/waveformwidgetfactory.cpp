@@ -111,6 +111,10 @@ WaveformWidgetFactory::WaveformWidgetFactory()
           m_defaultZoom(WaveformWidgetRenderer::s_waveformDefaultZoom),
           m_zoomSync(true),
           m_overviewNormalized(false),
+          m_untilMarkShowBeats(false),
+          m_untilMarkShowTime(false),
+          m_untilMarkAlign(Qt::AlignVCenter),
+          m_untilMarkTextPointSize(24),
           m_openGlAvailable(false),
           m_openGlesAvailable(false),
           m_openGLShaderAvailable(false),
@@ -120,7 +124,6 @@ WaveformWidgetFactory::WaveformWidgetFactory()
           m_pVisualsManager(nullptr),
           m_frameCnt(0),
           m_actualFrameRate(0),
-          m_vSyncType(0),
           m_playMarkerPosition(WaveformWidgetRenderer::s_defaultPlayMarkerPosition) {
     m_visualGain[All] = 1.0;
     m_visualGain[Low] = 1.0;
@@ -360,8 +363,6 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
                 ConfigValue(m_endOfTrackWarningTime));
     }
 
-    m_vSyncType = m_config->getValue(ConfigKey("[Waveform]","VSync"), 0);
-
     double defaultZoom = m_config->getValueString(ConfigKey("[Waveform]","DefaultZoom")).toDouble(&ok);
     if (ok) {
         setDefaultZoom(defaultZoom);
@@ -405,6 +406,34 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
     m_playMarkerPosition = m_config->getValue(ConfigKey("[Waveform]","PlayMarkerPosition"),
             WaveformWidgetRenderer::s_defaultPlayMarkerPosition);
     setPlayMarkerPosition(m_playMarkerPosition);
+
+    int untilMarkShowBeats =
+            m_config->getValueString(
+                            ConfigKey("[Waveform]", "UntilMarkShowBeats"))
+                    .toInt(&ok);
+    if (ok) {
+        setUntilMarkShowBeats(static_cast<bool>(untilMarkShowBeats));
+    } else {
+        m_config->set(ConfigKey("[Waveform]", "UntilMarkShowBeats"),
+                ConfigValue(m_untilMarkShowBeats));
+    }
+    int untilMarkShowTime =
+            m_config->getValueString(
+                            ConfigKey("[Waveform]", "UntilMarkShowTime"))
+                    .toInt(&ok);
+    if (ok) {
+        setUntilMarkShowTime(static_cast<bool>(untilMarkShowTime));
+    } else {
+        m_config->set(ConfigKey("[Waveform]", "UntilMarkShowTime"),
+                ConfigValue(m_untilMarkShowTime));
+    }
+
+    setUntilMarkAlign(toUntilMarkAlign(
+            m_config->getValue(ConfigKey("[Waveform]", "UntilMarkAlign"),
+                    toUntilMarkAlignIndex(m_untilMarkAlign))));
+    setUntilMarkTextPointSize(
+            m_config->getValue(ConfigKey("[Waveform]", "UntilMarkTextPointSize"),
+                    m_untilMarkTextPointSize));
 
     return true;
 }
@@ -530,6 +559,24 @@ bool WaveformWidgetFactory::setWidgetType(
                 ConfigKey("[Waveform]", "WaveformType"), *pCurrentType);
     }
     return isAcceptable;
+}
+
+bool WaveformWidgetFactory::widgetTypeSupportsUntilMark() const {
+    switch (m_configType) {
+    case WaveformWidgetType::AllShaderRGBWaveform:
+        return true;
+    case WaveformWidgetType::AllShaderLRRGBWaveform:
+        return true;
+    case WaveformWidgetType::AllShaderFilteredWaveform:
+        return true;
+    case WaveformWidgetType::AllShaderSimpleWaveform:
+        return true;
+    case WaveformWidgetType::AllShaderHSVWaveform:
+        return true;
+    default:
+        break;
+    }
+    return false;
 }
 
 bool WaveformWidgetFactory::setWidgetTypeFromConfig() {
@@ -794,16 +841,23 @@ void WaveformWidgetFactory::swap() {
 }
 
 void WaveformWidgetFactory::swapAndRender() {
+    // used for PLL
+    WGLWidget* widget = SharedGLContext::getWidget();
+    widget->getOpenGLWindow()->update();
+
     swapSelf();
     renderSelf();
+
     m_vsyncThread->vsyncSlotFinished();
 }
 
 void WaveformWidgetFactory::slotFrameSwapped() {
 #ifdef MIXXX_USE_QOPENGL
-    WGLWidget* widget = SharedGLContext::getWidget();
-    // continuously trigger redraws
-    widget->getOpenGLWindow()->update();
+    if (m_vsyncThread->pllInitializing()) {
+        // continuously trigger redraws during PLL init
+        WGLWidget* widget = SharedGLContext::getWidget();
+        widget->getOpenGLWindow()->update();
+    }
     // update the phase-locked-loop
     m_vsyncThread->updatePLL();
 #endif
@@ -1109,15 +1163,17 @@ int WaveformWidgetFactory::findIndexOf(WWaveformViewer* viewer) const {
 }
 
 void WaveformWidgetFactory::startVSync(GuiTick* pGuiTick, VisualsManager* pVisualsManager) {
+    const auto vSyncMode = static_cast<VSyncThread::VSyncMode>(
+            m_config->getValue(ConfigKey("[Waveform]", "VSync"), 0));
+
     m_pGuiTick = pGuiTick;
     m_pVisualsManager = pVisualsManager;
-    m_vsyncThread = new VSyncThread(this);
+    m_vsyncThread = new VSyncThread(this, vSyncMode);
     m_vsyncThread->setObjectName(QStringLiteral("VSync"));
-    m_vsyncThread->setVSyncType(m_vSyncType);
     m_vsyncThread->setSyncIntervalTimeMicros(static_cast<int>(1e6 / m_frameRate));
 
 #ifdef MIXXX_USE_QOPENGL
-    if (m_vSyncType == VSyncThread::ST_PLL) {
+    if (m_vsyncThread->vsyncMode() == VSyncThread::ST_PLL) {
         WGLWidget* widget = SharedGLContext::getWidget();
         connect(widget->getOpenGLWindow(),
                 &QOpenGLWindow::frameSwapped,
@@ -1241,4 +1297,64 @@ QSurfaceFormat WaveformWidgetFactory::getSurfaceFormat(UserSettingsPointer confi
     format.setSwapInterval(vsyncMode == VSyncThread::ST_PLL ? 1 : 0);
 #endif
     return format;
+}
+
+void WaveformWidgetFactory::setUntilMarkShowBeats(bool value) {
+    m_untilMarkShowBeats = value;
+    if (m_config) {
+        m_config->set(ConfigKey("[Waveform]", "UntilMarkShowBeats"),
+                ConfigValue(m_untilMarkShowBeats));
+    }
+}
+
+void WaveformWidgetFactory::setUntilMarkShowTime(bool value) {
+    m_untilMarkShowTime = value;
+    if (m_config) {
+        m_config->set(ConfigKey("[Waveform]", "UntilMarkShowTime"),
+                ConfigValue(m_untilMarkShowTime));
+    }
+}
+
+void WaveformWidgetFactory::setUntilMarkAlign(Qt::Alignment align) {
+    m_untilMarkAlign = align;
+    if (m_config) {
+        m_config->setValue(ConfigKey("[Waveform]", "UntilMarkAlign"),
+                toUntilMarkAlignIndex(m_untilMarkAlign));
+    }
+}
+void WaveformWidgetFactory::setUntilMarkTextPointSize(int value) {
+    m_untilMarkTextPointSize = value;
+    if (m_config) {
+        m_config->setValue(ConfigKey("[Waveform]", "UntilMarkTextPointSize"),
+                m_untilMarkTextPointSize);
+    }
+}
+
+// static
+Qt::Alignment WaveformWidgetFactory::toUntilMarkAlign(int index) {
+    switch (index) {
+    case 0:
+        return Qt::AlignTop;
+    case 1:
+        return Qt::AlignVCenter;
+    case 2:
+        return Qt::AlignBottom;
+    }
+    assert(false);
+    return Qt::AlignVCenter;
+}
+// static
+int WaveformWidgetFactory::toUntilMarkAlignIndex(Qt::Alignment align) {
+    switch (align) {
+    case Qt::AlignTop:
+        return 0;
+    case Qt::AlignVCenter:
+        return 1;
+    case Qt::AlignBottom:
+        return 2;
+    default:
+        break;
+    }
+    assert(false);
+    return 1;
 }
