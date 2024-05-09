@@ -76,14 +76,17 @@ class WCueMenuPopup : public QWidget {
     void slotEditLabel();
     void slotDeleteCue();
     void slotUpdate();
+    void slotStandardCue();
     void slotSavedLoopCue();
     void slotAdjustSavedLoopCue();
     void slotSavedJumpCue();
+    void slotAdjustSavedJumpCue();
     void slotChangeCueColor(mixxx::RgbColor::optional_t color);
 
   private:
     ColorPaletteSettings m_colorPaletteSettings;
     PollingControlProxy m_pBeatLoopSize;
+    PollingControlProxy m_pBeatJumpSize;
     PollingControlProxy m_pPlayPos;
     PollingControlProxy m_pTrackSample;
     PollingControlProxy m_pQuantizeEnabled;

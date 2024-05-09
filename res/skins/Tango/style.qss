@@ -2470,13 +2470,29 @@ WTrackMenu QMenu QCheckBox::indicator {
   To get the final size for the Delete button consider border width.
   tall button, about the same height as cue number + label edit box */
   width: 26px;
-  height: 44px;
+  height: 26px;
   border: 1px solid #666;
   background-color: #333;
   border-radius: 2px;
   qproperty-icon: url(skin:/../Tango/buttons/btn_delete.svg);
   /* make the icon slightly larger than default 16px */
+  qproperty-iconSize: 16px;
+}
+#CueStandardButton {
+  /* color buttons are 42x24 px.
+  To get the final size for the Delete button consider border width.
+  tall button, about the same height as cue number + label edit box */
+  width: 26px;
+  height: 44px;
+  border: 1px solid #666;
+  background-color: #333;
+  border-radius: 2px;
+  qproperty-icon: url(skin:/../Tango/buttons/btn_hotcues_later.svg);
+  /* make the icon slightly larger than default 16px */
   qproperty-iconSize: 20px;
+}
+#CueStandardButton:checked {
+  background-color: #ff7b00;
 }
 #CueSavedLoopButton {
   /* color buttons are 42x24 px.
@@ -2492,17 +2508,25 @@ WTrackMenu QMenu QCheckBox::indicator {
   qproperty-iconSize: 20px;
 }
 #CueSavedLoopButton:checked {
+  background-color: #ff7b00;
+  qproperty-icon: url(skin:/../Tango/buttons/btn_loop_beatjump_on.svg);
+}
+#CueSavedJumpButton {
   /* color buttons are 42x24 px.
   To get the final size for the Delete button consider border width.
   tall button, about the same height as cue number + label edit box */
   width: 26px;
   height: 44px;
   border: 1px solid #666;
-  background-color: #ff7b00;
+  background-color: #333;
   border-radius: 2px;
-  qproperty-icon: url(skin:/../Tango/buttons/btn_loop_beatjump_on.svg);
+  qproperty-icon: url(skin:/../Tango/buttons/btn_beatjump_forward.svg);
   /* make the icon slightly larger than default 16px */
   qproperty-iconSize: 20px;
+}
+#CueSavedJumpButton:checked {
+  qproperty-icon: url(skin:/../Tango/buttons/btn_beatjump_forward_pressed.svg);
+  background-color: #ff7b00;
 }
 #CueLabelEdit {
   border: 1px solid #ff6600;

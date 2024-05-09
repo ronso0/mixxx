@@ -1460,6 +1460,7 @@ WEffectSelector:!editable,
 #fadeModeCombobox:!editable,
 #LibraryFeatureControls QPushButton:enabled,
 #CueDeleteButton,
+#CueStandardButton,
 #CueSavedLoopButton,
 #CueSavedJumpButton {
   outline: none;
@@ -1491,6 +1492,8 @@ WEffectSelector:!editable,
   WEffectSelector:!editable:on,
   #fadeModeCombobox:!editable:on,
   #CueDeleteButton[pressed="true"],
+  #CueStandardButton[pressed="true"],
+  #CueStandardButton:checked,
   #CueSavedLoopButton[pressed="true"],
   #CueSavedLoopButton:checked,
   #CueSavedJumpButton[pressed="true"],
@@ -1642,6 +1645,7 @@ WBeatSpinBox::down-button {
   /* bright buttons in dimmed containers
   #BeatgridControls WPushButton[displayValue="0"], */
   #CueDeleteButton,
+  #CueStandardButton,
   #CueSavedLoopButton,
   #CueSavedJumpButton,
   #SplitCue[displayValue="0"],
@@ -1697,7 +1701,8 @@ WPushButton#LoopOut[pressed="true"],
 #BeatjumpControls WPushButton[value="1"],
 #RateControls WPushButton[value="1"],
 #BeatgridControls WPushButton[pressed="true"]/*,
-#CueDeleteButton[pressed="true"],
+#CueStandardButton[pressed="true"],
+#CueStandardButton:checked,
 #CueSavedLoopButton[pressed="true"],
 #CueSavedLoopButton:checked,
 #CueSavedJumpButton[pressed="true"],
@@ -2609,6 +2614,12 @@ QPushButton#pushButtonRepeatPlaylist:!checked {
 WCueMenuPopup #CueDeleteButton {
   qproperty-icon: url(skins:LateNight/palemoon/buttons/btn__delete.svg);
   width: 24px;
+  height: 24px;
+  qproperty-iconSize: 18px;
+}
+WCueMenuPopup #CueStandardButton {
+  qproperty-icon: url(skins:LateNight/palemoon/buttons/btn__beats_hotcues_later.svg);
+  width: 24px;
   height: 42px;
   /* make the icon slightly larger than default 16px */
   qproperty-iconSize: 20px;
@@ -2628,21 +2639,26 @@ WCueMenuPopup #CueSavedJumpButton {
   qproperty-iconSize: 20px;
 }
 
-WCueMenuPopup #CueDeleteButton:pressed {
-  background-color: #b24c12;
+#CueDeleteButton:hover {
+  background-color: #6c2e2e;
+}
+
+#CueDeleteButton[pressed="true"], #CueDeleteButton:pressed, #CueDeleteButton:clicked {
+  background-color: #dc4141 !important;
   outline: none;
   /* not applied: */
   qproperty-icon: url(skins:LateNight/palemoon/buttons/btn__delete_active.svg);
 }
 
-WCueMenuPopup #CueSavedLoopButton:pressed, WCueMenuPopup #CueSavedLoopButton:checked {
+#CueSavedLoopButton:pressed, #CueSavedLoopButton:checked {
   background-color: #b24c12;
   outline: none;
   /* not applied: */
   qproperty-icon: url(skins:LateNight/palemoon/buttons/btn__loop_active.svg);
 }
 
-WCueMenuPopup #CueSavedJumpButton:pressed, WCueMenuPopup #CueSavedJumpButton:checked {
+WCueMenuPopup #CueSavedJumpButton:pressed, WCueMenuPopup #CueSavedJumpButton:checked,
+  WCueMenuPopup #CueStandardButton:pressed, WCueMenuPopup #CueStandardButton:checked {
   background-color: #b24c12;
   outline: none;
 }

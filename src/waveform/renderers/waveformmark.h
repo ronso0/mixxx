@@ -65,12 +65,14 @@ class WaveformMark {
     double getSampleEndPosition() const {
         if (!m_pEndPositionCO ||
                 // A hotcue may have an end position although it isn't a saved
-                // loop anymore. This happens when the user changes the cue
+                // loop or jump anymore. This happens when the user changes the cue
                 // type. However, we persist the end position if the user wants
                 // to restore the cue to a saved loop
                 (m_pTypeCO &&
                         static_cast<mixxx::CueType>(m_pTypeCO->get()) !=
-                                mixxx::CueType::Loop)) {
+                                mixxx::CueType::Loop &&
+                        static_cast<mixxx::CueType>(m_pTypeCO->get()) !=
+                                mixxx::CueType::Jump)) {
             return Cue::kNoPosition;
         }
         return m_pEndPositionCO->get();

@@ -262,7 +262,6 @@ void allshader::WaveformRenderMark::paintGL() {
 
         // Check if the range needs to be displayed.
         if (samplePosition != sampleEndPosition && sampleEndPosition != Cue::kNoPosition) {
-            DEBUG_ASSERT(samplePosition < sampleEndPosition);
             const float currentMarkEndPoint = static_cast<
                     float>(
                     m_waveformRenderer
