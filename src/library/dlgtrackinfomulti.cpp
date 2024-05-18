@@ -286,10 +286,12 @@ void DlgTrackInfoMulti::init() {
 
 void DlgTrackInfoMulti::slotApply() {
     saveTracks();
+    // Repopulate the dialog and update the UI
+    updateFromTracks();
 }
 
 void DlgTrackInfoMulti::slotOk() {
-    slotApply();
+    saveTracks();
     clear();
     accept();
 }
@@ -671,9 +673,6 @@ void DlgTrackInfoMulti::saveTracks() {
     }
 
     connectTracksChanged();
-
-    // Repopulate the dialog and update the UI
-    updateFromTracks();
 }
 
 void DlgTrackInfoMulti::clear() {

@@ -294,7 +294,7 @@ void DlgTrackInfo::slotApply() {
 }
 
 void DlgTrackInfo::slotOk() {
-    slotApply();
+    saveTrack();
     clear();
     accept();
 }
