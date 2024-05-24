@@ -9,7 +9,6 @@
 #include "preferences/colorpalettesettings.h"
 #include "track/cue.h"
 #include "track/track_decl.h"
-#include "util/parented_ptr.h"
 #include "util/widgethelper.h"
 #include "widget/wcolorpicker.h"
 
@@ -34,17 +33,6 @@ class WCueMenuPopup : public QWidget {
     Q_OBJECT
   public:
     WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent = nullptr);
-
-    ~WCueMenuPopup() {
-        delete m_pCueNumber;
-        delete m_pCuePosition;
-        delete m_pEditLabel;
-        delete m_pColorPicker;
-        delete m_pDeleteCue;
-        delete m_pStandardCue;
-        delete m_pSavedLoopCue;
-        delete m_pSavedJumpCue;
-    }
 
     void setTrackCueGroup(TrackPointer pTrack, const CuePointer& pCue, const QString& group);
 
@@ -77,10 +65,18 @@ class WCueMenuPopup : public QWidget {
     void slotDeleteCue();
     void slotUpdate();
     void slotStandardCue();
-    void slotSavedLoopCue();
-    void slotAdjustSavedLoopCue();
-    void slotSavedJumpCue();
-    void slotAdjustSavedJumpCue();
+    void slotSavedJumpCueManual();
+    void slotSavedJumpCueAuto();
+    /// This slot is called when the saved loop button is being left pressed,
+    /// which effectively toggle the cue loop between standard cue and saved
+    /// loop. If the cue was never a saved loop, it will use the current
+    /// beatloop size to define the saved loop size. If it was previously a
+    /// saved loop, it will use the previously known loop size.
+    void slotSavedLoopCueAuto();
+    /// This slot is called when the saved loop button is being left pressed,
+    /// which effectively makes the cue a saved loop and use the current play
+    /// position as loop end
+    void slotSavedLoopCueManual();
     void slotChangeCueColor(mixxx::RgbColor::optional_t color);
 
   private:
@@ -93,14 +89,14 @@ class WCueMenuPopup : public QWidget {
     CuePointer m_pCue;
     TrackPointer m_pTrack;
 
-    QLabel* m_pCueNumber;
-    QLabel* m_pCuePosition;
-    QLineEdit* m_pEditLabel;
-    WColorPicker* m_pColorPicker;
-    QPushButton* m_pDeleteCue;
-    QPushButton* m_pStandardCue;
-    CueTypePushButton* m_pSavedLoopCue;
-    CueTypePushButton* m_pSavedJumpCue;
+    std::unique_ptr<QLabel> m_pCueNumber;
+    std::unique_ptr<QLabel> m_pCuePosition;
+    std::unique_ptr<QLineEdit> m_pEditLabel;
+    std::unique_ptr<WColorPicker> m_pColorPicker;
+    std::unique_ptr<QPushButton> m_pDeleteCue;
+    std::unique_ptr<QPushButton> m_pStandardCue;
+    std::unique_ptr<CueTypePushButton> m_pSavedLoopCue;
+    std::unique_ptr<CueTypePushButton> m_pSavedJumpCue;
 
   protected:
     void closeEvent(QCloseEvent* event) override;
