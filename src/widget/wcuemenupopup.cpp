@@ -63,13 +63,13 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
 
     m_pSavedLoopCue = new CueTypePushButton(this);
     m_pSavedLoopCue->setToolTip(
-            tr("Toggle this cue type to saved loop, using "
+            tr("Toggle this cue type to saved loop, using \n"
                "the current beatloop size or the current play position") +
             "\n\n" +
-            tr("Left-click: Toggle between normal cue and saved loop, using "
+            tr("Left-click: Toggle between normal cue and saved loop, using \n"
                "the current beatloop size as the loop size if not previous size was known") +
             "\n" +
-            tr("Right-click: Set the current play position as the loop end and "
+            tr("Right-click: Set the current play position as the loop end and \n"
                "make the cue a saved loop if not"));
     m_pSavedLoopCue->setObjectName("CueSavedLoopButton");
     m_pSavedLoopCue->setCheckable(true);
@@ -81,17 +81,15 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
 
     m_pSavedJumpCue = new CueTypePushButton(this);
     m_pSavedJumpCue->setToolTip(
-            tr("Toggle this cue type between normal cue and saved jump, to "
+            tr("Toggle this cue type between normal cue and saved jump, to \n"
                "the current play position or the current beatjump size ") +
             "\n\n" +
-            tr("Left-click: Toggle this cue type to saved loop, using "
-               "the current play position if not previous size was known. If "
-               "the play position is the cue position, uses the current "
-               "beatjump size") +
+            tr("Left-click: Toggle this cue type to saved beatjump, using \n"
+               "the current play position if not previous destination was known. \nIf "
+               "the play position is the cue position, uses the current beatjump size") +
             "\n" +
-            tr("Right-click: Set the current play position as the jump "
-               "destination and "
-               "make the cue a saved jump if not"));
+            tr("Right-click: Set the current play position as the jump \n"
+               "destination and make the cue a saved jump if not"));
     m_pSavedJumpCue->setObjectName("CueSavedJumpButton");
     m_pSavedJumpCue->setCheckable(true);
     connect(m_pSavedJumpCue, &QPushButton::clicked, this, &WCueMenuPopup::slotSavedJumpCue);
