@@ -148,6 +148,11 @@ void CueControl::process(const double,
                 pCue->getPosition() <= currentPosition) {
             auto delta = pCue->getPosition() - currentPosition;
             seekAbs(pCue->getEndPosition() + delta);
+            if (pCue->getEndPosition() < pCue->getPosition()) {
+                // If the saved jump is backward, we make the cue idle so it
+                // prevent creating a fake loop
+                pCue->setStatus(HotcueControl::Status::Set);
+            }
         }
     }
     m_lastProcessedPosition = currentPosition;
