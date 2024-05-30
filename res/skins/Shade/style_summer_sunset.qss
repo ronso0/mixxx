@@ -14,6 +14,7 @@ WTrackMenu::item,
 WTrackMenu QMenu,
 WTrackMenu QMenu::item,
 WTrackMenu QMenu QCheckBox,
+WTrackMenu WStarRating,
 QLineEdit QMenu,
 QLineEdit QMenu::item,
 QPlainTextEdit QMenu,
@@ -143,6 +144,12 @@ WEffectSelector::indicator:unchecked:selected,
 
 #CueDeleteButton {
   background-color: #cdbb5d;
+}
+#CueSavedLoopButton {
+  background-color: #cdbb5d;
+}
+#CueSavedLoopButton:pressed, #CueSavedLoopButton:checked {
+  background-color: #54fd05;
 }
 #CueLabelEdit {
   background-color: #706633;

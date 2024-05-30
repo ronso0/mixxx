@@ -51,7 +51,8 @@ WTrackTableView::WTrackTableView(QWidget* parent,
           m_backgroundColorOpacity(backgroundColorOpacity),
           // Default color for the focus border of TableItemDelegates
           m_focusBorderColor(Qt::white),
-          m_playedInactiveColor(QColor::fromRgb(kDefaultPlayedInactiveColorHex)),
+          m_trackPlayedColor(QColor(kDefaultTrackPlayedColor)),
+          m_trackMissingColor(QColor(kDefaultTrackMissingColor)),
           m_sorting(sorting),
           m_selectionChangedSinceLastGuiTick(true),
           m_loadCachedOnly(false) {
@@ -102,6 +103,19 @@ void WTrackTableView::selectionChanged(
         const QItemSelection& selected, const QItemSelection& deselected) {
     m_selectionChangedSinceLastGuiTick = true;
     enableCachedOnly();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    // Workaround for Qt6 bug https://bugreports.qt.io/browse/QTBUG-108595:
+    // If 'selectedClick' is enabled Ctrl+click opens the editor instead of
+    // toggling the clicked item.
+    // TODO Remove or adjust version guard as soon as the bug is fixed.
+    if (m_pLibrary->selectedClickEnabled()) {
+        if (selectionModel()->selectedRows().size() > 1) {
+            setSelectedClick(false);
+        } else {
+            setSelectedClick(true);
+        }
+    }
+#endif
     QTableView::selectionChanged(selected, deselected);
 }
 
@@ -353,7 +367,7 @@ void WTrackTableView::initTrackMenu() {
     // after removing tracks from the view via track menu, restore a usable
     // selection/currentIndex for navigation via keyboard & controller
     connect(m_pTrackMenu,
-            &WTrackMenu::restoreCurrentIndex,
+            &WTrackMenu::restoreCurrentViewStateOrIndex,
             this,
             &WTrackTableView::slotrestoreCurrentIndex);
 }
@@ -468,7 +482,7 @@ void WTrackTableView::slotDeleteTracksFromDisk() {
     saveCurrentIndex();
     m_pTrackMenu->loadTrackModelIndices(indices);
     m_pTrackMenu->slotRemoveFromDisk();
-    // WTrackmenu emits restoreCurrentIndex()
+    // WTrackmenu emits restoreCurrentViewStateOrIndex()
 }
 
 void WTrackTableView::slotUnhide() {
@@ -510,13 +524,15 @@ void WTrackTableView::contextMenuEvent(QContextMenuEvent* event) {
     event->accept();
     // Update track indices in context menu
     QModelIndexList indices = getSelectedRows();
+    // TODO Also pass the index of the focused column so DlgTrackInfo/~Multi?
+    // They could then focus the respective edit field.
     m_pTrackMenu->loadTrackModelIndices(indices);
 
     saveCurrentIndex();
 
     // Create the right-click menu
     m_pTrackMenu->popup(event->globalPos());
-    // WTrackmenu emits restoreCurrentIndex() if required
+    // WTrackmenu emits restoreCurrentViewStateOrIndex() if required
 }
 
 void WTrackTableView::onSearch(const QString& text) {
@@ -576,7 +592,6 @@ void WTrackTableView::mouseMoveEvent(QMouseEvent* pEvent) {
         return;
     }
     //qDebug() << "MouseMoveEvent";
-    // Iterate over selected rows and append each item's location url to a list.
 
     if (DragAndDropHelper::mouseMoveInitiatesDrag(pEvent)) {
         // Iterate over selected rows and append each item's location url to a list.
@@ -1024,7 +1039,7 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
     case kPropertiesShortcutKey: {
         // Return invokes the double-click action.
-        // Ctrl+Return opens track properties dialog.
+        // Ctrl+Return opens the track properties dialog.
         // Ignore it if any cell editor is open.
         // Note: we use kPropertiesShortcutKey/~Mofifier here and in
         // in WTrackMenu to display the shortcut.
@@ -1035,10 +1050,10 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             slotMouseDoubleClicked(currentIndex());
         } else if ((event->modifiers() & kPropertiesShortcutModifier)) {
             QModelIndexList indices = getSelectedRows();
-            if (indices.length() == 1) {
-                m_pTrackMenu->loadTrackModelIndices(indices);
-                m_pTrackMenu->slotShowDlgTrackInfo();
-            }
+            // TODO Also pass the index of the focused column so DlgTrackInfo/~Multi
+            // can focus the respective edit field.
+            m_pTrackMenu->loadTrackModelIndices(indices);
+            m_pTrackMenu->slotShowDlgTrackInfo();
         }
         return;
     }
@@ -1141,20 +1156,33 @@ void WTrackTableView::hideOrRemoveSelectedTracks() {
     }
 
     TrackModel::Capability cap;
-    // Hide is the primary action if allowed. Else we test for remove capability
-    if (pTrackModel->hasCapabilities(TrackModel::Capability::Hide)) {
-        cap = TrackModel::Capability::Hide;
-    } else if (pTrackModel->isLocked()) { // Locked playlists and crates
-        return;
-    }
+    // Remove is the primary action if allowed (playlists and crates).
+    // Else we test for remove capability.
+    // In the track menu the hotkey is shown for 'Remove ..' actions, or if there
+    // is no remove action, for 'Hide ..'. Hence, to match the hotkey, do Hide
+    // only if the track model doesn't support any Remove actions.
     if (pTrackModel->hasCapabilities(TrackModel::Capability::Remove)) {
         cap = TrackModel::Capability::Remove;
     } else if (pTrackModel->hasCapabilities(TrackModel::Capability::RemoveCrate)) {
         cap = TrackModel::Capability::RemoveCrate;
     } else if (pTrackModel->hasCapabilities(TrackModel::Capability::RemovePlaylist)) {
         cap = TrackModel::Capability::RemovePlaylist;
-    } else {
+    } else if (pTrackModel->hasCapabilities(TrackModel::Capability::Hide)) {
+        cap = TrackModel::Capability::Hide;
+    } else { // Locked playlists and crates
         return;
+    }
+
+    switch (cap) {
+    case TrackModel::Capability::Remove:
+    case TrackModel::Capability::RemoveCrate:
+    case TrackModel::Capability::RemovePlaylist: {
+        if (pTrackModel->isLocked()) {
+            return;
+        }
+    default:
+        break;
+    }
     }
 
     if (pTrackModel->getRequireConfirmationToHideRemoveTracks()) {

@@ -205,7 +205,7 @@ elseif(APPLE)
   endif()
 endif()
 
-project(mixxx VERSION 2.5.0)
+project(mixxx VERSION 2.6.0)
 enable_language(C CXX)
 # Work around missing version suffixes support https://gitlab.kitware.com/cmake/cmake/-/issues/16716
 set(MIXXX_VERSION_PRERELEASE "alpha") # set to "alpha" "beta" or ""
@@ -797,6 +797,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/effects/backends/builtin/loudnesscontoureffect.cpp
   src/effects/backends/builtin/metronomeeffect.cpp
   src/effects/backends/builtin/moogladder4filtereffect.cpp
+  src/effects/backends/builtin/compressoreffect.cpp
   src/effects/backends/builtin/parametriceqeffect.cpp
   src/effects/backends/builtin/phasereffect.cpp
   src/effects/backends/builtin/reverbeffect.cpp
@@ -932,6 +933,8 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/library/dlgtagfetcher.ui
   src/library/dlgtrackinfo.cpp
   src/library/dlgtrackinfo.ui
+  src/library/dlgtrackinfomulti.cpp
+  src/library/dlgtrackinfomulti.ui
   src/library/dlgtrackmetadataexport.cpp
   src/library/export/coverartcopyworker.cpp
   src/library/export/dlgtrackexport.ui
@@ -1041,6 +1044,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/preferences/colorpalettesettings.cpp
   src/preferences/colorpalettesettings.cpp
   src/preferences/configobject.cpp
+  src/preferences/constants.cpp
   src/preferences/dialog/dlgprefautodj.cpp
   src/preferences/dialog/dlgprefautodjdlg.ui
   src/preferences/dialog/dlgprefbeats.cpp
@@ -1206,12 +1210,12 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/util/workerthreadscheduler.cpp
   src/util/xml.cpp
   src/waveform/guitick.cpp
-  src/waveform/renderers/glslwaveformrenderersignal.cpp
-  src/waveform/renderers/glvsynctestrenderer.cpp
-  src/waveform/renderers/glwaveformrenderbackground.cpp
-  src/waveform/renderers/glwaveformrendererfilteredsignal.cpp
-  src/waveform/renderers/glwaveformrendererrgb.cpp
-  src/waveform/renderers/glwaveformrenderersimplesignal.cpp
+  src/waveform/renderers/deprecated/glslwaveformrenderersignal.cpp
+  src/waveform/renderers/deprecated/glvsynctestrenderer.cpp
+  src/waveform/renderers/deprecated/glwaveformrenderbackground.cpp
+  src/waveform/renderers/deprecated/glwaveformrendererfilteredsignal.cpp
+  src/waveform/renderers/deprecated/glwaveformrendererrgb.cpp
+  src/waveform/renderers/deprecated/glwaveformrenderersimplesignal.cpp
   src/waveform/renderers/waveformmark.cpp
   src/waveform/renderers/waveformmarkrange.cpp
   src/waveform/renderers/waveformmarkset.cpp
@@ -1238,12 +1242,12 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/waveform/waveformmarklabel.cpp
   src/waveform/waveformwidgetfactory.cpp
   src/waveform/widgets/emptywaveformwidget.cpp
-  src/waveform/widgets/glrgbwaveformwidget.cpp
-  src/waveform/widgets/glsimplewaveformwidget.cpp
-  src/waveform/widgets/glslwaveformwidget.cpp
-  src/waveform/widgets/glvsynctestwidget.cpp
-  src/waveform/widgets/glwaveformwidget.cpp
-  src/waveform/widgets/glwaveformwidgetabstract.cpp
+  src/waveform/widgets/deprecated/glrgbwaveformwidget.cpp
+  src/waveform/widgets/deprecated/glsimplewaveformwidget.cpp
+  src/waveform/widgets/deprecated/glslwaveformwidget.cpp
+  src/waveform/widgets/deprecated/glvsynctestwidget.cpp
+  src/waveform/widgets/deprecated/glwaveformwidget.cpp
+  src/waveform/widgets/deprecated/glwaveformwidgetabstract.cpp
   src/waveform/widgets/hsvwaveformwidget.cpp
   src/waveform/widgets/rgbwaveformwidget.cpp
   src/waveform/widgets/softwarewaveformwidget.cpp
@@ -1301,6 +1305,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/widget/wpixmapstore.cpp
   src/widget/wpushbutton.cpp
   src/widget/wraterange.cpp
+  src/widget/wstarratingaction.cpp
   src/widget/wrecordingduration.cpp
   src/widget/wscrollable.cpp
   src/widget/wsearchlineedit.cpp
@@ -1331,7 +1336,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
 set(MIXXX_COMMON_PRECOMPILED_HEADER
   src/util/assert.h
 )
-target_precompile_headers(mixxx-lib PUBLIC
+set(MIXXX_LIB_PRECOMPILED_HEADER
   src/audio/frame.h
   src/audio/signalinfo.h
   src/audio/streaminfo.h
@@ -1433,7 +1438,6 @@ target_precompile_headers(mixxx-lib PUBLIC
   src/util/mac.h
   src/util/macros.h
   src/util/math.h
-  src/util/memory.h
   src/util/messagepipe.h
   src/util/movinginterquartilemean.h
   src/util/mutex.h
@@ -1487,7 +1491,6 @@ target_precompile_headers(mixxx-lib PUBLIC
   src/util/workerthread.h
   src/util/workerthreadscheduler.h
   src/util/xml.h
-  ${MIXXX_COMMON_PRECOMPILED_HEADER}
 )
 if (NOT QML)
   target_sources(mixxx-lib PRIVATE
@@ -1501,6 +1504,7 @@ endif()
 if(QOPENGL)
   target_sources(mixxx-lib PRIVATE
     src/shaders/endoftrackshader.cpp
+    src/shaders/slipmodeshader.cpp
     src/shaders/patternshader.cpp
     src/shaders/rgbashader.cpp
     src/shaders/rgbshader.cpp
@@ -1508,17 +1512,20 @@ if(QOPENGL)
     src/shaders/textureshader.cpp
     src/shaders/unicolorshader.cpp
     src/shaders/vinylqualityshader.cpp
-    src/util/texture.cpp
+    src/util/opengltexture2d.cpp
+    src/waveform/renderers/allshader/digitsrenderer.cpp
     src/waveform/renderers/allshader/matrixforwidgetgeometry.cpp
     src/waveform/renderers/allshader/waveformrenderbackground.cpp
     src/waveform/renderers/allshader/waveformrenderbeat.cpp
     src/waveform/renderers/allshader/waveformrenderer.cpp
     src/waveform/renderers/allshader/waveformrendererendoftrack.cpp
+    src/waveform/renderers/allshader/waveformrendererslipmode.cpp
     src/waveform/renderers/allshader/waveformrendererfiltered.cpp
     src/waveform/renderers/allshader/waveformrendererhsv.cpp
     src/waveform/renderers/allshader/waveformrendererlrrgb.cpp
     src/waveform/renderers/allshader/waveformrendererpreroll.cpp
     src/waveform/renderers/allshader/waveformrendererrgb.cpp
+    src/waveform/renderers/allshader/waveformrenderertextured.cpp
     src/waveform/renderers/allshader/waveformrenderersignalbase.cpp
     src/waveform/renderers/allshader/waveformrenderersimple.cpp
     src/waveform/renderers/allshader/waveformrendermark.cpp
@@ -1527,8 +1534,12 @@ if(QOPENGL)
     src/waveform/widgets/allshader/hsvwaveformwidget.cpp
     src/waveform/widgets/allshader/lrrgbwaveformwidget.cpp
     src/waveform/widgets/allshader/rgbwaveformwidget.cpp
+    src/waveform/widgets/allshader/rgbstackedwaveformwidget.cpp
     src/waveform/widgets/allshader/simplewaveformwidget.cpp
     src/waveform/widgets/allshader/waveformwidget.cpp
+    src/waveform/widgets/allshader/waveformwidgettexturedfiltered.cpp
+    src/waveform/widgets/allshader/waveformwidgettexturedrgb.cpp
+    src/waveform/widgets/allshader/waveformwidgettexturedstacked.cpp
     src/widget/openglwindow.cpp
     src/widget/tooltipqopengl.cpp
     src/widget/wglwidgetqopengl.cpp
@@ -1650,8 +1661,11 @@ if(MSVC)
   if(WARNINGS_PEDANTIC)
     target_compile_options(mixxx-lib PUBLIC /W4)
   else()
-    # Warning Level 3 (production quality)
-    target_compile_options(mixxx-lib PUBLIC /W3)
+    target_compile_options(mixxx-lib PUBLIC
+        /W3  # Warning Level 3 (production quality)
+        /wd4200 # C4200: nonstandard extension used: zero-sized array in struct/union
+                # Note: Even with CMAKE_C_STANDARD = 99 MSVC does not complain about C99 flexible array members
+    )
     target_compile_definitions(mixxx-lib PUBLIC _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING _CRT_SECURE_NO_WARNINGS)
   endif()
 else()
@@ -2183,39 +2197,12 @@ add_executable(mixxx-test
   src/test/wwidgetstack_test.cpp
   src/util/moc_included_test.cpp
 )
-target_precompile_headers(mixxx-test REUSE_FROM mixxx-lib)
 find_package(GTest CONFIG REQUIRED)
 set_target_properties(mixxx-test PROPERTIES AUTOMOC ON)
 target_link_libraries(mixxx-test PRIVATE mixxx-lib mixxx-gitinfostore GTest::gtest GTest::gmock)
 
 find_package(benchmark)
 target_link_libraries(mixxx-test PRIVATE benchmark::benchmark)
-
-# Test Suite
-include(CTest)
-include(GoogleTest)
-enable_testing()
-gtest_add_tests(
-  TARGET mixxx-test
-  EXTRA_ARGS --logLevel info
-  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-  TEST_LIST testsuite
-)
-if (NOT WIN32)
-  # Default to offscreen rendering during tests.
-  # This is required if the build system like Fedora koji/mock does not
-  # allow to pass environment variables into the ctest macro expansion.
-  set_tests_properties(${testsuite} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
-endif()
-
-# Benchmarking
-add_custom_target(mixxx-benchmark
-  COMMAND $<TARGET_FILE:mixxx-test> --benchmark
-  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-  COMMENT "Mixxx Benchmarks"
-  VERBATIM
-)
-add_dependencies(mixxx-benchmark mixxx-test)
 
 #
 # Resources
@@ -2363,7 +2350,7 @@ option(ENGINEPRIME "Support for library export to Denon Engine Prime" ON)
 if(ENGINEPRIME)
   # libdjinterop does not currently have a stable ABI, so we fetch sources for a specific tag, build here, and link
   # statically.  This situation should be reviewed once libdjinterop hits version 1.x.
-  set(LIBDJINTEROP_VERSION 0.20.2)
+  set(LIBDJINTEROP_VERSION 0.21.0)
   # Look whether an existing installation of libdjinterop matches the required version.
   find_package(DjInterop  ${LIBDJINTEROP_VERSION} EXACT CONFIG)
   if(NOT DjInterop_FOUND)
@@ -2399,7 +2386,7 @@ if(ENGINEPRIME)
       URL
         "https://github.com/xsco/libdjinterop/archive/refs/tags/${LIBDJINTEROP_VERSION}.tar.gz"
         "https://launchpad.net/~xsco/+archive/ubuntu/djinterop/+sourcefiles/libdjinterop/${LIBDJINTEROP_VERSION}-0ubuntu1/libdjinterop_${LIBDJINTEROP_VERSION}.orig.tar.gz"
-      URL_HASH SHA256=3024b8b49bc0bd673a7f032e7da7b73ce61144951e810683ec89650fedd45b85
+      URL_HASH SHA256=160d4e09b25e859816a6b664058e7c6bc5cd889adeb188a9721c2b65d2133641
       DOWNLOAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/downloads"
       DOWNLOAD_NAME "libdjinterop-${LIBDJINTEROP_VERSION}.tar.gz"
       INSTALL_DIR ${DJINTEROP_INSTALL_DIR}
@@ -3470,6 +3457,52 @@ if(FFMPEG)
   target_include_directories(mixxx-lib PUBLIC "${FFMPEG_INCLUDE_DIRS}")
 endif()
 
+# STEM file support
+default_option(STEM "STEM file support" "FFMPEG_FOUND;FFMPEG")
+if (STEM)
+  if(NOT FFMPEG)
+    message(FATAL_ERROR "STEM requires that also FFMPEG is enabled")
+  endif()
+  target_compile_definitions(mixxx-lib PUBLIC __STEM__)
+  target_compile_definitions(mixxx-test PUBLIC __STEM__)
+  target_sources(mixxx-test PUBLIC
+    src/test/stemtest.cpp
+    src/test/steminfotest.cpp
+  )
+  list(APPEND MIXXX_LIB_PRECOMPILED_HEADER src/track/steminfo.h)
+  target_sources(mixxx-lib PRIVATE
+    src/sources/soundsourcestem.cpp
+    src/track/steminfoimporter.cpp
+    src/track/steminfo.cpp
+  )
+endif()
+
+# Test Suite
+include(CTest)
+include(GoogleTest)
+enable_testing()
+gtest_add_tests(
+  TARGET mixxx-test
+  EXTRA_ARGS --logLevel info
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  TEST_LIST testsuite
+)
+if (NOT WIN32)
+  # Default to offscreen rendering during tests.
+  # This is required if the build system like Fedora koji/mock does not
+  # allow to pass environment variables into the ctest macro expansion.
+  set_tests_properties(${testsuite} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()
+
+# Benchmarking
+add_custom_target(mixxx-benchmark
+  COMMAND $<TARGET_FILE:mixxx-test> --benchmark
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+  COMMENT "Mixxx Benchmarks"
+  VERBATIM
+)
+add_dependencies(mixxx-benchmark mixxx-test)
+
 # Google PerfTools
 option(GPERFTOOLS "Google PerfTools libtcmalloc linkage" OFF)
 option(GPERFTOOLSPROFILER "Google PerfTools libprofiler linkage" OFF)
@@ -3577,8 +3610,8 @@ if(OPUS)
     src/encoder/encoderopussettings.cpp
   )
   target_compile_definitions(mixxx-lib PUBLIC __OPUS__)
-  target_link_libraries(mixxx-lib PRIVATE OpusFile::OpusFile)
-  target_link_libraries(mixxx-lib PRIVATE Opus::Opus)
+  target_link_libraries(mixxx-lib PRIVATE OpusFile::OpusFile Opus::Opus)
+  target_link_libraries(mixxx-test PRIVATE OpusFile::OpusFile Opus::Opus)
 endif()
 
 # MAD MP3 Decoder
@@ -3780,11 +3813,18 @@ if(WAVPACK)
   target_link_libraries(mixxx-lib PRIVATE WavPack::wavpack)
 endif()
 
+target_precompile_headers(mixxx-lib PUBLIC
+  ${MIXXX_LIB_PRECOMPILED_HEADER}
+  ${MIXXX_COMMON_PRECOMPILED_HEADER}
+)
+target_precompile_headers(mixxx-test REUSE_FROM mixxx-lib)
+
 # Configure file with build options
 file(RELATIVE_PATH MIXXX_INSTALL_DOCDIR_RELATIVE_TO_DATADIR "${CMAKE_INSTALL_PREFIX}/${MIXXX_INSTALL_DATADIR}" "${CMAKE_INSTALL_PREFIX}/${MIXXX_INSTALL_DOCDIR}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in" "${CMAKE_CURRENT_BINARY_DIR}/src/config.h" @ONLY)
 
 # Packaging
+set(CPACK_PACKAGE_NAME "Mixxx")
 set(CPACK_PACKAGE_VENDOR "Mixxx Project")
 set(CPACK_PACKAGE_CONTACT "RJ Skerry-Ryan <rryan@mixxx.org>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Digital DJ Application")
@@ -3853,7 +3893,7 @@ set(CPACK_DEBIAN_UPLOAD_PPA_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/packaging/CPackD
 set(CPACK_DEBIAN_INSTALL_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/packaging/CPackDebInstall.cmake")
 
 set(CPACK_WIX_UPGRADE_GUID "921DC99C-4DCF-478D-B950-50685CB9E6BE")
-set(CPACK_WIX_LICENSE_RTF "${CMAKE_CURRENT_SOURCE_DIR}/packaging/wix/LICENSE.rtf")
+set(CPACK_WIX_LICENSE_RTF "${CMAKE_CURRENT_BINARY_DIR}/packaging/wix/LICENSE.rtf")
 set(CPACK_WIX_PRODUCT_ICON "${CMAKE_SOURCE_DIR}/res/images/icons/ic_mixxx.ico")
 set(CPACK_WIX_PROPERTY_ARPHELPLINK "${CPACK_PACKAGE_HOMEPAGE_URL}")
 set(CPACK_WIX_UI_BANNER "${CMAKE_CURRENT_SOURCE_DIR}/packaging/wix/images/banner.bmp")
@@ -3864,6 +3904,8 @@ set(CPACK_PROJECT_CONFIG_FILE "${CMAKE_SOURCE_DIR}/packaging/CPackConfig.cmake" 
 if(WIN32)
     # override not working default NSIS
     set(CPACK_GENERATOR WIX)
+    # uses CMAKE_PROJECT_VERSION
+    configure_file(packaging/wix/LICENSE.rtf.in packaging/wix/LICENSE.rtf @ONLY)
 endif()
 
 include(CPack)
