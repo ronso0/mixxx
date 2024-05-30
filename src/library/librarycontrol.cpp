@@ -17,6 +17,7 @@
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wsearchlineedit.h"
+#include "widget/wtracktableview.h"
 
 namespace {
 const QString kAppGroup = QStringLiteral("[App]");
@@ -838,11 +839,17 @@ void LibraryControl::slotMoveTrack(double v) {
         return;
     }
 
+    auto* pTrackTableview = m_pLibraryWidget->getCurrentTrackTableView();
+    if (!pTrackTableview) {
+        // no track table view is currently visible
+        return;
+    }
+
     const auto key = (v < 0) ? Qt::Key_Up : Qt::Key_Down;
     const auto times = static_cast<unsigned short>(std::abs(v));
-    QKeyEvent event = QKeyEvent{
+    QKeyEvent pEvent = QKeyEvent{
             QEvent::KeyPress, key, Qt::AltModifier, QString(), false, times};
-    QApplication::sendEvent(m_pLibraryWidget, &event);
+    QApplication::sendEvent(pTrackTableview, &pEvent);
 }
 
 void LibraryControl::emitKeyEvent(QKeyEvent&& event) {
