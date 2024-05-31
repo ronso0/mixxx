@@ -1536,42 +1536,6 @@ void MixxxMainWindow::checkDirectRendering() {
 }
 
 bool MixxxMainWindow::confirmExit() {
-    bool playing(false);
-    bool playingSampler(false);
-    auto pPlayerManager = m_pCoreServices->getPlayerManager();
-    unsigned int deckCount = pPlayerManager->numDecks();
-    unsigned int samplerCount = pPlayerManager->numSamplers();
-    for (unsigned int i = 0; i < deckCount; ++i) {
-        if (ControlObject::toBool(
-                    ConfigKey(PlayerManager::groupForDeck(i), "play"))) {
-            playing = true;
-            break;
-        }
-    }
-    for (unsigned int i = 0; i < samplerCount; ++i) {
-        if (ControlObject::toBool(
-                    ConfigKey(PlayerManager::groupForSampler(i), "play"))) {
-            playingSampler = true;
-            break;
-        }
-    }
-    if (playing) {
-        QMessageBox::StandardButton btn = QMessageBox::question(this,
-            tr("Confirm Exit"),
-            tr("A deck is currently playing. Exit Mixxx?"),
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-        if (btn == QMessageBox::No) {
-            return false;
-        }
-    } else if (playingSampler) {
-        QMessageBox::StandardButton btn = QMessageBox::question(this,
-            tr("Confirm Exit"),
-            tr("A sampler is currently playing. Exit Mixxx?"),
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-        if (btn == QMessageBox::No) {
-            return false;
-        }
-    }
     if (m_pPrefDlg && m_pPrefDlg->isVisible()) {
         QMessageBox::StandardButton btn = QMessageBox::question(
             this, tr("Confirm Exit"),
@@ -1580,10 +1544,18 @@ bool MixxxMainWindow::confirmExit() {
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (btn == QMessageBox::No) {
             return false;
-        }
-        else {
+        } else {
             m_pPrefDlg->close();
         }
+    }
+
+    QMessageBox::StandardButton btn = QMessageBox::question(this,
+            tr("Confirm Exit"),
+            tr("Exit Mixxx?"),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+    if (btn == QMessageBox::No) {
+        return false;
     }
 
     return true;
