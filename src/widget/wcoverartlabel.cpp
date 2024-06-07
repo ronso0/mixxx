@@ -48,6 +48,20 @@ WCoverArtLabel::WCoverArtLabel(QWidget* pParent, WCoverArtMenu* pCoverMenu)
     setFrameShape(QFrame::Box);
     setAlignment(Qt::AlignCenter);
     setPixmapAndResize(m_defaultCover);
+
+    if (m_pCoverMenu != nullptr) {
+        // Note: We reuse existing translation strings from src/skin/legacy/tooltips.cpp
+        // to avoid having to retranslate basically the same content twice.
+        // Please sync changes made here to tooltips.cpp, and vice versa.
+        setToolTip(
+                QString("%1: %2").arg(
+                        tr("Left-click"),
+                        tr("Opens separate artwork viewer.")) +
+                "\n" +
+                QString("%1: %2").arg(
+                        tr("Right-click"),
+                        tr("Displays options for editing cover artwork.")));
+    }
 }
 
 WCoverArtLabel::~WCoverArtLabel() = default;
