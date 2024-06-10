@@ -334,8 +334,17 @@ bool WSearchLineEdit::eventFilter(QObject* obj, QEvent* event) {
         // Any other keypress is forwarded.
         if (key != Qt::Key_Escape &&
                 key != Qt::Key_Down &&
-                key != Qt::Key_Up) {
+                key != Qt::Key_Up &&
+                key != Qt::Key_Return &&
+                key != Qt::Key_Enter) {
             keyPressEvent(keyEvent);
+            return true;
+        }
+        // Enter: immediately trigger search and jump to tracks
+        if (key == Qt::Key_Return || key == Qt::Key_Enter) {
+            QComboBox::eventFilter(obj, event);
+            slotTriggerSearch();
+            emit setLibraryFocus(FocusWidget::TracksTable);
             return true;
         }
     }
