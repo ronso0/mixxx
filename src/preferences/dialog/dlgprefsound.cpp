@@ -15,6 +15,10 @@
 #include "util/rlimit.h"
 #include "util/scopedoverridecursor.h"
 
+#ifdef __RUBBERBAND__
+#include "engine/bufferscalers/rubberbandworkerpool.h"
+#endif
+
 namespace {
 
 const QString kAppGroup = QStringLiteral("[App]");
@@ -32,6 +36,25 @@ bool soundItemAlreadyExists(const AudioPath& output, const QWidget& widget) {
     return false;
 }
 
+#ifdef __RUBBERBAND__
+const QString kKeylockMultiThreadedAvailable =
+        QStringLiteral("<p><span style=\"font-weight:600;\">") +
+        QObject::tr("Warning!") + QStringLiteral("</span></p><p>") +
+        QObject::tr(
+                "Using multi "
+                "threading may result in pitch and tone imperfection, and this "
+                "is "
+                "mono-incompatible, due to third party limitations.") +
+        QStringLiteral("</p>");
+const QString kKeylockMultiThreadedUnavailableMono = QStringLiteral("<i>") +
+        QObject::tr(
+                "Multi threading mode is incompatible with mono main mix.") +
+        QStringLiteral("</i>");
+const QString kKeylockMultiThreadedUnavailableRubberband =
+        QStringLiteral("<i>") +
+        QObject::tr("Multi threading mode is only available with RubberBand.") +
+        QStringLiteral("</i>");
+#endif
 } // namespace
 
 /// Construct a new sound preferences pane. Initializes and populates
@@ -122,6 +145,9 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
     headDelaySpinBox->setValue(m_pHeadDelay->get());
     boothDelaySpinBox->setValue(m_pBoothDelay->get());
 
+    // TODO These settings are applied immediately via ControlProxies.
+    // While this is handy for testing the delays, it breaks the rule to
+    // apply only in slotApply(). Add hint to UI?
     connect(latencyCompensationSpinBox,
             QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this,
@@ -182,6 +208,14 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
             QOverload<int>::of(&QComboBox::currentIndexChanged),
             this,
             &DlgPrefSound::settingChanged);
+#ifdef __RUBBERBAND__
+    connect(keylockMultithreadedCheckBox,
+            &QCheckBox::clicked,
+            this,
+            &DlgPrefSound::updateKeylockMultithreading);
+#else
+    keylockMultithreadedCheckBox->hide();
+#endif
 
     connect(queryButton, &QAbstractButton::clicked, this, &DlgPrefSound::queryClicked);
 
@@ -265,18 +299,12 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
                             MIXXX_WIKI_HARDWARE_COMPATIBILITY_URL)));
 }
 
-/// Slot called when the preferences dialog is opened or this pane is
-/// selected.
+/// Slot called when the preferences dialog is opened.
 void DlgPrefSound::slotUpdate() {
-    // this is unfortunate, because slotUpdate is called every time
-    // we change to this pane, we lose changed and unapplied settings
-    // every time. There's no real way around this, just another argument
-    // for a prefs rewrite -- bkgood
     m_bSkipConfigClear = true;
     loadSettings();
     checkLatencyCompensation();
     m_bSkipConfigClear = false;
-    m_settingsModified = false;
 }
 
 /// Slot called when the Apply or OK button is pressed.
@@ -298,6 +326,21 @@ void DlgPrefSound::slotApply() {
         m_pSettings->set(ConfigKey("[Master]", "keylock_engine"),
                 ConfigValue(static_cast<int>(keylockEngine)));
 
+#ifdef __RUBBERBAND__
+        bool keylockMultithreading = m_pSettings->getValue(
+                ConfigKey(kAppGroup, "keylock_multithreading"), false);
+        m_pSettings->setValue(ConfigKey(kAppGroup, "keylock_multithreading"),
+                keylockMultithreadedCheckBox->isChecked() &&
+                        keylockMultithreadedCheckBox->isEnabled());
+        if (keylockMultithreading !=
+                (keylockMultithreadedCheckBox->isChecked() &&
+                        keylockMultithreadedCheckBox->isEnabled())) {
+            QMessageBox::information(this,
+                    tr("Information"),
+                    tr("Mixxx must be restarted before the multi-threaded "
+                       "RubberBand setting change will take effect."));
+        }
+#endif
         status = m_pSoundManager->setConfig(m_config);
     }
     if (status != SoundDeviceStatus::Ok) {
@@ -388,6 +431,10 @@ void DlgPrefSound::connectSoundItem(DlgPrefSoundItem* pItem) {
             &DlgPrefSoundItem::selectedChannelsChanged,
             this,
             &DlgPrefSound::deviceChannelsChanged);
+    connect(pItem,
+            &DlgPrefSoundItem::configuredDeviceNotFound,
+            this,
+            &DlgPrefSound::configuredDeviceNotFound);
     connect(this, &DlgPrefSound::loadPaths, pItem, &DlgPrefSoundItem::loadPath);
     connect(this, &DlgPrefSound::writePaths, pItem, &DlgPrefSoundItem::writePath);
     if (pItem->isInput()) {
@@ -487,6 +534,13 @@ void DlgPrefSound::loadSettings(const SoundManagerConfig& config) {
                 EngineBuffer::getKeylockEngineName(keylockEngine), keylockEngineVariant);
         keylockComboBox->setCurrentIndex(keylockComboBox->count() - 1);
     }
+
+#ifdef __RUBBERBAND__
+    // Default is no multi threading on keylock
+    keylockMultithreadedCheckBox->setChecked(m_pSettings->getValue(
+            ConfigKey(kAppGroup, QStringLiteral("keylock_multithreading")),
+            false));
+#endif
 
     // Collect selected I/O channel indices for all non-empty device comboboxes
     // in order to allow auto-selecting free channels when different devices are
@@ -682,6 +736,53 @@ void DlgPrefSound::settingChanged() {
         return; // doesn't count if we're just loading prefs
     }
     m_settingsModified = true;
+
+#ifdef __RUBBERBAND__
+    bool supportedScaler = keylockComboBox->currentData()
+                                   .value<EngineBuffer::KeylockEngine>() !=
+            EngineBuffer::KeylockEngine::SoundTouch;
+    bool monoMix = mainOutputModeComboBox->currentIndex() == 1;
+    keylockMultithreadedCheckBox->setEnabled(!monoMix && supportedScaler);
+    keylockMultithreadedCheckBox->setToolTip(monoMix
+                    ? kKeylockMultiThreadedUnavailableMono
+                    : (supportedScaler
+                                      ? kKeylockMultiThreadedAvailable
+                                      : kKeylockMultiThreadedUnavailableRubberband));
+}
+
+void DlgPrefSound::updateKeylockMultithreading(bool enabled) {
+    m_settingsModified = true;
+    if (!enabled) {
+        return;
+    }
+    QMessageBox msg;
+    msg.setIcon(QMessageBox::Warning);
+    msg.setWindowTitle(tr("Are you sure?"));
+    msg.setText(QStringLiteral("<p>%1</p><p>%2</p>")
+                        .arg(tr("Using multi threading result in a loss of "
+                                "mono compatibility and a diffuse stereo "
+                                "image. It is not recommended during "
+                                "broadcasting or recording."),
+                                tr("Are you sure you wish to proceed?")));
+    QPushButton* pNoBtn = msg.addButton(tr("No"), QMessageBox::AcceptRole);
+    QPushButton* pYesBtn = msg.addButton(
+            tr("Yes, I know what I am doing"), QMessageBox::RejectRole);
+    msg.setDefaultButton(pNoBtn);
+    msg.exec();
+    keylockMultithreadedCheckBox->setChecked(msg.clickedButton() == pYesBtn);
+#endif
+}
+
+/// Slot called when a device from the config can not be selected, i.e. is
+/// currently not available. This may happen during startup when MixxxMainWindow
+/// opens this page to allow users to make adjustments in case configured
+/// devices are busy/missing.
+/// The issue is that the visual state (combobox(es) with 'None') does not match
+/// the untouched config state. This set the modified flag so slotApply() will
+/// apply the (seemingly) unchanged configuration if users simply click Apply/Okay
+/// because they are okay to continue without these devices.
+void DlgPrefSound::configuredDeviceNotFound() {
+    m_settingsModified = true;
 }
 
 void DlgPrefSound::deviceChanged() {
@@ -828,7 +929,19 @@ void DlgPrefSound::mainEnabledChanged(double value) {
 }
 
 void DlgPrefSound::mainOutputModeComboBoxChanged(int value) {
-    m_pMainMonoMixdown->set((double)value);
+    m_pMainMonoMixdown->set(static_cast<double>(value));
+
+#ifdef __RUBBERBAND__
+    bool supportedScaler = keylockComboBox->currentData()
+                                   .value<EngineBuffer::KeylockEngine>() !=
+            EngineBuffer::KeylockEngine::SoundTouch;
+    keylockMultithreadedCheckBox->setEnabled(!value && supportedScaler);
+    keylockMultithreadedCheckBox->setToolTip(
+            value ? kKeylockMultiThreadedUnavailableMono
+                  : (supportedScaler
+                                    ? kKeylockMultiThreadedAvailable
+                                    : kKeylockMultiThreadedUnavailableRubberband));
+#endif
 }
 
 void DlgPrefSound::mainMonoMixdownChanged(double value) {

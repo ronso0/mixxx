@@ -524,6 +524,8 @@ void WTrackTableView::contextMenuEvent(QContextMenuEvent* event) {
     event->accept();
     // Update track indices in context menu
     QModelIndexList indices = getSelectedRows();
+    // TODO Also pass the index of the focused column so DlgTrackInfo/~Multi?
+    // They could then focus the respective edit field.
     m_pTrackMenu->loadTrackModelIndices(indices);
 
     saveCurrentIndex();
@@ -1037,7 +1039,7 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
     switch (event->key()) {
     case kPropertiesShortcutKey: {
         // Return invokes the double-click action.
-        // Ctrl+Return opens track properties dialog.
+        // Ctrl+Return opens the track properties dialog.
         // Ignore it if any cell editor is open.
         // Note: we use kPropertiesShortcutKey/~Mofifier here and in
         // in WTrackMenu to display the shortcut.
@@ -1048,10 +1050,10 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             slotMouseDoubleClicked(currentIndex());
         } else if ((event->modifiers() & kPropertiesShortcutModifier)) {
             QModelIndexList indices = getSelectedRows();
-            if (indices.length() == 1) {
-                m_pTrackMenu->loadTrackModelIndices(indices);
-                m_pTrackMenu->slotShowDlgTrackInfo();
-            }
+            // TODO Also pass the index of the focused column so DlgTrackInfo/~Multi
+            // can focus the respective edit field.
+            m_pTrackMenu->loadTrackModelIndices(indices);
+            m_pTrackMenu->slotShowDlgTrackInfo();
         }
         return;
     }
@@ -1425,23 +1427,69 @@ void WTrackTableView::addToAutoDJ(PlaylistDAO::AutoDJSendLoc loc) {
     playlistDao.addTracksToAutoDJQueue(trackIds, loc);
 }
 
-void WTrackTableView::slotAddToAutoDJBottom() {
+void WTrackTableView::addToAutoDJBottom() {
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::BOTTOM);
 }
 
-void WTrackTableView::slotAddToAutoDJTop() {
+void WTrackTableView::addToAutoDJTop() {
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::TOP);
 }
 
-void WTrackTableView::slotAddToAutoDJReplace() {
+void WTrackTableView::addToAutoDJReplace() {
     addToAutoDJ(PlaylistDAO::AutoDJSendLoc::REPLACE);
 }
 
-void WTrackTableView::slotSelectTrack(const TrackId& trackId) {
+void WTrackTableView::selectTrack(const TrackId& trackId) {
     if (trackId.isValid() && setCurrentTrackId(trackId, 0, true)) {
         setSelectedTracks({trackId});
     } else {
         setSelectedTracks({});
+    }
+}
+
+void WTrackTableView::moveSelection(int delta) {
+    QAbstractItemModel* pModel = model();
+
+    if (pModel == nullptr) {
+        return;
+    }
+
+    while (delta != 0) {
+        QItemSelectionModel* currentSelection = selectionModel();
+        if (currentSelection->selectedRows().length() > 0) {
+            if (delta > 0) {
+                // i is positive, so we want to move the highlight down
+                int row = currentSelection->selectedRows().last().row();
+                if (row + 1 < pModel->rowCount()) {
+                    selectRow(row + 1);
+                } else {
+                    // we wrap around at the end of the list so it is faster to get
+                    // to the top of the list again
+                    selectRow(0);
+                }
+
+                delta--;
+            } else {
+                // i is negative, so move down
+                int row = currentSelection->selectedRows().first().row();
+                if (row - 1 >= 0) {
+                    selectRow(row - 1);
+                } else {
+                    selectRow(pModel->rowCount() - 1);
+                }
+
+                delta++;
+            }
+        } else {
+            // no selection, so select the first or last element depending on delta
+            if (delta > 0) {
+                selectRow(0);
+                delta--;
+            } else {
+                selectRow(pModel->rowCount() - 1);
+                delta++;
+            }
+        }
     }
 }
 
