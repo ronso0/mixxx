@@ -11,6 +11,7 @@
 #include <QStringLiteral>
 #include <QToolButton>
 
+#include "controllers/keyboard/keyboardeventfilter.h"
 #include "moc_wsearchlineedit.cpp"
 #include "preferences/configobject.h"
 #include "skin/legacy/skincontext.h"
@@ -326,6 +327,7 @@ QString WSearchLineEdit::getSearchText() const {
 bool WSearchLineEdit::eventFilter(QObject* obj, QEvent* event) {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        // KeyboardEventFilter::getKeySeq(keyEvent); // logs keypress
         const int key = keyEvent->key();
         // Esc has already closed the popup by now and we don't want to process it.
         // We don't need to handle Up/Down in the popup either.
@@ -380,6 +382,12 @@ void WSearchLineEdit::keyPressEvent(QKeyEvent* keyEvent) {
         // then selects the previous query
         if (findCurrentTextIndex() == -1) {
             slotSaveSearch();
+        }
+        // Immediately show the popup to see all saved queries.
+        // For quick apply, we need to catch Enter and trigger the search.
+        if (!view()->isVisible()) {
+            showPopup();
+            return;
         }
         break;
     case Qt::Key_Left:
