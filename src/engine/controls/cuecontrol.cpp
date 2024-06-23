@@ -404,6 +404,11 @@ void CueControl::connectControls() {
                 this,
                 &CueControl::hotcueClear,
                 Qt::DirectConnection);
+        connect(pControl,
+                &HotcueControl::hotcueSwap,
+                this,
+                &CueControl::hotcueSwap,
+                Qt::DirectConnection);
     }
 }
 
@@ -1290,6 +1295,26 @@ void CueControl::hotcueClear(HotcueControl* pControl, double value) {
     detachCue(pControl);
     m_pLoadedTrack->removeCue(pCue);
     setHotcueFocusIndex(Cue::kNoHotCue);
+}
+
+void CueControl::hotcueSwap(HotcueControl* pControl, double v) {
+    // 1-based GUI/human index to 0-based internal index
+    int newCuenum = static_cast<int>(v) - 1;
+    if (newCuenum < mixxx::kFirstHotCueIndex || newCuenum >= m_iNumHotCues) {
+        return;
+    }
+
+    auto lock = lockMutex(&m_trackMutex);
+    if (!m_pLoadedTrack) {
+        return;
+    }
+
+    CuePointer pCue = pControl->getCue();
+    if (!pCue) {
+        return;
+    }
+
+    m_pLoadedTrack->swapHotcues(pCue->getHotCue(), newCuenum);
 }
 
 void CueControl::hotcuePositionChanged(
@@ -2699,6 +2724,13 @@ HotcueControl::HotcueControl(const QString& group, int hotcueIndex)
             &HotcueControl::slotHotcueClear,
             Qt::DirectConnection);
 
+    m_hotcueSwap = std::make_unique<ControlPushButton>(keyForControl(QStringLiteral("swap")));
+    connect(m_hotcueSwap.get(),
+            &ControlObject::valueChanged,
+            this,
+            &HotcueControl::slotHotcueSwap,
+            Qt::DirectConnection);
+
     m_previewingType.setValue(mixxx::CueType::Invalid);
     m_previewingPosition.setValue(mixxx::audio::kInvalidFramePos);
 }
@@ -2759,6 +2791,10 @@ void HotcueControl::slotHotcueActivatePreview(double v) {
 
 void HotcueControl::slotHotcueClear(double v) {
     emit hotcueClear(this, v);
+}
+
+void HotcueControl::slotHotcueSwap(double v) {
+    emit hotcueSwap(this, v);
 }
 
 void HotcueControl::slotHotcuePositionChanged(double newPosition) {
