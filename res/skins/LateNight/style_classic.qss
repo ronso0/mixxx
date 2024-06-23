@@ -2071,8 +2071,7 @@ QPushButton#pushButtonRepeatPlaylist:!checked {
   }
 
 /* widgets in cue popup menu */
-#CueDeleteButton {  /*
-  padding: 3px 6px; */
+#CueDeleteButton {
   qproperty-icon: url(skins:LateNight/classic/buttons/btn__delete.svg);
   /* color buttons are 42x24 px.
   To get the final size for the Delete button consider border width.
@@ -2093,8 +2092,7 @@ QPushButton#pushButtonRepeatPlaylist:!checked {
   background-color: #dc4141 !important;
 }
 
-#CueSavedLoopButton {  /*
-  padding: 3px 6px; */
+#CueSavedLoopButton {
   qproperty-icon: url(skins:LateNight/classic/buttons/btn__loop.svg);
   /* color buttons are 42x24 px.
   To get the final size for the Delete button consider border width.
@@ -2121,8 +2119,7 @@ QPushButton#pushButtonRepeatPlaylist:!checked {
   image: url(skins:LateNight/classic/buttons/btn__loop_active.svg);
 }
 
-#CueSavedJumpButton {  /*
-  padding: 3px 6px; */
+#CueSavedJumpButton {
   qproperty-icon: url(skins:LateNight/classic/buttons/btn__beatjump_right.svg);
   /* color buttons are 42x24 px.
   To get the final size for the Delete button consider border width.
@@ -2137,8 +2134,7 @@ QPushButton#pushButtonRepeatPlaylist:!checked {
   padding: 0px; */
 }
 
-#CueStandardButton {  /*
-  padding: 3px 6px; */
+#CueStandardButton {
   qproperty-icon: url(skins:LateNight/classic/buttons/btn__beats_hotcues_later.svg);
   /* color buttons are 42x24 px.
   To get the final size for the Delete button consider border width.
