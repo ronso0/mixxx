@@ -2,7 +2,7 @@
 
   <WidgetGroup>
     <Layout>vertical</Layout>
-    <MaximumSize>,230</MaximumSize>
+    <!-- <MaximumSize>,230</MaximumSize> -->
     <Children>
 
       <Template src="skins:LateNight/decks/deck_singletons.xml">

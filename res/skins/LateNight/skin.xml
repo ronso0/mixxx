@@ -457,7 +457,7 @@
 
                         <WidgetGroup>
                           <Layout>horizontal</Layout>
-                          <SizePolicy>me,max</SizePolicy>
+                          <SizePolicy>me,me</SizePolicy>
                           <Children>
                             <Template src="skins:LateNight/decks/decks_left.xml"/>
                             <Template src="skins:LateNight/mixer.xml"/>
