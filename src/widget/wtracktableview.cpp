@@ -1101,10 +1101,10 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             moveSelectedTracks(event);
             return;
         }
-        if (event->key() == Qt::Key_Escape) {
-            clearSelection();
-            setCurrentIndex(QModelIndex());
-        }
+        // if (event->key() == Qt::Key_Escape) {
+        //    clearSelection();
+        //    setCurrentIndex(QModelIndex());
+        // }
     }
     QTableView::keyPressEvent(event);
 }
