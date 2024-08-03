@@ -424,14 +424,15 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
                 return pModel->index(pModel->rowCount() - 1, column);
             }
         } break;
-        case QAbstractItemView::MoveLeft:
-        case QAbstractItemView::MoveRight:
-            if (modifiers & Qt::ControlModifier) {
-                // Ignore, so it can be handled by WLibrary::keyEvent
-                // to navigate to the sidebar
-                return currentIndex();
-            }
-            break;
+        // ronso0: disabled to allow moving the current index with Ctrl + Left/Right
+        // case QAbstractItemView::MoveLeft:
+        // case QAbstractItemView::MoveRight:
+        //     if (modifiers & Qt::ControlModifier) {
+        //         // Ignore, so it can be handled by WLibrary::keyPressEvent
+        //         // to navigate to the sidebar
+        //         return currentIndex();
+        //     }
+        //     break;
         default:
             break;
         }

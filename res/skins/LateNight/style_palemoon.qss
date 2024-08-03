@@ -3101,26 +3101,15 @@ WTrackTableView::item:selected,
   /* This is not required for painting the background,
      but it is for applying the focus outline. */
   background-color: #2c454f;
-    /* For outline to be applied, background-color must be set, too ...
-       Use a value between #0f0f0f and #0a0a0a (alternate-background-color) */
-    background-color: #0c0c0c;
-    outline: 1px solid #fff;
-    color: #fff;
 }
-
 WTrackTableView::item:!selected:focus,
 WTrackTableView::indicator:!selected:focus {
-  /* This magically enables the white outline */
-  /* BUT: the indicator of the Played & BPM checkbox gets its own border */
-  border: 0px solid red;
+  /* For outline to be applied, background-color must be set, too ...
+     Use a value between #0f0f0f and #0a0a0a (alternate-background-color) */
+  background-color: #0c0c0c;
+  outline: 1px solid #fff;
+  color: #fff;
 }
-WTrackTableView::indicator:!selected:focus {
-  /* has no effect */
-  outline: 2px solid red;
-  /* This makes the Played checkbox grow when it is selected*/
-  /* border: 1px solid red; */
-}
-
 WLibrarySidebar::item:selected:focus {
   outline: none;
 }
