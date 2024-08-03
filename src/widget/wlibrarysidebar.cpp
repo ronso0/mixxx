@@ -312,14 +312,16 @@ void WLibrarySidebar::keyPressEvent(QKeyEvent* pEvent) {
         emit pressed(selIndex);
         return;
     }
-    case Qt::Key_Right: {
-        if (pEvent->modifiers() & Qt::ControlModifier) {
-            emit setLibraryFocus(FocusWidget::TracksTable);
-        } else {
-            QTreeView::keyPressEvent(pEvent);
-        }
-        return;
-    }
+    // ronso0: disabled moving focus between sidebar and tracks with Ctrl + Left/Right
+    // in WLibrary to restore moving the current index instead.
+    // case Qt::Key_Right: {
+    //     if (pEvent->modifiers() & Qt::ControlModifier) {
+    //         emit setLibraryFocus(FocusWidget::TracksTable);
+    //     } else {
+    //         QTreeView::keyPressEvent(pEvent);
+    //     }
+    //     return;
+    // }
     case Qt::Key_Left: {
         // If an expanded item is selected let QTreeView collapse it
         QModelIndex selIndex = selectedIndex();
