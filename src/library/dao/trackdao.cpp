@@ -2011,9 +2011,10 @@ bool TrackDAO::verifyRemainingTracks(
     // check if it exists.
     // TODO(kain88) check if all others are marked with 0 again
     query.setForwardOnly(true);
-    query.prepare("SELECT location "
-                  "FROM track_locations "
-                  "WHERE needs_verification = 1");
+    query.prepare(
+            "SELECT location, fs_deleted "
+            "FROM track_locations "
+            "WHERE needs_verification = 1");
     if (!query.exec()) {
         LOG_FAILED_QUERY(query);
         DEBUG_ASSERT(!"Failed query");
@@ -2024,11 +2025,13 @@ bool TrackDAO::verifyRemainingTracks(
                    "SET fs_deleted=:fs_deleted, needs_verification=0 "
                    "WHERE location=:location");
 
+    const int fsDeletedColumn = query.record().indexOf("fs_deleted");
     const int locationColumn = query.record().indexOf("location");
     QString trackLocation;
     while (query.next()) {
         trackLocation = query.value(locationColumn).toString();
         int fs_deleted = 0;
+        int old_fs_deleded = query.value(fsDeletedColumn).toInt();
         for (const auto& rootDir : libraryRootDirs) {
             if (trackLocation.startsWith(rootDir.location())) {
                 // Track is under the library root,
@@ -2051,6 +2054,15 @@ bool TrackDAO::verifyRemainingTracks(
             LOG_FAILED_QUERY(query2);
         }
         emit progressVerifyTracksOutside(trackLocation);
+        if (fs_deleted != old_fs_deleded) {
+            // Update track in case it was cached, otherwise it may still be painted
+            // with 'track missing' color after being re-discovered.
+            TrackId id = getTrackIdByLocation(trackLocation);
+            if (id.isValid()) {
+                QSet<TrackId> ids{id};
+                emit tracksChanged(ids);
+            }
+        }
         if (*pCancel) {
             return false;
         }
