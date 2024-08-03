@@ -1,6 +1,7 @@
 #include "preferences/dialog/dlgpreferencepage.h"
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QGroupBox>
@@ -53,6 +54,14 @@ void DlgPreferencePage::setScrollSafeGuardForAllInputWidgets(QObject* obj) {
             setScrollSafeGuard(slider);
             continue;
         }
+        // workaround for Qt bug present in 6.2.3 (fixed in 6.5)
+        // Required to avoid scroll events getting swallowed/ignored when cursor
+        // is above an inactive (disabled) checkbox.
+        QCheckBox* cbox = qobject_cast<QCheckBox*>(ch);
+        if (cbox) {
+            setScrollSafeGuard(cbox);
+            continue;
+        }
     }
 }
 
@@ -65,16 +74,9 @@ bool DlgPreferencePage::eventFilter(QObject* obj, QEvent* e) {
     if (e->type() == QEvent::Wheel) {
         // Reject scrolling only if widget is unfocused.
         // Object to widget cast is needed to check the focus state.
-        QComboBox* combo = qobject_cast<QComboBox*>(obj);
-        QSpinBox* spin = qobject_cast<QSpinBox*>(obj);
-        QDoubleSpinBox* spinDbl = qobject_cast<QDoubleSpinBox*>(obj);
-        QSlider* slider = qobject_cast<QSlider*>(obj);
-        if ((combo && !combo->hasFocus()) ||
-                (spin && !spin->hasFocus()) ||
-                (spinDbl && !spinDbl->hasFocus()) ||
-                (slider && !slider->hasFocus())) {
+        QWidget* wid = qobject_cast<QWidget*>(obj);
+        if (wid && !wid->hasFocus()) {
             QApplication::sendEvent(qobject_cast<QObject*>(layout()), e);
-            // QApplication::sendEvent(layout()->parent(), e); ??
             return true;
         }
     }
