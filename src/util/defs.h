@@ -26,6 +26,7 @@ constexpr int kMaxNumberOfDecks = 4;
 // Keyboard shortcut components for showing the Track Properties dialog and
 // for displaying the shortcut in the track context menu
 constexpr Qt::Modifier kPropertiesShortcutModifier = Qt::CTRL;
+constexpr Qt::Modifier kTrackMenuModifier = Qt::SHIFT;
 constexpr Qt::Key kPropertiesShortcutKey = Qt::Key_Return;
 
 // Keyboard shortcut for hiding track and removing from Crate/Playlist/AutoDJ queue.
