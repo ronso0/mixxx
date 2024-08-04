@@ -1237,6 +1237,15 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             const QString columnName = columnNameOfIndex(currentIndex());
             m_pTrackMenu->setTrackPropertyName(columnName);
             m_pTrackMenu->slotShowDlgTrackInfo();
+        } else if (event->modifiers() & kTrackMenuModifier) {
+            const QPoint evPos = QPoint(10, 10);
+            // might as well use QCursor::pos(), but keeping the menu within the
+            // tracks table is clearer. Note that with QCursor::pos() we'd need
+            // to consider multiple screens / virtual screens, too.
+            QContextMenuEvent* cme = // mapToGlobal() is required!
+                    new QContextMenuEvent(QContextMenuEvent::Keyboard, evPos, mapToGlobal(evPos));
+            contextMenuEvent(cme);
+            return;
         }
         return;
     }
