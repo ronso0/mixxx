@@ -1069,6 +1069,19 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         }
         return;
     }
+    case Qt::Key_F10: {
+        if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+            const QPoint evPos = QPoint(10, 10);
+            // might as well use QCursor::pos(), but keeping the menu within the
+            // tracks table is clearer. Note that with that we'd need to consider
+            // multiple screens / virtual screens, too.
+            QContextMenuEvent* cme = // mapToGlobal() is required!
+                    new QContextMenuEvent(QContextMenuEvent::Keyboard, evPos, mapToGlobal(evPos));
+            contextMenuEvent(cme);
+            return;
+        }
+        break;
+    }
     default:
         break;
     }
