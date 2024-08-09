@@ -95,6 +95,9 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
     void slotUpdateSpeedAutoReset(bool);
     void slotUpdatePitchAutoReset(bool);
 
+  private slots:
+    void slotLoopCueActivationModeSelected(QAbstractButton* pressedButton);
+
   private:
     // Because the CueDefault list is out of order, we have to set the combo
     // box using the user data, not the index.  Returns the index of the item
@@ -113,7 +116,8 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
     const parented_ptr<ControlProxy> m_pNumDecks;
     const parented_ptr<ControlProxy> m_pNumSamplers;
 
-    QList<ControlProxy*> m_cueControls;
+    QList<ControlProxy*> m_cueModeControls;
+    QList<ControlProxy*> m_loopCueActivationModeControls;
     QList<ControlProxy*> m_rateControls;
     QList<ControlProxy*> m_rateDirectionControls;
     QList<ControlProxy*> m_rateRangeControls;
@@ -126,6 +130,7 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
     TrackTime::DisplayMode m_timeDisplayMode;
 
     CueMode m_cueMode;
+    LoopCueActivationMode m_loopCueActivationMode;
 
     bool m_bSetIntroStartAtMainCue;
     bool m_bCloneDeckOnLoadDoubleTap;

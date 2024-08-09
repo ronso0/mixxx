@@ -982,12 +982,12 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/library/sidebarmodel.cpp
   src/library/starrating.cpp
   src/library/tabledelegates/bpmdelegate.cpp
+  src/library/tabledelegates/checkboxdelegate.cpp
   src/library/tabledelegates/colordelegate.cpp
   src/library/tabledelegates/coverartdelegate.cpp
   src/library/tabledelegates/keydelegate.cpp
   src/library/tabledelegates/locationdelegate.cpp
   src/library/tabledelegates/multilineeditdelegate.cpp
-  src/library/tabledelegates/playcountdelegate.cpp
   src/library/tabledelegates/previewbuttondelegate.cpp
   src/library/tabledelegates/stardelegate.cpp
   src/library/tabledelegates/stareditor.cpp
@@ -1155,6 +1155,8 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/util/color/predefinedcolorpalettes.cpp
   src/util/colorcomponents.cpp
   src/util/console.cpp
+  src/util/cpupinning.cpp
+  src/util/safelywritablefile.cpp
   src/util/db/dbconnection.cpp
   src/util/db/dbconnectionpool.cpp
   src/util/db/dbconnectionpooled.cpp
@@ -1845,6 +1847,14 @@ install(
     "${MIXXX_INSTALL_BINDIR}"
   BUNDLE DESTINATION
     .
+)
+
+install(
+  FILES
+    tools/mixxx-isolate.py
+  DESTINATION
+    "${MIXXX_INSTALL_BINDIR}"
+  RENAME "mixxx-isolate"
 )
 
 # Skins

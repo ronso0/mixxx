@@ -85,10 +85,10 @@
                 <SetVariable name="FxParameter">8</SetVariable>
               </Template>
             </Children>
-            <Connection>
+            <!-- <Connection>
               <ConfigKey persist="true">[<Variable name="FxRack_FxUnit"/>],show_parameters</ConfigKey>
               <BindProperty>visible</BindProperty>
-            </Connection>
+            </Connection> -->
           </WidgetGroup><!-- FxSlotParameters -->
 
         </Children>

@@ -2,6 +2,7 @@
 
 #include <QString>
 
+#include "control/pollingcontrolproxy.h"
 #include "util/parented_ptr.h"
 #include "widget/wcuemenupopup.h"
 #include "widget/wpushbutton.h"
@@ -42,6 +43,7 @@ class WHotcueButton : public WPushButton {
     bool m_hoverCueColor;
     parented_ptr<ControlProxy> m_pCoColor;
     parented_ptr<ControlProxy> m_pCoType;
+    std::unique_ptr<PollingControlProxy> m_pCoActivateSecondary;
     parented_ptr<WCueMenuPopup> m_pCueMenuPopup;
     int m_cueColorDimThreshold;
     bool m_bCueColorDimmed;
