@@ -17,7 +17,7 @@
             <Children>
               <WidgetGroup>
                 <Layout>horizontal</Layout>
-                <SizePolicy>i,me</SizePolicy>
+                <SizePolicy>me,me</SizePolicy>
                 <Children>
                   <TrackProperty>
                     <ObjectName>TitleText</ObjectName>
@@ -38,7 +38,7 @@
               <WidgetGroup>
                 <ObjectName>AlignRight</ObjectName>
                 <Layout>horizontal</Layout>
-                <SizePolicy>p,min</SizePolicy>
+                <SizePolicy>max,min</SizePolicy>
                 <MinimumSize>80,</MinimumSize>
                 <Children>
                   <NumberPos>
