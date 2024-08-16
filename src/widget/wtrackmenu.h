@@ -114,6 +114,8 @@ class WTrackMenu : public QMenu {
     void slotRemoveFromDisk();
     const QString getDeckGroup() const;
 
+    void keyPressEvent(QKeyEvent* pEvent) override;
+
   signals:
 #ifdef __STEM__
     void loadTrackToPlayer(TrackPointer pTrack,
@@ -135,7 +137,7 @@ class WTrackMenu : public QMenu {
     void slotSelectInLibrary();
 
     // Track rating
-    void slotSetRating(int rating);
+    void slotSetRating(int rating, bool close = true);
 
     // Row color
     void slotColorPicked(const mixxx::RgbColor::optional_t& color);
