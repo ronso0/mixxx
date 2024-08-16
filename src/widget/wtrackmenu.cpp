@@ -364,10 +364,14 @@ void WTrackMenu::createActions() {
     if (featureIsEnabled(Feature::Metadata)) {
         m_pStarRatingAction = make_parented<WStarRatingAction>(this);
         m_pStarRatingAction->setObjectName("RatingAction");
+        // This is for when the rating is set with mouse click.
+        // See keypressEvent() for changes via keyboard.
         connect(m_pStarRatingAction,
                 &WStarRatingAction::ratingSet,
                 this,
-                &WTrackMenu::slotSetRating);
+                [this](int rating) {
+                    slotSetRating(rating);
+                });
     }
 
     if (featureIsEnabled(Feature::Properties)) {
@@ -1269,6 +1273,24 @@ void WTrackMenu::loadTrack(
     updateMenus();
 }
 
+void WTrackMenu::keyPressEvent(QKeyEvent* pEvent) {
+    if (activeAction() == qobject_cast<QAction*>(m_pStarRatingAction)) {
+        // used to suppress triggered() signal to keep the menu open.
+        // Unfortunately this also blocks ratingSet(rating), so we need to
+        // call slotSetRating().
+        m_pStarRatingAction->blockSignals(true);
+        if (pEvent->key() == Qt::Key_Left || pEvent->key() == Qt::Key_PageUp) {
+            m_pStarRatingAction->decRating();
+            slotSetRating(m_pStarRatingAction->getRating(), false);
+        } else if (pEvent->key() == Qt::Key_Right || pEvent->key() == Qt::Key_PageDown) {
+            m_pStarRatingAction->incRating();
+            slotSetRating(m_pStarRatingAction->getRating(), false);
+        }
+        m_pStarRatingAction->blockSignals(false);
+    }
+    QMenu::keyPressEvent(pEvent);
+}
+
 void WTrackMenu::loadTrackModelIndices(
         const QModelIndexList& trackIndexList) {
     // This asserts that this function is only accessible when a track model is set,
@@ -1928,7 +1950,7 @@ class SetRatingTrackPointerOperation : public mixxx::TrackPointerOperation {
 
 } // anonymous namespace
 
-void WTrackMenu::slotSetRating(int rating) {
+void WTrackMenu::slotSetRating(int rating, bool close) {
     if (!mixxx::TrackRecord::isValidRating(rating)) {
         return;
     }
@@ -1941,7 +1963,9 @@ void WTrackMenu::slotSetRating(int rating) {
             progressLabelText,
             &trackOperator);
 
-    hide();
+    if (close) {
+        hide();
+    }
 }
 
 namespace {
