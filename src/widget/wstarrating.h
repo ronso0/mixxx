@@ -14,6 +14,16 @@ class WStarRating : public WWidget {
     virtual void setup(const QDomNode& node, const SkinContext& context);
     QSize sizeHint() const override;
 
+    int getRating() {
+        return m_starCount;
+    }
+    void incRating() {
+        slotSetRating(m_starCount + 1);
+    }
+    void decRating() {
+        slotSetRating(m_starCount - 1);
+    }
+
   public slots:
     void slotSetRating(int starCount);
 
