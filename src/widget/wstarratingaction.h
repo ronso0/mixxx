@@ -15,6 +15,10 @@ class WStarRatingAction : public QWidgetAction {
 
     QSize sizeHint();
 
+    int getRating();
+    void incRating();
+    void decRating();
+
   signals:
     void ratingSet(const int rating);
 
