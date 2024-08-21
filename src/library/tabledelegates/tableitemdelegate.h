@@ -1,10 +1,8 @@
 #pragma once
 
-#include <QStyledItemDelegate>
+#include "library/tabledelegates/defaultdelegate.h"
 
-class QTableView;
-
-class TableItemDelegate : public QStyledItemDelegate {
+class TableItemDelegate : public DefaultDelegate {
     Q_OBJECT
   public:
     explicit TableItemDelegate(
@@ -37,5 +35,4 @@ class TableItemDelegate : public QStyledItemDelegate {
     int columnWidth(const QModelIndex &index) const;
 
     QColor m_focusBorderColor;
-    QTableView* m_pTableView;
 };
