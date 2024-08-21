@@ -2750,7 +2750,12 @@ WLibrarySidebar::item:selected,
 WTrackTableView::item:selected,
 #LibraryBPMButton::item:selected,
 #LibraryPlayedCheckbox::item:selected {
-  color: #fff;
+  /* disabled since it interferes with selection-color
+     which we use in DefaultDelegate and TableItemDelegate to
+     blend the highlight color with the played/missing color.
+   color: #fff;*/
+  /* This is not required for painting the background,
+     but it is for applying the focus outline. */
   background-color: #2c454f;
   }
   /* Highlight currentIndex which can be moved with Ctrl + arrow keys */
