@@ -211,7 +211,7 @@ LegacyMidiControllerMappingFileHandler::load(const QDomElement& root,
         output = output.nextSiblingElement("output");
     }
 
-    qDebug() << "MidiMappingFileHandler: Output mapping parsing complete.";
+    qDebug() << "LegacyMidiControllerMappingFileHandler: Output mapping parsing complete.";
 
     return pMapping;
 }
