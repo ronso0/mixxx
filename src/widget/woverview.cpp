@@ -864,7 +864,7 @@ void WOverview::drawMinuteMarkers(QPainter* pPainter) {
     pPainter->setOpacity(1.0);
 
     const double overviewHeight = m_orientation == Qt::Horizontal ? height() : width();
-    const double markerHeight = overviewHeight * 0.08;
+    const double markerHeight = overviewHeight * 0.03;
     const double lowerMarkerYPos = overviewHeight * 0.92;
     double currentMarkerXPos;
     const int iWidth = m_orientation == Qt::Horizontal ? width() : height();
@@ -875,8 +875,9 @@ void WOverview::drawMinuteMarkers(QPainter* pPainter) {
         if (m_orientation == Qt::Horizontal) {
             line.setLine(currentMarkerXPos, 0.0, currentMarkerXPos, markerHeight);
             pPainter->drawLine(line);
-            line.setLine(currentMarkerXPos, lowerMarkerYPos, currentMarkerXPos, overviewHeight);
-            pPainter->drawLine(line);
+            // Only draw upper markers
+            // line.setLine(currentMarkerXPos, lowerMarkerYPos, currentMarkerXPos, overviewHeight);
+            // pPainter->drawLine(line);
         } else {
             // untested, best effort basis
             line.setLine(0.0, currentMarkerXPos, markerHeight, currentMarkerXPos);
