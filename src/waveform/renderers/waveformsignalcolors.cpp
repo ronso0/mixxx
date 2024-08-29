@@ -51,20 +51,20 @@ bool WaveformSignalColors::setup(const QDomNode &node, const SkinContext& contex
     // filtered colors
     m_rgbLowFilteredColor = QColor(context.selectString(node, "SignalRGBLowFilteredColor"));
     if (!m_rgbLowFilteredColor.isValid()) {
-        m_rgbLowFilteredColor = m_rgbLowColor.darker(300);
+        m_rgbLowFilteredColor = m_rgbLowColor.darker(100000);
     }
     m_rgbLowFilteredColor = WSkinColor::getCorrectColor(m_rgbLowFilteredColor).toRgb();
 
     m_rgbMidFilteredColor = QColor(context.selectString(node, "SignalRGBMidFilteredColor"));
     if (!m_rgbMidFilteredColor.isValid()) {
-        m_rgbMidFilteredColor = m_rgbMidColor.darker(300);
+        m_rgbMidFilteredColor = m_rgbMidColor.darker(100000);
         ;
     }
     m_rgbMidFilteredColor = WSkinColor::getCorrectColor(m_rgbMidFilteredColor).toRgb();
 
     m_rgbHighFilteredColor = QColor(context.selectString(node, "SignalRGBHighFilteredColor"));
     if (!m_rgbHighFilteredColor.isValid()) {
-        m_rgbHighFilteredColor = m_rgbHighColor.darker(300);
+        m_rgbHighFilteredColor = m_rgbHighColor.darker(100000);
         ;
     }
     m_rgbHighFilteredColor = WSkinColor::getCorrectColor(m_rgbHighFilteredColor).toRgb();
