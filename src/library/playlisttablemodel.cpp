@@ -263,6 +263,10 @@ void PlaylistTableModel::removeTracks(const QModelIndexList& indices) {
     m_pTrackCollectionManager->internalCollection()->getPlaylistDAO().removeTracksFromPlaylist(
             m_iPlaylistId,
             std::move(trackPositions));
+
+    if (trackPositions.contains(1)) {
+        emit firstTrackChanged();
+    }
 }
 
 void PlaylistTableModel::moveTrack(const QModelIndex& sourceIndex,
@@ -288,6 +292,10 @@ void PlaylistTableModel::moveTrack(const QModelIndex& sourceIndex,
     }
 
     m_pTrackCollectionManager->internalCollection()->getPlaylistDAO().moveTrack(m_iPlaylistId, oldPosition, newPosition);
+
+    if (oldPosition == 1 || newPosition == 1) {
+        emit firstTrackChanged();
+    }
 }
 
 bool PlaylistTableModel::isLocked() {
@@ -373,7 +381,8 @@ TrackModel::Capabilities PlaylistTableModel::getCapabilities() const {
             Capability::ResetPlayed |
             Capability::RemoveFromDisk |
             Capability::Hide |
-            Capability::Analyze;
+            Capability::Analyze |
+            Capability::Properties;
 
     if (m_iPlaylistId !=
             m_pTrackCollectionManager->internalCollection()

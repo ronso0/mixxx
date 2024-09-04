@@ -52,6 +52,7 @@ class TrackModel {
         RemoveCrate = 1u << 15u,
         RemoveFromDisk = 1u << 16u,
         Analyze = 1u << 17u,
+        Properties = 1u << 18u,
     };
     Q_DECLARE_FLAGS(Capabilities, Capability)
 
@@ -235,7 +236,6 @@ class TrackModel {
 
     /// @brief modelKey returns a unique identifier for the model
     /// @param noSearch don't include the current search in the key
-    /// @param baseOnly return only a identifier for the whole subsystem
     virtual QString modelKey(bool noSearch) const = 0;
 
     virtual bool getRequireConfirmationToHideRemoveTracks() {

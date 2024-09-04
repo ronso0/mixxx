@@ -41,6 +41,7 @@
 #include "widget/weffectchainpresetbutton.h"
 #include "widget/weffectchainpresetselector.h"
 #include "widget/weffectknobparametername.h"
+#include "widget/weffectmetaknob.h"
 #include "widget/weffectname.h"
 #include "widget/weffectparameterknob.h"
 #include "widget/weffectparameterknobcomposed.h"
@@ -57,9 +58,7 @@
 #include "widget/wnumberdb.h"
 #include "widget/wnumberpos.h"
 #include "widget/wnumberrate.h"
-#include "widget/woverviewhsv.h"
-#include "widget/woverviewlmh.h"
-#include "widget/woverviewrgb.h"
+#include "widget/woverview.h"
 #include "widget/wpixmapstore.h"
 #include "widget/wpushbutton.h"
 #include "widget/wraterange.h"
@@ -118,7 +117,7 @@ ControlObject* LegacySkinParser::controlFromConfigKey(
     // Since the usual behavior here is to create a skin-defined push
     // button, actually make it a push button and set it to toggle.
     ControlPushButton* controlButton = new ControlPushButton(key, bPersist);
-    controlButton->setButtonMode(ControlPushButton::TOGGLE);
+    controlButton->setButtonMode(mixxx::control::ButtonMode::Toggle);
 
     if (pCreated) {
         *pCreated = true;
@@ -318,7 +317,7 @@ Qt::MouseButton LegacySkinParser::parseButtonState(const QDomNode& node,
 }
 
 QWidget* LegacySkinParser::parseSkin(const QString& skinPath, QWidget* pParent) {
-    ScopedTimer timer(u"SkinLoader::parseSkin");
+    ScopedTimer timer(QStringLiteral("SkinLoader::parseSkin"));
     qDebug() << "LegacySkinParser loading skin:" << skinPath;
 
     // Remove all widget pointers we previously registered for shortcut tooltips.
@@ -594,6 +593,8 @@ QList<QWidget*> LegacySkinParser::parseNode(const QDomElement& node) {
         result = wrapWidget(parseEffectChainPresetSelector(node));
     } else if (nodeName == "EffectName") {
         result = wrapWidget(parseEffectName(node));
+    } else if (nodeName == "EffectMetaKnob") {
+        result = wrapWidget(parseEffectMetaKnob(node));
     } else if (nodeName == "EffectSelector") {
         result = wrapWidget(parseEffectSelector(node));
     } else if (nodeName == "EffectParameterKnob") {
@@ -906,11 +907,13 @@ QWidget* LegacySkinParser::parseBackground(const QDomElement& node,
     QLabel* bg = new QLabel(pInnerWidget);
 
     QString filename = m_pContext->selectString(node, "Path");
-    QPixmap* background = WPixmapStore::getPixmapNoCache(
-        m_pContext->makeSkinPath(filename), m_pContext->getScaleFactor());
+    auto background = WPixmapStore::getPixmapNoCache(
+            m_pContext->makeSkinPath(filename), m_pContext->getScaleFactor());
 
     bg->move(0, 0);
     if (background != nullptr && !background->isNull()) {
+        // setPixmap makes a copy of the background
+        // which can be disposed of afterwards.
         bg->setPixmap(*background);
     }
 
@@ -935,10 +938,6 @@ QWidget* LegacySkinParser::parseBackground(const QDomElement& node,
     pOuterWidget->setBackgroundRole(QPalette::Window);
     pOuterWidget->setPalette(palette);
     pOuterWidget->setAutoFillBackground(true);
-
-    // WPixmapStore::getPixmapNoCache() allocated background and gave us
-    // ownership. QLabel::setPixmap makes a copy, so we have to delete this.
-    delete background;
 
     return bg;
 }
@@ -989,17 +988,8 @@ QWidget* LegacySkinParser::parseOverview(const QDomElement& node) {
         return nullptr;
     }
 
-    WOverview* overviewWidget = nullptr;
-
-    // "RGB" = "2", "HSV" = "1" or "Filtered" = "0" (LMH) waveform overview type
-    int type = m_pConfig->getValue(ConfigKey("[Waveform]","WaveformOverviewType"), 2);
-    if (type == 0) {
-        overviewWidget = new WOverviewLMH(group, m_pPlayerManager, m_pConfig, m_pParent);
-    } else if (type == 1) {
-        overviewWidget = new WOverviewHSV(group, m_pPlayerManager, m_pConfig, m_pParent);
-    } else {
-        overviewWidget = new WOverviewRGB(group, m_pPlayerManager, m_pConfig, m_pParent);
-    }
+    WOverview* overviewWidget =
+            new WOverview(group, m_pPlayerManager, m_pConfig, m_pParent);
 
     connect(overviewWidget,
             &WOverview::trackDropped,
@@ -1582,6 +1572,16 @@ QWidget* LegacySkinParser::parseLibrary(const QDomElement& node) {
                     BaseTrackTableModel::kBpmColumnPrecisionDefault);
     BaseTrackTableModel::setBpmColumnPrecision(bpmColumnPrecision);
 
+    const auto keyColorsEnabled =
+            m_pConfig->getValue(
+                    ConfigKey("[Config]", "KeyColorsEnabled"),
+                    BaseTrackTableModel::kKeyColorsEnabledDefault);
+    BaseTrackTableModel::setKeyColorsEnabled(keyColorsEnabled);
+
+    ColorPaletteSettings colorPaletteSettings(m_pConfig);
+    ColorPalette colorPalette = colorPaletteSettings.getTrackColorPalette();
+    BaseTrackTableModel::setKeyColorPalette(colorPaletteSettings.getConfigKeyColorPalette());
+
     const auto applyPlayedTrackColor =
             m_pConfig->getValue(
                     mixxx::library::prefs::kApplyPlayedTrackColorConfigKey,
@@ -1744,6 +1744,7 @@ QDomElement LegacySkinParser::loadTemplate(const QString& path) {
 
     if (!templateFile.open(QIODevice::ReadOnly)) {
         qWarning() << "Could not open template file:" << absolutePath;
+        return QDomElement();
     }
 
     QDomDocument tmpl("template");
@@ -1908,6 +1909,18 @@ QWidget* LegacySkinParser::parseEffectSelector(const QDomElement& node) {
         m_pControllerManager->getControllerLearningEventFilter());
     pSelector->Init();
     return pSelector;
+}
+
+QWidget* LegacySkinParser::parseEffectMetaKnob(const QDomElement& node) {
+    WEffectMetaKnob* pMetaKnob =
+            new WEffectMetaKnob(m_pParent, m_pEffectsManager);
+    commonWidgetSetup(node, pMetaKnob);
+    pMetaKnob->setup(node, *m_pContext);
+    pMetaKnob->installEventFilter(m_pKeyboard);
+    pMetaKnob->installEventFilter(
+            m_pControllerManager->getControllerLearningEventFilter());
+    pMetaKnob->Init();
+    return pMetaKnob;
 }
 
 QWidget* LegacySkinParser::parseEffectParameterKnob(const QDomElement& node) {

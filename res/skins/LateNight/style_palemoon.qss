@@ -1154,6 +1154,16 @@ WEffectSelector:!editable:on {
 #SkinSettingsMixerToggle {
   background-color: rgba(15, 15, 15, 255);
 }
+
+/* Cover for the beatgrid edit buttons in the waveform container
+   and the CurPos button in the deck settings near the overview.
+   Hue has to match the bg color of the buttons want to we cover */
+#BeatEditCover {
+  background-color: rgba(21, 21, 23, 180);
+}
+#BeatEditCoverDecks {
+  background-color: rgba(25, 25, 26, 180);
+}
 /*********************************************************************
 ******************* Container layouts, margins etc. *****************/
 
@@ -1465,7 +1475,8 @@ WPushButton#FxAssignButton1[displayValue="0"],
 WEffectSelector:!editable,
 #fadeModeCombobox:!editable,
 #LibraryFeatureControls QPushButton:enabled,
-#CueDeleteButton {
+#CueDeleteButton,
+#CueSavedLoopButton {
   outline: none;
   border-width: 2px;
   border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library.svg) 2 2 2 2;
@@ -1494,26 +1505,11 @@ WEffectSelector:!editable,
   QPushButton#pushButtonRecording:checked,
   WEffectSelector:!editable:on,
   #fadeModeCombobox:!editable:on,
-  #CueDeleteButton[pressed="true"] {
+  #CueDeleteButton[pressed="true"],
+  #CueSavedLoopButton[pressed="true"],
+  #CueSavedLoopButton:checked {
     border-width: 2px;
     border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library_active.svg) 2 2 2 2;
-  }
-
-  WTrackTableViewHeader {
-    border-bottom-right-radius: 1px solid #000;
-    outline: none;
-  }
-  WTrackTableViewHeader::section {
-    outline: none;
-    border-width: 1px 2px 1px 1px;
-    border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library_header.svg) 1 2 1 1;
-  }
-  WTrackTableViewHeader::up-arrow,
-  WTrackTableViewHeader::down-arrow {
-    outline: none;
-    /* ToDo: restore image
-    border-width: 1px 2px 1px 0px;
-    border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library_header_sort.svg) 1 2 1 1; */
   }
 
   #LibraryFeatureControls QPushButton:!enabled {
@@ -1602,6 +1598,7 @@ WBeatSpinBox::down-button {
   }
   /* dim buttons in top-level containers */
   #LoopControls WPushButton[displayValue="0"],
+  WPushButton#LoopAnchor[displayValue="1"],
   #BeatjumpControls WPushButton[displayValue="0"],
   WPushButton#SyncDeck[value="0"],
   WPushButton#SyncLeader[value="0"],
@@ -1642,6 +1639,7 @@ WBeatSpinBox::down-button {
   /* bright buttons in dimmed containers
   #BeatgridControls WPushButton[displayValue="0"], */
   #CueDeleteButton,
+  #CueSavedLoopButton,
   #SplitCue[displayValue="0"],
   #PlayPreview[displayValue="0"],
   /* library controls */
@@ -1692,10 +1690,13 @@ QPushButton#pushButtonAnalyze:checked {
 #SyncLeader[value="1"],
 WPushButton#LoopIn[pressed="true"],
 WPushButton#LoopOut[pressed="true"],
+WPushButton#LoopAnchor[pressed="true"],
 #BeatjumpControls WPushButton[value="1"],
 #RateControls WPushButton[value="1"],
 #BeatgridControls WPushButton[pressed="true"]/*,
-#CueDeleteButton[pressed="true"]*/ {
+#CueDeleteButton[pressed="true"],
+#CueSavedLoopButton[pressed="true"],
+#CueSavedLoopButton:checked*/ {
   background-color: #7d350d;
   }
 
@@ -2106,6 +2107,12 @@ WPushButton#PlayDeck[value="0"] {
   #LoopOut[pressed="true"] {
     image: url(skins:LateNight/palemoon/buttons/btn__loop_out_active.svg) no-repeat center center;
   }
+#LoopAnchor[displayValue="0"] {
+  image: url(skins:LateNight/palemoon/buttons/btn__loop_anchor_start.svg) no-repeat center center;
+  }
+  #LoopAnchor[displayValue="1"] {
+    image: url(skins:LateNight/palemoon/buttons/btn__loop_anchor_end.svg) no-repeat center center;
+  }
 
 #JumpForward {
   image: url(skins:LateNight/palemoon/buttons/btn__beatjump_right.svg) no-repeat center center;
@@ -2352,6 +2359,13 @@ WPushButton#PlayDeck[value="0"] {
     image: url(skins:LateNight/palemoon/buttons/btn__beatgrid_controls_collapse.svg) no-repeat center center;
   }
 
+  #BpmLockToggle[value="1"] {
+    image: url(skins:LateNight/palemoon/buttons/btn__bpm_locked.svg);
+    }
+  #BpmLockToggle[value="0"] {
+    image: url(skins:LateNight/palemoon/buttons/btn__bpm_unlocked.svg);
+    }
+
   #BeatCurposLarge[displayValue="0"] {
     image: url(skins:LateNight/palemoon/buttons/btn__beat_curpos_large.svg) no-repeat center center;
     }
@@ -2504,20 +2518,32 @@ QPushButton#pushButtonRepeatPlaylist:!checked {
 /* AutoDJ button icons */
 
 /* widgets in cue popup menu */
-WCueMenuPopup #CueDeleteButton {
-  qproperty-icon: url(skins:LateNight/palemoon/buttons/btn__delete.svg);
+WCueMenuPopup #CueDeleteButton,
+WCueMenuPopup #CueSavedLoopButton {
   width: 24px;
   height: 42px;
-  /* make the icon slightly larger than default 16px */
-  qproperty-iconSize: 20px;
 }
+WCueMenuPopup #CueDeleteButton {
+  /* Note: we can't use qproperty-icon here because it's evauated only once
+     and therefore won't style the checked state */
+  image: url(skins:LateNight/palemoon/buttons/btn__delete.svg);
+}
+  WCueMenuPopup #CueDeleteButton:pressed {
+    background-color: #b24c12;
+    outline: none;
+    image: url(skins:LateNight/palemoon/buttons/btn__delete_active.svg);
+  }
 
-WCueMenuPopup #CueDeleteButton:pressed {
+WCueMenuPopup #CueSavedLoopButton {
+  image: url(skins:LateNight/palemoon/buttons/btn__loop.svg);
+}
+WCueMenuPopup #CueSavedLoopButton:pressed,
+WCueMenuPopup #CueSavedLoopButton:checked {
   background-color: #b24c12;
   outline: none;
-  /* not applied: */
-  qproperty-icon: url(skins:LateNight/palemoon/buttons/btn__delete_active.svg);
+  image: url(skins:LateNight/palemoon/buttons/btn__loop_active.svg);
 }
+
 WCueMenuPopup #CueLabelEdit {
   /*border: 1px solid #c2b3a5;*/
   border-radius: 0px;
@@ -2670,7 +2696,7 @@ WTrackPropertyEditor {
       }
 
 #LibraryPlayedCheckbox::indicator:unchecked {
-  image: url(skin:../LateNight/palemoon/buttons/btn__lib_checkbox.svg);
+  image: url(skins:LateNight/palemoon/buttons/btn__lib_checkbox.svg);
 }
 
 /* Button in library "Preview" column */
@@ -2691,16 +2717,40 @@ WTrackPropertyEditor {
 /*********** table header styles *********************************/
 
 WTrackTableViewHeader {
+  border-bottom-right-radius: 1px solid #000;
+  outline: none;
+}
+
+WTrackTableViewHeader::section {
+/* Setting an image causes QHeaderView to reserve space for the sort indicator,
+   i.e. column titles are truncated, even where no indicators are shown.
+   The arrow width and padding are set in style.qss (0.8em + .15em),
+   so let's set a negative padding-right to shift the text. This will push the
+   reserved space out of the visible region, but the actual arrow will still be visible.
+   Now the arrow overlaps the column title again like in Qt5 (bug), so the arrow images
+   could use a background-color to cover the text, or a gradient to fade it out gently. */
+  padding: 2px -0.95em 0px 3px;
+  outline: none;
+  border-width: 1px 2px 1px 1px;
+  border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library_header.svg) 1 2 1 1;
+}
+
+WTrackTableViewHeader::up-arrow,
+WTrackTableViewHeader::down-arrow {
+  outline: none;
+  /* horizontal gradient to fade out the text */
+  background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+    stop: 0 transparent,
+    stop: 0.2 #171719,
+    stop: 1 #171719);
   }
-  WTrackTableViewHeader::section {
-    padding: 2px 1px 0px 3px;
-    }
-    WTrackTableViewHeader::up-arrow {
-      image: url(skins:LateNight/palemoon/buttons/btn__lib_sort_up.svg);
-    }
-    WTrackTableViewHeader::down-arrow {
-      image: url(skins:LateNight/palemoon/buttons/btn__lib_sort_down.svg);
-    }
+  WTrackTableViewHeader::up-arrow {
+    image: url(skins:LateNight/palemoon/buttons/btn__lib_sort_up.svg);
+  }
+  WTrackTableViewHeader::down-arrow {
+    image: url(skins:LateNight/palemoon/buttons/btn__lib_sort_down.svg);
+  }
+
 
 
 
@@ -3010,10 +3060,10 @@ WSearchLineEdit::item {
 /* ::indicator:!checked won't work. use 'unchecked' */
 #MainMenu QMenu::indicator:unchecked:selected,
 WLibrarySidebar QMenu::item:selected,
-WTrackTableViewHeader QMenu::item:selected,
 WTrackTableViewHeader QMenu QCheckBox:selected,
 WTrackTableViewHeader QMenu QCheckBox:focus,
 WTrackTableViewHeader QMenu QCheckBox:hover,
+WLibraryTextBrowser QMenu::item:selected,
 WTrackMenu::item:selected,
 WTrackMenu QMenu::item:selected,
 WTrackMenu QMenu QCheckBox:selected,
@@ -3073,6 +3123,7 @@ WSearchLineEdit::item:selected,
 #MainMenu::item:disabled,
 #MainMenu QMenu::item:disabled,
 WLibrarySidebar QMenu::item:disabled,
+WLibraryTextBrowser QMenu::item:disabled,
 WTrackMenu::item:disabled,
 WTrackMenu QMenu::item:disabled,
 WTrackMenu QMenu QCheckBox:disabled,
@@ -3117,7 +3168,7 @@ QPlainTextEdit QMenu::item:disabled {
       image: url(skins:LateNight/palemoon/buttons/btn__menu_checkbox.svg);
     }
 
-    WLibrarySidebar QMenu::indicator:checked,
+  WLibrarySidebar QMenu::indicator:checked,
   WTrackTableViewHeader QMenu QCheckBox::indicator:checked,
   #LibraryPlayedCheckbox::indicator:checked,
   WTrackMenu QMenu QCheckBox::indicator:checked,
@@ -3128,15 +3179,7 @@ QPlainTextEdit QMenu::item:disabled {
   WEffectChainPresetSelector::indicator:checked,
   #fadeModeCombobox::indicator:checked {
     image: url(skins:LateNight/palemoon/buttons/btn__effect_selected.svg);
-    width: 13px;
-    height: 13px;
     margin-left: 6px;
-  }
-  /* disabled menu item and checkbox */
-  WTrackMenu QMenu QCheckBox::indicator:disabled:unchecked,
-  WTrackMenu QMenu QCheckBox::indicator:disabled:checked,
-  WTrackMenu QMenu QCheckBox::indicator:indeterminate {
-    background-color: #222;
   }
   WTrackMenu QMenu QCheckBox::indicator:disabled:checked {
     image: url(skins:LateNight/palemoon/buttons/btn__lib_checkmark_grey.svg);
