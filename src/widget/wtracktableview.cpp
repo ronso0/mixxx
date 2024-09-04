@@ -838,7 +838,7 @@ void WTrackTableView::dropEvent(QDropEvent * event) {
 
 QModelIndexList WTrackTableView::getSelectedRows() const {
     QItemSelectionModel* pSelectionModel = selectionModel();
-    VERIFY_OR_DEBUG_ASSERT(pSelectionModel != nullptr) {
+    if (pSelectionModel == nullptr) {
         qWarning() << "No selection model available";
         return {};
     }
