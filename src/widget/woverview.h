@@ -8,6 +8,7 @@
 #include "track/track_decl.h"
 #include "track/trackid.h"
 #include "util/parented_ptr.h"
+#include "waveform/overviews/overviewtype.h"
 #include "waveform/renderers/waveformmarkrange.h"
 #include "waveform/renderers/waveformmarkset.h"
 #include "waveform/renderers/waveformsignalcolors.h"
@@ -19,6 +20,7 @@
 class PlayerManager;
 class QDomNode;
 class SkinContext;
+class OverviewCache;
 
 class WOverview : public WWidget, public TrackDropTarget {
     Q_OBJECT
@@ -36,6 +38,7 @@ class WOverview : public WWidget, public TrackDropTarget {
     void slotTrackLoaded(TrackPointer pTrack);
     void slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack);
     void onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);
+    void slotTypeChanged(mixxx::OverviewType type);
 
   signals:
     void trackDropped(const QString& filename, const QString& group) override;
@@ -122,6 +125,9 @@ class WOverview : public WWidget, public TrackDropTarget {
 
     const QString m_group;
     UserSettingsPointer m_pConfig;
+    OverviewCache* const m_pCache;
+
+    mixxx::OverviewType m_type;
 
     int m_actualCompletion;
     bool m_pixmapDone;

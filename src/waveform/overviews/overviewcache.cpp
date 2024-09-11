@@ -118,9 +118,14 @@ void OverviewCache::setOverviewType(mixxx::OverviewType type) {
     }
 
     m_type = type;
+
+    const TrackIdList trackIds = m_overviewCache.keys();
+    for (auto& trackId : trackIds) {
+        emit overviewChanged(trackId);
+    }
     m_overviewCache.clear();
 
-    emit overviewsChanged(m_overviewCache.keys());
+    emit typeChanged(type);
 }
 
 void OverviewCache::setOverviewNormalized(bool normalized) {

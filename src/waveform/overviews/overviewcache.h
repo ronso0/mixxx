@@ -21,7 +21,9 @@ struct OverviewCacheItem {
 class OverviewCache : public QObject, public Singleton<OverviewCache> {
     Q_OBJECT
   public:
-    mixxx::OverviewType getOverviewType();
+    mixxx::OverviewType getOverviewType() {
+        return m_type;
+    }
     void setOverviewType(mixxx::OverviewType);
 
     bool isOverviewNormalized();
@@ -72,6 +74,8 @@ class OverviewCache : public QObject, public Singleton<OverviewCache> {
     void overviewChanged(TrackId);
 
     void overviewsChanged(const QList<TrackId>);
+
+    void typeChanged(mixxx::OverviewType type);
 
   protected:
     OverviewCache(UserSettingsPointer pConfig,

@@ -40,6 +40,8 @@ WOverview::WOverview(
         : WWidget(parent),
           m_group(group),
           m_pConfig(pConfig),
+          m_pCache(OverviewCache::instance()),
+          m_type(m_pCache->getOverviewType()),
           m_actualCompletion(0),
           m_pixmapDone(false),
           m_waveformPeak(-1.0),
@@ -103,6 +105,11 @@ WOverview::WOverview(
             &WOverview::onTrackAnalyzerProgress);
 
     connect(m_pCueMenuPopup.get(), &WCueMenuPopup::aboutToHide, this, &WOverview::slotCueMenuPopupAboutToHide);
+
+    connect(m_pCache,
+            &OverviewCache::typeChanged,
+            this,
+            &WOverview::slotTypeChanged);
 }
 
 void WOverview::setup(const QDomNode& node, const SkinContext& context) {
@@ -282,8 +289,17 @@ void WOverview::onConnectedControlChanged(double dParameter, double dValue) {
     }
 }
 
+void WOverview::slotTypeChanged(mixxx::OverviewType type) {
+    kLogger.warning() << "slotTypeChanged";
+    if (m_type == type) {
+        return;
+    }
+    m_type = type;
+    slotWaveformSummaryUpdated();
+}
+
 void WOverview::slotWaveformSummaryUpdated() {
-    //qDebug() << "WOverview::slotWaveformSummaryUpdated()";
+    kLogger.info() << "slotWaveformSummaryUpdated";
 
     TrackPointer pTrack(m_pCurrentTrack);
     if (!pTrack) {
@@ -676,7 +692,7 @@ void WOverview::drawWaveformPixmap(QPainter* pPainter) {
         WaveformWidgetFactory* widgetFactory = WaveformWidgetFactory::instance();
         PainterScope painterScope(pPainter);
         float diffGain;
-        bool normalize = OverviewCache::instance()->isOverviewNormalized();
+        bool normalize = m_pCache->isOverviewNormalized();
         if (normalize && m_pixmapDone && m_waveformPeak > 1) {
             diffGain = 255 - m_waveformPeak - 1;
         } else {
@@ -1291,7 +1307,7 @@ bool WOverview::drawNextPixmapPart() {
     }
 
     RenderResult result = OverviewRenderThread::render(
-            pWaveform, mixxx::OverviewType::RGB, m_signalColors);
+            pWaveform, m_type, m_signalColors);
     m_waveformSourceImage = result.image;
     m_waveformPeak = result.waveformPeak;
     // reset scaled image to trigger rebuild in drawWaveformPixmap()
