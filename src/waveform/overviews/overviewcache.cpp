@@ -133,6 +133,10 @@ void OverviewCache::setOverviewNormalized(bool normalized) {
     m_overviewNormalized = normalized;
 }
 
+bool OverviewCache::isOverviewNormalized() {
+    return m_overviewNormalized;
+}
+
 void OverviewCache::onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress) {
     kLogger.info() << "onTrackAnalyzerProgress" << trackId << analyzerProgress;
 

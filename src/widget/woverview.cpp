@@ -314,7 +314,7 @@ void WOverview::onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyz
     if (!m_pCurrentTrack || (m_pCurrentTrack->getId() != trackId)) {
         return;
     }
-
+    kLogger.info() << "onTrackAnalyzerProgress:" << analyzerProgress;
     bool updateNeeded = drawNextPixmapPart();
     if (updateNeeded || (m_analyzerProgress != analyzerProgress)) {
         m_analyzerProgress = analyzerProgress;
@@ -349,6 +349,7 @@ void WOverview::slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack)
     }
 
     m_waveformSourceImage = QImage();
+    m_waveformImageScaled = QImage();
     m_analyzerProgress = kAnalyzerProgressUnknown;
     m_actualCompletion = 0;
     m_waveformPeak = -1.0;
@@ -669,21 +670,13 @@ void WOverview::drawAxis(QPainter* pPainter) {
 }
 
 void WOverview::drawWaveformPixmap(QPainter* pPainter) {
-    QImage image = OverviewCache::instance()->getCachedOverviewImage(
-            m_pCurrentTrack->getId(), m_signalColors);
-    //, size() * m_devicePixelRatio/
+    kLogger.info() << "drawWaveformPixmap";
 
-    kLogger.info() << "drawWaveformPixmap" << image;
-
-    // pPainter->drawPixmap(rect(), pixmap);
-    pPainter->drawImage(rect(), image);
-
-#if 0
-    WaveformWidgetFactory* widgetFactory = WaveformWidgetFactory::instance();
     if (!m_waveformSourceImage.isNull()) {
+        WaveformWidgetFactory* widgetFactory = WaveformWidgetFactory::instance();
         PainterScope painterScope(pPainter);
         float diffGain;
-        bool normalize = widgetFactory->isOverviewNormalized();
+        bool normalize = OverviewCache::instance()->isOverviewNormalized();
         if (normalize && m_pixmapDone && m_waveformPeak > 1) {
             diffGain = 255 - m_waveformPeak - 1;
         } else {
@@ -711,7 +704,6 @@ void WOverview::drawWaveformPixmap(QPainter* pPainter) {
 
         pPainter->drawImage(rect(), m_waveformImageScaled);
     }
-#endif
 }
 
 void WOverview::drawMinuteMarkers(QPainter* pPainter) {
@@ -1301,8 +1293,12 @@ bool WOverview::drawNextPixmapPart() {
     RenderResult result = OverviewRenderThread::render(
             pWaveform, mixxx::OverviewType::RGB, m_signalColors);
     m_waveformSourceImage = result.image;
+    m_waveformPeak = result.waveformPeak;
+    // reset scaled image to trigger rebuild in drawWaveformPixmap()
+    m_waveformImageScaled = QImage();
 
-    kLogger.info() << "drawNextPixmapPart" << m_waveformSourceImage;
+    kLogger.info() << " --> drawNextPixmapPart. done." << result.completion
+                   << m_waveformSourceImage;
 
     return true;
 }
