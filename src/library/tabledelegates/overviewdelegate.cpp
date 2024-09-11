@@ -117,8 +117,6 @@ void OverviewDelegate::paintItem(QPainter* painter,
     TrackId trackId(m_pTrackModel->getTrackId(index));
 
     const double scaleFactor = qobject_cast<QWidget*>(parent())->devicePixelRatioF();
-
-    // QPixmap pixmap = , option.rect.size() * scaleFactor
     QImage image = m_pCache->getCachedOverviewImage(trackId, m_signalColors);
     if (image.isNull()) {
         // Cache miss
@@ -135,8 +133,10 @@ void OverviewDelegate::paintItem(QPainter* painter,
         }
     } else {
         // Cache hit
-        // pixmap.setDevicePixelRatio(scaleFactor);
-        // painter->drawPixmap(option.rect, pixmap);
-        painter->drawImage(option.rect, image);
+        const double scaleFactor = qobject_cast<QWidget*>(parent())->devicePixelRatioF();
+        painter->drawImage(option.rect,
+                image.scaled(option.rect.size() * scaleFactor,
+                        Qt::IgnoreAspectRatio,
+                        Qt::SmoothTransformation));
     }
 }
