@@ -330,7 +330,7 @@ void WOverview::onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyz
     if (!m_pCurrentTrack || (m_pCurrentTrack->getId() != trackId)) {
         return;
     }
-    kLogger.info() << "onTrackAnalyzerProgress:" << analyzerProgress;
+    // kLogger.info() << "onTrackAnalyzerProgress:" << analyzerProgress;
     bool updateNeeded = drawNextPixmapPart();
     if (updateNeeded || (m_analyzerProgress != analyzerProgress)) {
         m_analyzerProgress = analyzerProgress;
@@ -686,7 +686,7 @@ void WOverview::drawAxis(QPainter* pPainter) {
 }
 
 void WOverview::drawWaveformPixmap(QPainter* pPainter) {
-    kLogger.info() << "drawWaveformPixmap";
+    // kLogger.info() << "drawWaveformPixmap";
 
     if (!m_waveformSourceImage.isNull()) {
         WaveformWidgetFactory* widgetFactory = WaveformWidgetFactory::instance();
@@ -1313,8 +1313,8 @@ bool WOverview::drawNextPixmapPart() {
     // reset scaled image to trigger rebuild in drawWaveformPixmap()
     m_waveformImageScaled = QImage();
 
-    kLogger.info() << " --> drawNextPixmapPart. done." << result.completion
-                   << m_waveformSourceImage;
+    // kLogger.info() << " --> drawNextPixmapPart. done." << result.completion
+    //                << m_waveformSourceImage;
 
     return true;
 }

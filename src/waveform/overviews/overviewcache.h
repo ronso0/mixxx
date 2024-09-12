@@ -97,6 +97,8 @@ class OverviewCache : public QObject, public Singleton<OverviewCache> {
             const mixxx::DbConnectionPoolPtr pDbConnectionPool,
             const TrackId trackId);
 
+    void logCacheUsage() const;
+
   private:
     UserSettingsPointer m_pConfig;
     mixxx::DbConnectionPoolPtr m_pDbConnectionPool;

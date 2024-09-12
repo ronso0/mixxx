@@ -101,7 +101,7 @@ QList<AnalysisDao::AnalysisInfo> AnalysisDao::loadAnalysesFromQuery(TrackId trac
         bytes += info.data.length();
         analyses.append(info);
     }
-    qDebug() << "AnalysisDAO fetched" << analyses.size() << "analyses,"
+    qDebug() << "----------------------AnalysisDAO fetched" << analyses.size() << "analyses,"
              << bytes << "bytes for track"
              << trackId << "in" << time.elapsed().debugMillisWithUnit();
     return analyses;
@@ -118,6 +118,8 @@ bool AnalysisDao::saveAnalysis(AnalysisDao::AnalysisInfo* info) {
     }
     PerformanceTimer time;
     time.start();
+
+    qDebug() << "----------------------AnalysisDAO saveAnalysis";
 
     const QByteArray compressedData = qCompress(info->data, kCompressionLevel);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)

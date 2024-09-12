@@ -136,6 +136,9 @@ RenderResult OverviewRenderThread::render(ConstWaveformPointer pWaveform,
     result.image = image;
     result.completion = pWaveform->getCompletion();
     result.waveformPeak = peak;
+    kLogger.info() << "---------------------------";
+    kLogger.info() << "render Done. img size:" << image.sizeInBytes();
+    kLogger.info() << "---------------------------";
     return result;
 }
 

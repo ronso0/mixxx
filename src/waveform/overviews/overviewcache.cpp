@@ -143,7 +143,10 @@ bool OverviewCache::isOverviewNormalized() {
 }
 
 void OverviewCache::onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress) {
-    kLogger.info() << "onTrackAnalyzerProgress" << trackId << analyzerProgress;
+    if (analyzerProgress == 1.0) {
+        kLogger.info() << "onTrackAnalyzerProgress DONE" << trackId << analyzerProgress;
+    }
+    // kLogger.info() << "onTrackAnalyzerProgress" << trackId << analyzerProgress;
 
     m_tracksWithoutWaveform.remove(trackId);
 
@@ -184,6 +187,8 @@ QImage OverviewCache::getCachedOverviewImage(
             return pItem->images[imageCacheKey].second;
         }
     }
+
+    logCacheUsage();
 
     /*
     QImage image =
@@ -251,6 +256,27 @@ void OverviewCache::requestOverview(const TrackId trackId,
             this,
             &OverviewCache::overviewPrepared);
     watcher->setFuture(future);
+}
+
+void OverviewCache::logCacheUsage() const {
+    const TrackIdList ids = m_overviewCache.keys();
+    double totalCost = 0;
+    for (auto id : std::as_const(ids)) {
+        OverviewCacheItem* pItem = m_overviewCache[id];
+        const auto imgs = pItem->images;
+        const auto imgsvals = imgs.values();
+        for (const QPair<WaveformSignalColors, QImage>& imgpair : imgsvals) {
+            const QImage immg = imgpair.second;
+            double imgCost = immg.sizeInBytes() / 1024; // kB
+            totalCost += imgCost;
+            if (imgCost > 4000) {
+                kLogger.warning() << qSetRealNumberPrecision(18)
+                                  << "--------imgCost for Track" << id
+                                  << ":" << imgCost << "kB";
+            }
+        }
+    }
+    kLogger.warning() << "------totalCost:  " << totalCost / 1024 << "MB";
 }
 
 // static
@@ -345,8 +371,12 @@ void OverviewCache::overviewPrepared() {
             QString imageCacheKey = formImageCacheKey(res.overviewType, res.signalColors);
             pItem->images[imageCacheKey] = QPair(res.signalColors, res.image);
             m_overviewCache.insert(res.trackId, pItem);
+            kLogger.warning() << qSetRealNumberPrecision(18)
+                              << "------image cost: " << res.image.sizeInBytes() / 1024 << "kB";
+            kLogger.warning() << "------cache count:" << m_overviewCache.count();
         }
 
+        logCacheUsage();
         kLogger.info()
                 << "Emitting overviewReady() signal" << res.requester << res.trackId;
         emit overviewReady(res.requester, res.trackId);
