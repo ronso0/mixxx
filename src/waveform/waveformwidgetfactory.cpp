@@ -577,6 +577,7 @@ void WaveformWidgetFactory::setEndOfTrackWarningTime(int endTime) {
     if (m_config) {
         m_config->setValue(kEndOfTrackWarningKey, m_endOfTrackWarningTime);
     }
+    emit endOfTrackTimeChanged(endTime);
 }
 
 bool WaveformWidgetFactory::setWidgetType(WaveformWidgetType::Type type) {

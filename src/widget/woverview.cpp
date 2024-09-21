@@ -61,7 +61,7 @@ WOverview::WOverview(
           m_bLeftClickDragging(false),
           m_iPickupPos(0),
           m_iPlayPos(0),
-          m_endOfTrackWarningTime(30), // irrelevant, value is fetched when required
+          m_endOfTrackWarningTime(WaveformWidgetFactory::instance()->getEndOfTrackWarningTime()),
           m_bTimeRulerActive(false),
           m_orientation(Qt::Horizontal),
           m_dragMarginH(kDragOutsideLimitX),
@@ -86,6 +86,11 @@ WOverview::WOverview(
             this);
     m_pEndOfTrackBlinkTimer->connectValueChanged(
             this, &WOverview::onEndOfTrackBlinkTimeout);
+    auto* pWaveformWidgetFactory = WaveformWidgetFactory::instance();
+    connect(pWaveformWidgetFactory,
+            &WaveformWidgetFactory::endOfTrackTimeChanged,
+            this,
+            &WOverview::setEndOfTrackTime);
 
     m_pRateRatioControl = make_parented<ControlProxy>(
             m_group, QStringLiteral("rate_ratio"), this, ControlFlag::NoAssertIfMissing);
@@ -415,12 +420,6 @@ void WOverview::slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack)
                 &WOverview::slotWaveformSummaryUpdated);
         slotWaveformSummaryUpdated();
         connect(pNewTrack.get(), &Track::cuesUpdated, this, &WOverview::receiveCuesUpdated);
-
-        // TODO(ronso0) To apply changed eot time asap, fetch it in paintEvent(),
-        // or make WaveformWidgetFactory emit a signal when the eot time changed
-        // and hook up to that.
-        m_endOfTrackWarningTime =
-                WaveformWidgetFactory::instance()->getEndOfTrackWarningTime();
     } else {
         m_pCurrentTrack.reset();
         m_pWaveform.clear();
@@ -571,6 +570,11 @@ void WOverview::updateCues(const QList<CuePointer> &loadedCues) {
 // due to the incompatible signatures. This is a "wrapper" workaround
 void WOverview::receiveCuesUpdated() {
     onMarkChanged(0);
+}
+
+void WOverview::setEndOfTrackTime(int time) {
+    // validated in WaveformWidgetFactory
+    m_endOfTrackWarningTime = time;
 }
 
 void WOverview::mouseMoveEvent(QMouseEvent* e) {
