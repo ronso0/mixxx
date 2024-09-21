@@ -219,6 +219,7 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     void swapSpinnies();
     void renderVuMeters(VSyncThread*);
     void swapVuMeters();
+    void endOfTrackTimeChanged(int time);
 
     void overviewNormalizeChanged();
     void overallVisualGainChanged();
