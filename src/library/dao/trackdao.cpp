@@ -16,6 +16,7 @@
 #include "library/dao/libraryhashdao.h"
 #include "library/dao/playlistdao.h"
 #include "library/library_prefs.h"
+#include "library/overviewcache.h"
 #include "library/queryutil.h"
 #include "moc_trackdao.cpp"
 #include "sources/soundsourceproxy.h"
@@ -1549,6 +1550,12 @@ TrackPointer TrackDAO::getTrackById(TrackId trackId) const {
             [this](TrackId trackId) {
                 // Adapt and forward signal
                 emit mixxx::thisAsNonConst(this)->tracksChanged(QSet<TrackId>{trackId});
+            });
+    connect(pTrack.get(),
+            &Track::waveformSummaryUpdated,
+            this,
+            [trackId]() {
+                OverviewCache::instance()->onTrackSummaryChanged(trackId);
             });
 
     // BaseTrackCache cares about track trackDirty/trackClean notifications

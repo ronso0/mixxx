@@ -55,6 +55,22 @@ void OverviewCache::onTrackAnalysisProgress(TrackId trackId, AnalyzerProgress an
 }
 
 void OverviewCache::onTrackSummaryChanged(TrackId trackId) {
+    // kLogger.warning() << "onTrackSummaryChanged" << trackId;
+    bool go = true;
+    while (go) {
+        const auto it = m_cachedPixmapsById.find(trackId);
+        if (it == m_cachedPixmapsById.end()) {
+            // kLogger.warning() << "--> no key (anymore), stop.";
+            go = false;
+        } else {
+            // kLogger.warning() << "--> found a key";
+            const auto cacheKey = it.value();
+            DEBUG_ASSERT(!cacheKey.isEmpty());
+            m_cachedPixmapsById.remove(trackId);
+            QPixmapCache::remove(cacheKey);
+        }
+    }
+    m_tracksWithoutOverview.remove(trackId);
     emit overviewChanged(trackId);
 }
 
@@ -165,12 +181,16 @@ void OverviewCache::overviewPrepared() {
         const QString cacheKey = pixmapCacheKey(
                 res.trackId, res.resizedToSize, res.type);
         QPixmapCache::insert(cacheKey, pixmap);
+        // Store the cached track id so we can clear ALL pixmaps of a track
+        // in case the waveform has been cleared/updated.
+        m_cachedPixmapsById.insert(res.trackId, cacheKey);
     }
 
     if (pixmap.isNull()) {
         // Avoid (too many) repeated lookups.
         // (there may still be identical request be processed due to
         // asynchronous processing)
+        // kLogger.warning() << "--> empty pixmap, add to ignore list";
         m_tracksWithoutOverview.insert(res.trackId);
     }
     m_currentlyLoading.remove(res.trackId);
