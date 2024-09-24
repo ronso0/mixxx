@@ -382,13 +382,6 @@ void CoreServices::initialize(QApplication* pApp) {
     // been created. Otherwise Mixxx might hang when accessing
     // the uninitialized singleton instance!
     m_pPlayerManager->bindToLibrary(m_pLibrary.get());
-    // This also creates a TrackAnalysisScheduler instance.
-    // Connect to analyzer progress so we can update the tracks table
-    // (re-requests the overview) when analysis has finished.
-    connect(m_pPlayerManager.get(),
-            &PlayerManager::trackAnalyzerProgress,
-            pOverviewCache,
-            &OverviewCache::onTrackAnalysisProgress);
 
     bool musicDirAdded = false;
 
