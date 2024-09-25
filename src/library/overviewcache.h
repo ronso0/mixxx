@@ -9,6 +9,8 @@
 #include "util/singleton.h"
 #include "waveform/overviews/overviewtype.h"
 
+class WaveformSignalColors;
+
 class OverviewCache : public QObject, public Singleton<OverviewCache> {
     Q_OBJECT
   public:
@@ -20,6 +22,7 @@ class OverviewCache : public QObject, public Singleton<OverviewCache> {
 
     QPixmap requestOverview(
             const mixxx::OverviewType type,
+            const WaveformSignalColors& signalColors,
             const TrackId trackId,
             const QObject* pRequester,
             const QSize desiredSize);
@@ -58,6 +61,7 @@ class OverviewCache : public QObject, public Singleton<OverviewCache> {
             UserSettingsPointer pConfig,
             mixxx::DbConnectionPoolPtr pDbConnectionPool,
             const mixxx::OverviewType type,
+            const WaveformSignalColors& signalColors,
             const TrackId trackId,
             const QObject* pRequester,
             const QSize desiredSize);
