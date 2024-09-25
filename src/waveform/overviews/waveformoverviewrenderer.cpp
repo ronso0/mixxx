@@ -4,47 +4,11 @@
 
 #include "util/colorcomponents.h"
 #include "util/math.h"
-
-QColor WaveformOverviewRenderer::s_rgbLowColor = defaultLowColor;
-QColor WaveformOverviewRenderer::s_rgbMidColor = defaultMidColor;
-QColor WaveformOverviewRenderer::s_rgbHighColor = defaultHighColor;
-
-QColor WaveformOverviewRenderer::s_filteredLowColor = defaultLowColor;
-QColor WaveformOverviewRenderer::s_filteredMidColor = defaultMidColor;
-QColor WaveformOverviewRenderer::s_filteredHighColor = defaultHighColor;
-
-QColor WaveformOverviewRenderer::s_signalColor = defaultSignalColor;
-
-void WaveformOverviewRenderer::setRgbLowColor(QColor color) {
-    s_rgbLowColor = color;
-}
-
-void WaveformOverviewRenderer::setRgbMidColor(QColor color) {
-    s_rgbMidColor = color;
-}
-
-void WaveformOverviewRenderer::setRgbHighColor(QColor color) {
-    s_rgbHighColor = color;
-}
-
-void WaveformOverviewRenderer::setFilteredLowColor(QColor color) {
-    s_filteredLowColor = color;
-}
-
-void WaveformOverviewRenderer::setFilteredMidColor(QColor color) {
-    s_filteredMidColor = color;
-}
-
-void WaveformOverviewRenderer::setFilteredHighColor(QColor color) {
-    s_filteredHighColor = color;
-}
-
-void WaveformOverviewRenderer::setSignalColor(QColor color) {
-    s_signalColor = color;
-}
+#include "waveform/renderers/waveformsignalcolors.h"
 
 QImage WaveformOverviewRenderer::render(ConstWaveformPointer pWaveform,
-        mixxx::OverviewType type) {
+        mixxx::OverviewType type,
+        const WaveformSignalColors& signalColors) {
     const int dataSize = pWaveform->getDataSize();
     if (dataSize <= 0) {
         return QImage();
@@ -61,23 +25,19 @@ QImage WaveformOverviewRenderer::render(ConstWaveformPointer pWaveform,
                 pWaveform,
                 nullptr,
                 dataSize,
-                s_signalColor);
+                signalColors);
     } else if (type == mixxx::OverviewType::Filtered) {
         drawWaveformPartLMH(&painter,
                 pWaveform,
                 nullptr,
                 dataSize,
-                s_filteredLowColor,
-                s_filteredMidColor,
-                s_filteredHighColor);
+                signalColors);
     } else {
         drawWaveformPartRGB(&painter,
                 pWaveform,
                 nullptr,
                 dataSize,
-                s_rgbLowColor,
-                s_rgbMidColor,
-                s_rgbHighColor);
+                signalColors);
     }
 
     return image;
@@ -88,14 +48,17 @@ void WaveformOverviewRenderer::drawWaveformPartRGB(
         ConstWaveformPointer pWaveform,
         int* start,
         int end,
-        QColor lowColor,
-        QColor midColor,
-        QColor highColor) {
+        const WaveformSignalColors& signalColors) {
     int startVal = 0;
     if (start) {
         startVal = *start;
     }
 
+    const QColor lowColor = signalColors.getRgbLowColor();
+    const QColor midColor = signalColors.getRgbMidColor();
+    const QColor highColor = signalColors.getRgbHighColor();
+
+    // TODO initialize?
     float lowColor_r, lowColor_g, lowColor_b,
             midColor_r, midColor_g, midColor_b,
             highColor_r, highColor_g, highColor_b,
@@ -157,9 +120,10 @@ void WaveformOverviewRenderer::drawWaveformPartLMH(
         ConstWaveformPointer pWaveform,
         int* start,
         int end,
-        QColor lowColor,
-        QColor midColor,
-        QColor highColor) {
+        const WaveformSignalColors& signalColors) {
+    const QColor lowColor = signalColors.getLowColor();
+    const QColor midColor = signalColors.getMidColor();
+    const QColor highColor = signalColors.getHighColor();
     int startVal = 0;
     if (start) {
         startVal = *start;
@@ -192,18 +156,19 @@ void WaveformOverviewRenderer::drawWaveformPartHSV(
         ConstWaveformPointer pWaveform,
         int* start,
         int end,
-        QColor lowColor) {
+        const WaveformSignalColors& signalColors) {
     int startVal = 0;
     if (start) {
         startVal = *start;
     }
 
+    const QColor lowColor = signalColors.getLowColor();
     // Get HSV of low color.
-    float h, s, v;
+    float h, s, v; // TODO initialize?
     getHsvF(lowColor, &h, &s, &v);
 
     QColor color;
-    float lo, hi, total;
+    float lo, hi, total; // TODO initialize?
 
     unsigned char maxLow[2] = {0, 0};
     unsigned char maxHigh[2] = {0, 0};
