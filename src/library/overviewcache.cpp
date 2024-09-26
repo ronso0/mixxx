@@ -41,6 +41,22 @@ OverviewCache::OverviewCache(UserSettingsPointer pConfig,
           m_pDbConnectionPool(std::move(pDbConnectionPool)) {
 }
 
+void OverviewCache::onNormalizeOrVisualGainChanged() {
+    // TODO Lock to prevent interferences when this is called repeatedly when
+    // Normalize or VisualGainAll value are changed in quick succession?
+    // TODO use QMultihash::key_value_iterator to collect keys and values?
+    const QStringList cacheKeys = m_cachedPixmapsById.values();
+    const TrackIdList ids = m_cachedPixmapsById.keys();
+    m_cachedPixmapsById.clear();
+
+    for (const auto& cacheKey : cacheKeys) {
+        QPixmapCache::remove(cacheKey);
+    }
+    for (const auto trackId : ids) {
+        emit overviewChanged(trackId);
+    }
+}
+
 void OverviewCache::onTrackAnalysisProgress(TrackId trackId, AnalyzerProgress analyzerProgress) {
     if (analyzerProgress < 1.0) {
         return;
@@ -126,6 +142,7 @@ OverviewCache::FutureResult OverviewCache::prepareOverview(
         const TrackId trackId,
         const QObject* pRequester,
         const QSize desiredSize) {
+    // kLogger.warning() << "prepareOverview" << trackId;
     FutureResult result;
     result.trackId = trackId;
     result.type = type;
@@ -172,6 +189,7 @@ void OverviewCache::overviewPrepared() {
     QFutureWatcher<FutureResult>* watcher = static_cast<QFutureWatcher<FutureResult>*>(sender());
     FutureResult res = watcher->result();
     watcher->deleteLater();
+    // kLogger.warning() << "overviewPrepared" << res.trackId;
 
     // Create pixmap, GUI thread only
     QPixmap pixmap = QPixmap::fromImage(res.image);
