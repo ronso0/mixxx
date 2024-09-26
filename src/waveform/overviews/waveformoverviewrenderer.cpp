@@ -4,11 +4,13 @@
 
 #include "util/colorcomponents.h"
 #include "util/math.h"
+#include "util/painterscope.h"
 #include "waveform/renderers/waveformsignalcolors.h"
 
 QImage WaveformOverviewRenderer::render(ConstWaveformPointer pWaveform,
         mixxx::OverviewType type,
-        const WaveformSignalColors& signalColors) {
+        const WaveformSignalColors& signalColors,
+        bool mono) {
     const int dataSize = pWaveform->getDataSize();
     if (dataSize <= 0) {
         return QImage();
@@ -25,19 +27,22 @@ QImage WaveformOverviewRenderer::render(ConstWaveformPointer pWaveform,
                 pWaveform,
                 nullptr,
                 dataSize,
-                signalColors);
+                signalColors,
+                mono);
     } else if (type == mixxx::OverviewType::Filtered) {
         drawWaveformPartLMH(&painter,
                 pWaveform,
                 nullptr,
                 dataSize,
-                signalColors);
+                signalColors,
+                mono);
     } else {
         drawWaveformPartRGB(&painter,
                 pWaveform,
                 nullptr,
                 dataSize,
-                signalColors);
+                signalColors,
+                mono);
     }
 
     return image;
@@ -48,7 +53,8 @@ void WaveformOverviewRenderer::drawWaveformPartRGB(
         ConstWaveformPointer pWaveform,
         int* start,
         int end,
-        const WaveformSignalColors& signalColors) {
+        const WaveformSignalColors& signalColors,
+        bool mono) {
     int startVal = 0;
     if (start) {
         startVal = *start;
@@ -69,45 +75,77 @@ void WaveformOverviewRenderer::drawWaveformPartRGB(
     getRgbF(midColor, &midColor_r, &midColor_g, &midColor_b);
     getRgbF(highColor, &highColor_r, &highColor_g, &highColor_b);
 
-    for (int i = startVal, x = startVal / 2; i < end; i += 2, ++x) {
-        // Left
-        all = pWaveform->getAll(i);
-        low = pWaveform->getLow(i);
-        mid = pWaveform->getMid(i);
-        high = pWaveform->getHigh(i);
+    if (mono) {
+        // Mono means we're going to paint from bottom to top with l+r.
+        PainterScope painterScope(pPainter);
+        const qreal dy = pPainter->deviceTransform().dy();
+        pPainter->resetTransform();
+        // shift y0 to bottom
+        pPainter->translate(0, 2 * dy);
+        // flip y-axis
+        pPainter->scale(1, -1);
+        for (int i = startVal, x = startVal / 2; i < end; i += 2, ++x) {
+            // Left
+            all = pWaveform->getAll(i) + pWaveform->getAll(i + 1);
+            low = pWaveform->getLow(i) + pWaveform->getLow(i + 1);
+            mid = pWaveform->getMid(i) + pWaveform->getMid(i + 1);
+            high = pWaveform->getHigh(i) + pWaveform->getHigh(i + 1);
 
-        red = low * lowColor_r + mid * midColor_r + high * highColor_r;
-        green = low * lowColor_g + mid * midColor_g + high * highColor_g;
-        blue = low * lowColor_b + mid * midColor_b + high * highColor_b;
-        // Normalize
-        max = math_max3(red, green, blue);
-        // Draw
-        if (max > 0.0) {
-            color.setRgbF(static_cast<float>(low / max),
-                    static_cast<float>(mid / max),
-                    static_cast<float>(high / max));
-            pPainter->setPen(color);
-            pPainter->drawLine(x, static_cast<int>(-all), x, 0);
+            red = low * lowColor_r + mid * midColor_r + high * highColor_r;
+            green = low * lowColor_g + mid * midColor_g + high * highColor_g;
+            blue = low * lowColor_b + mid * midColor_b + high * highColor_b;
+            // Normalize
+            max = math_max3(red, green, blue);
+            // Draw
+            if (max > 0.0) {
+                color.setRgbF(static_cast<float>(low / max),
+                        static_cast<float>(mid / max),
+                        static_cast<float>(high / max));
+                pPainter->setPen(color);
+                pPainter->drawLine(x, static_cast<int>(all), x, 0);
+            }
         }
+    } else { // stereo
+        for (int i = startVal, x = startVal / 2; i < end; i += 2, ++x) {
+            // Left
+            all = pWaveform->getAll(i);
+            low = pWaveform->getLow(i);
+            mid = pWaveform->getMid(i);
+            high = pWaveform->getHigh(i);
 
-        // Right
-        all = pWaveform->getAll(i + 1);
-        low = pWaveform->getLow(i + 1);
-        mid = pWaveform->getMid(i + 1);
-        high = pWaveform->getHigh(i + 1);
+            red = low * lowColor_r + mid * midColor_r + high * highColor_r;
+            green = low * lowColor_g + mid * midColor_g + high * highColor_g;
+            blue = low * lowColor_b + mid * midColor_b + high * highColor_b;
+            // Normalize
+            max = math_max3(red, green, blue);
+            // Draw
+            if (max > 0.0) {
+                color.setRgbF(static_cast<float>(low / max),
+                        static_cast<float>(mid / max),
+                        static_cast<float>(high / max));
+                pPainter->setPen(color);
+                pPainter->drawLine(x, static_cast<int>(-all), x, 0);
+            }
 
-        red = low * lowColor_r + mid * midColor_r + high * highColor_r;
-        green = low * lowColor_g + mid * midColor_g + high * highColor_g;
-        blue = low * lowColor_b + mid * midColor_b + high * highColor_b;
+            // Right
+            all = pWaveform->getAll(i + 1);
+            low = pWaveform->getLow(i + 1);
+            mid = pWaveform->getMid(i + 1);
+            high = pWaveform->getHigh(i + 1);
 
-        max = math_max3(red, green, blue);
+            red = low * lowColor_r + mid * midColor_r + high * highColor_r;
+            green = low * lowColor_g + mid * midColor_g + high * highColor_g;
+            blue = low * lowColor_b + mid * midColor_b + high * highColor_b;
 
-        if (max > 0.0) {
-            color.setRgbF(static_cast<float>(low / max),
-                    static_cast<float>(mid / max),
-                    static_cast<float>(high / max));
-            pPainter->setPen(color);
-            pPainter->drawLine(x, 0, x, static_cast<int>(all));
+            max = math_max3(red, green, blue);
+
+            if (max > 0.0) {
+                color.setRgbF(static_cast<float>(low / max),
+                        static_cast<float>(mid / max),
+                        static_cast<float>(high / max));
+                pPainter->setPen(color);
+                pPainter->drawLine(x, 0, x, static_cast<int>(all));
+            }
         }
     }
     if (start) {
@@ -120,7 +158,8 @@ void WaveformOverviewRenderer::drawWaveformPartLMH(
         ConstWaveformPointer pWaveform,
         int* start,
         int end,
-        const WaveformSignalColors& signalColors) {
+        const WaveformSignalColors& signalColors,
+        bool mono) {
     const QColor lowColor = signalColors.getLowColor();
     const QColor midColor = signalColors.getMidColor();
     const QColor highColor = signalColors.getHighColor();
@@ -129,23 +168,53 @@ void WaveformOverviewRenderer::drawWaveformPartLMH(
         startVal = *start;
     }
 
-    for (int i = startVal, x = startVal / 2; i < end; i += 2, ++x) {
-        x = i / 2;
-        unsigned char low_r = pWaveform->getLow(i);
-        unsigned char low_l = pWaveform->getLow(i + 1);
-        if (low_l || low_r) {
-            pPainter->setPen(lowColor);
-            pPainter->drawLine(QPoint(x, -low_r), QPoint(x, low_l));
+    if (mono) {
+        // Mono means we're going to paint from bottom to top with l+r.
+        PainterScope painterScope(pPainter);
+        const qreal dy = pPainter->deviceTransform().dy();
+        pPainter->resetTransform();
+        // shift y0 to bottom
+        pPainter->translate(0, 2 * dy);
+        // flip y-axis
+        pPainter->scale(1, -1);
+
+        for (int i = startVal, x = startVal / 2; i < end; i += 2, ++x) {
+            x = i / 2;
+            unsigned char low_r = pWaveform->getLow(i);
+            unsigned char low_l = pWaveform->getLow(i + 1);
+            if (low_l || low_r) {
+                pPainter->setPen(lowColor);
+                pPainter->drawLine(QPoint(x, 0), QPoint(x, low_l + low_r));
+            }
+
+            pPainter->setPen(midColor);
+            pPainter->drawLine(QPoint(x, 0),
+                    QPoint(x, pWaveform->getMid(i) + pWaveform->getMid(i + 1)));
+
+            pPainter->setPen(highColor);
+            pPainter->drawLine(QPoint(x, 0),
+                    QPoint(x, pWaveform->getHigh(i) + pWaveform->getHigh(i + 1)));
         }
+    } else { // stereo
+        for (int i = startVal, x = startVal / 2; i < end; i += 2, ++x) {
+            x = i / 2;
+            unsigned char low_r = pWaveform->getLow(i);
+            unsigned char low_l = pWaveform->getLow(i + 1);
+            if (low_l || low_r) {
+                pPainter->setPen(lowColor);
+                pPainter->drawLine(QPoint(x, -low_r), QPoint(x, low_l));
+            }
 
-        pPainter->setPen(midColor);
-        pPainter->drawLine(QPoint(x, -pWaveform->getMid(i)),
-                QPoint(x, pWaveform->getMid(i + 1)));
+            pPainter->setPen(midColor);
+            pPainter->drawLine(QPoint(x, -pWaveform->getMid(i)),
+                    QPoint(x, pWaveform->getMid(i + 1)));
 
-        pPainter->setPen(highColor);
-        pPainter->drawLine(QPoint(x, -pWaveform->getHigh(i)),
-                QPoint(x, pWaveform->getHigh(i + 1)));
+            pPainter->setPen(highColor);
+            pPainter->drawLine(QPoint(x, -pWaveform->getHigh(i)),
+                    QPoint(x, pWaveform->getHigh(i + 1)));
+        }
     }
+
     if (start) {
         *start = end;
     }
@@ -156,7 +225,8 @@ void WaveformOverviewRenderer::drawWaveformPartHSV(
         ConstWaveformPointer pWaveform,
         int* start,
         int end,
-        const WaveformSignalColors& signalColors) {
+        const WaveformSignalColors& signalColors,
+        bool mono) {
     int startVal = 0;
     if (start) {
         startVal = *start;
@@ -174,6 +244,17 @@ void WaveformOverviewRenderer::drawWaveformPartHSV(
     unsigned char maxHigh[2] = {0, 0};
     unsigned char maxMid[2] = {0, 0};
     unsigned char maxAll[2] = {0, 0};
+
+    PainterScope painterScope(pPainter);
+    if (mono) {
+        // Mono means we're going to paint from bottom to top with l+r.
+        const qreal dy = pPainter->deviceTransform().dy();
+        pPainter->resetTransform();
+        // shift y0 to bottom
+        pPainter->translate(0, 2 * dy);
+        // flip y-axis
+        pPainter->scale(1, -1);
+    }
 
     for (int i = startVal, x = startVal / 2; i < end; i += 2, ++x) {
         x = i / 2;
@@ -204,9 +285,15 @@ void WaveformOverviewRenderer::drawWaveformPartHSV(
             // Set color
             color.setHsvF(h, 1.0f - hi, 1.0f - lo);
 
-            pPainter->setPen(color);
-            pPainter->drawLine(QPoint(i / 2, -maxAll[0]),
-                    QPoint(i / 2, maxAll[1]));
+            if (mono) {
+                pPainter->setPen(color);
+                pPainter->drawLine(QPoint(i / 2, 0),
+                        QPoint(i / 2, maxAll[0] + maxAll[1]));
+            } else {
+                pPainter->setPen(color);
+                pPainter->drawLine(QPoint(i / 2, -maxAll[0]),
+                        QPoint(i / 2, maxAll[1]));
+            }
         }
     }
     if (start) {
