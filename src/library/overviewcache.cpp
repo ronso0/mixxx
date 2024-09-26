@@ -161,7 +161,8 @@ OverviewCache::FutureResult OverviewCache::prepareOverview(
             QImage image = WaveformOverviewRenderer::render(
                     pLoadedTrackWaveformSummary,
                     type,
-                    signalColors);
+                    signalColors,
+                    true /* mono, bottom-aligned */);
 
             if (!image.isNull()) {
                 image = resizeImageSize(image, desiredSize);
