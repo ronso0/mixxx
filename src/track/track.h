@@ -298,6 +298,7 @@ class Track : public QObject {
     void shiftCuePositionsMillis(mixxx::audio::FrameDiff_t milliseconds);
     /// Shift beatgrid by a constant offset
     void shiftBeatsMillis(double milliseconds);
+    void sortHotcuesByPosition();
 
     // Call when analysis is done.
     void analysisFinished();

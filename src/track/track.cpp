@@ -1004,6 +1004,46 @@ void Track::shiftBeatsMillis(double milliseconds) {
     }
 }
 
+void Track::sortHotcuesByPosition() {
+    auto locked = lockMutex(&m_qMutex);
+
+    VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
+        return;
+    }
+
+    QList<int> indices;
+    QList<mixxx::audio::FramePos> positions;
+
+    for (const CuePointer& pCue : std::as_const(m_cuePoints)) {
+        if (pCue->getType() != mixxx::CueType::HotCue) {
+            continue;
+        }
+        const auto pos = pCue->getPosition();
+        positions.append(pos);
+        const int index = pCue->getHotCue();
+        indices.append(index);
+    }
+
+    std::sort(positions.begin(), positions.end());
+    std::sort(indices.begin(), indices.end());
+
+    QMap<mixxx::audio::FramePos, int> posIndexMap;
+    for (int i = 0; i < positions.size(); i++) {
+        posIndexMap.insert(positions[i], indices[i]);
+    }
+
+    for (CuePointer& pCue : m_cuePoints) {
+        if (pCue->getType() != mixxx::CueType::HotCue) {
+            continue;
+        }
+        int newIndex = posIndexMap.take(pCue->getPosition());
+        pCue->setHotCue(newIndex);
+    }
+
+    markDirtyAndUnlock(&locked);
+    emit cuesUpdated();
+}
+
 void Track::analysisFinished() {
     emit analyzed();
 }
@@ -1153,7 +1193,7 @@ void Track::swapHotcues(int a, int b) {
         return;
     }
     VERIFY_OR_DEBUG_ASSERT(a > Cue::kNoHotCue || b > Cue::kNoHotCue) {
-        qWarning() << "Track::swapHotcues rejected, both a and b are kNoHotCue";
+        qWarning() << "Track::swapHotcues rejected, both a and b are" << Cue::kNoHotCue;
         return;
     }
     auto locked = lockMutex(&m_qMutex);

@@ -462,6 +462,13 @@ void WTrackMenu::createActions() {
 
         m_pClearAllMetadataAction = new QAction(tr("All"), m_pClearMetadataMenu);
         connect(m_pClearAllMetadataAction, &QAction::triggered, this, &WTrackMenu::slotClearAllMetadata);
+
+        m_pSortHotcuesByPositionAction = new QAction(
+                tr("Sort hotcues by position"), m_pClearMetadataMenu);
+        connect(m_pSortHotcuesByPositionAction,
+                &QAction::triggered,
+                this,
+                &WTrackMenu::slotSortHotcuesByPosition);
     }
 
     if (featureIsEnabled(Feature::BPM)) {
@@ -692,6 +699,8 @@ void WTrackMenu::setupActions() {
         m_pClearMetadataMenu->addAction(m_pClearKeyAction);
         m_pClearMetadataMenu->addAction(m_pClearReplayGainAction);
         m_pClearMetadataMenu->addAction(m_pClearWaveformAction);
+        m_pClearMetadataMenu->addSeparator();
+        m_pClearMetadataMenu->addAction(m_pSortHotcuesByPositionAction);
         m_pClearMetadataMenu->addSeparator();
         m_pClearMetadataMenu->addAction(m_pClearAllMetadataAction);
         addMenu(m_pClearMetadataMenu);
@@ -2042,6 +2051,17 @@ class ResetOutroTrackPointerOperation : public mixxx::TrackPointerOperation {
     }
 };
 
+class SortHotcuesByPositionTrackPointerOperation : public mixxx::TrackPointerOperation {
+  public:
+    explicit SortHotcuesByPositionTrackPointerOperation() {
+    }
+
+  private:
+    void doApply(const TrackPointer& pTrack) const override {
+        pTrack->sortHotcuesByPosition();
+    }
+};
+
 } // anonymous namespace
 
 void WTrackMenu::slotResetMainCue() {
@@ -2089,6 +2109,16 @@ void WTrackMenu::slotClearHotCues() {
             tr("Removing hot cues from %n track(s)", "", getTrackCount());
     const auto trackOperator =
             RemoveCuesOfTypeTrackPointerOperation(mixxx::CueType::HotCue);
+    applyTrackPointerOperation(
+            progressLabelText,
+            &trackOperator);
+}
+
+void WTrackMenu::slotSortHotcuesByPosition() {
+    const auto progressLabelText =
+            tr("Sorting hotcues of %n track(s) by position", "", getTrackCount());
+    const auto trackOperator =
+            SortHotcuesByPositionTrackPointerOperation();
     applyTrackPointerOperation(
             progressLabelText,
             &trackOperator);
