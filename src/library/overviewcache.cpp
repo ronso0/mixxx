@@ -100,7 +100,32 @@ void OverviewCache::onTrackSummaryChanged(TrackId trackId) {
     emit overviewChanged(trackId);
 }
 
-QPixmap OverviewCache::requestOverview(
+QPixmap OverviewCache::requestCachedOverview(
+        mixxx::OverviewType type,
+        const TrackId trackId,
+        const QObject* pRequester,
+        const QSize desiredSize) {
+    if (!trackId.isValid()) {
+        return QPixmap();
+    }
+
+    if (m_currentlyLoading.contains(trackId)) {
+        return QPixmap();
+    }
+
+    if (m_tracksWithoutOverview.contains(trackId)) {
+        return QPixmap();
+    }
+
+    kLogger.info() << "requestCachedOverview()" << trackId << pRequester << desiredSize;
+
+    const QString cacheKey = pixmapCacheKey(trackId, desiredSize, type);
+    QPixmap pixmap;
+    QPixmapCache::find(cacheKey, &pixmap);
+    return pixmap;
+}
+
+QPixmap OverviewCache::requestUncachedOverview(
         mixxx::OverviewType type,
         const WaveformSignalColors& signalColors,
         const TrackId trackId,
@@ -120,9 +145,9 @@ QPixmap OverviewCache::requestOverview(
 
     kLogger.info() << "requestOverview()" << trackId << pRequester << desiredSize;
 
-    // request overview
     const QString cacheKey = pixmapCacheKey(trackId, desiredSize, type);
     QPixmap pixmap;
+    // Maybe it has been cached since the request for cached image?
     if (QPixmapCache::find(cacheKey, &pixmap)) {
         return pixmap;
     }
@@ -229,5 +254,5 @@ void OverviewCache::overviewPrepared() {
     }
     m_currentlyLoading.remove(res.trackId);
 
-    emit overviewReady(res.requester, res.trackId, !pixmap.isNull(), res.resizedToSize);
+    emit overviewReady(res.requester, res.trackId, !pixmap.isNull());
 }

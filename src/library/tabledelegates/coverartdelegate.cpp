@@ -111,9 +111,6 @@ void CoverArtDelegate::paintItem(
     paintItemBackground(painter, option, index);
 
     CoverInfo coverInfo = m_pTrackModel->getCoverInfo(index);
-    VERIFY_OR_DEBUG_ASSERT(m_pTrackModel) {
-        return;
-    }
     bool drewPixmap = false;
     if (coverInfo.hasImage()) {
         VERIFY_OR_DEBUG_ASSERT(m_pCache) {
