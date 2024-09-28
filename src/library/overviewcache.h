@@ -70,5 +70,5 @@ class OverviewCache : public QObject, public Singleton<OverviewCache> {
 
     QSet<TrackId> m_currentlyLoading;
     QSet<TrackId> m_tracksWithoutOverview;
-    QMultiHash<TrackId, QString> m_cachedPixmapsById;
+    QMultiHash<TrackId, QString> m_cacheKeysByTrackId;
 };

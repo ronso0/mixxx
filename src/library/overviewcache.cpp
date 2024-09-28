@@ -45,9 +45,9 @@ void OverviewCache::onNormalizeOrVisualGainChanged() {
     // TODO Lock to prevent interferences when this is called repeatedly when
     // Normalize or VisualGainAll value are changed in quick succession?
     // TODO use QMultihash::key_value_iterator to collect keys and values?
-    const QStringList cacheKeys = m_cachedPixmapsById.values();
-    const TrackIdList ids = m_cachedPixmapsById.keys();
-    m_cachedPixmapsById.clear();
+    const QStringList cacheKeys = m_cacheKeysByTrackId.values();
+    const TrackIdList ids = m_cacheKeysByTrackId.keys();
+    m_cacheKeysByTrackId.clear();
 
     for (const auto& cacheKey : cacheKeys) {
         QPixmapCache::remove(cacheKey);
@@ -70,13 +70,13 @@ void OverviewCache::onTrackSummaryChanged(TrackId trackId) {
     // kLogger.warning() << "onTrackSummaryChanged" << trackId;
     bool go = true;
     while (go) {
-        const auto it = m_cachedPixmapsById.find(trackId);
-        if (it == m_cachedPixmapsById.end()) {
+        const auto it = m_cacheKeysByTrackId.find(trackId);
+        if (it == m_cacheKeysByTrackId.end()) {
             go = false;
         } else {
             const auto cacheKey = it.value();
             DEBUG_ASSERT(!cacheKey.isEmpty());
-            m_cachedPixmapsById.remove(trackId);
+            m_cacheKeysByTrackId.remove(trackId);
             QPixmapCache::remove(cacheKey);
         }
     }
@@ -201,7 +201,7 @@ void OverviewCache::overviewPrepared() {
         QPixmapCache::insert(cacheKey, pixmap);
         // Store the cached track id so we can clear ALL pixmaps of a track
         // in case the waveform has been cleared/updated.
-        m_cachedPixmapsById.insert(res.trackId, cacheKey);
+        m_cacheKeysByTrackId.insert(res.trackId, cacheKey);
     }
 
     if (pixmap.isNull()) {
