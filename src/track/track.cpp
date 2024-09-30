@@ -1064,17 +1064,15 @@ CuePointer Track::findCueById(DbId id) const {
 
 CuePointer Track::findHotcueByIndex(int idx) const {
     auto locked = lockMutex(&m_qMutex);
-    auto is_hotcue_n = [](int n) {
-        return [n](const CuePointer& pCue) {
-            return pCue && pCue->getHotCue() == n;
-        };
-    };
-    auto cueIt = std::find_if(m_cuePoints.begin(), m_cuePoints.end(), is_hotcue_n(idx));
+    auto cueIt = std::find_if(
+            m_cuePoints.begin(),
+            m_cuePoints.end(),
+            [idx](const CuePointer& pCue) {
+                return pCue && pCue->getHotCue() == idx;
+            });
     if (cueIt != m_cuePoints.end()) {
-        qWarning() << "     > found hotcue" << idx;
         return *cueIt;
     } else {
-        qWarning() << "     ! no hotcue" << idx;
         return {};
     }
 }
@@ -1130,18 +1128,15 @@ void Track::swapHotcues(int a, int b) {
         return;
     }
     auto locked = lockMutex(&m_qMutex);
-    qWarning() << "     Track::swapHotcues" << a << "and" << b;
     CuePointer pCueA = findHotcueByIndex(a);
     CuePointer pCueB = findHotcueByIndex(b);
     if (!pCueA && !pCueB) {
         return;
     }
     if (pCueA) {
-        qWarning() << "     >> move" << a << "to" << b;
         pCueA->setHotCue(b);
     }
     if (pCueB) {
-        qWarning() << "     >> move" << b << "to" << a;
         pCueB->setHotCue(a);
     }
     emit cuesUpdated();
