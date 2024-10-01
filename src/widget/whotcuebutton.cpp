@@ -1,5 +1,6 @@
 #include "widget/whotcuebutton.h"
 
+#include <QApplication>
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -170,19 +171,23 @@ void WHotcueButton::mouseMoveEvent(QMouseEvent* pEvent) {
 
     if (DragAndDropHelper::mouseMoveInitiatesDrag(pEvent)) {
         QDrag* pDrag = new QDrag(this);
-        QMimeData* mimeData = new QMimeData;
+        auto mimeData = std::make_unique<QMimeData>();
         mimeData->setText(mimeTextIdentifier() + kMimeTextDelimiter + QString::number(m_hotcue));
-        pDrag->setMimeData(mimeData);
-        // Use the currently rendered button as dnd cursor.
+        pDrag->setMimeData(mimeData.release());
+
+        // Use the currently rendered button as dnd cursor
+        // (incl. hover and pressed style).
         const QPixmap currLook = grab(rect().marginsRemoved(m_dndRectMargins));
         pDrag->setDragCursor(currLook, Qt::MoveAction);
-        // Release this button after failed or successful drop.
-        // This prevents both the preview and the pressed state from getting stuck.
-        connect(pDrag,
-                &QDrag::destroyed,
-                this,
-                &WHotcueButton::release);
+
+        m_dragging = true;
         pDrag->exec();
+        m_dragging = false;
+
+        // Release this button afterwards.
+        // This prevents both the preview and the pressed state from getting stuck.
+        QEvent leaveEv(QEvent::Leave);
+        QApplication::sendEvent(this, &leaveEv);
     }
 }
 
@@ -218,22 +223,10 @@ void WHotcueButton::dropEvent(QDropEvent* pEvent) {
     QStringList mimeTextLines = mimeText.split(kMimeTextDelimiter);
     int otherCueNum = mimeTextLines.at(1).toInt();
     pTrack->swapHotcues(otherCueNum, m_hotcue);
-    // Alternative way to release drag source button:
-    // WHotcueButton* srcBtn = qobject_cast<WHotcueButton*>(pEvent->source());
-    // DEBUG_ASSERT(srcBtn);
-    // srcBtn->release();
 }
 
 const QString WHotcueButton::mimeTextIdentifier() const {
     return QStringLiteral("hotcue_") + m_group;
-}
-
-void WHotcueButton::release() {
-    // Actions from WPushButton::mouseReleaseEvent()
-    // TODO Create a QMouseVent and call mouseReleaseEvent instead of this hack?
-    setControlParameterLeftUp(0);
-    m_bPressed = false;
-    restyleAndRepaint();
 }
 
 ConfigKey WHotcueButton::createConfigKey(const QString& name) {

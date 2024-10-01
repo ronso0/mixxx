@@ -24,8 +24,6 @@ class WHotcueButton : public WPushButton {
     Q_PROPERTY(bool dark MEMBER m_bCueColorIsDark);
     Q_PROPERTY(QString type MEMBER m_type);
 
-    void release();
-
   protected:
     void mousePressEvent(QMouseEvent* pEvent) override;
     void mouseReleaseEvent(QMouseEvent* pEvent) override;

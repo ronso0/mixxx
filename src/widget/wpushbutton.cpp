@@ -237,6 +237,7 @@ void WPushButton::setup(const QDomNode& node, const SkinContext& context) {
 void WPushButton::setStates(int iStates) {
     m_bHovered = false;
     m_bPressed = false;
+    m_dragging = false;
     m_iNoStates = iStates;
     m_elideMode = Qt::ElideNone;
     m_activeTouchButton = Qt::NoButton;
@@ -440,7 +441,9 @@ bool WPushButton::event(QEvent* e) {
         m_bHovered = true;
         restyleAndRepaint();
     } else if (e->type() == QEvent::Leave) {
-        if (m_bPressed) {
+        // Leave might occur sporadically while dragging (swapping) a WHotcueButton.
+        // Don't release in that case.
+        if (m_bPressed && !m_dragging) {
             // A Leave event is send instead of a mouseReleaseEvent()
             // fake it to get not stuck in pressed state
             QMouseEvent mouseEvent = QMouseEvent(
