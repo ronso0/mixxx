@@ -2,12 +2,47 @@
 
 #include <QString>
 
+#include "track/trackid.h"
 #include "util/parented_ptr.h"
 #include "widget/wcuemenupopup.h"
 #include "widget/wpushbutton.h"
 
 class WHotcueButton : public WPushButton {
     Q_OBJECT
+
+    struct HotcueDragData {
+        TrackId trackId = TrackId();
+        int hotcue = Cue::kNoHotCue;
+
+        const QByteArray toByteArray() {
+            QByteArray bytes;
+            QDataStream dataStream(&bytes, QIODevice::WriteOnly);
+            qWarning() << "     .";
+            qWarning() << "     toByteArray";
+            qWarning() << "     --> id: " << trackId.toVariant().toInt();
+            qWarning() << "     --> hot:" << hotcue;
+            qWarning() << "     .";
+            dataStream << trackId.toVariant().toInt() << hotcue;
+            return bytes;
+        };
+
+        void fromByteArray(QByteArray& bytes) {
+            QDataStream stream(&bytes, QIODevice::ReadOnly);
+            int id = -1;
+            int hot = -1;
+            stream >> id >> hot;
+            qWarning() << "     .";
+            qWarning() << "     fromByteArray";
+            qWarning() << "     --> id: " << id;
+            qWarning() << "     --> hot:" << hot;
+            trackId = TrackId(QVariant::fromValue(id));
+            hotcue = hot;
+            qWarning() << "     --> data id: " << trackId;
+            qWarning() << "     --> data hot:" << hotcue;
+            qWarning() << "     .";
+        }
+    };
+
   public:
     WHotcueButton(const QString& group, QWidget* pParent);
 
@@ -39,7 +74,6 @@ class WHotcueButton : public WPushButton {
 
   private:
     ConfigKey createConfigKey(const QString& name);
-    const QString mimeTextIdentifier() const;
     void updateStyleSheet();
 
     const QString m_group;

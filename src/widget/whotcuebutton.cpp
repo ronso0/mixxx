@@ -15,7 +15,7 @@
 
 namespace {
 constexpr int kDefaultDimBrightThreshold = 127;
-const QString kMimeTextDelimiter = QStringLiteral("\n");
+const QString kDragDataType = QStringLiteral("dragData");
 } // anonymous namespace
 
 WHotcueButton::WHotcueButton(const QString& group, QWidget* pParent)
@@ -170,9 +170,14 @@ void WHotcueButton::mouseMoveEvent(QMouseEvent* pEvent) {
     }
 
     if (DragAndDropHelper::mouseMoveInitiatesDrag(pEvent)) {
+        const TrackId id = pTrack->getId();
+        VERIFY_OR_DEBUG_ASSERT(id.isValid()) {
+            return;
+        }
         QDrag* pDrag = new QDrag(this);
+        HotcueDragData dragData(id, m_hotcue);
         auto mimeData = std::make_unique<QMimeData>();
-        mimeData->setText(mimeTextIdentifier() + kMimeTextDelimiter + QString::number(m_hotcue));
+        mimeData->setData(kDragDataType, dragData.toByteArray());
         pDrag->setMimeData(mimeData.release());
 
         // Use the currently rendered button as dnd cursor
@@ -198,35 +203,49 @@ void WHotcueButton::dragEnterEvent(QDragEnterEvent* pEvent) {
     }
     TrackPointer pTrack = PlayerInfo::instance().getTrackInfo(m_group);
     if (!pTrack) {
-        pEvent->ignore();
         return;
     }
-    const QString& mimeText = pEvent->mimeData()->text();
-    QStringList mimeTextLines = mimeText.split(kMimeTextDelimiter);
-    if (mimeTextLines.size() != 2 || mimeTextLines.at(0) != mimeTextIdentifier()) {
-        pEvent->ignore();
+    qWarning() << "   dragEvent";
+    QByteArray mimeDataBytes = pEvent->mimeData()->data(kDragDataType);
+    if (mimeDataBytes.isEmpty()) {
+        qWarning() << "   --> drag mimeDataBytes empty !";
         return;
     }
-    bool okay = false;
-    int otherCueNum = mimeTextLines.at(1).toInt(&okay);
-    if (okay && otherCueNum != m_hotcue) {
+    HotcueDragData dragData;
+    dragData.fromByteArray(mimeDataBytes);
+    qWarning() << "   --> other hotcue:" << dragData.hotcue;
+    qWarning() << "   --> trackId:" << dragData.trackId;
+    if (dragData.trackId.isValid() &&
+            dragData.trackId == pTrack->getId() &&
+            dragData.hotcue != Cue::kNoHotCue) {
         pEvent->acceptProposedAction();
     }
 }
 
 void WHotcueButton::dropEvent(QDropEvent* pEvent) {
+    if (pEvent->source() == this) {
+        pEvent->ignore();
+        return;
+    }
     TrackPointer pTrack = PlayerInfo::instance().getTrackInfo(m_group);
     if (!pTrack) {
         return;
     }
-    const QString& mimeText = pEvent->mimeData()->text();
-    QStringList mimeTextLines = mimeText.split(kMimeTextDelimiter);
-    int otherCueNum = mimeTextLines.at(1).toInt();
-    pTrack->swapHotcues(otherCueNum, m_hotcue);
-}
-
-const QString WHotcueButton::mimeTextIdentifier() const {
-    return QStringLiteral("hotcue_") + m_group;
+    qWarning() << "   dropEvent";
+    QByteArray mimeDataBytes = pEvent->mimeData()->data(kDragDataType);
+    if (mimeDataBytes.isEmpty()) {
+        qWarning() << "   --> drag mimeDataBytes empty !";
+        return;
+    }
+    HotcueDragData dragData;
+    dragData.fromByteArray(mimeDataBytes);
+    qWarning() << "   --> other hotcue:" << dragData.hotcue;
+    qWarning() << "   --> trackId:" << dragData.trackId;
+    if (dragData.trackId.isValid() &&
+            dragData.trackId == pTrack->getId() &&
+            dragData.hotcue != Cue::kNoHotCue) {
+        pTrack->swapHotcues(dragData.hotcue, m_hotcue);
+    }
 }
 
 ConfigKey WHotcueButton::createConfigKey(const QString& name) {
