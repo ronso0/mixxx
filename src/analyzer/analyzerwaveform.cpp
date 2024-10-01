@@ -329,7 +329,6 @@ void AnalyzerWaveform::storeResults(TrackPointer tio) {
         m_waveform->setVersion(WaveformFactory::currentWaveformVersion());
         m_waveform->setDescription(WaveformFactory::currentWaveformDescription());
     }
-    tio->setWaveform(m_waveform);
 
     // Force completion to waveform size
     if (m_waveformSummary) {
@@ -338,7 +337,6 @@ void AnalyzerWaveform::storeResults(TrackPointer tio) {
         m_waveformSummary->setVersion(WaveformFactory::currentWaveformSummaryVersion());
         m_waveformSummary->setDescription(WaveformFactory::currentWaveformSummaryDescription());
     }
-    tio->setWaveformSummary(m_waveformSummary);
 
 #ifdef TEST_HEAT_MAP
     test_heatMap->save("heatMap.png");
@@ -352,6 +350,15 @@ void AnalyzerWaveform::storeResults(TrackPointer tio) {
             tio->getId(),
             m_waveform,
             m_waveformSummary);
+
+    // Set waveforms on track AFTER they'been written to disk in order to have
+    // a consistency when OverviewCache asks AnalysisDAO for a waveform summary.
+    if (m_waveform) {
+        tio->setWaveform(m_waveform);
+    }
+    if (m_waveformSummary) {
+        tio->setWaveformSummary(m_waveformSummary);
+    }
 
     kLogger.debug() << "Waveform generation for track" << tio->getId() << "done"
                     << m_timer.elapsed().debugSecondsWithUnit();

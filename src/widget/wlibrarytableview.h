@@ -58,7 +58,7 @@ class WLibraryTableView : public QTableView, public virtual LibraryView {
     void loadTrack(TrackPointer pTrack);
     void loadTrackToPlayer(TrackPointer pTrack, const QString& group, bool play = false);
     void trackSelected(TrackPointer pTrack);
-    void onlyCachedCoverArt(bool);
+    void onlyCachedCoversAndOverviews(bool);
     void scrollValueChanged(int);
     FocusWidget setLibraryFocus(FocusWidget newFocus);
 
