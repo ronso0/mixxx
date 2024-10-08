@@ -21,6 +21,7 @@
 #include "library/coverartcache.h"
 #include "library/library.h"
 #include "library/library_prefs.h"
+#include "library/overviewcache.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "mixer/playerinfo.h"
@@ -358,6 +359,10 @@ void CoreServices::initialize(QApplication* pApp) {
     emit initializationProgressUpdate(50, tr("library"));
     CoverArtCache::createInstance();
     Clipboard::createInstance();
+    OverviewCache::createInstance();
+    auto* pOverviewCache = OverviewCache::instance();
+    pOverviewCache->setConfig(pConfig);
+    pOverviewCache->setDbConnectionPool(m_pDbConnectionPool);
 
     m_pTrackCollectionManager = std::make_shared<TrackCollectionManager>(
             this,

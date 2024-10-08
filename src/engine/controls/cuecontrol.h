@@ -47,6 +47,15 @@ enum class HotcueSetMode {
     Loop = 2,
 };
 
+/// Describes how loop cues are activated
+enum class LoopCueActivationMode {
+    /// Activate loop, jump to loop start if loop is behind play position (default)
+    Reloop = 0,
+    /// Jump to loop start and loop, toggle loop if play position is inside
+    /// loop range
+    JumpOrToggle = 1,
+};
+
 inline SeekOnLoadMode seekOnLoadModeFromDouble(double value) {
     return static_cast<SeekOnLoadMode>(int(value));
 }
@@ -132,10 +141,12 @@ class HotcueControl : public QObject {
     void slotHotcueGotoAndLoop(double v);
     void slotHotcueCueLoop(double v);
     void slotHotcueActivate(double v);
+    void slotHotcueActivateSecondary(double v);
     void slotHotcueActivateCue(double v);
     void slotHotcueActivateLoop(double v);
     void slotHotcueActivatePreview(double v);
     void slotHotcueClear(double v);
+    void slotHotcueSwap(double v);
     void slotHotcueEndPositionChanged(double newPosition);
     void slotHotcuePositionChanged(double newPosition);
     void slotHotcueColorChangeRequest(double newColor);
@@ -148,8 +159,10 @@ class HotcueControl : public QObject {
     void hotcueGotoAndLoop(HotcueControl* pHotcue, double v);
     void hotcueCueLoop(HotcueControl* pHotcue, double v);
     void hotcueActivate(HotcueControl* pHotcue, double v, HotcueSetMode mode);
+    void hotcueActivateSecondary(HotcueControl* pHotcue, double v, HotcueSetMode mode);
     void hotcueActivatePreview(HotcueControl* pHotcue, double v);
     void hotcueClear(HotcueControl* pHotcue, double v);
+    void hotcueSwap(HotcueControl* pHotcue, double v);
     void hotcuePositionChanged(HotcueControl* pHotcue, double newPosition);
     void hotcueEndPositionChanged(HotcueControl* pHotcue, double newEndPosition);
     void hotcuePlay(double v);
@@ -177,10 +190,12 @@ class HotcueControl : public QObject {
     std::unique_ptr<ControlPushButton> m_hotcueGotoAndLoop;
     std::unique_ptr<ControlPushButton> m_hotcueCueLoop;
     std::unique_ptr<ControlPushButton> m_hotcueActivate;
+    std::unique_ptr<ControlPushButton> m_hotcueActivateSecondary;
     std::unique_ptr<ControlPushButton> m_hotcueActivateCue;
     std::unique_ptr<ControlPushButton> m_hotcueActivateLoop;
     std::unique_ptr<ControlPushButton> m_hotcueActivatePreview;
     std::unique_ptr<ControlPushButton> m_hotcueClear;
+    std::unique_ptr<ControlPushButton> m_hotcueSwap;
 
     ControlValueAtomic<mixxx::CueType> m_previewingType;
     ControlValueAtomic<mixxx::audio::FramePos> m_previewingPosition;
@@ -225,9 +240,13 @@ class CueControl : public EngineControl {
     void hotcueGotoAndLoop(HotcueControl* pControl, double v);
     void hotcueCueLoop(HotcueControl* pControl, double v);
     void hotcueActivate(HotcueControl* pControl, double v, HotcueSetMode mode);
+    void hotcueActivateSecondary(HotcueControl* pControl, double v, HotcueSetMode mode);
     void hotcueActivatePreview(HotcueControl* pControl, double v);
+    void loopCueReloop(HotcueControl* pControl, const CuePointer& pCue);
+    void loopCueGoToAndLoopOrToggle(HotcueControl* pControl, const CuePointer& pCue);
     void updateCurrentlyPreviewingIndex(int hotcueIndex);
     void hotcueClear(HotcueControl* pControl, double v);
+    void hotcueSwap(HotcueControl* pHotcue, double v);
     void hotcuePositionChanged(HotcueControl* pControl, double newPosition);
     void hotcueEndPositionChanged(HotcueControl* pControl, double newEndPosition);
 
@@ -278,6 +297,7 @@ class CueControl : public EngineControl {
 
     void attachCue(const CuePointer& pCue, HotcueControl* pControl);
     void detachCue(HotcueControl* pControl);
+    void setCurrentSavedLoopControl(HotcueControl* pControl);
     void setCurrentSavedLoopControlAndActivate(HotcueControl* pControl);
     void loadCuesFromTrack();
     mixxx::audio::FramePos quantizeCuePoint(mixxx::audio::FramePos position);
@@ -357,6 +377,8 @@ class CueControl : public EngineControl {
     std::unique_ptr<ControlObject> m_pHotcueFocusColorPrev;
 
     parented_ptr<ControlProxy> m_pPassthrough;
+
+    ControlObject* m_pLoopCueActivationMode;
 
     QAtomicPointer<HotcueControl> m_pCurrentSavedLoopControl;
 

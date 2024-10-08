@@ -2,6 +2,7 @@
 
 #include <QString>
 
+#include "control/pollingcontrolproxy.h"
 #include "util/parented_ptr.h"
 #include "widget/wcuemenupopup.h"
 #include "widget/wpushbutton.h"
@@ -24,9 +25,15 @@ class WHotcueButton : public WPushButton {
     Q_PROPERTY(bool dark MEMBER m_bCueColorIsDark);
     Q_PROPERTY(QString type MEMBER m_type);
 
+    void release();
+
   protected:
-    void mousePressEvent(QMouseEvent* e) override;
-    void mouseReleaseEvent(QMouseEvent* e) override;
+    void mousePressEvent(QMouseEvent* pEvent) override;
+    void mouseReleaseEvent(QMouseEvent* pEvent) override;
+    void mouseMoveEvent(QMouseEvent* pEvent) override;
+    void dragEnterEvent(QDragEnterEvent* pEvent) override;
+    void dropEvent(QDropEvent* pEvent) override;
+
     void restyleAndRepaint() override;
 
   private slots:
@@ -35,6 +42,7 @@ class WHotcueButton : public WPushButton {
 
   private:
     ConfigKey createConfigKey(const QString& name);
+    const QString mimeTextIdentifier() const;
     void updateStyleSheet();
 
     const QString m_group;
@@ -42,10 +50,12 @@ class WHotcueButton : public WPushButton {
     bool m_hoverCueColor;
     parented_ptr<ControlProxy> m_pCoColor;
     parented_ptr<ControlProxy> m_pCoType;
+    std::unique_ptr<PollingControlProxy> m_pCoActivateSecondary;
     parented_ptr<WCueMenuPopup> m_pCueMenuPopup;
     int m_cueColorDimThreshold;
     bool m_bCueColorDimmed;
     bool m_bCueColorIsLight;
     bool m_bCueColorIsDark;
     QString m_type;
+    QMargins m_dndRectMargins;
 };

@@ -681,6 +681,15 @@ if(NOT MSVC)
       endif()
     endif()
   endif()
+  # cpu pinning / isolate support
+  find_program(CPUSET_EXECUTABLE "cset")
+  if(CPUSET_EXECUTABLE)
+    message(STATUS "Found cpuset: ${CPUSET_EXECUTABLE}")
+    set(CPUSET_FOUND TRUE)
+  else()
+    message(STATUS "Could NOT find cpuset (missing executable)")
+  endif()
+  message(STATUS "Support for cpu pinning / isolate: ${CPUSET_FOUND}")
 endif()
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
@@ -928,6 +937,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/library/dao/settingsdao.cpp
   src/library/dao/trackdao.cpp
   src/library/dao/trackschema.cpp
+  src/library/tabledelegates/defaultdelegate.cpp
   src/library/dlgcoverartfullsize.cpp
   src/library/dlgcoverartfullsize.ui
   src/library/dlgtagfetcher.cpp
@@ -960,6 +970,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/library/missing_hidden/hiddentablemodel.cpp
   src/library/missing_hidden/missingtablemodel.cpp
   src/library/mixxxlibraryfeature.cpp
+  src/library/overviewcache.cpp
   src/library/parser.cpp
   src/library/parsercsv.cpp
   src/library/parserm3u.cpp
@@ -989,6 +1000,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/library/tabledelegates/keydelegate.cpp
   src/library/tabledelegates/locationdelegate.cpp
   src/library/tabledelegates/multilineeditdelegate.cpp
+  src/library/tabledelegates/overviewdelegate.cpp
   src/library/tabledelegates/previewbuttondelegate.cpp
   src/library/tabledelegates/stardelegate.cpp
   src/library/tabledelegates/stareditor.cpp
@@ -1156,6 +1168,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/util/color/predefinedcolorpalettes.cpp
   src/util/colorcomponents.cpp
   src/util/console.cpp
+  src/util/cpupinning.cpp
   src/util/db/dbconnection.cpp
   src/util/db/dbconnectionpool.cpp
   src/util/db/dbconnectionpooled.cpp
@@ -1210,11 +1223,13 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/util/workerthreadscheduler.cpp
   src/util/xml.cpp
   src/waveform/guitick.cpp
+  src/waveform/overviews/overviewtype.cpp
   src/waveform/renderers/glwaveformrenderbackground.cpp
   src/waveform/renderers/glvsynctestrenderer.cpp
   src/waveform/renderers/waveformmark.cpp
   src/waveform/renderers/waveformmarkrange.cpp
   src/waveform/renderers/waveformmarkset.cpp
+  src/waveform/overviews/waveformoverviewrenderer.cpp
   src/waveform/renderers/waveformrenderbackground.cpp
   src/waveform/renderers/waveformrenderbeat.cpp
   src/waveform/renderers/waveformrendererabstract.cpp
@@ -1848,6 +1863,15 @@ install(
     .
 )
 
+# Script for cpu pinning of the engine thread
+install(
+  FILES
+    tools/mixxx-isolate.py
+  DESTINATION
+    "${MIXXX_INSTALL_BINDIR}"
+  RENAME "mixxx-isolate"
+)
+
 # Skins
 install(
   DIRECTORY
@@ -2101,6 +2125,7 @@ add_executable(mixxx-test
   src/test/imageutils_test.cpp
   src/test/indexrange_test.cpp
   src/test/itunesxmlimportertest.cpp
+  src/test/keyfactorytest.cpp
   src/test/keyutilstest.cpp
   src/test/lcstest.cpp
   src/test/learningutilstest.cpp

@@ -46,6 +46,7 @@ WLabel#FxUnitLabel,
 WLabel#MicAuxLabel, WLabel#MicAuxLabelUnconfigured,
 #VinylControls WPushButton,
 #FxAssignButtons WPushButton,
+#FxAssignButtonsBig WPushButton,
 WPushButton#GuiToggleButton,
 WLabel#RecFeedback, WLabel#RecDuration,
 WPushButton#BroadcastButton,
@@ -68,6 +69,7 @@ QLabel#labelRecFilename {
 #MicAuxLabel, #MicAuxLabelUnconfigured,
 #VinylControls WPushButton,
 #FxAssignButtons WPushButton,
+#FxAssignButtonsBig WPushButton,
 #GuiToggleButton,
 #RecFeedback, #RecDuration,
 #BroadcastButton,
@@ -241,6 +243,7 @@ WPushButton,
 }
 
 WKey,
+#FxAssignButtonsBig WPushButton,
 WEffectSelector,
 WEffectSelector QAbstractScrollArea,
 WEffectChainPresetSelector,
@@ -261,6 +264,7 @@ WEffectChainPresetSelector QAbstractScrollArea,
 #SamplerTitleMini, #SamplerBpm,
 #MicAuxLabel, #MicAuxLabelUnconfigured,
 #PreviewTitle,
+#PreviewTitle WTrackPropertyEditor,
 #PreviewLabel,
 WBeatSpinBox,
 #spinBoxTransition {
@@ -270,6 +274,7 @@ WBeatSpinBox,
 #TitleTextSmall,
 #ArtistTextSmall,
 #PlayPositionText,
+#CommentText,
 #BpmText,
 #BpmTextSmall,
 #FxUnitLabel,
@@ -287,7 +292,9 @@ WRecordingDuration {
 }
 
 #ArtistText,
-#TitleText {
+#TitleText,
+#CommentText,
+WTrackProperty QLineEdit {
   font-size: 18px;
 }
 
@@ -605,7 +612,7 @@ WTrackProperty[selected="false"] {
   qproperty-layoutAlignment: 'AlignRight | AlignTop';
 }
 #FxUnitControlsExpanded,
-#FxUnitControlsCollapsed,
+/*#FxUnitControlsCollapsed,*/
 #FxSlotContainer,
 #FxSlotControls,
 #FxFocusButtonBox,
@@ -621,6 +628,7 @@ WTrackProperty[selected="false"] {
   qproperty-layoutAlignment: 'AlignRight | AlignVCenter';
 }
 
+#FxUnitControlsCollapsed,
 #FxParameterKnobBox {
   qproperty-layoutAlignment: 'AlignHCenter | AlignTop';
 }
@@ -642,6 +650,7 @@ WEffectSelector {
   padding: 4px 0px 4px 4px;
   /* The 3D frame on the combo box becomes flat when you give it a border
   border-radius: 3px; */
+  text-align: center;
   }
 WEffectChainPresetSelector {
   border:  0px;
@@ -821,6 +830,7 @@ WEffectChainPresetButton::menu-indicator {
 
 /************** Skin settings *************************************************/
 
+#SkinSettingsContainer,
 #SkinSettings {
   qproperty-layoutAlignment: 'AlignLeft | AlignTop';
   }

@@ -178,6 +178,17 @@ void DlgTrackInfoMulti::init() {
                 QOverload<int>::of(&QComboBox::currentIndexChanged),
                 this,
                 &DlgTrackInfoMulti::slotTagBoxIndexChanged);
+
+        auto pLine = pBox->lineEdit();
+        connect(pLine,
+                &QLineEdit::editingFinished,
+                [pBox, pLine]() {
+                    QString origVal = pBox->property(kOrigValProp).toString();
+                    if (!pLine->text().trimmed().isEmpty() &&
+                            pLine->text() != origVal) {
+                        pLine->setPlaceholderText(QString());
+                    }
+                });
     }
     // Note: unlike other tags, comments can be multi-line, though while QComboBox
     // can have multi-line items its Q*Line*Edit is not suitable for editing multi-

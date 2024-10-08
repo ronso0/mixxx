@@ -761,6 +761,14 @@ void LibraryControl::slotScrollDown(double v) {
 }
 
 void LibraryControl::slotScrollVertical(double v) {
+    if (m_focusedWidget == FocusWidget::ContextMenu) {
+        const auto key = (v < 0) ? Qt::Key_Left : Qt::Key_Right;
+        const auto times = static_cast<unsigned short>(std::abs(v));
+        QKeyEvent event = QKeyEvent{QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times};
+        QApplication::sendEvent(QApplication::focusWindow(), &event);
+        return;
+    }
+
     const auto key = (v < 0) ? Qt::Key_PageUp : Qt::Key_PageDown;
     const auto times = static_cast<unsigned short>(std::abs(v));
     emitKeyEvent(QKeyEvent{QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times});
@@ -1039,8 +1047,11 @@ void LibraryControl::slotGoToItem(double v) {
         // press & release Space (QAbstractButton::clicked() is emitted on release)
         QKeyEvent pressSpace = QKeyEvent{QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier};
         QKeyEvent releaseSpace = QKeyEvent{QEvent::KeyRelease, Qt::Key_Space, Qt::NoModifier};
-        QApplication::sendEvent(QApplication::focusWindow(), &pressSpace);
-        QApplication::sendEvent(QApplication::focusWindow(), &releaseSpace);
+        auto* pWindow = QApplication::focusWindow();
+        if (pWindow) {
+            QApplication::sendEvent(pWindow, &pressSpace);
+            QApplication::sendEvent(pWindow, &releaseSpace);
+        }
         return;
     }
     case FocusWidget::ContextMenu:
@@ -1054,7 +1065,10 @@ void LibraryControl::slotGoToItem(double v) {
         // If Unknown is some other 'untrained' or unresponsive widget
         // GoToItem is inappropriate and we can't do much about that.
         QKeyEvent event = QKeyEvent{QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier};
-        QApplication::sendEvent(QApplication::focusWindow(), &event);
+        auto* pWindow = QApplication::focusWindow();
+        if (pWindow) {
+            QApplication::sendEvent(pWindow, &event);
+        }
         return;
     }
     case FocusWidget::Searchbar:

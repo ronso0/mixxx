@@ -27,6 +27,7 @@
 #include "util/timer.h"
 #include "util/valuetransformer.h"
 #include "util/xml.h"
+#include "waveform/overviews/waveformoverviewrenderer.h"
 #include "waveform/vsyncthread.h"
 #include "waveform/waveformwidgetfactory.h"
 #include "widget/controlwidgetconnection.h"
@@ -1038,6 +1039,13 @@ QWidget* LegacySkinParser::parseOverview(const QDomElement& node) {
             &PlayerManager::slotLoadLocationToPlayerMaybePlay);
     connect(overviewWidget, &WOverview::cloneDeck,
             m_pPlayerManager, &PlayerManager::slotCloneDeck);
+    // This signal stems from AnalysisFeature, and the overview can now
+    // render the analysis progress like when listening to Playermanager's
+    // analysis progress signal when loading a track.
+    connect(m_pLibrary,
+            &Library::onTrackAnalyzerProgress,
+            overviewWidget,
+            &WOverview::onTrackAnalyzerProgress);
 
     commonWidgetSetup(node, overviewWidget);
     overviewWidget->setup(node, *m_pContext);

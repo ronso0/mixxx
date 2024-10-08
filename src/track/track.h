@@ -296,6 +296,10 @@ class Track : public QObject {
     void setMainCuePosition(mixxx::audio::FramePos position);
     /// Shift all cues by a constant offset
     void shiftCuePositionsMillis(mixxx::audio::FrameDiff_t milliseconds);
+    /// Shift beatgrid by a constant offset
+    void shiftBeatsMillis(double milliseconds);
+    void sortHotcuesByPosition();
+
     // Call when analysis is done.
     void analysisFinished();
 
@@ -322,6 +326,7 @@ class Track : public QObject {
     }
     CuePointer findCueByType(mixxx::CueType type) const; // NOTE: Cannot be used for hotcues.
     CuePointer findCueById(DbId id) const;
+    CuePointer findHotcueByIndex(int idx) const;
     void removeCue(const CuePointer& pCue);
     void removeCuesOfType(mixxx::CueType);
     QList<CuePointer> getCuePoints() const {
@@ -329,7 +334,8 @@ class Track : public QObject {
         // lock thread-unsafe copy constructors of QList
         return m_cuePoints;
     }
-
+    QList<CuePointer> getHotcues() const;
+    void swapHotcues(int a, int b);
     void setCuePoints(const QList<CuePointer>& cuePoints);
 
 #ifdef __STEM__

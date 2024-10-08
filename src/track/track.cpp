@@ -981,12 +981,67 @@ void Track::shiftCuePositionsMillis(double milliseconds) {
     VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
         return;
     }
-    double frames = m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(milliseconds);
+    const double frames =
+            m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(
+                    milliseconds);
     for (const CuePointer& pCue : std::as_const(m_cuePoints)) {
         pCue->shiftPositionFrames(frames);
     }
 
     markDirtyAndUnlock(&locked);
+}
+
+void Track::shiftBeatsMillis(double milliseconds) {
+    if (milliseconds == 0 || !m_pBeats) {
+        return;
+    }
+    const double frames =
+            m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(
+                    milliseconds);
+    const auto translatedBeats = m_pBeats->tryTranslate(frames);
+    if (translatedBeats) {
+        trySetBeats(*translatedBeats);
+    }
+}
+
+void Track::sortHotcuesByPosition() {
+    auto locked = lockMutex(&m_qMutex);
+
+    VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
+        return;
+    }
+
+    QList<int> indices;
+    QList<mixxx::audio::FramePos> positions;
+
+    for (const CuePointer& pCue : std::as_const(m_cuePoints)) {
+        if (pCue->getType() != mixxx::CueType::HotCue) {
+            continue;
+        }
+        const auto pos = pCue->getPosition();
+        positions.append(pos);
+        const int index = pCue->getHotCue();
+        indices.append(index);
+    }
+
+    std::sort(positions.begin(), positions.end());
+    std::sort(indices.begin(), indices.end());
+
+    QMap<mixxx::audio::FramePos, int> posIndexMap;
+    for (int i = 0; i < positions.size(); i++) {
+        posIndexMap.insert(positions[i], indices[i]);
+    }
+
+    for (CuePointer& pCue : m_cuePoints) {
+        if (pCue->getType() != mixxx::CueType::HotCue) {
+            continue;
+        }
+        int newIndex = posIndexMap.take(pCue->getPosition());
+        pCue->setHotCue(newIndex);
+    }
+
+    markDirtyAndUnlock(&locked);
+    emit cuesUpdated();
 }
 
 void Track::analysisFinished() {
@@ -1062,6 +1117,35 @@ CuePointer Track::findCueById(DbId id) const {
     return CuePointer();
 }
 
+CuePointer Track::findHotcueByIndex(int idx) const {
+    auto locked = lockMutex(&m_qMutex);
+    auto is_hotcue_n = [](int n) {
+        return [n](const CuePointer& pCue) {
+            return pCue && pCue->getHotCue() == n;
+        };
+    };
+    auto cueIt = std::find_if(m_cuePoints.begin(), m_cuePoints.end(), is_hotcue_n(idx));
+    if (cueIt != m_cuePoints.end()) {
+        qWarning() << "     > found hotcue" << idx;
+        return *cueIt;
+    } else {
+        qWarning() << "     ! no hotcue" << idx;
+        return {};
+    }
+}
+
+QList<CuePointer> Track::getHotcues() const {
+    const QMutexLocker lock(&m_qMutex);
+    // lock thread-unsafe copy constructors of QList
+    QList<CuePointer> hotcues;
+    for (const auto& pCue : m_cuePoints) {
+        if (pCue->getType() == mixxx::CueType::HotCue) {
+            hotcues.append(pCue);
+        }
+    }
+    return hotcues;
+}
+
 void Track::removeCue(const CuePointer& pCue) {
     if (!pCue) {
         return;
@@ -1101,6 +1185,33 @@ void Track::removeCuesOfType(mixxx::CueType type) {
         markDirtyAndUnlock(&locked);
         emit cuesUpdated();
     }
+}
+
+void Track::swapHotcues(int a, int b) {
+    VERIFY_OR_DEBUG_ASSERT(a != b) {
+        qWarning() << "Track::swapHotcues rejected," << a << "==" << b;
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(a > Cue::kNoHotCue || b > Cue::kNoHotCue) {
+        qWarning() << "Track::swapHotcues rejected, both a and b are" << Cue::kNoHotCue;
+        return;
+    }
+    auto locked = lockMutex(&m_qMutex);
+    qWarning() << "     Track::swapHotcues" << a << "and" << b;
+    CuePointer pCueA = findHotcueByIndex(a);
+    CuePointer pCueB = findHotcueByIndex(b);
+    if (!pCueA && !pCueB) {
+        return;
+    }
+    if (pCueA) {
+        qWarning() << "     >> move" << a << "to" << b;
+        pCueA->setHotCue(b);
+    }
+    if (pCueB) {
+        qWarning() << "     >> move" << b << "to" << a;
+        pCueB->setHotCue(a);
+    }
+    emit cuesUpdated();
 }
 
 void Track::setCuePoints(const QList<CuePointer>& cuePoints) {
