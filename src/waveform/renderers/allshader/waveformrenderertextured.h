@@ -1,11 +1,14 @@
 #pragma once
 
+#ifndef QT_OPENGL_ES_2
+
 #include "shaders/rgbshader.h"
 #include "track/track_decl.h"
 #include "util/class.h"
 #include "waveform/renderers/allshader/rgbdata.h"
 #include "waveform/renderers/allshader/vertexdata.h"
 #include "waveform/renderers/allshader/waveformrenderersignalbase.h"
+#include "waveform/waveform.h"
 #include "waveform/widgets/waveformwidgettype.h"
 
 class QOpenGLFramebufferObject;
@@ -41,6 +44,13 @@ class allshader::WaveformRendererTextured : public QObject,
     void slotWaveformUpdated();
 
   private:
+    struct WaveformTexture {
+        unsigned char low;
+        unsigned char mid;
+        unsigned char high;
+        unsigned char all;
+    };
+
     static QString fragShaderForType(WaveformWidgetType::Type t);
     bool loadShaders();
     bool loadTexture();
@@ -54,6 +64,8 @@ class allshader::WaveformRendererTextured : public QObject,
     TrackPointer m_loadedTrack;
     int m_textureRenderedWaveformCompletion;
 
+    std::vector<WaveformFilteredData> m_data;
+
     // Frame buffer for two pass rendering.
     std::unique_ptr<QOpenGLFramebufferObject> m_framebuffer;
 
@@ -65,3 +77,5 @@ class allshader::WaveformRendererTextured : public QObject,
     const QString m_pFragShader;
     std::unique_ptr<QOpenGLShaderProgram> m_frameShaderProgram;
 };
+
+#endif // QT_OPENGL_ES_2

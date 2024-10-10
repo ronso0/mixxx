@@ -1,12 +1,13 @@
 #include "waveform/renderers/allshader/waveformrenderertextured.h"
 
+#ifndef QT_OPENGL_ES_2
+
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLShaderProgram>
 
 #include "moc_waveformrenderertextured.cpp"
 #include "track/track.h"
 #include "waveform/renderers/waveformwidgetrenderer.h"
-#include "waveform/waveform.h"
 
 namespace allshader {
 
@@ -128,6 +129,15 @@ bool WaveformRendererTextured::loadTexture() {
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     if (pWaveform != nullptr && data != nullptr) {
+        // Make a copy of the waveform data, stripping the stems portion. Note that the datasize is
+        // different from the texture size -- we want the full texture size so the upload works. See
+        // m_data in waveform/waveform.h.
+        if (m_data.size() == 0 || static_cast<int>(m_data.size()) != pWaveform->getTextureSize()) {
+            m_data.resize(pWaveform->getTextureSize());
+        }
+        for (int i = 0; i < pWaveform->getDataSize(); i++) {
+            m_data[i] = data[i].filtered;
+        }
         // Waveform ensures that getTextureSize is a multiple of
         // getTextureStride so there is no rounding here.
         int textureWidth = pWaveform->getTextureStride();
@@ -141,7 +151,7 @@ bool WaveformRendererTextured::loadTexture() {
                 0,
                 GL_RGBA,
                 GL_UNSIGNED_BYTE,
-                data);
+                m_data.data());
         int error = glGetError();
         if (error) {
             qDebug() << "WaveformRendererTextured::loadTexture - glTexImage2D error" << error;
@@ -294,10 +304,16 @@ void WaveformRendererTextured::paintGL() {
         return;
     }
 
-    const WaveformData* data = pWaveform->data();
-    if (data == nullptr) {
+    if (pWaveform->data() == nullptr) {
         return;
     }
+#ifdef __STEM__
+    auto stemInfo = pTrack->getStemInfo();
+    // If this track is a stem track, skip the rendering
+    if (!stemInfo.isEmpty() && pWaveform->hasStem()) {
+        return;
+    }
+#endif
 
     const double trackSamples = m_waveformRenderer->getTrackSamples();
     if (trackSamples <= 0) {
@@ -305,7 +321,7 @@ void WaveformRendererTextured::paintGL() {
     }
 
     // NOTE(vRince): completion can change during loadTexture
-    // do not remove currenCompletion temp variable !
+    // do not remove currentCompletion temp variable !
     const int currentCompletion = pWaveform->getCompletion();
     if (m_textureRenderedWaveformCompletion < currentCompletion) {
         loadTexture();
@@ -531,3 +547,5 @@ void WaveformRendererTextured::paintGL() {
 }
 
 } // namespace allshader
+
+#endif // QT_OPENGL_ES_2
