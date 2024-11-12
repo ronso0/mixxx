@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QGuiApplication>
+#include <QMainWindow>
 #include <QScreen>
 #include <QStyle>
 #include <QWindow>
@@ -113,6 +114,27 @@ QScreen* getScreenForWidgetOrApplication(
                   "Using primary screen"
                << pScreen->name();
     return pScreen;
+}
+
+QWidget* getSkinWidget() {
+    QWidget* pCentralWidget = nullptr;
+    QMainWindow* pMainWindow = nullptr;
+    const QWidgetList pwidgets = QApplication::topLevelWidgets();
+    for (auto* pWidget : pwidgets) {
+        if ((pMainWindow = qobject_cast<QMainWindow*>(pWidget))) {
+            // This fetches the #Skin widget
+            pCentralWidget = pMainWindow->centralWidget();
+            break;
+        }
+    }
+    // We only want the 'Skin' widget, not the temporary LaunchImage
+    // Alt: avoid the literal object name, assumes the central widget
+    // can only be nullptr, 'Skin' or LaunchImage.
+    // if (pCentralWidget && qobject_cast<LaunchImage*>(pCentralWidget) == nullptr) {
+    if (pCentralWidget && pCentralWidget->objectName() == skinWidgetName()) {
+        return pCentralWidget;
+    }
+    return nullptr;
 }
 
 void growListWidget(QListWidget& listWidget, const QWidget& parent) {
