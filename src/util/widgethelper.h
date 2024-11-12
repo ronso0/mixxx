@@ -25,8 +25,7 @@ QPoint mapPopupToScreen(
 /// Might return nullptr if no window could be determined.
 ///
 /// Adopted from windowForWidget() in qtbase/src/widgets/kernel/qapplication_p.h
-QWindow* getWindow(
-        const QWidget& widget);
+QWindow* getWindow(const QWidget& widget);
 
 /// Obtains the corresponding screen for the given widget.
 ///
@@ -57,6 +56,16 @@ inline QScreen* getScreen(
 /// primary screen if no application or widget screen is available yet.
 QScreen* getScreenForWidgetOrApplication(
         const QWidget& widget);
+
+/// Name for the central skin widget. Set by LegacySkinparser.
+inline QString skinWidgetName() {
+    return QStringLiteral("Skin");
+}
+
+/// Try to get the QMainWindow's central 'Skin' widget.
+/// This is a helper for various GUI or non-GUI classes to use 'Skin' as parent
+/// for their dialogs so they inherit the skin's stylesheet.
+QWidget* getSkinWidget();
 
 /// QSize for stretching a list widget attempting to show entire column
 void growListWidget(QListWidget& listWidget, const QWidget& parent);
