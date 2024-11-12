@@ -14,6 +14,7 @@
 #include "moc_setlogfeature.cpp"
 #include "track/track.h"
 #include "util/make_const_iterator.h"
+#include "util/widgethelper.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wtracktableview.h"
@@ -547,7 +548,8 @@ void SetlogFeature::slotDeleteAllUnlockedChildPlaylists() {
     }
     QString year = m_lastRightClickedIndex.data().toString();
 
-    QMessageBox::StandardButton btn = QMessageBox::question(nullptr,
+    QMessageBox::StandardButton btn = QMessageBox::question(
+            mixxx::widgethelper::getSkinWidget(), // parent to apply skin styles,
             tr("Confirm Deletion"),
             //: %1 is the year
             //: <b> + </b> are used to make the text in between bold in the popup
@@ -571,7 +573,8 @@ void SetlogFeature::slotDeleteAllUnlockedChildPlaylists() {
         }
     }
     // Double-check, this is a weighty decision
-    btn = QMessageBox::warning(nullptr,
+    btn = QMessageBox::warning(
+            mixxx::widgethelper::getSkinWidget(), // parent to apply skin styles,
             tr("Confirm Deletion"),
             //: %1 is the number of playlists to be deleted
             //: %2 is the year
