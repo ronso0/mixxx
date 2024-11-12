@@ -524,6 +524,29 @@ QString DlgPrefController::mappingFileLinks(
     return linkList.join("<br/>");
 }
 
+void DlgPrefController::updateMappingIconsAndColoredLinkTexts() {
+    // re-enumerating mappings is the easiest way to update the list icons
+    enumerateMappings(mappingFilePathFromIndex(m_ui.comboBoxMapping->currentIndex()));
+
+    // Update the colored links
+    createLinkColor();
+    // Note: this will show the links of the LOADED mapping, so when applying
+    // a stylesheet while the selected mapping hasn't been loaded, yet, the
+    // links will be wrong.
+    std::shared_ptr<LegacyControllerMapping> pMapping = m_pController->getMapping();
+    // TODO copied from showMapping()
+    QString supportLinks, scriptFileLinks;
+    if (pMapping) {
+        supportLinks = mappingSupportLinks(pMapping);
+        scriptFileLinks = mappingFileLinks(pMapping);
+    }
+    m_ui.labelMappingSupportLinks->setText(supportLinks);
+    m_ui.labelMappingScriptFileLinks->setText(scriptFileLinks);
+    // Hide or show labels based on the presence of text
+    m_ui.labelMappingSupport->setVisible(!supportLinks.isEmpty());
+    m_ui.labelMappingScriptFiles->setVisible(!scriptFileLinks.isEmpty());
+}
+
 void DlgPrefController::enumerateMappings(const QString& selectedMappingPath) {
     m_ui.comboBoxMapping->blockSignals(true);
     QString currentMappingFilePath = mappingFilePathFromIndex(m_ui.comboBoxMapping->currentIndex());
@@ -531,12 +554,14 @@ void DlgPrefController::enumerateMappings(const QString& selectedMappingPath) {
 
     // qDebug() << "Enumerating mappings for controller" << m_pController->getName();
 
-    // Check the text color of the palette for whether to use dark or light icons
+    // Check the text color of the palette for whether to use dark or light icons.
+    // For this to work with custom stylesheets we need to set the text color, eg.:
+    // DlgPrefController { color: yellow; }
     QDir iconsPath;
     if (!Color::isDimColor(palette().text().color())) {
-        iconsPath.setPath(":/images/preferences/light/");
+        iconsPath.setPath(PREF_LIGHT_ICON_PATH);
     } else {
-        iconsPath.setPath(":/images/preferences/dark/");
+        iconsPath.setPath(PREF_DARK_ICON_PATH);
     }
 
     // Insert a dummy item at the top to try to make it less confusing.
@@ -872,7 +897,7 @@ bool DlgPrefController::saveMapping() {
                 "Overwrite or save with a new name?");
         QString overwriteCheckLabel = tr("Always overwrite during this session");
 
-        QMessageBox overwriteMsgBox;
+        QMessageBox overwriteMsgBox(this);
         overwriteMsgBox.setIcon(QMessageBox::Question);
         overwriteMsgBox.setWindowTitle(overwriteTitle);
         overwriteMsgBox.setText(overwriteLabel.arg(mappingName));
@@ -937,7 +962,7 @@ bool DlgPrefController::saveMapping() {
     return true;
 }
 
-QString DlgPrefController::askForMappingName(const QString& prefilledName) const {
+QString DlgPrefController::askForMappingName(const QString& prefilledName) {
     QString saveMappingTitle = tr("Save user mapping");
     QString saveMappingLabel = tr("Enter the name for saving the mapping to the user folder.");
     QString savingFailedTitle = tr("Saving mapping failed");
@@ -955,7 +980,7 @@ QString DlgPrefController::askForMappingName(const QString& prefilledName) const
     while (!validMappingName) {
         QString userDir = m_pUserDir;
         bool ok = false;
-        mappingName = QInputDialog::getText(nullptr,
+        mappingName = QInputDialog::getText(this,
                 saveMappingTitle,
                 saveMappingLabel,
                 QLineEdit::Normal,
@@ -968,7 +993,7 @@ QString DlgPrefController::askForMappingName(const QString& prefilledName) const
             return QString();
         }
         if (mappingName.isEmpty()) {
-            QMessageBox::warning(nullptr,
+            QMessageBox::warning(this,
                     savingFailedTitle,
                     invalidNameLabel);
             continue;
@@ -976,7 +1001,7 @@ QString DlgPrefController::askForMappingName(const QString& prefilledName) const
         // While / is allowed for the display name we can't use it for the file name.
         QString newFilePath = mappingNameToPath(userDir, mappingName);
         if (QFile::exists(newFilePath)) {
-            QMessageBox::warning(nullptr,
+            QMessageBox::warning(this,
                     savingFailedTitle,
                     fileExistsLabel);
             continue;
@@ -1044,6 +1069,7 @@ void DlgPrefController::slotShowPreviewScreens(
 void DlgPrefController::showMapping(std::shared_ptr<LegacyControllerMapping> pMapping) {
     QString name, description, author, supportLinks, scriptFileLinks;
 
+    // TODO move to separate function
     if (pMapping) {
         name = pMapping->name();
         description = pMapping->description();
