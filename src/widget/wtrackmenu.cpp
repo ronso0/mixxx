@@ -1543,7 +1543,7 @@ void WTrackMenu::addSelectionToPlaylist(int iPlaylistId) {
 
         do {
             bool ok = false;
-            name = QInputDialog::getText(nullptr,
+            name = QInputDialog::getText(this,
                     tr("Create New Playlist"),
                     tr("Enter name for new playlist:"),
                     QLineEdit::Normal,
@@ -1554,11 +1554,11 @@ void WTrackMenu::addSelectionToPlaylist(int iPlaylistId) {
                 return;
             }
             if (playlistDao.getPlaylistIdFromName(name) != -1) {
-                QMessageBox::warning(nullptr,
+                QMessageBox::warning(this,
                         tr("Playlist Creation Failed"),
                         tr("A playlist by that name already exists."));
             } else if (name.isEmpty()) {
-                QMessageBox::warning(nullptr,
+                QMessageBox::warning(this,
                         tr("Playlist Creation Failed"),
                         tr("A playlist cannot have a blank name."));
             } else {
@@ -1567,7 +1567,7 @@ void WTrackMenu::addSelectionToPlaylist(int iPlaylistId) {
         } while (!validNameGiven);
         iPlaylistId = playlistDao.createPlaylist(name); //-1 is changed to the new playlist ID return from the DAO
         if (iPlaylistId == -1) {
-            QMessageBox::warning(nullptr,
+            QMessageBox::warning(this,
                     tr("Playlist Creation Failed"),
                     tr("An unknown error occurred while creating playlist: ") + name);
             return;
@@ -2527,56 +2527,56 @@ void WTrackMenu::slotRemoveFromDisk() {
         // Purge only those tracks whose files have actually been deleted.
         m_pLibrary->trackCollectionManager()->purgeTracks(tracksToPurge);
 
-    //if (s_showPurgeSuccessPopup) {
-    //     // Show purge summary message
-    //     QMessageBox msgBoxPurgeTracks;
-    //     msgBoxPurgeTracks.setIcon(QMessageBox::Information);
-    //     QString msgTitle;
-    //     QString msgText;
-    //     if (m_pTrackModel) {
-    // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    //         msgTitle = tr("Track Files Deleted");
-    // #else
-    //         msgTitle = tr("Track Files Moved To Trash");
-    // #endif
-    //         msgText =
-    // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    //                 tr("%1 track files were deleted from disk and purged "
-    //                    "from the Mixxx database.")
-    // #else
-    //                 tr("%1 track files were moved to trash and purged "
-    //                    "from the Mixxx database.")
-    // #endif
-    //                         .arg(QString::number(tracksToPurge.length())) +
-    //                 QStringLiteral("<br><br>") +
-    //                 tr("Note: if you are in the Computer or Recording view you "
-    //                    "need to click the current view again to see changes.");
-    //     } else {
-    // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    //         msgTitle = tr("Track File Deleted");
-    //         msgText = tr(
-    //                 "Track file was deleted from disk and purged "
-    //                 "from the Mixxx database.");
-    // #else
-    //         msgTitle = tr("Track File Moved To Trash");
-    //         msgText = tr(
-    //                 "Track file was moved to trash and purged "
-    //                 "from the Mixxx database.");
-    // #endif
-    //     }
-    //     QCheckBox notAgainCB(tr("Don't show again during this session"));
-    //     notAgainCB.setCheckState(Qt::Unchecked);
-    //     msgBoxPurgeTracks.setWindowTitle(msgTitle);
-    //     msgBoxPurgeTracks.setText(msgText);
-    //     msgBoxPurgeTracks.setTextFormat(Qt::RichText);
-    //     msgBoxPurgeTracks.setCheckBox(&notAgainCB);
-    //     msgBoxPurgeTracks.setStandardButtons(QMessageBox::Ok);
-    //     msgBoxPurgeTracks.exec();
-    //
-    //     if (notAgainCB.isChecked()) {
-    //         s_showPurgeSuccessPopup = false;
-    //     }
-    // }
+        //if (s_showPurgeSuccessPopup) {
+        //     // Show purge summary message
+        //     QMessageBox msgBoxPurgeTracks(this);
+        //     msgBoxPurgeTracks.setIcon(QMessageBox::Information);
+        //     QString msgTitle;
+        //     QString msgText;
+        //     if (m_pTrackModel) {
+        // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+        //         msgTitle = tr("Track Files Deleted");
+        // #else
+        //         msgTitle = tr("Track Files Moved To Trash");
+        // #endif
+        //         msgText =
+        // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+        //                 tr("%1 track files were deleted from disk and purged "
+        //                    "from the Mixxx database.")
+        // #else
+        //                 tr("%1 track files were moved to trash and purged "
+        //                    "from the Mixxx database.")
+        // #endif
+        //                         .arg(QString::number(tracksToPurge.length())) +
+        //                 QStringLiteral("<br><br>") +
+        //                 tr("Note: if you are in the Computer or Recording view you "
+        //                    "need to click the current view again to see changes.");
+        //     } else {
+        // #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
+        //         msgTitle = tr("Track File Deleted");
+        //         msgText = tr(
+        //                 "Track file was deleted from disk and purged "
+        //                 "from the Mixxx database.");
+        // #else
+        //         msgTitle = tr("Track File Moved To Trash");
+        //         msgText = tr(
+        //                 "Track file was moved to trash and purged "
+        //                 "from the Mixxx database.");
+        // #endif
+        //     }
+        //     QCheckBox notAgainCB(tr("Don't show again during this session"));
+        //     notAgainCB.setCheckState(Qt::Unchecked);
+        //     msgBoxPurgeTracks.setWindowTitle(msgTitle);
+        //     msgBoxPurgeTracks.setText(msgText);
+        //     msgBoxPurgeTracks.setTextFormat(Qt::RichText);
+        //     msgBoxPurgeTracks.setCheckBox(&notAgainCB);
+        //     msgBoxPurgeTracks.setStandardButtons(QMessageBox::Ok);
+        //     msgBoxPurgeTracks.exec();
+        //
+        //     if (notAgainCB.isChecked()) {
+        //         s_showPurgeSuccessPopup = false;
+        //     }
+        // }
     }
 
     const QList<QString> tracksToKeep(trackOperator.getTracksToKeep());
@@ -2645,6 +2645,7 @@ void WTrackMenu::slotShowDlgTrackInfo() {
         // Use the batch editor.
         // Create a fresh dialog on invocation.
         m_pDlgTrackInfoMulti = std::make_unique<DlgTrackInfoMulti>(
+                this,
                 m_pConfig);
         connect(m_pDlgTrackInfoMulti.get(),
                 &QDialog::finished,
@@ -2668,6 +2669,7 @@ void WTrackMenu::slotShowDlgTrackInfo() {
         // Use the single-track editor with Next/Prev buttons and DlgTagFetcher.
         // Create a fresh dialog on invocation.
         m_pDlgTrackInfo = std::make_unique<DlgTrackInfo>(
+                this,
                 m_pConfig,
                 m_pTrackModel);
         connect(m_pDlgTrackInfo.get(),
@@ -2701,7 +2703,9 @@ void WTrackMenu::slotShowDlgTagFetcher() {
     }
     // Create a fresh dialog on invocation
     m_pDlgTagFetcher = std::make_unique<DlgTagFetcher>(
-            m_pConfig, m_pTrackModel);
+            this,
+            m_pConfig,
+            m_pTrackModel);
     connect(m_pDlgTagFetcher.get(),
             &QDialog::finished,
             this,
