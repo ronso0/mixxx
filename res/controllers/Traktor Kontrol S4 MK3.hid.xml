@@ -25,6 +25,12 @@
                     default="false"
                     label="Sync scratch speed with wheel LED speed">
                 </option>
+                <option
+                    variable="hotcuePressStopsScratching"
+                    type="boolean"
+                    default="false"
+                    label="Stop scratching when a hotcue is pressed">
+                </option>
             </row>
         </group>
 

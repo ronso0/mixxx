@@ -127,6 +127,7 @@ const ScratchAlpha = 1.0/8;
 const ScratchBeta = ScratchAlpha/32;
 const ScratchTicksPerRev = ScratchSyncToWheelLED ? 2150 : 6750;
 const ScratchSpeedFactor = ScratchSyncToWheelLED ? 2.14 : 1;
+const HotcuePressStopsScratching = !!engine.getSetting("hotcuePressStopsScratching");
 
 // Define whether or not to use motors.
 // This is a BETA feature! Please use at your own risk. Setting this off means that below settings are inactive
@@ -733,7 +734,9 @@ class HotcueButton extends PushButton {
         this.inKey = `hotcue_${this.number}_clear`;
     }
     input(pressed) {
-        this.deck.wheelTouch.toggleScratching(false);
+        if (HotcuePressStopsScratching) {
+            this.deck.wheelTouch.toggleScratching(false);
+        }
         engine.setValue(this.group, this.inKey, pressed);
     }
     output(value) {
