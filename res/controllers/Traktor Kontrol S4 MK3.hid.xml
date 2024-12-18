@@ -13,11 +13,12 @@
         <group label="TEST scratch modes">
             <row orientation="vertical">
                 <option
-                    variable="useEngineScratch"
-                    type="boolean"
-                    default="false"
-                    label="Use 'engine.scratch..' functions">
-                    <description>Use 'engine.scratchEnable()/disable()' and 'engine.scratchTick()' instead of engine.setValue(group, "scratch2..")</description>
+                    variable="scratchMode"
+                    type="enum"
+                    label="Scratch mode">
+                    <value label="scratch2">scratch2</value>
+                    <value label="scratchTick">scratchTick</value>
+                    <value label="wheelPos">wheelPos</value>
                 </option>
                 <option
                     variable="scratchSyncToWheelLED"
