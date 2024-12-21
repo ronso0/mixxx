@@ -45,11 +45,12 @@
             <MinimumSize>,18</MinimumSize>
             <Children>
               <TrackProperty>
-                <TooltipId>track_title</TooltipId>
-                <ObjectName>SamplerTitleMini</ObjectName>
+                <TooltipId>track_artist</TooltipId>
+                <ObjectName>SamplerBpmMini</ObjectName>
                 <SizePolicy>me,me</SizePolicy>
-                <Property>titleInfo</Property>
+                <Property>artist</Property>
                 <Group><Variable name="Group"/></Group>
+                <!-- <Alignment>center</Alignment> -->
                 <Elide>right</Elide>
               </TrackProperty>
             </Children>
