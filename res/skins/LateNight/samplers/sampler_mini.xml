@@ -35,16 +35,25 @@
             <Size>,18f</Size>
             <Children>
 
-              <TrackProperty>
-                <TooltipId>track_title</TooltipId>
-                <ObjectName>SamplerBpmMini</ObjectName>
-                <SizePolicy>me,me</SizePolicy>
-                <Property>artist</Property>
-                <Group><Variable name="Group"/></Group>
-                <Elide>right</Elide>
-              </TrackProperty>
+              <WidgetGroup>
+                <ObjectName>SamplerTitleBoxMini</ObjectName>
+                <Layout>horizontal</Layout>
+                <SizePolicy>i,min</SizePolicy>
+                <MinimumSize>,18</MinimumSize>
+                <Children>
+                  <TrackProperty>
+                    <TooltipId>track_artist</TooltipId>
+                    <ObjectName>SamplerBpmMini</ObjectName>
+                    <SizePolicy>me,me</SizePolicy>
+                    <Property>artist</Property>
+                    <Group><Variable name="Group"/></Group>
+                    <!-- <Alignment>center</Alignment> -->
+                    <Elide>right</Elide>
+                  </TrackProperty>
+                </Children>
+              </WidgetGroup>
 
-              <WidgetGroup><Size>0me,0min</Size></WidgetGroup>
+              <WidgetGroup><Size>3f,0min</Size></WidgetGroup>
 
               <Number>
                 <TooltipId>visual_bpm</TooltipId>
