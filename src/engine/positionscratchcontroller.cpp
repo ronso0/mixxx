@@ -76,6 +76,7 @@ constexpr double kThrowThreshold = 2.5;
 // Max velocity we would like to stop in a given time period.
 constexpr double kMaxVelocity = 100;
 // Seconds to stop a throw at the max velocity.
+// TODO make configurable, eg. to customize spinbacks with controllers
 constexpr double kTimeToStop = 1.0;
 
 } // anonymous namespace
@@ -92,7 +93,12 @@ PositionScratchController::PositionScratchController(const QString& group)
           m_pRateIIFilter(std::make_unique<RateIIFilter>()),
           m_isScratching(false),
           m_inertiaEnabled(false),
+          m_rampBack(false),
+          m_reportRate(false),
           m_prevSamplePos(0),
+          // TODO we might as well use FramePos in order to use more convenient
+          // mixxx::audio::kInvalidFramePos, then convert to sample pos on the fly
+          m_seekSamplePos(std::numeric_limits<double>::quiet_NaN()),
           m_samplePosDeltaSum(0),
           m_scratchTargetDelta(0),
           m_scratchStartPos(0),
@@ -102,6 +108,7 @@ PositionScratchController::PositionScratchController(const QString& group)
           m_bufferSize(-1), // ?
           m_dt(1),
           m_callsPerDt(1),
+          m_callsToStop(1), // ?
           m_p(1),
           m_d(1),
           m_f(0.4) {
@@ -122,6 +129,8 @@ void PositionScratchController::slotUpdateFilterParameters(double sampleRate) {
     // have 0 ... 3 samples. The remaining jitter is ironed by the following IIR
     // lowpass filter
     m_callsPerDt = static_cast<int>(ceil(kDefaultSampleInterval / m_dt));
+
+    m_callsToStop = m_dt / kTimeToStop;
 
     // Tweak PD controller for different latencies
     m_p = 0.3;
@@ -155,11 +164,37 @@ void PositionScratchController::process(double currentSamplePos,
         slotUpdateFilterParameters(m_pMainSampleRate->get());
     }
 
+    if (!util_isnan(m_seekSamplePos)) {
+        // If we were notified about a sekk, adopt the new position immediately.
+        // fabs(currentSamplePos - queuedSeekPos) < kSeekPosTolerance) {
+        double posDiff = m_seekSamplePos - currentSamplePos;
+        const QString filler = QString(posDiff >= 0 ? " " : "");
+        loggg(QString("adopt seek pos at %2").arg(static_cast<int>(currentSamplePos)));
+        loggg(QString("            diff: %1").arg(static_cast<int>(posDiff)));
+        m_seekSamplePos = std::numeric_limits<double>::quiet_NaN();
+        m_reportRate = true;
+
+        m_prevSamplePos = currentSamplePos;
+        m_rate = 0;
+        // Reset filters in a way that the system is settled.
+        // Set to the remaining error of a p controller // ??
+        m_samplePosDeltaSum = -(releaseRate / m_p) * m_callsPerDt;
+        m_pVelocityController->reset(-m_samplePosDeltaSum);
+        m_pRateIIFilter->reset(-m_samplePosDeltaSum);
+        m_scratchStartPos = m_pScratchPos->get();
+        m_scratchTargetDelta = 0;
+        m_moveDelay = 0;
+        return;
+    }
+
     double scratchPosition = 0;
     m_mouseSampleTime += m_dt;
     if (m_mouseSampleTime >= kDefaultSampleInterval || !m_isScratching) {
+        // loggg(QString("        <<<< m_mouseSampleTime >= kDefaultSampleInterval"), adoptSeekPos);
         scratchPosition = m_pScratchPos->get();
         m_mouseSampleTime = 0;
+    } else {
+        // loggg(QString("  !! m_mouseSampleTime < kDefaultSampleInterval"), adoptSeekPos);
     }
 
     if (m_isScratching) {
@@ -168,8 +203,9 @@ void PositionScratchController::process(double currentSamplePos,
             // mode. Take the previous rate that was set and apply a
             // deceleration.
 
-            // If we're playing, then do not decay rate below 1. If we're not playing,
-            // then we want to decay all the way down to below 0.01
+            // If we're playing, then do not decay rate below 1.
+            // If we're not playing, then we want to decay all the way down
+            // to below 0.01.
             double decayThreshold = fabs(releaseRate);
             if (decayThreshold < MIN_SEEK_SPEED) {
                 decayThreshold = MIN_SEEK_SPEED;
@@ -179,20 +215,28 @@ void PositionScratchController::process(double currentSamplePos,
             // constants. Roughly we backsolve what the decay should be if we want to
             // stop a throw of max velocity kMaxVelocity in kTimeToStop seconds. Here is
             // the derivation:
-            // kMaxVelocity * alpha ^ (# callbacks to stop in) = decayThreshold
+            // decayThreshold = kMaxVelocity * alpha ^ (# callbacks to stop in)
             // # callbacks = kTimeToStop / m_dt
             // alpha = (decayThreshold / kMaxVelocity) ^ (m_dt / kTimeToStop)
-            const double kExponentialDecay = pow(decayThreshold / kMaxVelocity, m_dt / kTimeToStop);
+            const double kExponentialDecay = pow(decayThreshold / kMaxVelocity, m_callsToStop);
 
             m_rate *= kExponentialDecay;
 
             // If the rate has decayed below the threshold, or scratching is
             // re-enabled then leave inertia mode.
+            //
+            // TODO ramp back to desired engine rate
+            // If the rate has decayed below the threshold, leave inertia mode
+            // and enable ramping ack to engine rate.
+            // Else, if scratching is re-enabled just leave inertia mode.
             if (fabs(m_rate) < decayThreshold || scratchEnable) {
                 m_inertiaEnabled = false;
+                // m_rampBack = true;
                 m_isScratching = false;
+            } else if (scratchEnable) {
             }
             // qDebug() << m_rate << kExponentialDecay << m_dt;
+        } else if (m_rampBack) {
         } else if (scratchEnable) {
             // If we're scratching, clear the inertia flag. This case should
             // have been caught by the 'enable' case below, but just to make
@@ -201,12 +245,13 @@ void PositionScratchController::process(double currentSamplePos,
 
             double sampleDelta = 0.0;
             if (wrappedAround > 0) {
-                // If we wrapped around calculate the virtual position like if
+                // If we wrapped around, calculate the virtual position like if
                 // we are not looping, i.e. sum up diffs from loop start/end and
                 // loop length for each wrap-aound (necessary if the buffer is
-                // longer than the loop, e.g. when looping at high rates / with short loops.
+                // longer than the loop, e.g. with short loops, or when looping
+                // at high rates.
                 // This avoids high rate and infinite wrap-around scratching
-                // even after mouse was stopped.
+                // even after mouse has stopped.
                 double triggerPos = trigger.toEngineSamplePos();
                 double targetPos = target.toEngineSamplePos();
                 bool reverse = triggerPos < targetPos;
@@ -226,6 +271,7 @@ void PositionScratchController::process(double currentSamplePos,
             // running total and normalize to one buffer.
             // This is required to scratch within loop boundaries.
             m_samplePosDeltaSum += (sampleDelta) / (bufferSize * baseSampleRate);
+            // loggg(QString("     posDeltaSum: %1").arg(m_samplePosDeltaSum));
 
             // If we may have a new position, calculate scratch parameters and
             // eventually the new rate.
@@ -235,13 +281,15 @@ void PositionScratchController::process(double currentSamplePos,
                 // and normalize to one buffer
                 double scratchTargetDelta = (scratchPosition - m_scratchStartPos) /
                         (bufferSize * baseSampleRate);
+                // loggg(QString("     targetDelta: %1").arg(scratchTargetDelta));
 
                 bool calcRate = true;
 
                 if (m_scratchTargetDelta == scratchTargetDelta) {
-                    // We get here if the next mouse position is delayed, the mouse
-                    // is stopped or moves very slowly. Since we don't know the case
-                    // we assume delayed mouse updates for 40 ms.
+                    // loggg(QString("scratchTargetDelta == m_scratchTargetDelta"));
+                    // We get here if the next mouse position is delayed, the
+                    // mouse is stopped or moves very slowly. Since we don't
+                    // know the case we assume delayed mouse updates for 40 ms.
                     // TODO Make threshold configurable for controller use?
                     m_moveDelay += m_dt * m_callsPerDt;
                     if (m_moveDelay < kMoveDelayMax) {
@@ -261,6 +309,8 @@ void PositionScratchController::process(double currentSamplePos,
                         }
                     }
                 } else {
+                    // loggg(QString("scratchTargetDelta != m_scratchTargetDelta"));
+                    // loggg(QString("m_moveDelay = 0, adopt scratchTargetDelta"));
                     m_moveDelay = 0;
                     m_scratchTargetDelta = scratchTargetDelta;
                 }
@@ -270,12 +320,14 @@ void PositionScratchController::process(double currentSamplePos,
                             scratchTargetDelta - m_samplePosDeltaSum);
                     m_rate = m_pVelocityController->observation(ctrlError);
                     m_rate /= ceil(kDefaultSampleInterval / m_dt);
+                    // ??
                     // Note: The following SoundTouch changes the also rate by a ramp
                     // This looks like average of the new and the old rate independent
                     // from m_dt. Ramping is disabled when direction changes or rate = 0;
                     // (determined experimentally)
                     if (fabs(m_rate) < MIN_SEEK_SPEED) {
                         // we cannot get closer
+                        // TODO ramp to new rate?
                         m_rate = 0;
                     }
                 }
@@ -308,12 +360,34 @@ void PositionScratchController::process(double currentSamplePos,
         m_scratchStartPos = scratchPosition;
         // qDebug() << "scratchEnable()" << currentSamplePos;
     }
+
     m_prevSamplePos = currentSamplePos;
 }
 
 void PositionScratchController::notifySeek(mixxx::audio::FramePos position) {
+    // TODO Are we notified of seeks other cue seeks (hotcue, loop cue etc.) ??
+    // If so, use seek reason?
     DEBUG_ASSERT(position.isValid());
-    // scratching continues after seek due to calculating the relative distance traveled
-    // in m_samplePosDeltaSum
-    m_prevSamplePos = position.toEngineSamplePos();
+    double newPos = position.toEngineSamplePos();
+    if (!isEnabled()) {
+        loggg(QString("notifySeek: not scratching --> ignore"));
+        return;
+    } else if (fabs(m_prevSamplePos - newPos) < 100) {
+        loggg(QString("notifySeek: very close --> ignore"));
+        return;
+    } else if (m_prevSamplePos == newPos) {
+        loggg(QString("notifySeek: equal --> ignore"));
+        return;
+    }
+    // ?? Scratching continues after seek due to calculating the relative
+    // ?? distance traveled in m_samplePosDeltaSum
+    // Note: it can happen that RateControl is not yet aware of the seek position,
+    // hence it's possible that we get the new position only in thesecond next
+    // process() call.
+    // That's what the wait counter is for: keep the seek position for next to calls,
+    // then reset it (we might come across the seek position just by playing or scratching
+    // and then we must process it regularly.
+    loggg(QString(": ."));
+    loggg(QString("notifySeek: accept %1").arg(QString::number(newPos, 'g', 18)));
+    m_seekSamplePos = newPos;
 }

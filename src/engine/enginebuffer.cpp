@@ -482,6 +482,13 @@ void EngineBuffer::setNewPlaypos(mixxx::audio::FramePos position) {
 
     // Must hold the engineLock while using m_engineControls
     for (const auto& pControl : std::as_const(m_engineControls)) {
+        if (pControl == m_pRateControl) {
+            // qWarning() << "---------------------------------";
+            // qWarning() << "--------------------EB setNewPlaypos, notify all "
+            //               "engine controls"
+            //            << m_playPos;
+            // qWarning() << "---------------------------------";
+        }
         pControl->notifySeek(m_playPos);
     }
 

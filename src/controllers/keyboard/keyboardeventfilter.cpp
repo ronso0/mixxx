@@ -179,11 +179,15 @@ QKeySequence KeyboardEventFilter::getKeySeq(QKeyEvent* e) {
     const QKeySequence k = QKeySequence(modseq + keyseq);
 
     if (CmdlineArgs::Instance().getDeveloper()) {
+        qDebug() << "                   .";
+        qDebug() << "                   .";
         if (e->type() == QEvent::KeyPress) {
-            qDebug() << "keyboard press: " << k.toString();
+            qDebug() << "                   keyboard press: " << k.toString();
         } else if (e->type() == QEvent::KeyRelease) {
-            qDebug() << "keyboard release: " << k.toString();
+            qDebug() << "                   keyboard release: " << k.toString();
         }
+        qDebug() << "                   .";
+        qDebug() << "                   .";
     }
 
     return k;

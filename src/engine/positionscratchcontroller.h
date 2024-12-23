@@ -29,7 +29,9 @@ class PositionScratchController : public QObject {
         // TODO return true only if m_rate is valid.
         return m_isScratching;
     }
-    double getRate() const {
+    double getRate() {
+        loggg(QString("rate = %1").arg(m_rate), m_reportRate);
+        m_reportRate = false;
         return m_rate;
     }
     void notifySeek(mixxx::audio::FramePos position);
@@ -38,15 +40,45 @@ class PositionScratchController : public QObject {
     void slotUpdateFilterParameters(double sampleRate);
 
   private:
+
+    void loggg(const QString text, bool condition = true) {
+        if (!condition) {
+            return;
+        }
+        qWarning().noquote() << qSetRealNumberPrecision(18)
+                             << "---------------------------------------------------- "
+                             << text;
+    }
+    void warn(const QString text) {
+        qWarning() << "                                                        -"
+                      "-------------------------------------------------------- ";
+        qWarning() << "                                                        -"
+                      "-------------------------------------------------------- ";
+        qWarning() << "                                                        -"
+                   << text;
+        qWarning() << "                                                        -"
+                      "-------------------------------------------------------- ";
+        qWarning() << "                                                        -"
+                      "-------------------------------------------------------- ";
+        qWarning() << "                                                        -"
+                      "-------------------------------------------------------- ";
+    }
+
     const QString m_group;
+
     std::unique_ptr<ControlObject> m_pScratchEnable;
     std::unique_ptr<ControlObject> m_pScratchPos;
     std::unique_ptr<ControlProxy> m_pMainSampleRate;
     std::unique_ptr<VelocityController> m_pVelocityController;
     std::unique_ptr<RateIIFilter> m_pRateIIFilter;
+
     bool m_isScratching;
     bool m_inertiaEnabled;
+    bool m_rampBack;
+    bool m_reportRate;
+
     double m_prevSamplePos;
+    double m_seekSamplePos;
     double m_samplePosDeltaSum;
     double m_scratchTargetDelta;
     double m_scratchStartPos;
@@ -58,6 +90,7 @@ class PositionScratchController : public QObject {
 
     double m_dt;
     double m_callsPerDt;
+    double m_callsToStop;
 
     double m_p;
     double m_d;
