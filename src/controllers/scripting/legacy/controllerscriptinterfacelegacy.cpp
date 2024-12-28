@@ -894,8 +894,20 @@ void ControllerScriptInterfaceLegacy::scratchDisable(int deck, bool ramp) {
 
 bool ControllerScriptInterfaceLegacy::isScratching(int deck) {
     // PlayerManager::groupForDeck is 0-indexed.
-    QString group = PlayerManager::groupForDeck(deck - 1);
+    const QString group = PlayerManager::groupForDeck(deck - 1);
     return getValue(group, "scratch2_enable") > 0;
+}
+
+bool ControllerScriptInterfaceLegacy::isSoftStarting(int deck) {
+    // PlayerManager::groupForDeck is 0-indexed.
+    const QString group = PlayerManager::groupForDeck(deck - 1);
+    return m_softStartActive[deck];
+}
+
+bool ControllerScriptInterfaceLegacy::isBraking(int deck) {
+    // PlayerManager::groupForDeck is 0-indexed.
+    const QString group = PlayerManager::groupForDeck(deck - 1);
+    return m_brakeActive[deck];
 }
 
 void ControllerScriptInterfaceLegacy::spinback(
