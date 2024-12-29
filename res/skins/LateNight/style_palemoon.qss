@@ -2732,7 +2732,7 @@ WPushButton#PlayDeck[value="0"] {
     }
 
   #KeylockButton12[displayValue="0"], #KeylockButton34[displayValue="0"] {
-    image: url(skins:LateNight/palemoon/buttons/btn__keylock.svg) no-repeat center center;
+      image: url(skins:LateNight/palemoon/buttons/btn__keylock.svg) no-repeat center center;
     }
     #KeylockButton12[displayValue="1"] {
       image: url(skins:LateNight/palemoon/buttons/btn__keylock_active_12.svg) no-repeat center center;
