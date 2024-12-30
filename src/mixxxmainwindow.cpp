@@ -1035,7 +1035,8 @@ void MixxxMainWindow::slotDeveloperTools(bool visible) {
     if (visible) {
         if (m_pDeveloperToolsDlg == nullptr) {
             UserSettingsPointer pConfig = m_pCoreServices->getSettings();
-            m_pDeveloperToolsDlg = new DlgDeveloperTools(this, pConfig);
+            bool devMode = CmdlineArgs::Instance().getDeveloper();
+            m_pDeveloperToolsDlg = new DlgDeveloperTools(this, pConfig, devMode);
             connect(m_pDeveloperToolsDlg,
                     &DlgDeveloperTools::destroyed,
                     this,
