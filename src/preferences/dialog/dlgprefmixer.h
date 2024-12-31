@@ -13,6 +13,8 @@
 class QComboBox;
 class QWidget;
 class EffectsManager;
+// class PerformanceTimer;
+class QTimer;
 
 class DlgPrefMixer : public DlgPreferencePage, public Ui::DlgPrefMixerDlg {
     Q_OBJECT
@@ -48,7 +50,11 @@ class DlgPrefMixer : public DlgPreferencePage, public Ui::DlgPrefMixerDlg {
     void slotPopulateDeckEqSelectors();
     void slotPopulateQuickEffectSelectors();
 
-    void slotUpdateXFader();
+    void slotUpdateXFaderFromConfigOrControls();
+    void slotXFaderReverseChanged();
+    void slotXFaderControlChanged();
+    void slotXFaderWidgetsChanged();
+
     void slotHiEqSliderChanged();
     void slotLoEqSliderChanged();
 
@@ -121,10 +127,15 @@ class DlgPrefMixer : public DlgPreferencePage, public Ui::DlgPrefMixerDlg {
     bool m_eqBypass;
 
     bool m_initializing;
+    bool m_inSlotApply;
     bool m_updatingMainEQ;
     bool m_applyingDeckEQs;
     bool m_applyingQuickEffects;
 
     QList<int> m_eqIndiciesOnUpdate;
     QList<int> m_quickEffectIndiciesOnUpdate;
+
+    QTimer m_xfaderControlUpdateTimer;
+    // Measure how long xfader graphics update takes when controls are changed
+    // PerformanceTimer m_xfaderDebugTimer;
 };
