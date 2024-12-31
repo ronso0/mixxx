@@ -3,7 +3,11 @@
 #include "util/math.h"
 
 //static
-const char* EngineXfader::kXfaderConfigKey = "[Mixer Profile]";
+const QString EngineXfader::kXfaderGroup = QStringLiteral("[Mixer Profile]");
+const QString EngineXfader::kXfaderModeKey = QStringLiteral("xFaderMode");
+const QString EngineXfader::kXfaderCurveKey = QStringLiteral("xFaderCurve");
+const QString EngineXfader::kXfaderCalibrationKey = QStringLiteral("xFaderCalibration");
+const QString EngineXfader::kXfaderReverseKey = QStringLiteral("xFaderReverse");
 const double EngineXfader::kTransformDefault = 1.0;
 const double EngineXfader::kTransformMax = 1000.0;
 const double EngineXfader::kTransformMin = 0.6;

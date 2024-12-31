@@ -107,19 +107,19 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
           m_pBalance(std::make_unique<ControlPotmeter>(
                   ConfigKey(group, "balance"), -1., 1.)),
           m_pXFaderMode(std::make_unique<ControlPushButton>(
-                  ConfigKey(EngineXfader::kXfaderConfigKey, "xFaderMode"))),
+                  ConfigKey(EngineXfader::kXfaderGroup, EngineXfader::kXfaderModeKey))),
           m_pXFaderCurve(std::make_unique<ControlPotmeter>(
-                  ConfigKey(EngineXfader::kXfaderConfigKey, "xFaderCurve"),
+                  ConfigKey(EngineXfader::kXfaderGroup, EngineXfader::kXfaderCurveKey),
                   EngineXfader::kTransformMin,
                   EngineXfader::kTransformMax)),
           m_pXFaderCalibration(std::make_unique<ControlPotmeter>(
                   ConfigKey(
-                          EngineXfader::kXfaderConfigKey, "xFaderCalibration"),
+                          EngineXfader::kXfaderGroup, EngineXfader::kXfaderCalibrationKey),
                   0.3,
                   1.,
                   true)),
           m_pXFaderReverse(std::make_unique<ControlPushButton>(
-                  ConfigKey(EngineXfader::kXfaderConfigKey, "xFaderReverse"))),
+                  ConfigKey(EngineXfader::kXfaderGroup, EngineXfader::kXfaderReverseKey))),
           m_pHeadSplitEnabled(std::make_unique<ControlPushButton>(
                   ConfigKey(group, "headSplit"))),
 

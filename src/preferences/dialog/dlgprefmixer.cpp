@@ -41,14 +41,14 @@ const ConfigKey kLowEqFreqKey = ConfigKey(kMixerProfile, kLowEqFrequency);
 const ConfigKey kLowEqFreqPreciseKey =
         ConfigKey(kMixerProfile, QStringLiteral("LoEQFrequencyPrecise"));
 
-const ConfigKey kXfaderModeKey = ConfigKey(EngineXfader::kXfaderConfigKey,
-        QStringLiteral("xFaderMode"));
-const ConfigKey kXfaderCurveKey = ConfigKey(EngineXfader::kXfaderConfigKey,
-        QStringLiteral("xFaderCurve"));
-const ConfigKey kXfaderCalibrationKey = ConfigKey(EngineXfader::kXfaderConfigKey,
-        QStringLiteral("xFaderCalibration"));
-const ConfigKey kXfaderReverseKey = ConfigKey(EngineXfader::kXfaderConfigKey,
-        QStringLiteral("xFaderReverse"));
+const ConfigKey kXfaderModeKey = ConfigKey(EngineXfader::kXfaderGroup,
+        EngineXfader::kXfaderModeKey);
+const ConfigKey kXfaderCurveKey = ConfigKey(EngineXfader::kXfaderGroup,
+        EngineXfader::kXfaderCurveKey);
+const ConfigKey kXfaderCalibrationKey = ConfigKey(EngineXfader::kXfaderGroup,
+        EngineXfader::kXfaderCalibrationKey);
+const ConfigKey kXfaderReverseKey = ConfigKey(EngineXfader::kXfaderGroup,
+        EngineXfader::kXfaderReverseKey);
 
 constexpr int kFrequencyUpperLimit = 20050;
 constexpr int kFrequencyLowerLimit = 16;
