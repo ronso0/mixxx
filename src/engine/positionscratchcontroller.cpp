@@ -174,17 +174,18 @@ void PositionScratchController::process(double currentSamplePos,
         m_seekSamplePos = std::numeric_limits<double>::quiet_NaN();
         m_reportRate = true;
 
-        m_prevSamplePos = currentSamplePos;
-        m_rate = 0;
+        // m_prevSamplePos = currentSamplePos;
+        m_prevSamplePos = m_seekSamplePos;
+        //        m_rate = 0;
         // Reset filters in a way that the system is settled.
         // Set to the remaining error of a p controller // ??
-        m_samplePosDeltaSum = -(releaseRate / m_p) * m_callsPerDt;
-        m_pVelocityController->reset(-m_samplePosDeltaSum);
-        m_pRateIIFilter->reset(-m_samplePosDeltaSum);
-        m_scratchStartPos = m_pScratchPos->get();
-        m_scratchTargetDelta = 0;
-        m_moveDelay = 0;
-        return;
+        //        m_samplePosDeltaSum = -(releaseRate / m_p) * m_callsPerDt;
+        //        m_pVelocityController->reset(-m_samplePosDeltaSum);
+        //        m_pRateIIFilter->reset(-m_samplePosDeltaSum);
+        //        m_scratchStartPos = m_pScratchPos->get();
+        //        m_scratchTargetDelta = 0;
+        //        m_moveDelay = 0;
+        //        return;
     }
 
     double scratchPosition = 0;
