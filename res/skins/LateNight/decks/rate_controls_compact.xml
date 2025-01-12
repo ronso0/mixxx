@@ -66,7 +66,7 @@
             </Children>
           </WidgetGroup><!-- BpmContainer -->
 
-          <WidgetGroup><Size>0min,0me</Size></WidgetGroup>
+          <WidgetGroup><Size>0min,3f</Size></WidgetGroup>
 
           <WidgetGroup>
             <ObjectName>RateControls</ObjectName>
@@ -86,8 +86,8 @@
                     <Children>
                       <PushButton>
                         <TooltipId>sync_enabled</TooltipId>
-                        <ObjectName>SyncDeck</ObjectName>
-                        <Size>40f,22f</Size>
+                        <ObjectName>SyncDeckCompact</ObjectName>
+                        <Size>30f,22f</Size>
                         <NumberStates>2</NumberStates>
                         <RightClickIsPushButton>true</RightClickIsPushButton>
                         <Connection>
