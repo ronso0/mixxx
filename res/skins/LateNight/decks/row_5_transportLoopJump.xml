@@ -225,6 +225,68 @@
           </WidgetGroup><!-- / Intro + Outro -->
 
           <WidgetGroup><Size>2f,0min</Size></WidgetGroup><!--  = 2-8px wide -->
+          <WidgetGroup><SizePolicy>i,min</SizePolicy><MaximumSize>80,</MaximumSize></WidgetGroup><!-- /Loop buttons + beatloop size spinbox -->
+
+          <WidgetGroup><!-- Jump buttons + beatjump size spinbox -->
+            <ObjectName>BeatjumpControls</ObjectName>
+            <Layout>vertical</Layout>
+            <SizePolicy>min,min</SizePolicy>
+            <MinimumSize>52,52</MinimumSize>
+            <MaximumSize>60,52</MaximumSize>
+            <Children>
+              <WidgetGroup><!-- beatjump size -->
+                <ObjectName>AlignLeftTop</ObjectName>
+                <Layout>horizontal</Layout>
+                <SizePolicy>0min,26f</SizePolicy>
+                <Children>
+                  <!-- put this spacer here so BeatSpinBox expands with HiDPI scaling
+                  <WidgetGroup><Size>0f,26f</Size></WidgetGroup> -->
+                  <BeatSpinBox>
+                    <TooltipId>beatjump_size</TooltipId>
+                    <ObjectName>Spinbox_<Variable name="BtnType"/></ObjectName>
+                    <SizePolicy>me,min</SizePolicy>
+                    <MinimumSize>46,26</MinimumSize>
+                    <MaximumSize>72,26</MaximumSize>
+                    <Value><Variable name="Group"/>,beatjump_size</Value>
+                    <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
+                    <Connection>
+                      <ConfigKey><Variable name="Group"/>,track_loaded</ConfigKey>
+                      <BindProperty>highlight</BindProperty>
+                    </Connection> -->
+                  </BeatSpinBox>
+                </Children>
+              </WidgetGroup>
+              <WidgetGroup>
+                <ObjectName>AlignLeftTop</ObjectName>
+                <Layout>horizontal</Layout>
+                <SizePolicy>min,max</SizePolicy>
+                <Children>
+
+                  <Template src="skins:LateNight/controls/button_1state_right.xml">
+                    <SetVariable name="TooltipId">beatjump_backward</SetVariable>
+                    <SetVariable name="ObjectName">JumpBack</SetVariable>
+                    <SetVariable name="Size">26f,26f</SetVariable>
+                    <SetVariable name="ConfigKey"><Variable name="Group"/>,beatjump_backward</SetVariable>
+                    <SetVariable name="ConfigKeyRight"><Variable name="Group"/>,beatjump_1_backward</SetVariable>
+                  </Template>
+
+                  <Template src="skins:LateNight/controls/button_1state_right.xml">
+                    <SetVariable name="TooltipId">beatjump_forward</SetVariable>
+                    <SetVariable name="ObjectName">JumpForward</SetVariable>
+                    <SetVariable name="Size">26f,26f</SetVariable>
+                    <SetVariable name="ConfigKey"><Variable name="Group"/>,beatjump_forward</SetVariable>
+                    <SetVariable name="ConfigKeyRight"><Variable name="Group"/>,beatjump_1_forward</SetVariable>
+                  </Template>
+                </Children>
+              </WidgetGroup>
+            </Children>
+            <Connection>
+              <ConfigKey>[Skin],show_beatjump_controls</ConfigKey>
+              <BindProperty>visible</BindProperty>
+            </Connection>
+          </WidgetGroup>
+
+          <WidgetGroup><Size>2f,0min</Size></WidgetGroup><!--  = 2-80px wide -->
           <WidgetGroup><SizePolicy>i,min</SizePolicy><MaximumSize>80,</MaximumSize></WidgetGroup>
 
           <WidgetGroup><!-- Loop buttons + beatloop size spinbox -->
@@ -304,68 +366,6 @@
             </Children>
             <Connection>
               <ConfigKey>[Skin],show_loop_controls</ConfigKey>
-              <BindProperty>visible</BindProperty>
-            </Connection>
-          </WidgetGroup><!-- /Loop buttons + beatloop size spinbox -->
-
-          <WidgetGroup><Size>2f,0min</Size></WidgetGroup><!--  = 2-80px wide -->
-          <WidgetGroup><SizePolicy>i,min</SizePolicy><MaximumSize>80,</MaximumSize></WidgetGroup>
-
-          <WidgetGroup><!-- Jump buttons + beatjump size spinbox -->
-            <ObjectName>BeatjumpControls</ObjectName>
-            <Layout>vertical</Layout>
-            <SizePolicy>min,min</SizePolicy>
-            <MinimumSize>52,52</MinimumSize>
-            <MaximumSize>60,52</MaximumSize>
-            <Children>
-              <WidgetGroup><!-- beatjump size -->
-                <ObjectName>AlignLeftTop</ObjectName>
-                <Layout>horizontal</Layout>
-                <SizePolicy>0min,26f</SizePolicy>
-                <Children>
-                  <!-- put this spacer here so BeatSpinBox expands with HiDPI scaling
-                  <WidgetGroup><Size>0f,26f</Size></WidgetGroup> -->
-                  <BeatSpinBox>
-                    <TooltipId>beatjump_size</TooltipId>
-                    <ObjectName>Spinbox_<Variable name="BtnType"/></ObjectName>
-                    <SizePolicy>me,min</SizePolicy>
-                    <MinimumSize>46,26</MinimumSize>
-                    <MaximumSize>72,26</MaximumSize>
-                    <Value><Variable name="Group"/>,beatjump_size</Value>
-                    <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
-                    <Connection>
-                      <ConfigKey><Variable name="Group"/>,track_loaded</ConfigKey>
-                      <BindProperty>highlight</BindProperty>
-                    </Connection> -->
-                  </BeatSpinBox>
-                </Children>
-              </WidgetGroup>
-              <WidgetGroup>
-                <ObjectName>AlignLeftTop</ObjectName>
-                <Layout>horizontal</Layout>
-                <SizePolicy>min,max</SizePolicy>
-                <Children>
-
-                  <Template src="skins:LateNight/controls/button_1state_right.xml">
-                    <SetVariable name="TooltipId">beatjump_backward</SetVariable>
-                    <SetVariable name="ObjectName">JumpBack</SetVariable>
-                    <SetVariable name="Size">26f,26f</SetVariable>
-                    <SetVariable name="ConfigKey"><Variable name="Group"/>,beatjump_backward</SetVariable>
-                    <SetVariable name="ConfigKeyRight"><Variable name="Group"/>,beatjump_1_backward</SetVariable>
-                  </Template>
-
-                  <Template src="skins:LateNight/controls/button_1state_right.xml">
-                    <SetVariable name="TooltipId">beatjump_forward</SetVariable>
-                    <SetVariable name="ObjectName">JumpForward</SetVariable>
-                    <SetVariable name="Size">26f,26f</SetVariable>
-                    <SetVariable name="ConfigKey"><Variable name="Group"/>,beatjump_forward</SetVariable>
-                    <SetVariable name="ConfigKeyRight"><Variable name="Group"/>,beatjump_1_forward</SetVariable>
-                  </Template>
-                </Children>
-              </WidgetGroup>
-            </Children>
-            <Connection>
-              <ConfigKey>[Skin],show_beatjump_controls</ConfigKey>
               <BindProperty>visible</BindProperty>
             </Connection>
           </WidgetGroup><!-- /Jump buttons + beatjump size spinbox -->
