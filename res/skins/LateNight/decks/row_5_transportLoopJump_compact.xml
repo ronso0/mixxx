@@ -46,7 +46,7 @@
             </Children>
           </WidgetGroup><!-- Play + PlayBlink + default dark background -->
 
-          <PushButton>
+          <PushButton><!-- CUE -->
             <TooltipId>cue_default_cue_gotoandstop</TooltipId>
             <ObjectName>CueDeck</ObjectName>
             <Size>42f,26f</Size>
@@ -78,13 +78,13 @@
               <ConfigKey><Variable name="Group"/>,cue_indicator</ConfigKey>
               <ConnectValueFromWidget>false</ConnectValueFromWidget>
             </Connection>
-          </PushButton>
+          </PushButton><!-- CUE -->
 
           <WidgetGroup>
             <SizePolicy>me,min</SizePolicy>
             <MinimumSize>4,</MinimumSize>
             <MaximumSize>4,</MaximumSize>
-          </WidgetGroup>
+          </WidgetGroup><!-- flex spacer -->
 
           <WidgetGroup><!-- HotCues 1 - 8 -->
             <Layout>horizontal</Layout>
@@ -115,13 +115,46 @@
                 <SetVariable name="number">8</SetVariable>
               </Template>
             </Children>
-          </WidgetGroup>
+          </WidgetGroup><!-- HotCues 1 - 8 -->
 
           <WidgetGroup>
             <SizePolicy>me,min</SizePolicy>
             <MinimumSize>2,</MinimumSize>
             <MaximumSize>40,</MaximumSize>
-          </WidgetGroup>
+          </WidgetGroup><!-- flex spacer -->
+
+          <WidgetGroup>
+            <ObjectName>BeatjumpControls</ObjectName>
+            <Layout>horizontal</Layout>
+            <SizePolicy>min,min</SizePolicy>
+            <Children>
+              <BeatSpinBox>
+                <TooltipId>beatjump_size</TooltipId>
+                <ObjectName>Spinbox_<Variable name="BtnType"/></ObjectName>
+                <SizePolicy>me,min</SizePolicy>
+                <MinimumSize>46,26</MinimumSize>
+                <MaximumSize>72,26</MaximumSize>
+                <Align>center</Align>
+                <Alignment>center</Alignment>
+                <Value><Variable name="Group"/>,beatjump_size</Value>
+                <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,track_loaded</ConfigKey>
+                  <BindProperty>highlight</BindProperty>
+                </Connection> -->
+              </BeatSpinBox>
+            </Children>
+            <Connection>
+              <ConfigKey persist="true">[Skin],show_beatjump_controls_compact</ConfigKey>
+              <BindProperty>visible</BindProperty>
+            </Connection>
+          </WidgetGroup><!-- Beatjump -->
+
+          <WidgetGroup>
+            <SizePolicy>me,min</SizePolicy>
+            <MinimumSize>2,</MinimumSize>
+            <MaximumSize>40,</MaximumSize>
+          </WidgetGroup><!-- flex spacer -->
 
           <WidgetGroup>
             <ObjectName>LoopControls</ObjectName>
@@ -156,46 +189,13 @@
                 <ConfigKey persist="true">[Skin],show_loop_controls_compact</ConfigKey>
                 <BindProperty>visible</BindProperty>
               </Connection>
-          </WidgetGroup>
-
-          <WidgetGroup>
-            <SizePolicy>me,min</SizePolicy>
-            <MinimumSize>2,</MinimumSize>
-            <MaximumSize>40,</MaximumSize>
-          </WidgetGroup>
-
-          <WidgetGroup>
-            <ObjectName>BeatjumpControls</ObjectName>
-            <Layout>horizontal</Layout>
-            <SizePolicy>min,min</SizePolicy>
-            <Children>
-              <BeatSpinBox>
-                <TooltipId>beatjump_size</TooltipId>
-                <ObjectName>Spinbox_<Variable name="BtnType"/></ObjectName>
-                <SizePolicy>me,min</SizePolicy>
-                <MinimumSize>46,26</MinimumSize>
-                <MaximumSize>72,26</MaximumSize>
-                <Align>center</Align>
-                <Alignment>center</Alignment>
-                <Value><Variable name="Group"/>,beatjump_size</Value>
-                <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
-                <Connection>
-                  <ConfigKey><Variable name="Group"/>,track_loaded</ConfigKey>
-                  <BindProperty>highlight</BindProperty>
-                </Connection> -->
-              </BeatSpinBox>
-            </Children>
-            <Connection>
-              <ConfigKey persist="true">[Skin],show_beatjump_controls_compact</ConfigKey>
-              <BindProperty>visible</BindProperty>
-            </Connection>
-          </WidgetGroup>
+          </WidgetGroup><!-- Looping -->
 
           <WidgetGroup>
             <SizePolicy>me,min</SizePolicy>
             <MinimumSize>2,</MinimumSize>
             <MaximumSize>20,</MaximumSize>
-          </WidgetGroup>
+          </WidgetGroup><!-- flex spacer -->
 
           <Template src="skins:LateNight/decks/vinyl_controls.xml"/>
 
@@ -203,7 +203,7 @@
             <SizePolicy>me,min</SizePolicy>
             <MinimumSize>2,</MinimumSize>
             <MaximumSize>20,</MaximumSize>
-          </WidgetGroup>
+          </WidgetGroup><!-- flex spacer -->
 
           <WidgetGroup>
             <SizePolicy>me,min</SizePolicy>
@@ -218,7 +218,7 @@
               <ConfigKey persist="true">[Skin],show_key_controls_compact</ConfigKey>
               <BindProperty>visible</BindProperty>
             </Connection>
-          </WidgetGroup>
+          </WidgetGroup><!-- Key controls -->
 
           <WidgetGroup><Size>20f,0min</Size></WidgetGroup>
 
