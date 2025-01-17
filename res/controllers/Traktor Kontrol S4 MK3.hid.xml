@@ -243,6 +243,19 @@
             </option>
         </group>
 
+        <group label="Effect Units">
+            <option
+                variable="allowEffectFocusWhenParametersHidden"
+                type="boolean"
+                default="false"
+                label="Allow effect focus with parameters hidden">
+                <description>
+                    Allow to focus effects while parameter rows are hidden in the GUI.
+                    This is helpful if you know what you're doing, e.g. use fx knobs for a Filter's HPF / LPF
+                </description>
+            </option>
+        </group>
+
         <group label="Beatloop Roll Size (Only if Enabled Instead of the Sampler Tab)">
             <row orientation="vertical">
                 <option
@@ -385,6 +398,7 @@
                 </option>
             </row>
         </group>
+
         <group label="Library">
             <row orientation="vertical">
                 <option
@@ -550,6 +564,7 @@
                 </option>
             </row>
         </group>
+
         <group label="Jog wheel">
             <option
                 variable="loopWheelMoveFactor"
@@ -598,6 +613,7 @@
                 <description>Define how fast the jogwheel rotates at the default play rate. This will impact scratch sensitivity, motor speed and ring LED pace.</description>
             </option>
         </group>
+
         <group label="Haptic drive feature (BETA)">
             <option
                 variable="useMotors"

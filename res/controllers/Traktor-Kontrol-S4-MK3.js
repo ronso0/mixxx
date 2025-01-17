@@ -95,6 +95,10 @@ const WheelLedBlinkOnTrackEnd = !!engine.getSetting("wheelLedBlinkOnTrackEnd");
 // Default: false
 const MixerControlsMixAuxOnShift = !!engine.getSetting("mixerControlsMicAuxOnShift");
 
+// The effect units may allow to focus effects without having the parameter rows shown in the GUI.
+// Default: false
+const AllowEffectFocusWhenParametersHidden = !!engine.getSetting("allowEffectFocusWhenParametersHidden");
+
 // Make the sampler tab a beatlooproll tab instead
 // Default: false
 const UseBeatloopRollInsteadOfSampler = !!engine.getSetting("useBeatloopRollInsteadOfSampler");
@@ -999,8 +1003,8 @@ class Mixer extends ComponentContainer {
         this.mixerColumnDeck1 = new S4Mk3MixerColumn(1, inReports, outReports[128],
             {
                 saveGain: {inByte: 11, inBit: 0, outByte: 80},
-                effectUnit1Assign: {inByte: 2, inBit: 3, outByte: 78},
-                effectUnit2Assign: {inByte: 2, inBit: 4, outByte: 79},
+                effectUnit13Assign: {inByte: 2, inBit: 3, outByte: 78},
+                effectUnit24Assign: {inByte: 2, inBit: 4, outByte: 79},
                 gain: {inByte: 16},
                 eqHigh: {inByte: 44},
                 eqMid: {inByte: 46},
@@ -1015,8 +1019,8 @@ class Mixer extends ComponentContainer {
         this.mixerColumnDeck2 = new S4Mk3MixerColumn(2, inReports, outReports[128],
             {
                 saveGain: {inByte: 11, inBit: 1, outByte: 84},
-                effectUnit1Assign: {inByte: 2, inBit: 5, outByte: 82},
-                effectUnit2Assign: {inByte: 2, inBit: 6, outByte: 83},
+                effectUnit13Assign: {inByte: 2, inBit: 5, outByte: 82},
+                effectUnit24Assign: {inByte: 2, inBit: 6, outByte: 83},
                 gain: {inByte: 18},
                 eqHigh: {inByte: 50},
                 eqMid: {inByte: 52},
@@ -1030,8 +1034,8 @@ class Mixer extends ComponentContainer {
         this.mixerColumnDeck3 = new S4Mk3MixerColumn(3, inReports, outReports[128],
             {
                 saveGain: {inByte: 2, inBit: 1, outByte: 88},
-                effectUnit1Assign: {inByte: 2, inBit: 0, outByte: 86},
-                effectUnit2Assign: {inByte: 2, inBit: 2, outByte: 87},
+                effectUnit13Assign: {inByte: 2, inBit: 0, outByte: 86},
+                effectUnit24Assign: {inByte: 2, inBit: 2, outByte: 87},
                 gain: {inByte: 14},
                 eqHigh: {inByte: 38},
                 eqMid: {inByte: 40},
@@ -1045,8 +1049,8 @@ class Mixer extends ComponentContainer {
         this.mixerColumnDeck4 = new S4Mk3MixerColumn(4, inReports, outReports[128],
             {
                 saveGain: {inByte: 11, inBit: 2, outByte: 92},
-                effectUnit1Assign: {inByte: 2, inBit: 7, outByte: 90},
-                effectUnit2Assign: {inByte: 11, inBit: 7, outByte: 91},
+                effectUnit13Assign: {inByte: 2, inBit: 7, outByte: 90},
+                effectUnit24Assign: {inByte: 11, inBit: 7, outByte: 91},
                 gain: {inByte: 20},
                 eqHigh: {inByte: 56},
                 eqMid: {inByte: 58},
@@ -1429,12 +1433,32 @@ let wheelTimerDelta = 0;
  * Kontrol S4 Mk3 hardware specific mapping logic
  */
 
+// An effect unit container for N units.
+// Supports effect focus mode.
+// TODO for main:
+// * show parameters on focus
 class S4Mk3EffectUnit extends ComponentContainer {
-    constructor(unitNumber, inReports, outReport, io) {
+    constructor(numbers, inReports, outReport, io) {
         super();
-        this.group = `[EffectRack1_EffectUnit${unitNumber}]`;
-        this.unitNumber = unitNumber;
+        if (typeof numbers === "number") {
+            this.group = this.unitGroupForNumber(numbers[0]);
+            this.unitNumbers = [numbers];
+        } else if (Array.isArray(numbers)) {
+            this.unitNumbers = numbers;
+        } else {
+            console.warn("ERROR! new S4Mk3EffectUnit() called without specifying any unit numbers!");
+            return;
+        }
+        // Note. original components implementation also has these checks
+        //   Math.floor(unitNumbers) === unitNumbers
+        //   isFinite(unitNumbers)) {
+
+        this.unitNumber = this.unitNumbers[0];
+        this.group = this.unitGroupForNumber(this.unitNumber);
         this.focusedEffect = null;
+        this.focusSelectMode = false;
+        // Set this GUI control so we see which unit is currently mapped to the controller
+        engine.setValue(this.group, "controller_input_active", 1);
 
         this.mixKnob = new Pot({
             inKey: "mix",
@@ -1443,47 +1467,74 @@ class S4Mk3EffectUnit extends ComponentContainer {
             inByte: io.mixKnob.inByte,
         });
 
-        this.mainButton = new PowerWindowButton({
+        this.effectFocusButton = new PowerWindowButton({
             unit: this,
+            group: this.group,
             inReport: inReports[1],
-            inByte: io.mainButton.inByte,
-            inBit: io.mainButton.inBit,
-            outByte: io.mainButton.outByte,
+            inByte: io.effectFocusButton.inByte,
+            inBit: io.effectFocusButton.inBit,
+            outByte: io.effectFocusButton.outByte,
             outReport: outReport,
-            shift: function() {
-                this.group = this.unit.group;
-                this.outKey = "group_[Master]_enable";
-                this.outConnect();
-                this.outTrigger();
-            },
-            unshift: function() {
-                this.outDisconnect();
-                this.outKey = undefined;
-                this.group = undefined;
-                this.output(false);
-            },
-            input: function(pressed) {
-                if (!this.shifted) {
-                    for (const index of [0, 1, 2]) {
-                        const effectGroup = `[EffectRack1_EffectUnit${unitNumber}_Effect${index + 1}]`;
-                        engine.setValue(effectGroup, "enabled", pressed);
+            onShortRelease: function() {
+                // First, quit focus mode
+                console.warn("onShortRelease: focus select mode OFF");
+                if (this.unit.focusedEffect !== null) {
+                    // console.warn(`--> focus fx: ${this.unit.focusedEffect}', reset`);
+                    // this.unit.focusSelectMode = false;
+                    this.unit.setFocusedEffect(null);
+                    // let realFocusEff = engine.getValue(this.unit.group, "focused_effect");
+                    // console.warn(`check: ${realFocusEff}'`);
+                    // engine.setValue(this.unit.group, "show_parameters", false);
+                } else if (this.shifted) {
+                    script.toggleControl("[Skin]", "show_4effectunits");
+                } else {
+                    // cycle through unitNumbers array
+                    if (this.unit.unitNumbers.length < 2) {
+                        return;
                     }
-                    this.output(pressed);
-                } else if (pressed) {
-                    if (this.unit.focusedEffect !== null) {
-                        this.unit.setFocusedEffect(null);
+                    console.warn("--> switch unit");
+                    let index = this.unit.unitNumbers.indexOf(this.unit.unitNumber);
+                    console.warn(`---> curr. index: ${index}' | num units: ${this.unit.unitNumbers.length}'`);
+                    if (index === (this.unit.unitNumbers.length - 1)) {
+                        index = 0;
                     } else {
-                        script.toggleControl(this.unit.group, "group_[Master]_enable");
-                        this.shift();
+                        index += 1;
                     }
+                    console.warn(`---> new index: ${index}'`);
+                    const newUnitNumber = this.unit.unitNumbers[index];
+                    console.warn(`---> new unit: ${newUnitNumber}'`);
+                    // make sure we have 4 units on screen when we switch to unit 3/4.
+                    if (newUnitNumber > 2) {
+                        engine.setValue("[Skin]", "show_4effectunits", 1);
+                    }
+                    this.unit.setCurrentUnit(newUnitNumber);
                 }
+                this.output(0);
+            },
+            onLongPress: function() {
+                // console.warn(`onLongPress: focus select mode ON`);
+                if (this.shifted) {
+                    script.toggleControl(this.unit.group, "show_parameters");
+                } else {
+                    this.unit.focusSelectMode = true;
+                }
+            },
+            onLongRelease: function() {
+                this.unit.focusSelectMode = false;
+                // console.warn(`onLongRelease: focus select mode OFF`);
+                // console.warn(`focused effect on ${this.unit.group}': ${this.unit.focusedEffect + 1}'`);
+                // const realFocusEff = engine.getValue(this.unit.group, "focused_effect");
+                // console.warn(`check: ${realFocusEff}'`);
             }
         });
 
         this.knobs = [];
         this.buttons = [];
         for (const index of [0, 1, 2]) {
-            const effectGroup = `[EffectRack1_EffectUnit${unitNumber}_Effect${index + 1}]`;
+            // const effectGroup = effectGroupForNumber(index + 1);
+            // const effectGroup = `[EffectRack1_EffectUnit${this.unitNumber}_Effect${index + 1}]`;
+            // const effectGroup = this.unit.effectGroupForNumber(index + 1);
+            const effectGroup = this.effectGroupForNumber(index + 1);
             this.knobs[index] = new Pot({
                 inKey: "meta",
                 group: effectGroup,
@@ -1500,7 +1551,12 @@ class S4Mk3EffectUnit extends ComponentContainer {
                 outByte: io.buttons[index].outByte,
                 outReport: outReport,
                 onShortPress: function() {
-                    if (!this.shifted || this.unit.focusedEffect !== null) {
+                    console.warn(`fx${index}' press`);
+                    if (this.unit.focusSelectMode) {
+                        console.warn("--> focus select mode ON");
+                        this.unit.setFocusedEffect(index);
+                    } else if (!this.shifted || this.unit.focusedEffect !== null) {
+                        console.warn("--> toggle effect");
                         script.toggleControl(this.group, this.inKey);
                     }
                 },
@@ -1527,20 +1583,39 @@ class S4Mk3EffectUnit extends ComponentContainer {
             component.outConnect();
             component.outTrigger();
         }
+        this.effectFocusButton.output(0);
     }
+
     indicatorLoop() {
         this.focusedEffectIndicator = !this.focusedEffectIndicator;
-        this.mainButton.output(true);
+        this.effectFocusButton.output(0);
     }
+
     setFocusedEffect(effectIdx) {
-        this.mainButton.indicator(effectIdx !== null);
+        console.warn(`setFocusedEffect ${effectIdx}' on ${this.group}'`);
+        this.effectFocusButton.indicator(effectIdx !== null);
         this.focusedEffect = effectIdx;
-        engine.setValue(this.group, "show_parameters", this.focusedEffect !== null);
 
+        if (engine.getValue(this.group, "show_parameters") > 0) {
+            const showParameters = !AllowEffectFocusWhenParametersHidden &&
+                    this.focusedEffect !== null;
+            engine.setValue(this.group, "show_parameters", showParameters);
+        }
 
-        const effectGroup = `[EffectRack1_EffectUnit${this.unitNumber}_Effect${this.focusedEffect + 1}]`;
+        if (effectIdx === null) {
+            engine.setValue(this.group, "focused_effect", 0);
+            engine.setValue(this.group, "show_focus", 0);
+        } else {
+            engine.setValue(this.group, "focused_effect", effectIdx + 1);
+            engine.setValue(this.group, "show_focus", 1);
+        }
+
+        // Knobs and buttons now control the knob/button parameters 1-3.
+        // With Shift we get the unfocus mapping:
+        // Meta knobs 1-3 and effect toggles 1-3
+        const effectGroup = effectGroupForNumber(this.focusedEffect + 1);
         for (const index of [0, 1, 2]) {
-            const unfocusGroup = `[EffectRack1_EffectUnit${this.unitNumber}_Effect${index + 1}]`;
+            const unfocusGroup = effectGroupForNumber(index + 1);
             this.buttons[index].outDisconnect();
             this.buttons[index].group = this.focusedEffect === null ? unfocusGroup : effectGroup;
             this.buttons[index].inKey = this.focusedEffect === null ? "enabled" : "button_parameter" + (index + 1);
@@ -1549,6 +1624,7 @@ class S4Mk3EffectUnit extends ComponentContainer {
                 this.setKey("enabled");
             };
             this.buttons[index].unshift = this.focusedEffect === null ? undefined : function() {
+                console.warn(`--> setGroup ${effectGroup}' on effect ${index}'`);
                 this.setGroup(effectGroup);
                 this.setKey("button_parameter" + (index + 1));
             };
@@ -1562,7 +1638,79 @@ class S4Mk3EffectUnit extends ComponentContainer {
                 this.setGroupKey(effectGroup, "parameter" + (index + 1));
             };
             this.buttons[index].outConnect();
+            this.buttons[index].outTrigger();
         }
+    }
+
+    setCurrentUnit(newNumber) {
+        console.warn(`setCurrentUnit: ${newNumber}'`);
+        this.focusSelectMode = false;
+        engine.setValue(this.group, "controller_input_active", 0);
+        if (AllowEffectFocusWhenParametersHidden) {
+            engine.setValue(this.group, "show_focus", 0);
+        } else {
+            if (this.showParametersConnection !== undefined) {
+                this.showParametersConnection.disconnect();
+            }
+            delete this.previouslyFocusedEffect;
+        }
+
+        this.unitNumber = newNumber;
+        // this.group = `[EffectRack1_EffectUnit${newNumber}]`;
+        this.group = this.effectGroupForNumber(index + 1);
+
+        if (AllowEffectFocusWhenParametersHidden) {
+            engine.setValue(this.group, "show_focus", 1);
+        } else {
+            // Connect a callback to show_parameters changing instead of
+            // setting show_focus when effectFocusButton is pressed so
+            // show_focus is always in the correct state, even if the user
+            // presses the skin button for show_parameters.
+            this.showParametersConnection = engine.makeConnection(this.group,
+                "show_parameters",
+                this.onShowParametersChange.bind(this));
+            this.showParametersConnection.trigger();
+        }
+        engine.setValue(this.group, "controller_input_active", 1);
+
+        // Do not enable soft takeover upon EffectUnit construction
+        // so initial values can be loaded from knobs.
+        if (this.hasInitialized === true) {
+            for (let n = 1; n <= 3; n++) {
+                const effect = effectGroupForNumber(n);
+                // ronso0:
+                // Disable Meta knob softTakeover for immediate response.
+                // Though it might be enabled, so reset it to 'false'
+                // Also change it in this.EffectUnitKnob.prototype
+                engine.softTakeover(effect, "meta", false);
+                engine.softTakeover(effect, "parameter1", false);
+                engine.softTakeover(effect, "parameter2", false);
+                engine.softTakeover(effect, "parameter3", false);
+            }
+        }
+
+        this.reconnectComponents(function(component) {
+            console.warn("reconnectComponents");
+            console.warn(`--> component.group = ${component.group}'`);
+            // update [EffectRack1_EffectUnitX] groups
+            const unitMatch = component.group.match(script.effectUnitRegEx);
+            if (unitMatch !== null) {
+                component.group = this.group;
+            } else {
+                // update [EffectRack1_EffectUnitX_EffectY] groups
+                const effectMatch = component.group.match(script.individualEffectRegEx);
+                if (effectMatch !== null) {
+                    // component.group = `[EffectRack1_EffectUnit${this.unitNumber}_Effect${effectMatch[2]}]`;
+                    component.group = this.effectGroupForNumber(index + 1);
+                }
+            }
+        });
+    };
+    unitGroupForNumber(number) {
+        return `[EffectRack1_EffectUnit${number}]`;
+    }
+    effectGroupForNumber(number) {
+        return `[EffectRack1_EffectUnit${this.unitNumber}_Effect${number}]`;
     }
 }
 
@@ -2806,14 +2954,30 @@ class S4Mk3MixerColumn extends ComponentContainer {
             outKey: "pfl",
         });
 
-        this.effectUnit1Assign = new PowerWindowButton({
+        this.effectUnit13Assign = new PowerWindowButton({
             group: "[EffectRack1_EffectUnit1]",
             key: `group_${this.group}_enable`,
+            shift() {
+                this.group = "[EffectRack1_EffectUnit3]";
+                this.key = `group_${this.group}_enable`;
+            },
+            unshift() {
+                this.group = "[EffectRack1_EffectUnit1]";
+                this.key = `group_${this.group}_enable`;
+            },
         });
 
-        this.effectUnit2Assign = new PowerWindowButton({
+        this.effectUnit24Assign = new PowerWindowButton({
             group: "[EffectRack1_EffectUnit2]",
             key: `group_${this.group}_enable`,
+            shift() {
+                this.group = "[EffectRack1_EffectUnit4]";
+                this.key = `group_${this.group}_enable`;
+            },
+            unshift() {
+                this.group = "[EffectRack1_EffectUnit2]";
+                this.key = `group_${this.group}_enable`;
+            },
         });
 
         // FIXME: Why is output not working for these?
@@ -2893,7 +3057,7 @@ class S4Mk3MixerColumn extends ComponentContainer {
                 component.outTrigger();
             }
         }
-        for (const property of ["effectUnit1Assign", "effectUnit2Assign"]) {
+        for (const property of ["effectUnit13Assign", "effectUnit24Assign"]) {
             const component = this[property];
             if (component instanceof Component) {
                 component.outDisconnect();
@@ -2931,10 +3095,10 @@ class S4MK3 {
         this.outReports = [];
         this.outReports[128] = new HIDOutputReport(128, 94);
 
-        this.effectUnit1 = new S4Mk3EffectUnit(1, this.inReports, this.outReports[128],
+        this.effectUnits13 = new S4Mk3EffectUnit([1, 3], this.inReports, this.outReports[128],
             {
                 mixKnob: {inByte: 30},
-                mainButton: {inByte: 1, inBit: 6, outByte: 62},
+                effectFocusButton: {inByte: 1, inBit: 6, outByte: 62},
                 knobs: [
                     {inByte: 32},
                     {inByte: 34},
@@ -2947,10 +3111,10 @@ class S4MK3 {
                 ],
             }
         );
-        this.effectUnit2 = new S4Mk3EffectUnit(2, this.inReports, this.outReports[128],
+        this.effectUnits24 = new S4Mk3EffectUnit([2, 4], this.inReports, this.outReports[128],
             {
                 mixKnob: {inByte: 70},
-                mainButton: {inByte: 9, inBit: 4, outByte: 73},
+                effectFocusButton: {inByte: 9, inBit: 4, outByte: 73},
                 knobs: [
                     {inByte: 72},
                     {inByte: 74},
@@ -2973,7 +3137,7 @@ class S4MK3 {
         // so every single components' IO needs to be specified individually
         // for both decks.
         this.leftDeck = new S4Mk3Deck(
-            [1, 3], [DeckColors[0], DeckColors[2]], this.effectUnit1, this.mixer,
+            [1, 3], [DeckColors[0], DeckColors[2]], this.effectUnits13, this.mixer,
             this.inReports, this.outReports[128],
             {
                 playButton: {inByte: 4, inBit: 0, outByte: 55},
@@ -3024,7 +3188,7 @@ class S4MK3 {
         );
 
         this.rightDeck = new S4Mk3Deck(
-            [2, 4], [DeckColors[1], DeckColors[3]], this.effectUnit2, this.mixer,
+            [2, 4], [DeckColors[1], DeckColors[3]], this.effectUnits24, this.mixer,
             this.inReports, this.outReports[128],
             {
                 playButton: {inByte: 12, inBit: 0, outByte: 66},
