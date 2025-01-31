@@ -12,6 +12,7 @@
 #include "library/trackprocessing.h"
 #include "preferences/usersettings.h"
 #include "track/beats.h"
+#include "track/track_decl.h"
 #include "track/trackref.h"
 #include "util/color/rgbcolor.h"
 #include "util/parented_ptr.h"
@@ -167,6 +168,9 @@ class WTrackMenu : public QMenu {
     void slotUnlockBpm();
     void slotScaleBpm(mixxx::Beats::BpmScale scale);
     void slotUndoBeatsChange();
+
+    // Hotcues
+    void slotSortHotcuesByPosition(HotcueSortMode sortMode);
 
     // Info and metadata
     void slotUpdateReplayGainFromPregain();
@@ -364,6 +368,8 @@ class WTrackMenu : public QMenu {
     parented_ptr<QAction> m_pClearKeyAction;
     parented_ptr<QAction> m_pClearReplayGainAction;
     parented_ptr<QAction> m_pClearAllMetadataAction;
+    parented_ptr<QAction> m_pSortHotcuesByPositionAction{};
+    parented_ptr<QAction> m_pSortHotcuesByPositionCompressAction{};
 
     const UserSettingsPointer m_pConfig;
     Library* const m_pLibrary;

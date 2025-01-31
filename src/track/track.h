@@ -299,6 +299,11 @@ class Track : public QObject {
     /// Shift beatgrid by a constant offset
     void shiftBeatsMillis(double milliseconds);
 
+    /// Set hoctues' indices sorted by their frame position.
+    /// If compress is true, indices are consecutive and start at 0.
+    /// Set false to sort only, ie. keep empty hotcues before and in between.
+    void setHotcueIndicesSortedByPosition(HotcueSortMode sortMode);
+
     // Call when analysis is done.
     void analysisFinished();
 
