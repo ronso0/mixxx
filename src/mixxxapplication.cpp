@@ -87,7 +87,7 @@ class QMouseEventEditable : public QMouseEvent {
 // processed through the event queue every 16.6ms, to ensure smooth rendering.
 // Exceeding this processing time can lead to visible delays, therefore 10ms is a
 // reasonable threshold.
-constexpr mixxx::Duration kEventNotifyExecTimeWarningThreshold = mixxx::Duration::fromMillis(10);
+constexpr mixxx::Duration kEventNotifyExecTimeWarningThreshold = mixxx::Duration::fromMillis(500);
 
 } // anonymous namespace
 
