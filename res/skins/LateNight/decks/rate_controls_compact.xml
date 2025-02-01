@@ -23,7 +23,7 @@
           <WidgetGroup><!-- BPM + rate + Tap overlay-->
             <ObjectName>BpmTapContainer</ObjectName>
             <Layout>stacked</Layout>
-            <Size>60f,40f</Size>
+            <Size>60f,26f</Size>
             <Children>
               <!-- invisible Tempo/BPM tap button on top of BPM display -->
               <PushButton>
@@ -31,13 +31,13 @@
                 <ObjectName>BpmTap</ObjectName>
                 <SizePolicy>me,me</SizePolicy>
                 <NumberStates>1</NumberStates>
-                  <Connection>
-                    <ConfigKey><Variable name="Group"/>,tempo_tap</ConfigKey>
-                  </Connection>
-                  <Connection>
-                    <ConfigKey><Variable name="Group"/>,bpm_tap</ConfigKey>
-                    <ButtonState>RightButton</ButtonState>
-                  </Connection>
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,tempo_tap</ConfigKey>
+                </Connection>
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,bpm_tap</ConfigKey>
+                  <ButtonState>RightButton</ButtonState>
+                </Connection>
               </PushButton>
               <WidgetGroup><!-- BPM + rate -->
                 <ObjectName>AlignCenter</ObjectName>
@@ -54,19 +54,19 @@
                       <ConfigKey><Variable name="Group"/>,visual_bpm</ConfigKey>
                     </Connection>
                   </Number>
-                  <NumberRate>
+                  <!-- <NumberRate>
                     <TooltipId>rate_display</TooltipId>
                     <ObjectName>RateText</ObjectName>
                     <Channel><Variable name="ChanNum" /></Channel>
                     <Alignment>center</Alignment>
                     <NumberOfDigits>2</NumberOfDigits>
-                  </NumberRate>
+                  </NumberRate> -->
                 </Children>
               </WidgetGroup><!-- BpmContainer + Tap overlay -->
             </Children>
           </WidgetGroup><!-- BpmContainer -->
 
-          <WidgetGroup><Size>0min,0me</Size></WidgetGroup>
+          <WidgetGroup><Size>0min,3f</Size></WidgetGroup>
 
           <WidgetGroup>
             <ObjectName>RateControls</ObjectName>
@@ -86,8 +86,8 @@
                     <Children>
                       <PushButton>
                         <TooltipId>sync_enabled</TooltipId>
-                        <ObjectName>SyncDeck</ObjectName>
-                        <Size>40f,22f</Size>
+                        <ObjectName>SyncDeckCompact</ObjectName>
+                        <Size>30f,22f</Size>
                         <NumberStates>2</NumberStates>
                         <RightClickIsPushButton>true</RightClickIsPushButton>
                         <Connection>

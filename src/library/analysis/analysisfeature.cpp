@@ -160,6 +160,14 @@ void AnalysisFeature::analyzeTracks(const QList<AnalyzerScheduledTrack>& tracks)
                 &TrackAnalysisScheduler::finished,
                 this,
                 &AnalysisFeature::onTrackAnalysisSchedulerFinished);
+        // Forward the signal to be picked up by Library.
+        // Finally used by WOveverview to render the analysis progress
+        // like with PlayerManager's signal.
+        connect(m_pTrackAnalysisScheduler.get(),
+                &TrackAnalysisScheduler::trackProgress,
+                this,
+                &AnalysisFeature::trackProgress,
+                Qt::DirectConnection);
 
         emit analysisActive(true);
     }

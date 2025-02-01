@@ -30,6 +30,18 @@ void WStarRatingAction::setRating(const int rating) {
     m_pStarRating->slotSetRating(rating);
 }
 
+int WStarRatingAction::getRating() {
+    return m_pStarRating->getRating();
+}
+
+void WStarRatingAction::incRating() {
+    m_pStarRating->incRating();
+}
+
+void WStarRatingAction::decRating() {
+    m_pStarRating->decRating();
+}
+
 QSize WStarRatingAction::sizeHint() {
     return m_pStarRating->sizeHint();
 }

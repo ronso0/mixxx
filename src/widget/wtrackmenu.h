@@ -12,6 +12,7 @@
 #include "library/trackprocessing.h"
 #include "preferences/usersettings.h"
 #include "track/beats.h"
+#include "track/track_decl.h"
 #include "track/trackref.h"
 #include "util/color/rgbcolor.h"
 #include "util/parented_ptr.h"
@@ -113,6 +114,8 @@ class WTrackMenu : public QMenu {
     void slotRemoveFromDisk();
     const QString getDeckGroup() const;
 
+    void keyPressEvent(QKeyEvent* pEvent) override;
+
   signals:
 #ifdef __STEM__
     void loadTrackToPlayer(TrackPointer pTrack,
@@ -134,7 +137,7 @@ class WTrackMenu : public QMenu {
     void slotSelectInLibrary();
 
     // Track rating
-    void slotSetRating(int rating);
+    void slotSetRating(int rating, bool close = true);
 
     // Row color
     void slotColorPicked(const mixxx::RgbColor::optional_t& color);
@@ -165,6 +168,9 @@ class WTrackMenu : public QMenu {
     void slotUnlockBpm();
     void slotScaleBpm(mixxx::Beats::BpmScale scale);
     void slotUndoBeatsChange();
+
+    // Hotcues
+    void slotSortHotcuesByPosition(HotcueSortMode sortMode);
 
     // Info and metadata
     void slotUpdateReplayGainFromPregain();
@@ -292,9 +298,6 @@ class WTrackMenu : public QMenu {
     parented_ptr<WCoverArtMenu> m_pCoverMenu;
     parented_ptr<WSearchRelatedTracksMenu> m_pSearchRelatedMenu;
     parented_ptr<WFindOnWebMenu> m_pFindOnWebMenu;
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    QMenu* m_pRemoveFromDiskMenu{};
-#endif
 
     // Update ReplayGain from Track
     parented_ptr<QAction> m_pUpdateReplayGainAct;
@@ -365,6 +368,8 @@ class WTrackMenu : public QMenu {
     parented_ptr<QAction> m_pClearKeyAction;
     parented_ptr<QAction> m_pClearReplayGainAction;
     parented_ptr<QAction> m_pClearAllMetadataAction;
+    parented_ptr<QAction> m_pSortHotcuesByPositionAction{};
+    parented_ptr<QAction> m_pSortHotcuesByPositionCompressAction{};
 
     const UserSettingsPointer m_pConfig;
     Library* const m_pLibrary;

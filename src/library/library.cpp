@@ -162,6 +162,11 @@ Library::Library(
             &PlayerManager::trackAnalyzerIdle,
             this,
             &Library::onPlayerManagerTrackAnalyzerIdle);
+    connect(m_pAnalysisFeature,
+            &AnalysisFeature::trackProgress,
+            this,
+            &Library::onTrackAnalyzerProgress,
+            Qt::DirectConnection);
 
     // iTunes and Rhythmbox should be last until we no longer have an obnoxious
     // messagebox popup when you select them. (This forces you to reach for your
@@ -359,6 +364,10 @@ void Library::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
             &WLibrarySidebar::deleteItem,
             m_pSidebarModel,
             &SidebarModel::deleteItem);
+    connect(m_pSidebarModel,
+            &SidebarModel::dataChanged,
+            pSidebarWidget,
+            &WLibrarySidebar::queueHeaderAdjustRequest);
 
     connect(pSidebarWidget,
             &WLibrarySidebar::setLibraryFocus,
@@ -382,8 +391,7 @@ void Library::bindLibraryWidget(
     WTrackTableView* pTrackTableView = new WTrackTableView(m_pLibraryWidget,
             m_pConfig,
             this,
-            m_pLibraryWidget->getTrackTableBackgroundColorOpacity(),
-            true);
+            m_pLibraryWidget->getTrackTableBackgroundColorOpacity());
     pTrackTableView->installEventFilter(pKeyboard);
     connect(this,
             &Library::showTrackModel,
