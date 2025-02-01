@@ -245,11 +245,13 @@ QKeySequence KeyboardEventFilter::getKeySeq(QKeyEvent* e) {
     const QKeySequence k = QKeySequence(modseq + keyseq);
 
     if (CmdlineArgs::Instance().getDeveloper()) {
+        kLogger.warning() << "                   .";
         if (e->type() == QEvent::KeyPress) {
-            kLogger.debug() << "keyboard press: " << k.toString();
+            kLogger.warning() << "                   keyboard press: " << k.toString();
         } else if (e->type() == QEvent::KeyRelease) {
-            kLogger.debug() << "keyboard release: " << k.toString();
+            kLogger.warning() << "                   keyboard release: " << k.toString();
         }
+        kLogger.warning() << "                   .";
     }
 
     return k;
