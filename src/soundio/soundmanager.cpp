@@ -165,6 +165,7 @@ void SoundManager::closeDevices(
     }
 
 #ifdef __LINUX__
+//<<<<<<< HEAD
     if (closed && sleepAfterClosing) {
         // Sleep for 5 sec to allow asynchronously sound APIs like "pulse" to free
         // its resources as well
@@ -178,7 +179,14 @@ void SoundManager::closeDevices(
             return;
         }
         // Sync mode, legacy - we sleep the current thread for 5 seconds
-        QThread::sleep(kSleepSecondsAfterClosingDevice);
+        // NOTE(ronso0) Is apparently only required for Pulse.
+        // See discussion in https://github.com/mixxxdj/mixxx/issues/14290
+        // And original Pulse bugs
+        // https://github.com/mixxxdj/mixxx/issues/770
+        // https://github.com/mixxxdj/mixxx/issues/8284
+        if (m_config.getAPI() == "Pulse") {
+            QThread::sleep(kSleepSecondsAfterClosingDevice);
+        }
     } else if (!closed)
 #endif
     {
