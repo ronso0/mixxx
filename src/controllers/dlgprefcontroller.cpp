@@ -389,7 +389,8 @@ void DlgPrefController::showLearningWizard() {
 }
 
 void DlgPrefController::slotStopLearning() {
-    VERIFY_OR_DEBUG_ASSERT(m_pMapping) {
+    if (!m_pMapping) {
+        // Can happen when aborting learning wizard with no prev mapping
         emit mappingEnded();
         return;
     }

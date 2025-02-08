@@ -292,6 +292,40 @@ void DlgTrackInfo::init() {
                 trackColorDialogSetColor(newColor);
                 m_trackRecord.setColor(newColor);
             });
+
+    installEventFilter(this);
+    txtArtist->installEventFilter(this);
+    txtTrackName->installEventFilter(this);
+    txtTrackName->installEventFilter(this);
+    txtAlbum->installEventFilter(this);
+    txtAlbumArtist->installEventFilter(this);
+    txtComposer->installEventFilter(this);
+    txtGenre->installEventFilter(this);
+    txtGrouping->installEventFilter(this);
+}
+
+bool DlgTrackInfo::eventFilter(QObject* pObj, QEvent* pEvent) {
+    if (pEvent->type() == QEvent::KeyPress) {
+        qWarning() << "     .";
+        qWarning() << "     keyPress" << pObj->objectName();
+        if (qobject_cast<QLineEdit*>(pObj) || pObj == this) {
+            qWarning() << "     is QLineEdit";
+            auto* ke = static_cast<QKeyEvent*>(pEvent);
+            if (ke->key() == Qt::Key_Down) {
+                qWarning() << "     -> Down";
+                if (focusNextChild()) {
+                    return true;
+                }
+            }
+            if (ke->key() == Qt::Key_Up) {
+                qWarning() << "     -> Up";
+                if (focusPreviousChild()) {
+                    return true;
+                }
+            }
+        }
+    }
+    return QDialog::eventFilter(pObj, pEvent);
 }
 
 void DlgTrackInfo::slotApply() {
