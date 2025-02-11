@@ -80,6 +80,10 @@ constexpr double kMaxVelocity = 100;
 // TODO make configurable, eg. to customize spinbacks with controllers
 constexpr double kTimeToStop = 1.0;
 
+// Notes: sample intervals
+// mouse: 7ms
+// S4mk3: 1.2 - 2.4 ms
+
 } // anonymous namespace
 
 PositionScratchController::PositionScratchController(const QString& group)
