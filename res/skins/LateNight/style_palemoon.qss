@@ -3516,6 +3516,17 @@ DlgPreferences #line_2 {
       padding: 0em 0.2em 0 0;
       margin: 0px 0px 0px 0em;
     }
+    DlgPreferences QGroupBox::indicator {
+      qproperty-iconSize: 22px;
+      width: 18px;
+      height: 18px;
+    }
+    DlgPreferences QGroupBox::indicator:checked {
+      image: url(skins:LateNight/palemoon/style/library_branch_open.svg);
+    }
+    DlgPreferences QGroupBox::indicator:unchecked {
+      image: url(skins:LateNight/palemoon/style/library_branch_closed.svg);
+    }
 
 #Skin QDialog QTabBar::tab-bar,
 DlgPreferences QTabBar::tab-bar {
