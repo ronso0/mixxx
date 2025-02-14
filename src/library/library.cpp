@@ -363,6 +363,10 @@ void Library::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
             &WLibrarySidebar::deleteItem,
             m_pSidebarModel,
             &SidebarModel::deleteItem);
+    connect(m_pSidebarModel,
+            &SidebarModel::dataChanged,
+            pSidebarWidget,
+            &WLibrarySidebar::queueHeaderAdjustRequest);
 
     connect(pSidebarWidget,
             &WLibrarySidebar::setLibraryFocus,
@@ -386,8 +390,7 @@ void Library::bindLibraryWidget(
     WTrackTableView* pTrackTableView = new WTrackTableView(m_pLibraryWidget,
             m_pConfig,
             this,
-            m_pLibraryWidget->getTrackTableBackgroundColorOpacity(),
-            true);
+            m_pLibraryWidget->getTrackTableBackgroundColorOpacity());
     pTrackTableView->installEventFilter(pKeyboard);
     connect(this,
             &Library::showTrackModel,

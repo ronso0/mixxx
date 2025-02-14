@@ -30,6 +30,8 @@ void WLibrary::setup(const QDomNode& node, const SkinContext& context) {
                     kDefaultTrackTableBackgroundColorOpacity),
             kMinTrackTableBackgroundColorOpacity,
             kMaxTrackTableBackgroundColorOpacity);
+
+    m_overviewSignalColors.setup(node, context);
 }
 
 bool WLibrary::registerView(const QString& name, QWidget* pView) {
@@ -162,8 +164,9 @@ bool WLibrary::event(QEvent* pEvent) {
 }
 
 void WLibrary::keyPressEvent(QKeyEvent* pEvent) {
-    if (pEvent->key() == Qt::Key_Left && pEvent->modifiers() & Qt::ControlModifier) {
-        emit setLibraryFocus(FocusWidget::Sidebar);
-    }
+    // ronso0: disabled moving current index in tracks table with Ctrl + Left/Right
+    // if (pEvent->key() == Qt::Key_Left && pEvent->modifiers() & Qt::ControlModifier) {
+    //     emit setLibraryFocus(FocusWidget::Sidebar);
+    // }
     QStackedWidget::keyPressEvent(pEvent);
 }

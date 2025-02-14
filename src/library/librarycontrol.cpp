@@ -257,6 +257,18 @@ LibraryControl::LibraryControl(Library* pLibrary)
                 &LibraryControl::refocusPrevLibraryWidget);
     }
 
+    // Control to "edit" the currently selected item/field in focused widget (context dependent)
+    m_pEditItem = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "EditItem"));
+#ifdef MIXXX_USE_QML
+    if (!CmdlineArgs::Instance().isQml())
+#endif
+    {
+        connect(m_pEditItem.get(),
+                &ControlPushButton::valueChanged,
+                this,
+                &LibraryControl::slotEditItem);
+    }
+
     // Control to "goto" the currently selected item in focused widget (context dependent)
     m_pGoToItem = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "GoToItem"));
 #ifdef MIXXX_USE_QML
@@ -797,6 +809,14 @@ void LibraryControl::slotScrollDown(double v) {
 }
 
 void LibraryControl::slotScrollVertical(double v) {
+    if (m_focusedWidget == FocusWidget::ContextMenu) {
+        const auto key = (v < 0) ? Qt::Key_Left : Qt::Key_Right;
+        const auto times = static_cast<unsigned short>(std::abs(v));
+        QKeyEvent event = QKeyEvent{QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times};
+        QApplication::sendEvent(QApplication::focusWindow(), &event);
+        return;
+    }
+
     const auto key = (v < 0) ? Qt::Key_PageUp : Qt::Key_PageDown;
     const auto times = static_cast<unsigned short>(std::abs(v));
     emitKeyEvent(QKeyEvent{QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times});
@@ -1043,6 +1063,29 @@ void LibraryControl::slotSelectPrevSidebarItem(double v) {
 void LibraryControl::slotToggleSelectedSidebarItem(double v) {
     if (m_pSidebarWidget && v > 0) {
         m_pSidebarWidget->toggleSelectedItem();
+    }
+}
+
+void LibraryControl::slotEditItem(double v) {
+    if (v <= 0) {
+        return;
+    }
+
+    switch (m_focusedWidget) {
+    case FocusWidget::Sidebar: {
+        m_pSidebarWidget->renameSelectedItem();
+        break;
+    }
+    case FocusWidget::TracksTable: {
+        WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+        if (pTrackTableView) {
+            pTrackTableView->editSelectedItem();
+        }
+        break;
+    }
+    default: {
+        break;
+    }
     }
 }
 

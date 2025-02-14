@@ -29,6 +29,7 @@
 #include "util/desktophelper.h"
 #include "util/parented_ptr.h"
 #include "util/string.h"
+#include "widget/wcollapsiblegroupbox.h"
 
 namespace {
 const QString kMappingExt(".midi.xml");
@@ -373,10 +374,6 @@ void DlgPrefController::showLearningWizard() {
             pControllerLearning,
             &ControllerLearningEventFilter::stopListening);
     connect(m_pDlgControllerLearning,
-            &DlgControllerLearning::stopLearning,
-            this,
-            &DlgPrefController::show);
-    connect(m_pDlgControllerLearning,
             &DlgControllerLearning::inputMappingsLearned,
             this,
             &DlgPrefController::midiInputMappingsLearned);
@@ -395,6 +392,7 @@ void DlgPrefController::slotStopLearning() {
     }
 
     applyMappingChanges();
+
     if (m_pMapping->filePath().isEmpty()) {
         // This mapping was created when the learning wizard was started
         if (m_pMapping->isDirty()) {
@@ -421,6 +419,7 @@ void DlgPrefController::slotStopLearning() {
         }
     }
 
+    // This will show() -> slotUpdate() -> enumerateMappings() etc.
     emit mappingEnded();
 }
 
@@ -464,7 +463,7 @@ QString DlgPrefController::mappingSupportLinks(
     if (!forumLink.isEmpty()) {
         linkList << coloredLinkString(
                 m_pLinkColor,
-                "Mixxx Forums",
+                "Mixxx&nbsp;Forums",
                 forumLink);
     }
 
@@ -472,7 +471,7 @@ QString DlgPrefController::mappingSupportLinks(
     if (!wikiLink.isEmpty()) {
         linkList << coloredLinkString(
                 m_pLinkColor,
-                "Mixxx Wiki",
+                "Mixxx&nbsp;Wiki",
                 wikiLink);
     }
 
@@ -480,7 +479,7 @@ QString DlgPrefController::mappingSupportLinks(
     if (!manualLink.isEmpty()) {
         linkList << coloredLinkString(
                 m_pLinkColor,
-                "Mixxx Manual",
+                "Mixxx&nbsp;Manual",
                 manualLink);
     }
 
@@ -490,8 +489,8 @@ QString DlgPrefController::mappingSupportLinks(
             m_pLinkColor,
             tr("Troubleshooting"),
             MIXXX_WIKI_MIDI_SCRIPTING_URL);
-
-    return QString(linkList.join("&nbsp;&nbsp;"));
+    // Without &nbsp; would be rendered as regular whitespace (thin, &ensp;)
+    return QString(linkList.join("&emsp;&nbsp;"));
 }
 
 QString DlgPrefController::mappingFileLinks(
@@ -520,6 +519,20 @@ QString DlgPrefController::mappingFileLinks(
     return linkList.join("<br/>");
 }
 
+void DlgPrefController::updateMappingIconsAndColoredLinkTexts() {
+    // re-enumerating mappings is the easiest way to update the list icons
+    enumerateMappings(mappingFilePathFromIndex(m_ui.comboBoxMapping->currentIndex()));
+
+    // Update the colored links
+    createLinkColor();
+    // Note: this will show the links of the LOADED mapping, so when applying
+    // a stylesheet while the selected mapping hasn't been loaded, yet, the
+    // links will be wrong.
+    std::shared_ptr<LegacyControllerMapping> pMapping = m_pController->cloneMapping();
+    m_ui.labelMappingSupportLinks->setText(mappingSupportLinks(pMapping));
+    m_ui.labelMappingScriptFileLinks->setText(mappingFileLinks(pMapping));
+}
+
 void DlgPrefController::enumerateMappings(const QString& selectedMappingPath) {
     m_ui.comboBoxMapping->blockSignals(true);
     QString currentMappingFilePath = mappingFilePathFromIndex(m_ui.comboBoxMapping->currentIndex());
@@ -527,12 +540,14 @@ void DlgPrefController::enumerateMappings(const QString& selectedMappingPath) {
 
     // qDebug() << "Enumerating mappings for controller" << m_pController->getName();
 
-    // Check the text color of the palette for whether to use dark or light icons
+    // Check the text color of the palette for whether to use dark or light icons.
+    // For this to work with custom stylesheets we need to set the text color, eg.:
+    // DlgPrefController { color: yellow; }
     QDir iconsPath;
     if (!Color::isDimColor(palette().text().color())) {
-        iconsPath.setPath(":/images/preferences/light/");
+        iconsPath.setPath(PREF_LIGHT_ICON_PATH);
     } else {
-        iconsPath.setPath(":/images/preferences/dark/");
+        iconsPath.setPath(PREF_DARK_ICON_PATH);
     }
 
     // Insert a dummy item at the top to try to make it less confusing.
@@ -616,9 +631,10 @@ void DlgPrefController::slotUpdate() {
     // Force updating the controller settings
     slotMappingSelected(m_ui.comboBoxMapping->currentIndex());
 
-    // enumeratePresets calls slotPresetSelected which will check the m_ui.chkEnabledDevice
-    // checkbox if there is a valid mapping saved in the mixxx.cfg file. However, the
-    // checkbox should only be checked if the device is currently enabled.
+    // enumerateMappings() calls slotMappingSelected() which will tick the 'Enabled'
+    // checkbox if there is a valid mapping saved in the mixxx.cfg file.
+    // However, the checkbox should only be checked if the device is currently enabled.
+    // TODO fix in slotMappingSelected()?
     m_ui.chkEnabledDevice->setChecked(m_pController->isOpen());
 
     // If the controller is not mappable, disable the input and output mapping
@@ -729,6 +745,10 @@ QString DlgPrefController::mappingFilePathFromIndex(int index) const {
 }
 
 void DlgPrefController::slotMappingSelected(int chosenIndex) {
+    // Note that this is also called by slotUpdate() after MIDI learning finished
+    // and we may have pending changes. Force-reloading the mapping from file
+    // would wipe those so we need to make sure to return before
+    // LegacyControllerMappingFileHandler::loadMapping()
     QString mappingFilePath = mappingFilePathFromIndex(chosenIndex);
     if (mappingFilePath.isEmpty()) {
         // User picked "No Mapping" item
@@ -754,10 +774,17 @@ void DlgPrefController::slotMappingSelected(int chosenIndex) {
     }
 
     // Check if the mapping is different from the configured mapping
-    if (m_GuiInitialized &&
-            m_pControllerManager->getConfiguredMappingFileForDevice(
+    if (m_GuiInitialized) {
+        if (m_pControllerManager->getConfiguredMappingFileForDevice(
                     m_pController->getName()) != mappingFilePath) {
-        setDirty(true);
+            setDirty(true);
+            m_settingsCollapsedStates.clear();
+        } else if (m_pMapping && m_pMapping->isDirty()) {
+            // We have pending changes, don't reload the mapping from file!
+            // This is called by show()/slotUpdate() after MIDI learning ended
+            // and there is no need to update the GUI.
+            return;
+        }
     }
 
     applyMappingChanges();
@@ -784,9 +811,8 @@ void DlgPrefController::slotMappingSelected(int chosenIndex) {
         // We might have saved the previous preset with a new name, so update
         // the preset combobox.
         enumerateMappings(mappingFilePath);
-    } else {
-        slotShowMapping(pMapping);
     }
+    slotShowMapping(pMapping);
 
     // These tabs are only usable for MIDI controllers
     bool showMidiTabs = m_pController->getDataRepresentationProtocol() ==
@@ -849,7 +875,7 @@ bool DlgPrefController::saveMapping() {
                 "Overwrite or save with a new name?");
         QString overwriteCheckLabel = tr("Always overwrite during this session");
 
-        QMessageBox overwriteMsgBox;
+        QMessageBox overwriteMsgBox(this);
         overwriteMsgBox.setIcon(QMessageBox::Question);
         overwriteMsgBox.setWindowTitle(overwriteTitle);
         overwriteMsgBox.setText(overwriteLabel.arg(mappingName));
@@ -914,7 +940,7 @@ bool DlgPrefController::saveMapping() {
     return true;
 }
 
-QString DlgPrefController::askForMappingName(const QString& prefilledName) const {
+QString DlgPrefController::askForMappingName(const QString& prefilledName) {
     QString saveMappingTitle = tr("Save user mapping");
     QString saveMappingLabel = tr("Enter the name for saving the mapping to the user folder.");
     QString savingFailedTitle = tr("Saving mapping failed");
@@ -932,7 +958,7 @@ QString DlgPrefController::askForMappingName(const QString& prefilledName) const
     while (!validMappingName) {
         QString userDir = m_pUserDir;
         bool ok = false;
-        mappingName = QInputDialog::getText(nullptr,
+        mappingName = QInputDialog::getText(this,
                 saveMappingTitle,
                 saveMappingLabel,
                 QLineEdit::Normal,
@@ -945,7 +971,7 @@ QString DlgPrefController::askForMappingName(const QString& prefilledName) const
             return QString();
         }
         if (mappingName.isEmpty()) {
-            QMessageBox::warning(nullptr,
+            QMessageBox::warning(this,
                     savingFailedTitle,
                     invalidNameLabel);
             continue;
@@ -953,7 +979,7 @@ QString DlgPrefController::askForMappingName(const QString& prefilledName) const
         // While / is allowed for the display name we can't use it for the file name.
         QString newFilePath = mappingNameToPath(userDir, mappingName);
         if (QFile::exists(newFilePath)) {
-            QMessageBox::warning(nullptr,
+            QMessageBox::warning(this,
                     savingFailedTitle,
                     fileExistsLabel);
             continue;
@@ -1060,7 +1086,35 @@ void DlgPrefController::slotShowMapping(std::shared_ptr<LegacyControllerMapping>
         }
 
         if (pLayout != nullptr && !settings.isEmpty()) {
-            m_ui.settingsTab->layout()->addWidget(pLayout->build(m_ui.settingsTab));
+            QWidget* pSettingsWidget = pLayout->build(m_ui.settingsTab);
+            m_ui.settingsTab->layout()->addWidget(pSettingsWidget);
+            // Add an expanding spacer so that when we collapse all groups
+            // all are pushed to the top.
+            m_ui.settingsTab->layout()->addItem(new QSpacerItem(
+                    1, 1, QSizePolicy::Minimum, QSizePolicy::Expanding));
+
+            // Set all groupboxes checkable so we get the collapse/expand
+            // functionality. We want to make only the top-level groupboxes
+            // collapsible, so find direct children only. QString() is required
+            // to pass second arg Qt::FindChildOption. This is fine since our
+            // groupboxes don't have ObjectNames.
+            const QList<WCollapsibleGroupBox*> boxes =
+                    pSettingsWidget->findChildren<WCollapsibleGroupBox*>(
+                            QString(), Qt::FindDirectChildrenOnly);
+            for (auto pBox : boxes) {
+                const QString title = pBox->title();
+                pBox->setCheckable(true);
+                if (m_settingsCollapsedStates.contains(title)) {
+                    pBox->setChecked(m_settingsCollapsedStates.value(title));
+                }
+
+                connect(pBox,
+                        &WCollapsibleGroupBox::toggled,
+                        this,
+                        [this, title](bool checked) {
+                            m_settingsCollapsedStates.insert(title, checked);
+                        });
+            }
 
             for (const auto& setting : std::as_const(settings)) {
                 connect(setting.get(),

@@ -59,8 +59,7 @@ class ReadAheadManager {
     /// Return the position in sample
     virtual double getFilePlaypositionFromLog(
             double currentFilePlayposition,
-            double numConsumedSamples,
-            mixxx::audio::ChannelCount channelCount);
+            double numConsumedSamples);
     /// Return the position in frame
     mixxx::audio::FramePos getFilePlaypositionFromLog(
             mixxx::audio::FramePos currentPosition,

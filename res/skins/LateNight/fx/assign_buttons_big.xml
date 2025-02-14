@@ -1,0 +1,36 @@
+<Template>
+  <SetVariable name="BtnType"></SetVariable>
+  <SetVariable name="Height">26</SetVariable>
+
+  <WidgetGroup>
+    <ObjectName>AlignLeft</ObjectName>
+    <Layout>vertical</Layout>
+    <SizePolicy>max,max</SizePolicy>
+    <Children>
+      <WidgetGroup>
+        <ObjectName>FxAssignButtonsBig</ObjectName>
+        <Layout>horizontal</Layout>
+        <SizePolicy>f,min</SizePolicy>
+        <Children>
+          <Template src="skins:LateNight/fx/assign_button.xml">
+            <SetVariable name="FxUnit">1</SetVariable>
+            <SetVariable name="Width">30f</SetVariable>
+            <SetVariable name="Text">&#8202;FX&#8202;</SetVariable>
+          </Template>
+          <Template src="skins:LateNight/fx/assign_button.xml">
+            <SetVariable name="FxUnit">2</SetVariable>
+            <SetVariable name="Width">26f</SetVariable>
+          </Template>
+          <Template src="skins:LateNight/fx/assign_button.xml">
+            <SetVariable name="FxUnit">3</SetVariable>
+            <SetVariable name="Width">26f</SetVariable>
+          </Template>
+          <Template src="skins:LateNight/fx/assign_button.xml">
+            <SetVariable name="FxUnit">4</SetVariable>
+            <SetVariable name="Width">26f</SetVariable>
+          </Template>
+        </Children>
+      </WidgetGroup>
+    </Children>
+  </WidgetGroup>
+</Template>

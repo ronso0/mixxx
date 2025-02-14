@@ -5,6 +5,7 @@
 #include <QTreeView>
 
 #include "library/library_decl.h"
+#include "util/performancetimer.h"
 #include "widget/wbasewidget.h"
 
 class LibraryFeature;
@@ -24,6 +25,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void focusInEvent(QFocusEvent* event) override;
     void timerEvent(QTimerEvent* event) override;
     void toggleSelectedItem();
+    void renameSelectedItem();
     bool isLeafNodeSelected();
     bool isChildIndexSelected(const QModelIndex& index);
     bool isFeatureRootIndexSelected(LibraryFeature* pFeature);
@@ -32,6 +34,8 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void selectIndex(const QModelIndex&);
     void selectChildIndex(const QModelIndex&, bool selectItem = true);
     void slotSetFont(const QFont& font);
+    void queueHeaderAdjustRequest();
+    void adjustHeaderStretch();
 
   signals:
     void rightClicked(const QPoint&, const QModelIndex&);
@@ -47,5 +51,8 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     QModelIndex selectedIndex();
 
     QBasicTimer m_expandTimer;
+    QBasicTimer m_headerAdjustTimer;
+    PerformanceTimer m_eventFrequencyTimer;
+
     QModelIndex m_hoverIndex;
 };

@@ -932,6 +932,15 @@ if(NOT MSVC)
       endif()
     endif()
   endif()
+  # cpu pinning / isolate support
+  find_program(CPUSET_EXECUTABLE "cset")
+  if(CPUSET_EXECUTABLE)
+    message(STATUS "Found cpuset: ${CPUSET_EXECUTABLE}")
+    set(CPUSET_FOUND TRUE)
+  else()
+    message(STATUS "Could NOT find cpuset (missing executable)")
+  endif()
+  message(STATUS "Support for cpu pinning / isolate: ${CPUSET_FOUND}")
 endif()
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
@@ -1187,6 +1196,7 @@ add_library(
   src/library/dao/settingsdao.cpp
   src/library/dao/trackdao.cpp
   src/library/dao/trackschema.cpp
+  src/library/tabledelegates/defaultdelegate.cpp
   src/library/dlgcoverartfullsize.cpp
   src/library/dlgcoverartfullsize.ui
   src/library/dlgtagfetcher.cpp
@@ -1219,6 +1229,7 @@ add_library(
   src/library/missing_hidden/hiddentablemodel.cpp
   src/library/missing_hidden/missingtablemodel.cpp
   src/library/mixxxlibraryfeature.cpp
+  src/library/overviewcache.cpp
   src/library/parser.cpp
   src/library/parsercsv.cpp
   src/library/parserm3u.cpp
@@ -1248,6 +1259,7 @@ add_library(
   src/library/tabledelegates/keydelegate.cpp
   src/library/tabledelegates/locationdelegate.cpp
   src/library/tabledelegates/multilineeditdelegate.cpp
+  src/library/tabledelegates/overviewdelegate.cpp
   src/library/tabledelegates/previewbuttondelegate.cpp
   src/library/tabledelegates/stardelegate.cpp
   src/library/tabledelegates/stareditor.cpp
@@ -1416,6 +1428,7 @@ add_library(
   src/util/color/predefinedcolorpalettes.cpp
   src/util/colorcomponents.cpp
   src/util/console.cpp
+  src/util/cpupinning.cpp
   src/util/db/dbconnection.cpp
   src/util/db/dbconnectionpool.cpp
   src/util/db/dbconnectionpooled.cpp
@@ -1470,11 +1483,13 @@ add_library(
   src/util/workerthreadscheduler.cpp
   src/util/xml.cpp
   src/waveform/guitick.cpp
+  src/waveform/overviews/overviewtype.cpp
   src/waveform/renderers/glwaveformrenderbackground.cpp
   src/waveform/renderers/glvsynctestrenderer.cpp
   src/waveform/renderers/waveformmark.cpp
   src/waveform/renderers/waveformmarkrange.cpp
   src/waveform/renderers/waveformmarkset.cpp
+  src/waveform/overviews/waveformoverviewrenderer.cpp
   src/waveform/renderers/waveformrenderbackground.cpp
   src/waveform/renderers/waveformrenderbeat.cpp
   src/waveform/renderers/waveformrendererabstract.cpp
@@ -1515,6 +1530,7 @@ add_library(
   src/widget/wbasewidget.cpp
   src/widget/wbattery.cpp
   src/widget/wbeatspinbox.cpp
+  src/widget/wcollapsiblegroupbox.cpp
   src/widget/wcolorpicker.cpp
   src/widget/wcolorpickeraction.cpp
   src/widget/wcombobox.cpp
@@ -2198,6 +2214,13 @@ install(
   BUNDLE DESTINATION .
 )
 
+# Script for cpu pinning of the engine thread
+install(
+  FILES tools/mixxx-isolate.py
+  DESTINATION "${MIXXX_INSTALL_BINDIR}"
+  RENAME "mixxx-isolate"
+)
+
 # Skins
 install(
   DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/skins"
@@ -2461,6 +2484,7 @@ if(BUILD_TESTING)
     src/test/frametest.cpp
     src/test/globaltrackcache_test.cpp
     src/test/hotcuecontrol_test.cpp
+    src/test/hotcueorderbyposition_test.cpp
     src/test/imageutils_test.cpp
     src/test/indexrange_test.cpp
     src/test/itunesxmlimportertest.cpp
@@ -2768,7 +2792,7 @@ option(ENGINEPRIME "Support for library export to Denon Engine Prime" ON)
 if(ENGINEPRIME)
   # libdjinterop does not currently have a stable ABI, so we fetch sources for a specific tag, build here, and link
   # statically.  This situation should be reviewed once libdjinterop hits version 1.x.
-  set(LIBDJINTEROP_VERSION 0.22.1)
+  set(LIBDJINTEROP_VERSION 0.24.3)
   # Look whether an existing installation of libdjinterop matches the required version.
   find_package(DjInterop ${LIBDJINTEROP_VERSION} EXACT CONFIG)
   if(NOT DjInterop_FOUND)
@@ -2831,7 +2855,7 @@ if(ENGINEPRIME)
         "https://github.com/xsco/libdjinterop/archive/refs/tags/${LIBDJINTEROP_VERSION}.tar.gz"
         "https://launchpad.net/~xsco/+archive/ubuntu/djinterop/+sourcefiles/libdjinterop/${LIBDJINTEROP_VERSION}-0ubuntu1/libdjinterop_${LIBDJINTEROP_VERSION}.orig.tar.gz"
       URL_HASH
-        SHA256=e811158d42c3864f5b682bcf76e0af78278050439d82d14d592dd0a391da6b20
+        SHA256=df41fe39bed9d16d27a3649d237b68edd2cdb6fc71a82cae5cd746d4e4ef6578
       DOWNLOAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/downloads"
       DOWNLOAD_NAME "libdjinterop-${LIBDJINTEROP_VERSION}.tar.gz"
       INSTALL_DIR ${DJINTEROP_INSTALL_DIR}
@@ -2886,6 +2910,13 @@ if(ENGINEPRIME)
         IMPORTED_LOCATION "${DJINTEROP_INSTALL_DIR}/${DJINTEROP_LIBRARY}"
     )
     add_dependencies(mixxx-libdjinterop libdjinterop)
+    # Add the local include directory explicitly before linking the library
+    # to make sure not the system provided headers are used
+    target_include_directories(
+      mixxx-lib
+      BEFORE
+      PRIVATE "${DJINTEROP_INSTALL_DIR}/include"
+    )
     target_link_libraries(mixxx-lib PRIVATE mixxx-libdjinterop)
   endif()
 
@@ -3254,6 +3285,16 @@ if(QT_EXTRA_COMPONENTS)
 endif()
 
 if(QML)
+  if(QT_KNOWN_POLICY_QTP0004)
+    # See: https://doc.qt.io/qt-6/qt-cmake-policy-qtp0004.html
+    # OLD (Qt < 6.8) requires to import qml modules with a folder e.g.:
+    # fragmentShader: "qrc:/shaders/rgbsignal_qml.frag.qsb"
+    # For using NEW, we need to back-port:
+    # https://github.com/qt/qtdeclarative/commit/6314d305ee0d9064ca848980ef2dab1793c191b8
+    # until Qt 6.8 lands in all supported distros
+    qt6_policy(SET QTP0004 OLD)
+  endif()
+
   add_subdirectory(res/shaders)
 
   set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)

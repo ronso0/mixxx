@@ -8,8 +8,12 @@
 #include "moc_wlibrarysidebar.cpp"
 #include "util/defs.h"
 #include "util/dnd.h"
+#include "util/duration.h"
 
 constexpr int expand_time = 250;
+// Delay for header adjust requests. 50 ms seems to be a good compromise between
+// fast GUI update and long enough wait time for potential follow-up events.
+constexpr int resize_header_delay = 50;
 
 WLibrarySidebar::WLibrarySidebar(QWidget* parent)
         : QTreeView(parent),
@@ -28,6 +32,15 @@ WLibrarySidebar::WLibrarySidebar(QWidget* parent)
     header()->setStretchLastSection(false);
     header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     header()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    // Adjust header when an item's expand state has changed
+    connect(this,
+            &QTreeView::expanded,
+            this,
+            &WLibrarySidebar::adjustHeaderStretch);
+    connect(this,
+            &QTreeView::collapsed,
+            this,
+            &WLibrarySidebar::adjustHeaderStretch);
 }
 
 void WLibrarySidebar::contextMenuEvent(QContextMenuEvent *event) {
@@ -62,7 +75,7 @@ void WLibrarySidebar::dragEnterEvent(QDragEnterEvent * event) {
     //QTreeView::dragEnterEvent(event);
 }
 
-/// Drag move event, happens when a dragged item hovers over the track sources view...
+/// Drag move event, happens when a dragged item hovers over the track sources view
 void WLibrarySidebar::dragMoveEvent(QDragMoveEvent * event) {
     //qDebug() << "dragMoveEvent" << event->mimeData()->formats();
     // Start a timer to auto-expand sections the user hovers on.
@@ -124,6 +137,8 @@ void WLibrarySidebar::dragMoveEvent(QDragMoveEvent * event) {
     }
 }
 
+/// Timer events for delayed tree item expand/collapse on drag'n'drop and
+/// header width adjustment when item layout or data has changed
 void WLibrarySidebar::timerEvent(QTimerEvent *event) {
     if (event->timerId() == m_expandTimer.timerId()) {
         QPoint pos = viewport()->mapFromGlobal(QCursor::pos());
@@ -135,11 +150,21 @@ void WLibrarySidebar::timerEvent(QTimerEvent *event) {
         }
         m_expandTimer.stop();
         return;
+    } else if (event->timerId() == m_headerAdjustTimer.timerId()) {
+        // The header timer is a repeating QBasicTimer. Stop it when we can be
+        // sure that the last trigger event has been processed (add some margin
+        // since it's a Qt::CoarseTimer with an imprecision of +- 5%)
+        if (m_eventFrequencyTimer.elapsed().toIntegerMillis() > resize_header_delay * 1.5) {
+            m_headerAdjustTimer.stop();
+            return;
+        }
+        adjustHeaderStretch();
+        return;
     }
     QTreeView::timerEvent(event);
 }
 
-// Drag-and-drop "drop" event. Occurs when something is dropped onto the track sources view
+/// Drag-and-drop "drop" event. Occurs when something is dropped onto the track sources view
 void WLibrarySidebar::dropEvent(QDropEvent * event) {
     if (event->mimeData()->hasUrls()) {
         // Drag and drop within this widget
@@ -176,6 +201,16 @@ void WLibrarySidebar::dropEvent(QDropEvent * event) {
     } else {
         event->ignore();
     }
+}
+
+void WLibrarySidebar::renameSelectedItem() {
+    // Rename crate or playlist (internal, external, history)
+    QModelIndex selIndex = selectedIndex();
+    if (!selIndex.isValid()) {
+        return;
+    }
+    emit renameItem(selIndex);
+    return;
 }
 
 void WLibrarySidebar::toggleSelectedItem() {
@@ -275,14 +310,16 @@ void WLibrarySidebar::keyPressEvent(QKeyEvent* event) {
         emit pressed(selIndex);
         return;
     }
-    case Qt::Key_Right: {
-        if (event->modifiers() & Qt::ControlModifier) {
-            emit setLibraryFocus(FocusWidget::TracksTable);
-        } else {
-            QTreeView::keyPressEvent(event);
-        }
-        return;
-    }
+    // ronso0: disabled moving focus between sidebar and tracks with Ctrl + Left/Right
+    // in WLibrary to restore moving the current index instead.
+    // case Qt::Key_Right: {
+    //     if (event->modifiers() & Qt::ControlModifier) {
+    //         emit setLibraryFocus(FocusWidget::TracksTable);
+    //     } else {
+    //         QTreeView::keyPressEvent(event);
+    //     }
+    //     return;
+    // }
     case Qt::Key_Left: {
         // If an expanded item is selected let QTreeView collapse it
         QModelIndex selIndex = selectedIndex();
@@ -307,16 +344,7 @@ void WLibrarySidebar::keyPressEvent(QKeyEvent* event) {
         emit setLibraryFocus(FocusWidget::TracksTable);
         return;
     case kRenameSidebarItemShortcutKey: { // F2
-        // Rename crate or playlist (internal, external, history)
-        QModelIndex selIndex = selectedIndex();
-        if (!selIndex.isValid()) {
-            return;
-        }
-        if (isExpanded(selIndex)) {
-            // Root views / knots can not be renamed
-            return;
-        }
-        emit renameItem(selIndex);
+        renameSelectedItem();
         return;
     }
     case kHideRemoveShortcutKey: { // Del (macOS: Cmd+Backspace)
@@ -420,10 +448,44 @@ void WLibrarySidebar::focusSelectedIndex() {
 }
 
 bool WLibrarySidebar::event(QEvent* pEvent) {
-    if (pEvent->type() == QEvent::ToolTip) {
+    switch (pEvent->type()) {
+    case QEvent::ToolTip:
         updateTooltip();
+        break;
+    case QEvent::Resize:
+    // Stretch the header when layout changes, e.g. viewport size changed due to
+    // scrollbar hide/show
+    case QEvent::LayoutRequest:
+    case QEvent::FontChange:
+    case QEvent::Polish:
+    case QEvent::PolishRequest:
+        queueHeaderAdjustRequest();
+        break;
+    default:
+        break;
     }
     return QTreeView::event(pEvent);
+}
+
+void WLibrarySidebar::queueHeaderAdjustRequest() {
+    m_eventFrequencyTimer.restart();
+    m_headerAdjustTimer.start(resize_header_delay, this);
+}
+
+/// Ensure tree items expand horizontally so we have the entire view width respond
+/// to mouse clicks, i.e. no unresponsive space right next to short items.
+void WLibrarySidebar::adjustHeaderStretch() {
+    // Disable stretching to trigger adjusting columns (ResizeToContents),
+    // i.e. full labels without elide
+    if (header()->stretchLastSection()) {
+        header()->setStretchLastSection(false);
+    }
+
+    // Enable stretching if there's space for the header to expand.
+    // Else, horizontal scrollbars are visible, nothing to do.
+    if (header()->sectionSize(0) < header()->width()) {
+        header()->setStretchLastSection(true);
+    }
 }
 
 void WLibrarySidebar::slotSetFont(const QFont& font) {
