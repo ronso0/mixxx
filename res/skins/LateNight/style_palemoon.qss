@@ -1647,7 +1647,7 @@ QPushButton#pushButtonRecording:checked {
   (except leftmost button in each grid > overwritten in the block below) */
 #VinylModeButton,
 #VinylCueButton[displayValue="0"],
-#PassthroughButton[displayValue="0"],
+/*#PassthroughButton[displayValue="0"],*/
 #SyncLeader[value="0"],
 #FxAssignButtons WPushButton[displayValue="0"],
 #FxAssignButtonsBig WPushButton[displayValue="0"] {
@@ -1658,7 +1658,7 @@ QPushButton#pushButtonRecording:checked {
   /* Active */
   #VinylCueButton[displayValue="1"],
   #VinylCueButton[displayValue="2"],
-  #PassthroughButton[displayValue="1"],
+/*  #PassthroughButton[displayValue="1"],*/
   #SyncLeader[value="1"],
   #SyncLeader[value="2"],
   #FxAssignButtons WPushButton[displayValue="1"],
@@ -1675,6 +1675,7 @@ QPushButton#pushButtonRecording:checked {
 #KeyMatch[displayValue="0"],
 #KeyReset[displayValue="0"],
 WPushButton#VinylStatus[displayValue="0"],
+#PassthroughButton[displayValue="0"],
 #SyncDeck[displayValue="0"],
 WPushButton#FxAssignButton1[displayValue="0"],
 #fadeModeCombobox:!editable,
@@ -1700,6 +1701,7 @@ WPushButton#FxAssignButton1[displayValue="0"],
   WPushButton#VinylStatus[displayValue="1"],
   WPushButton#VinylStatus[displayValue="2"],
   WPushButton#VinylStatus[displayValue="3"],
+  #PassthroughButton[displayValue="1"],
   #SyncDeck[displayValue="1"],
   WPushButton#FxAssignButton1[displayValue="1"],
   #KeyMatch[pressed="true"],
@@ -1728,6 +1730,12 @@ WPushButton#FxAssignButton1[displayValue="0"],
   #CueSavedJumpButton:checked {
     border-width: 2px;
     border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library_active.svg) 2 2 2 2;
+  }
+  #DeckMini1 #PassthroughButton,
+  #DeckMini2 #PassthroughButton,
+  #DeckMini3 #PassthroughButton,
+  #DeckMini4 #PassthroughButton {
+    margin: 1px 1px 1px 0px;
   }
 
   #LibraryFeatureControls QPushButton:!enabled {
