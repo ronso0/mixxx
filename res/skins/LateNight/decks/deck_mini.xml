@@ -93,6 +93,15 @@
                 </Children>
               </WidgetGroup><!-- PlayCueSmall -->
 
+              <Template src="skins:LateNight/controls/button_2state.xml">
+                <SetVariable name="TooltipId">passthrough_enabled</SetVariable>
+                <SetVariable name="ObjectName">PassthroughButton</SetVariable>
+                <SetVariable name="Size">26f,52f</SetVariable>
+                <SetVariable name="state_0_text">&#8202;P&#8202;</SetVariable>
+                <SetVariable name="state_1_text">&#8202;P&#8202;</SetVariable>
+                <SetVariable name="ConfigKey"><Variable name="Group"/>,passthrough</SetVariable>
+              </Template>
+
               <WidgetGroup>
                 <ObjectName>OverviewBoxMini</ObjectName>
                 <SizePolicy>me,min</SizePolicy>
