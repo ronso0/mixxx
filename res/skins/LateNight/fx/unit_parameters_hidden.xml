@@ -210,9 +210,9 @@
                 <ObjectName>FxUnit<Variable name="FxUnit"/>_PresetButton</ObjectName>
               </SingletonContainer>
 
-              <SingletonContainer>
+              <!-- <SingletonContainer>
                 <ObjectName>FxUnit<Variable name="FxUnit"/>_MixmodePfl</ObjectName>
-              </SingletonContainer>
+              </SingletonContainer> -->
             </Children>
           </WidgetGroup>
 
