@@ -137,12 +137,8 @@
           <WidgetGroup>
             <ObjectName>FxUnitControlsExpanded</ObjectName>
             <Layout>vertical</Layout>
-            <SizePolicy>max,min</SizePolicy>
+            <SizePolicy>min,min</SizePolicy>
             <Children>
-
-              <SingletonContainer>
-                <ObjectName>FxUnit<Variable name="FxUnit"/>_MixmodePfl</ObjectName>
-              </SingletonContainer>
 
               <WidgetGroup><Size>,1me</Size></WidgetGroup>
 
@@ -160,6 +156,10 @@
 
               <SingletonContainer>
                 <ObjectName>FxUnit<Variable name="FxUnit"/>_DryWetKnob</ObjectName>
+              </SingletonContainer>
+
+              <SingletonContainer>
+                <ObjectName>FxUnit<Variable name="FxUnit"/>_MixmodePfl</ObjectName>
               </SingletonContainer>
 
               <WidgetGroup><Size>,1me</Size></WidgetGroup>
