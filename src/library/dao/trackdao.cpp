@@ -101,18 +101,19 @@ TrackDAO::TrackDAO(CueDAO& cueDao,
           m_trackLocationIdColumn(UndefinedRecordIndex),
           m_queryLibraryIdColumn(UndefinedRecordIndex),
           m_queryLibraryMixxxDeletedColumn(UndefinedRecordIndex) {
-    connect(&m_playlistDao,
-            &PlaylistDAO::tracksRemovedFromPlayedHistory,
-            this,
-            [this](const QSet<TrackId>& playedTrackIds) {
-                if (playedTrackIds.isEmpty()) {
-                    // Nothing to do
-                    return;
-                }
-                VERIFY_OR_DEBUG_ASSERT(updatePlayCounterFromPlayedHistory(playedTrackIds)) {
-                    return;
-                }
-            });
+    // ronso0: disabled to maintain 'played == 0' as 'not prepared' indicator
+    // connect(&m_playlistDao,
+    //        &PlaylistDAO::tracksRemovedFromPlayedHistory,
+    //        this,
+    //        [this](const QSet<TrackId>& playedTrackIds) {
+    //            if (playedTrackIds.isEmpty()) {
+    //                // Nothing to do
+    //                return;
+    //            }
+    //            VERIFY_OR_DEBUG_ASSERT(updatePlayCounterFromPlayedHistory(playedTrackIds)) {
+    //                return;
+    //            }
+    //        });
 }
 
 TrackDAO::~TrackDAO() {
