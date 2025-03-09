@@ -216,6 +216,11 @@ void PositionScratchController::process(double currentSamplePos,
                 double triggerPos = trigger.toEngineSamplePos();
                 double targetPos = target.toEngineSamplePos();
                 double loopLength = triggerPos - targetPos;
+                qWarning() << "     .";
+                qWarning() << "     wrappedAround:" << wrappedAround;
+                qWarning() << "     sampleDelta:  " << sampleDelta;
+                qWarning() << "     totalSamDelta:" << sampleDelta + loopLength * wrappedAround;
+                qWarning() << "     .";
                 sampleDelta += loopLength * wrappedAround;
             }
 
@@ -276,6 +281,11 @@ void PositionScratchController::process(double currentSamplePos,
                     if (fabs(m_rate) < MIN_SEEK_SPEED) {
                         // we cannot get closer
                         m_rate = 0;
+                    }
+                    if (wrappedAround > 0) {
+                        qWarning() << "     .";
+                        qWarning() << "     ---------- rate:" << m_rate;
+                        qWarning() << "     .";
                     }
                 }
 
