@@ -165,6 +165,13 @@ void WTrackProperty::mousePressEvent(QMouseEvent* pEvent) {
         QString editText = getPropertyStringFromTrack(m_editProperty);
         if (m_displayProperty == "titleInfo" && editText.isEmpty()) {
             editText = tr("title");
+        } else if (m_displayProperty == "comment") {
+            // For comments we only load the first line,
+            // ie. truncate track text at first linebreak.
+            // On commit we replace the first line with the edited text.
+            const QString lb("\n");
+            int firstLB = editText.indexOf(lb);
+            editText.truncate(firstLB);
         }
         m_pEditor->setText(editText);
         m_pEditor->selectAll();
@@ -309,14 +316,31 @@ void WTrackProperty::slotShowTrackMenuChangeRequest(bool show) {
 }
 
 void WTrackProperty::slotCommitEditorData(const QString& text) {
-    // use real track data instead of text() to be independent from display text
-    if (m_pCurrentTrack && text != getPropertyStringFromTrack(m_editProperty)) {
-        const QVariant var(QVariant::fromValue(text));
-        m_pCurrentTrack->setProperty(
-                m_editProperty.toUtf8().constData(),
-                var);
-        // Track::changed() will update label
+    if (!m_pCurrentTrack) {
+        return;
     }
+    // use real track data instead of text() to be independent from display text
+    QString trackText = getPropertyStringFromTrack(m_editProperty);
+    QString editorText = text;
+    if (m_editProperty == "comment") {
+        // For comments the editor received only the first line.
+        // So, in order to keep the other lnes, we need to replace
+        // the first line of the original text with the editor text.
+        // (which may add new linebreaks)
+        const QString lb("\n");
+        int firstLB = trackText.indexOf(lb);
+        trackText = trackText.sliced(firstLB);
+        editorText.append(trackText);
+        trackText.prepend(editorText);
+    }
+    if (editorText == trackText) {
+        return;
+    }
+    const QVariant var(QVariant::fromValue(editorText));
+    m_pCurrentTrack->setProperty(
+            m_editProperty.toUtf8().constData(),
+            var);
+    // Track::changed() will update label
 }
 
 void WTrackProperty::resetSelectedState() {
