@@ -1268,6 +1268,56 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         }
         return;
     }
+    case Qt::Key_C: {
+        // Alt + C edits track comment -> open Track Info, focus comment
+        // Alt + Shift + C clears comment of selected tracks
+        if (event->modifiers().testFlag(Qt::AltModifier)) {
+            VERIFY_OR_DEBUG_ASSERT(m_pTrackMenu.get()) {
+                initTrackMenu();
+            }
+            const QModelIndexList indices = getSelectedRows();
+            if (indices.isEmpty()) {
+                return;
+            }
+            m_pTrackMenu->loadTrackModelIndices(indices);
+            if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+                // Clear comment
+                m_pTrackMenu->clearComments();
+                return;
+            }
+
+            // Edit comment
+            // If only one track is selected -> open inline editor
+            // multiple tracks -> use Track Info dialog, focus comment field
+            if (indices.size() == 1) {
+                int commColIndex = -1;
+                for (int i = 0; i < model()->columnCount(); ++i) {
+                    if (isColumnHidden(i)) {
+                        continue;
+                    }
+                    const QString colName = model()->headerData(
+                                                           i,
+                                                           Qt::Horizontal,
+                                                           TrackModel::kHeaderNameRole)
+                                                    .toString();
+                    if (colName == QStringLiteral("comment")) {
+                        commColIndex = i;
+                        break;
+                    }
+                }
+                if (commColIndex != -1) {
+                    const QModelIndex commIndex =
+                            model()->index(indices.first().row(), commColIndex);
+                    edit(commIndex, EditKeyPressed, nullptr);
+                }
+            } else {
+                m_pTrackMenu->setTrackPropertyName(QStringLiteral("comment"));
+                m_pTrackMenu->slotShowDlgTrackInfo();
+            }
+            return;
+        }
+        break;
+    }
     default:
         break;
     }
