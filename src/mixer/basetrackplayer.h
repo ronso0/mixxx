@@ -50,6 +50,9 @@ class BaseTrackPlayer : public BasePlayer {
     virtual bool isTrackMenuControlAvailable() {
         return false;
     };
+    virtual bool isTrackCommentEditControlAvailable() {
+        return false;
+    };
 
   public slots:
 #ifdef __STEM__
@@ -77,6 +80,8 @@ class BaseTrackPlayer : public BasePlayer {
     void noVinylControlInputConfigured();
     void trackRatingChanged(int rating);
     void trackMenuChangeRequest(bool show);
+    void trackCommentEditRequest();
+    void trackFileRemoveRequest();
 };
 
 class BaseTrackPlayerImpl : public BaseTrackPlayer {
@@ -106,6 +111,8 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     /// PushButtons persist skin reload, connected widgets don't, i.e. the
     /// connection is removed on skin reload and available again afterwards.
     bool isTrackMenuControlAvailable() final;
+    /// Same for the 'edit track comment' control
+    bool isTrackCommentEditControlAvailable() final;
     /// For testing, loads a fake track.
     TrackPointer loadFakeTrack(bool bPlay, double filebpm);
 
@@ -225,6 +232,7 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     std::unique_ptr<ControlObject> m_pShiftCues;
 
     std::unique_ptr<ControlPushButton> m_pShowTrackMenuControl;
+    std::unique_ptr<ControlPushButton> m_pTrackCommentEditControl;
 
     std::unique_ptr<ControlPushButton> m_pStarsUp;
     std::unique_ptr<ControlPushButton> m_pStarsDown;
