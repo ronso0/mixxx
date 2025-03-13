@@ -50,6 +50,14 @@
   border-radius: 1px;
   border-bottom-left-radius: 2px;
   }
+  #DeckCompact1[highlight="1"],
+  #DeckCompact3[highlight="1"] {
+    border-right: 0px;
+  }
+  #DeckCompact2[highlight="1"],
+  #DeckCompact4[highlight="1"] {
+    border-left: 0px;
+  }
   #MixerDecks[highlight="1"] {
     border-top-right-radius: 0px;
     border-bottom-right-radius: 1px;
