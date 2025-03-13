@@ -111,6 +111,9 @@ class WTrackMenu : public QMenu {
     void popup(const QPoint& pos, QAction* at = nullptr);
     void slotShowDlgTrackInfo();
     // Library management
+    void clearComments() {
+        slotClearComment();
+    }
     void slotRemoveFromDisk();
     const QString getDeckGroup() const;
 

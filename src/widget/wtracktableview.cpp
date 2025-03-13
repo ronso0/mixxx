@@ -1257,6 +1257,22 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         }
         return;
     }
+    case Qt::Key_C: { // Alt+C clears comment of selected tracks
+        if (event->modifiers().testFlag(Qt::AltModifier)) {
+            // Clear comment
+            VERIFY_OR_DEBUG_ASSERT(m_pTrackMenu.get()) {
+                initTrackMenu();
+            }
+            const QModelIndexList indices = getSelectedRows();
+            if (indices.isEmpty()) {
+                return;
+            }
+            m_pTrackMenu->loadTrackModelIndices(indices);
+            m_pTrackMenu->clearComments();
+            return;
+        }
+        break;
+    }
     default:
         break;
     }
