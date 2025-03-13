@@ -3,6 +3,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QMetaProperty>
+#include <QRegExp>
 #include <QStyleOption>
 
 #include "control/controlobject.h"
@@ -102,6 +103,10 @@ void WTrackProperty::slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldT
 void WTrackProperty::slotTrackChanged(TrackId trackId) {
     Q_UNUSED(trackId);
     updateLabel();
+    if (m_pEditor && m_pEditor->isVisible()) {
+        // Close and discard new text
+        m_pEditor->hide();
+    }
 }
 
 void WTrackProperty::updateLabel() {
@@ -328,7 +333,21 @@ void WTrackProperty::slotShowTrackMenuChangeRequest(bool show) {
     contextMenuEvent(pEvent);
 }
 
+void WTrackProperty::slotEditTrackComment() {
+    VERIFY_OR_DEBUG_ASSERT(m_isComment) {
+        return;
+    }
+    if (m_pCurrentTrack && isVisible()) {
+        // Note: if the editor is already visible, this will
+        // reload/reset the comment from the track
+        openEditor();
+    }
+}
+
 void WTrackProperty::slotCommitEditorData(const QString& text) {
+    if (!m_pCurrentTrack) {
+        return;
+    }
     // use real track data instead of text() to be independent from display text
     const QString trackText = getPropertyStringFromTrack(m_editProperty);
     QString editorText = text;
