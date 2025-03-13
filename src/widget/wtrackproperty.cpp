@@ -16,6 +16,7 @@ namespace {
 // Duration (ms) the widget is 'selected' after left click, i.e. the duration
 // a second click would open the value editor
 constexpr int kSelectedClickTimeoutMs = 2000;
+const QString kLinebreak = QStringLiteral("\n");
 } // namespace
 
 WTrackProperty::WTrackProperty(
@@ -29,6 +30,7 @@ WTrackProperty::WTrackProperty(
           m_pConfig(pConfig),
           m_pLibrary(pLibrary),
           m_isMainDeck(isMainDeck),
+          m_isComment(false),
           m_propertyIsWritable(false),
           m_pSelectedClickTimer(nullptr),
           m_bSelected(false),
@@ -65,6 +67,9 @@ void WTrackProperty::setup(const QDomNode& node, const SkinContext& context) {
             return;
         }
         m_editProperty = m_displayProperty;
+        if (property == "comment") {
+            m_isComment = true;
+        }
     }
     m_propertyIsWritable = true;
 }
@@ -148,34 +153,49 @@ void WTrackProperty::mousePressEvent(QMouseEvent* pEvent) {
         m_pSelectedClickTimer->callOnTimeout(
                 this, &WTrackProperty::resetSelectedState);
     } else if (m_pSelectedClickTimer->isActive()) {
-        resetSelectedState();
-        // create the persistent editor, populate & connect
-        if (!m_pEditor) {
-            m_pEditor = make_parented<WTrackPropertyEditor>(this);
-            connect(m_pEditor,
-                    // use custom signal. editingFinished() doesn't suit since it's
-                    // also emitted weh pressing Esc (which should cancel editing)
-                    &WTrackPropertyEditor::commitEditorData,
-                    this,
-                    &WTrackProperty::slotCommitEditorData);
-        }
-        // Don't let the editor expand beyond its initial size
-        m_pEditor->setFixedSize(size());
-
-        QString editText = getPropertyStringFromTrack(m_editProperty);
-        if (m_displayProperty == "titleInfo" && editText.isEmpty()) {
-            editText = tr("title");
-        }
-        m_pEditor->setText(editText);
-        m_pEditor->selectAll();
-        m_pEditor->show();
-        m_pEditor->setFocus();
+        openEditor();
         return;
     }
     // start timer
     m_pSelectedClickTimer->start();
     m_bSelected = true;
     restyleAndRepaint();
+}
+
+void WTrackProperty::openEditor() {
+    resetSelectedState();
+    if (!m_pCurrentTrack) {
+        return;
+    }
+    // create the persistent editor, populate & connect
+    if (!m_pEditor) {
+        m_pEditor = make_parented<WTrackPropertyEditor>(this);
+        connect(m_pEditor,
+                // use custom signal. editingFinished() doesn't suit since it's
+                // also emitted weh pressing Esc (which should cancel editing)
+                &WTrackPropertyEditor::commitEditorData,
+                this,
+                &WTrackProperty::slotCommitEditorData);
+    }
+    // Don't let the editor expand beyond its initial size
+    m_pEditor->setFixedSize(size());
+
+    QString editText = getPropertyStringFromTrack(m_editProperty);
+    if (m_displayProperty == "titleInfo" && editText.isEmpty()) {
+        editText = tr("title");
+    } else if (m_isComment) {
+        // For comments we only load the first line,
+        // ie. truncate track text at first linebreak.
+        // On commit we replace the first line with the edited text.
+        int firstLB = editText.indexOf(kLinebreak);
+        if (firstLB >= 0) {
+            editText.truncate(firstLB);
+        }
+    }
+    m_pEditor->setText(editText);
+    m_pEditor->selectAll();
+    m_pEditor->show();
+    m_pEditor->setFocus();
 }
 
 void WTrackProperty::mouseMoveEvent(QMouseEvent* pEvent) {
@@ -310,13 +330,29 @@ void WTrackProperty::slotShowTrackMenuChangeRequest(bool show) {
 
 void WTrackProperty::slotCommitEditorData(const QString& text) {
     // use real track data instead of text() to be independent from display text
-    if (m_pCurrentTrack && text != getPropertyStringFromTrack(m_editProperty)) {
-        const QVariant var(QVariant::fromValue(text));
-        m_pCurrentTrack->setProperty(
-                m_editProperty.toUtf8().constData(),
-                var);
-        // Track::changed() will update label
+    const QString trackText = getPropertyStringFromTrack(m_editProperty);
+    QString editorText = text;
+    if (m_isComment) {
+        // For multi-line comments, the editor received only the first line.
+        // In order to keep the other lines, we need to replace
+        // the first line of the original text with the editor text.
+        // (which may add new linebreaks)
+        // Note: assumes the comment didn't change while we were editing it.
+        int firstLB = trackText.indexOf(kLinebreak);
+        if (firstLB >= 0) { // has linebreak
+            QString trackTSliced = trackText;
+            trackTSliced = trackTSliced.sliced(firstLB);
+            editorText.append(trackTSliced);
+        }
     }
+    if (editorText == trackText) {
+        return;
+    }
+    const QVariant var(QVariant::fromValue(editorText));
+    m_pCurrentTrack->setProperty(
+            m_editProperty.toUtf8().constData(),
+            var);
+    // Track::changed() will update label
 }
 
 void WTrackProperty::resetSelectedState() {
