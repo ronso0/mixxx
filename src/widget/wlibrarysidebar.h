@@ -8,12 +8,15 @@
 #include "widget/wbasewidget.h"
 
 class LibraryFeature;
+class SidebarModel;
 class QPoint;
 
 class WLibrarySidebar : public QTreeView, public WBaseWidget {
     Q_OBJECT
   public:
     explicit WLibrarySidebar(QWidget* parent = nullptr);
+
+    void setModel(QAbstractItemModel* pModel) override;
 
     void contextMenuEvent(QContextMenuEvent* pEvent) override;
     void dragMoveEvent(QDragMoveEvent* pEvent) override;
@@ -51,6 +54,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void toggleDragHoverPropertyAndUpdateStyle(bool enabled);
     void resetHoverIndexAndDragMoveResult();
 
+    SidebarModel* m_pSidebarModel;
     QBasicTimer m_expandTimer;
     QModelIndex m_hoverIndex;
     bool m_lastDragMoveAccepted;
