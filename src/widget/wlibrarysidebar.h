@@ -9,12 +9,15 @@
 #include "widget/wbasewidget.h"
 
 class LibraryFeature;
+class SidebarModel;
 class QPoint;
 
 class WLibrarySidebar : public QTreeView, public WBaseWidget {
     Q_OBJECT
   public:
     explicit WLibrarySidebar(QWidget* parent = nullptr);
+
+    void setModel(QAbstractItemModel* pModel) override;
 
     void contextMenuEvent(QContextMenuEvent * event) override;
     void dragMoveEvent(QDragMoveEvent * event) override;
@@ -51,6 +54,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void focusSelectedIndex();
     QModelIndex selectedIndex();
 
+    SidebarModel* m_pSidebarModel;
     QBasicTimer m_expandTimer;
     QBasicTimer m_headerAdjustTimer;
     PerformanceTimer m_eventFrequencyTimer;
