@@ -3110,9 +3110,23 @@ WTrackTableView::indicator:!selected:focus {
   outline: 1px solid #fff;
   color: #fff;
 }
-WLibrarySidebar::item:selected:focus {
-  outline: none;
-}
+
+WLibrarySidebar::item {
+  /* add a dummy border so item text is not shifted when item is focused */
+  border-left: 1px solid transparent;
+  /* add right border so text is not elided when focus border is added */
+  border-right: 1px solid transparent;
+  }
+  /* subtle highlight if item is selected */
+  WLibrarySidebar::item:focus {
+    outline: none;
+    border: 1px solid #999;
+  }
+  /* strong highlight if item is NOT selected */
+  WLibrarySidebar::item:focus:!selected {
+    outline: none;
+    border: 1px solid #fff;
+  }
 
 WTrackTableView:focus,
 WLibrarySidebar:focus,
