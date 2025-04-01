@@ -312,6 +312,9 @@ void WLibrarySidebar::goToNextPrevBookmark(int direction) {
     }
 
     // just scroll to and highlight (focus)
+    // Note: scrollTo() with default hint EnsureVisible will also expand all
+    // parents, which in turn emits expanded() for each index which invokes
+    // LibraryFeature::onLazyChildExpandation().
     scrollTo(bookmarkIdx);
     // Use this instead of setCurrentIndex() to keep current selection
     selectionModel()->setCurrentIndex(bookmarkIdx, QItemSelectionModel::NoUpdate);
@@ -475,11 +478,11 @@ void WLibrarySidebar::selectIndex(const QModelIndex& index) {
     if (selectionModel()) {
         selectionModel()->deleteLater();
     }
-    if (index.parent().isValid()) {
-        expand(index.parent());
-    }
     setSelectionModel(pModel);
     setCurrentIndex(index);
+    // Note: scrollTo() with default hint EnsureVisible will also expand all
+    // parents, which in turn emits expanded() for each index which invokes
+    // LibraryFeature::onLazyChildExpandation().
     scrollTo(index);
 }
 
@@ -500,12 +503,10 @@ void WLibrarySidebar::selectChildIndex(const QModelIndex& index, bool selectItem
         setCurrentIndex(translated);
     }
 
-    QModelIndex parentIndex = translated.parent();
-    while (parentIndex.isValid()) {
-        expand(parentIndex);
-        parentIndex = parentIndex.parent();
-    }
-    scrollTo(translated, EnsureVisible);
+    // Note: scrollTo() with default hint EnsureVisible will also expand all
+    // parents, which in turn emits expanded() for each index which invokes
+    // LibraryFeature::onLazyChildExpandation().
+    scrollTo(translated);
 }
 
 QModelIndex WLibrarySidebar::selectedIndex() {
