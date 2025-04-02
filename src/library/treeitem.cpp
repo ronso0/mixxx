@@ -36,7 +36,8 @@ TreeItem::TreeItem(
       m_pParent(nullptr),
       m_label(std::move(label)),
       m_data(std::move(data)),
-      m_bold(false) {
+      m_bold(false),
+      m_needsUpdate(false) {
 }
 
 TreeItem::~TreeItem() {
