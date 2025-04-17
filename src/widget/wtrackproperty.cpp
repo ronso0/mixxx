@@ -230,9 +230,9 @@ void WTrackProperty::openEditor() {
         // For comments we only load the first line,
         // ie. truncate track text at first linebreak.
         // On commit we replace the first line with the edited text.
-        int firstLB = editText.indexOf(kLinebreak);
-        if (firstLB >= 0) {
-            editText.truncate(firstLB);
+        int firstLbIdx = editText.indexOf(kLinebreak);
+        if (firstLbIdx >= 0) {
+            editText.truncate(firstLbIdx);
         }
     }
     m_pEditor->setText(editText);
@@ -389,11 +389,11 @@ void WTrackProperty::slotCommitEditorData(const QString& text) {
         // the first line of the original text with the editor text.
         // (which may add new linebreaks)
         // Note: assumes the comment didn't change while we were editing it.
-        int firstLB = trackText.indexOf(kLinebreak);
-        if (firstLB >= 0) { // has linebreak
-            QString trackTSliced = trackText;
-            trackTSliced = trackTSliced.sliced(firstLB);
-            editorText.append(trackTSliced);
+        int firstLbIdx = trackText.indexOf(kLinebreak);
+        if (firstLbIdx >= 0) { // has linebreak
+            QString trackTextSliced = trackText;
+            trackTextSliced = trackTextSliced.sliced(firstLbIdx);
+            editorText.append(trackTextSliced);
         }
     }
     if (editorText == trackText) {
