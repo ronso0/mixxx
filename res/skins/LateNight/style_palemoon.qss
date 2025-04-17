@@ -3501,6 +3501,7 @@ DlgPreferences QCheckBox,
 #DlgTrackInfo QLabel,
 #DlgTrackInfo WStarRating,
 #DlgTrackInfoMulti QLabel,
+#DlgTrackInfoMulti QRadioButton,
 #DlgTrackInfoMulti WStarRating {
   background: #262628; /* without ::pane it's rendered as #323232 */
   padding: 0px;
@@ -3711,6 +3712,7 @@ WTrackMenu QDialog QListView,
 #DlgTrackInfo QDoubleSpinBox,
 #DlgTrackInfo QPushButton,
 #DlgTrackInfoMulti QLabel,
+#DlgTrackInfoMulti QRadioButton,
 #DlgTrackInfoMulti WStarRating,
 #DlgTrackInfoMulti QComboBox,
 #DlgTrackInfoMulti QLineEdit,
@@ -3963,7 +3965,8 @@ DlgPreferences QTableView::indicator,
 DlgTagFetcher QCheckBox::indicator,
 #Skin QDialog QCheckBox::indicator,
 #DlgTrackInfo QCheckBox::indicator,
-#DlgTrackInfoMulti QCheckBox::indicator {
+#DlgTrackInfoMulti QCheckBox::indicator,
+#DlgTrackInfoMulti QRadioButton::indicator {
   width: 0.8em;
   height: 0.8em;
   margin-top: 0.1em; /* align icon with text */
@@ -4030,10 +4033,12 @@ DlgTagFetcher QCheckBox::indicator,
       image: url(skins:LateNight/palemoon/buttons/btn__pref_checkmark_grey.svg) no-repeat center center;
     }
 
-  DlgPreferences QRadioButton::indicator:checked {
+  DlgPreferences QRadioButton::indicator:checked,
+  #DlgTrackInfoMulti QRadioButton::indicator:checked {
     image: url(skins:LateNight/palemoon/buttons/btn__pref_radio_button_on.svg) center center;
     }
-    DlgPreferences QRadioButton::indicator:unchecked {
+    DlgPreferences QRadioButton::indicator:unchecked,
+    #DlgTrackInfoMulti QRadioButton::indicator:unchecked {
       image: url(skins:LateNight/palemoon/buttons/btn__lib_radio_button_off.svg) center center;
     }
 
