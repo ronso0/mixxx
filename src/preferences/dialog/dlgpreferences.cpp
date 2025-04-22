@@ -287,6 +287,9 @@ void DlgPreferences::changePage(QTreeWidgetItem* pCurrent, QTreeWidgetItem* pPre
     if (!pCurrent) {
         pCurrent = pPrevious;
     }
+    qWarning() << "     .";
+    qWarning() << "     changePage" << pCurrent->text(0);
+    qWarning() << "     .";
 
     if (m_pControllersDlg->handleTreeItemClick(pCurrent)) {
         // Do nothing. m_controllersPage handled this click.
@@ -302,6 +305,9 @@ void DlgPreferences::changePage(QTreeWidgetItem* pCurrent, QTreeWidgetItem* pPre
 }
 
 void DlgPreferences::showSoundHardwarePage() {
+    qWarning() << "   .";
+    qWarning() << "   showSoundHardwarePage";
+    qWarning() << "   .";
     switchToPage(m_soundPage.pTreeItem->text(0), m_soundPage.pDlg);
     contentsTreeWidget->setCurrentItem(m_soundPage.pTreeItem);
 }
@@ -509,6 +515,9 @@ void DlgPreferences::expandTreeItem(QTreeWidgetItem* pItem) {
 }
 
 void DlgPreferences::switchToPage(const QString& pageTitle, DlgPreferencePage* pWidget) {
+    qWarning() << "     .";
+    qWarning() << "     switchToPage" << pageTitle;
+    qWarning() << "     .";
 #ifdef __APPLE__
     // According to Apple's Human Interface Guidelines, settings dialogs have to
     // "Update the window’s title to reflect the currently visible pane."
