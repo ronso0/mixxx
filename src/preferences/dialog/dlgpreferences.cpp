@@ -308,7 +308,6 @@ void DlgPreferences::showSoundHardwarePage() {
     qWarning() << "   .";
     qWarning() << "   showSoundHardwarePage";
     qWarning() << "   .";
-    switchToPage(m_soundPage.pTreeItem->text(0), m_soundPage.pDlg);
     contentsTreeWidget->setCurrentItem(m_soundPage.pTreeItem);
 }
 
