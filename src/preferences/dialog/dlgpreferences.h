@@ -34,8 +34,9 @@ class DlgPreferences : public QDialog, public Ui::DlgPreferencesDlg {
     struct PreferencesPage {
         PreferencesPage() {
         }
-        PreferencesPage(DlgPreferencePage* pDlg, QTreeWidgetItem* pTreeItem)
-                : pDlg(pDlg), pTreeItem(pTreeItem) {
+        PreferencesPage(DlgPreferencePage* pDlg, QTreeWidgetItemgit* pTreeItem)
+                : pDlg(pDlg),
+                  pTreeItem(pTreeItem) {
         }
 
         DlgPreferencePage* pDlg;
