@@ -3143,6 +3143,7 @@ WLibrarySidebar {
 }
 WLibrarySidebar {
   outline: none;
+  qproperty-bookmarkColor: #ff0000;
 }
 /* Selected rows in Tree and Tracks table */
 WLibrarySidebar::item:selected,
@@ -3156,14 +3157,6 @@ WTrackTableView::item:selected,
   /* This is not required for painting the background,
      but it is for applying the focus outline. */
   background-color: #2c454f;
-}
-WTrackTableView::item:!selected:focus,
-WTrackTableView::indicator:!selected:focus {
-  /* For outline to be applied, background-color must be set, too ...
-     Use a value between #0f0f0f and #0a0a0a (alternate-background-color) */
-  background-color: #0c0c0c;
-  outline: 1px solid #fff;
-  color: #fff;
 }
 
 /* Use the native focus decoration */
@@ -3533,6 +3526,7 @@ QLabel#labelSelectionInfo /* AutoDJ track selection info */ {
 
 WLibrarySidebar {
   show-decoration-selected: 0;
+  qproperty-bookmarkColor: #ff0000;
 }
 /* triangle for closed/opened branches in treeview */
 /* closed */
