@@ -1387,6 +1387,7 @@ add_library(
   src/library/searchqueryparser.cpp
   src/library/serato/seratofeature.cpp
   src/library/serato/seratoplaylistmodel.cpp
+  src/library/sidebaritemdelegate.cpp
   src/library/sidebarmodel.cpp
   src/library/starrating.cpp
   src/library/tabledelegates/bpmdelegate.cpp
