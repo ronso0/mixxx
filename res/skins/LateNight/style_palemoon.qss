@@ -3102,21 +3102,23 @@ WTrackTableView::item:selected,
      but it is for applying the focus outline. */
   background-color: #2c454f;
 }
-WTrackTableView::item:!selected:focus,
-WTrackTableView::indicator:!selected:focus {
-  /* For outline to be applied, background-color must be set, too ...
-     Use a value between #0f0f0f and #0a0a0a (alternate-background-color) */
-  background-color: #0c0c0c;
-  outline: 1px solid #fff;
-  color: #fff;
-}
 
 WLibrarySidebar::item {
   /* add a dummy border so item text is not shifted when item is focused */
   border-left: 1px solid transparent;
   /* add right border so text is not elided when focus border is added */
   border-right: 1px solid transparent;
-  }
+}
+/* subtle highlight if item is selected */
+WLibrarySidebar::item:selected:focus {
+  outline: none;
+  border: 1px solid #999;
+}
+/* strong highlight if item is NOT selected */
+WLibrarySidebar::item:!selected:focus {
+  outline: none;
+  border: 1px solid #fff;
+}
   /* subtle highlight if item is selected */
   WLibrarySidebar::item:focus {
     outline: none;
@@ -3471,6 +3473,7 @@ QLabel#labelSelectionInfo /* AutoDJ track selection info */ {
 
 WLibrarySidebar {
   show-decoration-selected: 0;
+  qproperty-bookmarkColor: #ff0000;
 }
 /* triangle for closed/opened branches in treeview */
 /* closed */
