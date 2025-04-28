@@ -9,6 +9,7 @@
 #include "widget/wbasewidget.h"
 
 class LibraryFeature;
+class SidebarItemDelegate;
 class SidebarModel;
 class QPoint;
 
@@ -16,6 +17,11 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     Q_OBJECT
   public:
     explicit WLibrarySidebar(QWidget* parent = nullptr);
+
+    Q_PROPERTY(QColor bookmarkColor
+                    MEMBER m_bookmarkColor
+                            NOTIFY bookmarkColorChanged
+                                    DESIGNABLE true);
 
     void setModel(QAbstractItemModel* pModel) override;
 
@@ -33,6 +39,8 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     bool isChildIndexSelected(const QModelIndex& index);
     bool isFeatureRootIndexSelected(LibraryFeature* pFeature);
 
+    void setBookmarkColor(const QColor& color);
+
   public slots:
     void selectIndex(const QModelIndex&);
     void selectChildIndex(const QModelIndex&, bool selectItem = true);
@@ -46,6 +54,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void deleteItem(const QModelIndex&);
     FocusWidget setLibraryFocus(FocusWidget newFocus,
             Qt::FocusReason focusReason = Qt::OtherFocusReason);
+    void bookmarkColorChanged(QColor m_bookmarkColor);
 
   protected:
     bool event(QEvent* pEvent) override;
@@ -59,9 +68,11 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void goToNextPrevBookmark(int direction);
 
     SidebarModel* m_pSidebarModel;
+    SidebarItemDelegate* m_pItemDelegate;
     QBasicTimer m_expandTimer;
     QBasicTimer m_headerAdjustTimer;
     PerformanceTimer m_eventFrequencyTimer;
 
     QModelIndex m_hoverIndex;
+    QColor m_bookmarkColor;
 };
