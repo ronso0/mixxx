@@ -15,6 +15,12 @@ constexpr int expand_time = 250;
 // Delay for header adjust requests. 50 ms seems to be a good compromise between
 // fast GUI update and long enough wait time for potential follow-up events.
 constexpr int resize_header_delay = 50;
+namespace {
+
+// color for the 'watched path' indicator (cyan)
+const QColor kDefaultWatchedPathColor = QColor("#00ffff"); // clazy:exclude=qcolor-from-literal
+
+} // anonymous namespace
 
 namespace {
 
@@ -27,7 +33,8 @@ WLibrarySidebar::WLibrarySidebar(QWidget* parent)
           WBaseWidget(this),
           m_pSidebarModel(nullptr),
           m_pItemDelegate(nullptr),
-          m_bookmarkColor(kDefaultBookmarkColor) {
+          m_bookmarkColor(kDefaultBookmarkColor),
+          m_watchedPathColor(kDefaultWatchedPathColor) {
     qRegisterMetaType<FocusWidget>("FocusWidget");
     //Set some properties
     setHeaderHidden(true);
@@ -58,7 +65,8 @@ void WLibrarySidebar::setModel(QAbstractItemModel* pModel) {
     DEBUG_ASSERT(pSidebarModel);
     m_pSidebarModel = pSidebarModel;
     QTreeView::setModel(pSidebarModel);
-    // Create the delegate for painting the bookmark indicator
+    // Create the delegate for painting the bookmark indicator and the
+    // 'is watched path' indicator for Computer feature
     DEBUG_ASSERT(m_pItemDelegate == nullptr);
     m_pItemDelegate = new SidebarItemDelegate(this, pSidebarModel);
     setItemDelegateForColumn(0, m_pItemDelegate);
@@ -69,6 +77,13 @@ void WLibrarySidebar::setModel(QAbstractItemModel* pModel) {
             &WLibrarySidebar::bookmarkColorChanged,
             m_pItemDelegate,
             &SidebarItemDelegate::setBookmarkColor);
+    m_pItemDelegate->setWatchedPathColor(m_watchedPathColor);
+    // Color can be set in qss via qproperty-watchedPathColor which happens
+    // when the stylesheet is applied. Push it to delegate.
+    connect(this,
+            &WLibrarySidebar::watchedPathColorChanged,
+            m_pItemDelegate,
+            &SidebarItemDelegate::setWatchedPathColor);
 }
 
 void WLibrarySidebar::contextMenuEvent(QContextMenuEvent *event) {
