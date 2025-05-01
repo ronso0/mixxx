@@ -25,6 +25,12 @@ class SidebarItemDelegate : public QStyledItemDelegate {
         }
     }
 
+    void setWatchedPathColor(const QColor& color) {
+        if (color.isValid()) {
+            m_watchedPathColor = color;
+        }
+    }
+
     bool editorEvent(QEvent* pEvent,
             QAbstractItemModel* pModel,
             const QStyleOptionViewItem& option,
@@ -33,4 +39,5 @@ class SidebarItemDelegate : public QStyledItemDelegate {
   private:
     SidebarModel* m_pSidebarModel; // shared_ptr?
     QColor m_bookmarkColor;
+    QColor m_watchedPathColor;
 };

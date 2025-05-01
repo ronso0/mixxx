@@ -136,6 +136,8 @@ class SidebarModel : public QAbstractItemModel {
     bool indexNeedsUpdate(const QModelIndex& index) const;
     void updateItem(const QModelIndex& index);
 
+    bool indexIsWatchedPathItem(const QModelIndex& index) const;
+
   public slots:
     void pressed(const QModelIndex& index);
     void clicked(const QModelIndex& index);

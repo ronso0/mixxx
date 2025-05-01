@@ -35,6 +35,19 @@ void SidebarItemDelegate::paint(
                 option.rect.height() - 2,
                 m_bookmarkColor);
     }
+
+    // If the (path) item is a watched path, draw an indicator on top of the qss style.
+    // The bounding rect of the dot is half the x-height of the current font.
+    if (m_pSidebarModel->indexIsWatchedPathItem(index)) {
+        pPainter->setRenderHint(QPainter::Antialiasing);
+        pPainter->setBrush(QBrush(m_watchedPathColor));
+        int wh = option.fontMetrics.xHeight() / 2;
+        pPainter->drawEllipse( // x, y, w, h
+                option.rect.x(),
+                option.rect.y() + 1,
+                wh,
+                wh);
+    }
 }
 
 // Used to catch clicks on TreeItem icons. Implemented only for BrowseFeature

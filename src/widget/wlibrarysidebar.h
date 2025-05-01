@@ -23,6 +23,11 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
                             NOTIFY bookmarkColorChanged
                                     DESIGNABLE true);
 
+    Q_PROPERTY(QColor watchedPathColor
+                    MEMBER m_watchedPathColor
+                            NOTIFY watchedPathColorChanged
+                                    DESIGNABLE true);
+
     void setModel(QAbstractItemModel* pModel) override;
 
     void contextMenuEvent(QContextMenuEvent * event) override;
@@ -55,6 +60,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     FocusWidget setLibraryFocus(FocusWidget newFocus,
             Qt::FocusReason focusReason = Qt::OtherFocusReason);
     void bookmarkColorChanged(QColor m_bookmarkColor);
+    void watchedPathColorChanged(QColor m_watchedPathColor);
 
   protected:
     bool event(QEvent* pEvent) override;
@@ -75,4 +81,5 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
 
     QModelIndex m_hoverIndex;
     QColor m_bookmarkColor;
+    QColor m_watchedPathColor;
 };
