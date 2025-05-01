@@ -657,7 +657,7 @@ QString BrowseFeature::getRootViewHtml() const {
                                           " from your Mixxx library like other track views.") +
             "<br><br>" +
             tr("If the selected folder is part of your library, a regular "
-               "track view is used.") +
+               "track view is used and the tree item is marked with an indicator.") +
             "<br><br>" +
             tr("If you load a track file from here, it will be added to your "
                "library.");
