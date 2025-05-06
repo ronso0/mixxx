@@ -577,6 +577,7 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
         }
 
         if (needsUpdate) {
+            qWarning() << "     -> needs update, mark, return";
             // Show a warning icon on the parent item. Users may then use the context
             // menu -> "Refresh directory tree".
             // Or click the Refresh icon. This is handled by SidebarItemDelegate
@@ -585,6 +586,7 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
             return;
         }
     }
+    qWarning() << "     -> (re)build, add children";
 
     // Reset `needsUpdate` state
     pItem->setIcon(QIcon());
@@ -610,6 +612,8 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
 
 std::vector<std::unique_ptr<TreeItem>> BrowseFeature::getChildDirectoryItems(
         const QString& path) const {
+    qWarning() << "     .";
+    qWarning() << "     getChildItems" << path;
     std::vector<std::unique_ptr<TreeItem>> items;
 
     if (path.isEmpty()) {
@@ -622,6 +626,8 @@ std::vector<std::unique_ptr<TreeItem>> BrowseFeature::getChildDirectoryItems(
     // dirInfo may be turned into the unresolved path in case it corresponds to
     // a (child of a) symlink root dir.
     std::tie(parentIsWatched, dirInfo) = isPathWatched(path);
+    qWarning() << "     -> parent is watched:"
+               << QString(parentIsWatched ? "X" : "-");
     const auto dirAccess = mixxx::FileAccess(dirInfo);
 
     QFileInfoList all = dirAccess.info().toQDir().entryInfoList(
@@ -662,6 +668,8 @@ std::unique_ptr<TreeItem> BrowseFeature::createPathTreeItem(
         std::tie(isWatched, dirInfo) = isPathWatched(path);
         auto pItem = std::make_unique<TreeItem>(name, dirInfo.location());
         pItem->setIsWatchedLibraryPath(isWatched);
+        // qWarning() << "   # createItem: watched:"
+        //         << QString(isWatched ? "X" : "-") << pItem->getData().toString();
         return pItem;
     } else {
         return std::make_unique<TreeItem>(name, path);
