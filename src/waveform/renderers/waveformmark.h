@@ -180,6 +180,10 @@ class WaveformMark {
     }
 
     double opacity() const {
+        qWarning() << "     .";
+        qWarning() << "     opacity(), active?" << isActive();
+        qWarning() << "     ret" << double(isActive() ? m_enabledOpacity : m_disabledOpacity);
+        qWarning() << "     .";
         return isActive() ? m_enabledOpacity : m_disabledOpacity;
     }
 

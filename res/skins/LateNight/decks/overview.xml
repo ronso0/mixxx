@@ -32,6 +32,7 @@
       <Color>#FF0000</Color>
       <TextColor>#FFFFFF</TextColor>
       <Text> %1 </Text>
+      <EndIcon>skins:LateNight/palemoon/buttons/btn__beatjump_right.svg</EndIcon>
     </DefaultMark>
     <!-- Cue -->
     <Mark>
@@ -49,7 +50,7 @@
       <Color><Variable name="LoopColor"/></Color>
       <Opacity>0.7</Opacity>
       <DisabledColor>#FFFFFF</DisabledColor>
-      <DisabledOpacity>0.6</DisabledOpacity>
+      <DisabledOpacity>0.444</DisabledOpacity>
     </MarkRange>
     <Mark>
       <Control>loop_start_position</Control>

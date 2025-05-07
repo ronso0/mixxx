@@ -61,8 +61,9 @@ void WaveformRenderMark::draw(QPainter* painter, QPaintEvent* /*event*/) {
                         QLinearGradient gradient(QPointF(0, 0),
                                 QPointF(0, m_waveformRenderer->getHeight()));
                         gradient.setColorAt(0, color);
-                        gradient.setColorAt(0.25, QColor(Qt::transparent));
-                        gradient.setColorAt(0.75, QColor(Qt::transparent));
+                        // what is this used for??
+                        gradient.setColorAt(0.25, QColor(Qt::blue));
+                        gradient.setColorAt(0.75, QColor(Qt::blue));
                         gradient.setColorAt(1, color);
                         painter->fillRect(
                                 QRectF(QPointF(currentMarkPoint, 0),
