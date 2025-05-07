@@ -110,14 +110,14 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
 
     m_pStandardCue = std::make_unique<QPushButton>("", this);
     m_pStandardCue->setToolTip(
-            tr("Toggle this cue type to normal cue if not."));
+            tr("Turn this cue into a regular hotcue"));
     m_pStandardCue->setObjectName("CueStandardButton");
     m_pStandardCue->setCheckable(true);
     connect(m_pStandardCue.get(), &QPushButton::clicked, this, &WCueMenuPopup::slotStandardCue);
 
     m_pSavedLoopCue = std::make_unique<CueTypePushButton>(this);
     m_pSavedLoopCue->setToolTip(
-            tr("Toggle this cue type between normal cue and saved loop") +
+            tr("Turn this cue into a saved loop") +
             "\n\n" +
             tr("Left-click: Use the old size or the current beatloop size as the loop size") +
             "\n" +
@@ -137,8 +137,8 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
     m_pSavedJumpCue->setToolTip(
             //: \n is a linebreak. Try to not to extend the translation beyond the length
             //: of the longest source line so the tooltip remains compact.
-            tr("Toggle this cue type between normal cue and saved jump, to \n"
-               "the current play position or the current beatjump size ") +
+            tr("Turn this cue into a saved jump, to the current play position \n"
+               "or that minus the current beatjump size") +
             "\n\n" +
             tr("Left-click: Toggle this cue type to saved beatjump, using \n"
                "the current play position if not previous destination was known. \nIf "
