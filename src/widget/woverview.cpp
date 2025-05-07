@@ -185,6 +185,8 @@ void WOverview::setup(const QDomNode& node, const SkinContext& context) {
     m_marks.connectSamplePositionChanged(this, &WOverview::onMarkChanged);
     m_marks.connectSampleEndPositionChanged(this, &WOverview::onMarkChanged);
     m_marks.connectVisibleChanged(this, &WOverview::onMarkChanged);
+    m_marks.connectTypeChanged(this, &WOverview::onMarkChanged);
+    m_marks.connectStatusChanged(this, &WOverview::onMarkChanged);
 
     QDomNode child = node.firstChild();
     while (!child.isNull()) {
@@ -474,7 +476,8 @@ void WOverview::updateCues(const QList<CuePointer> &loadedCues) {
 
             int hotcueNumber = currentCue->getHotCue();
             if ((currentCue->getType() == mixxx::CueType::HotCue ||
-                        currentCue->getType() == mixxx::CueType::Loop) &&
+                        currentCue->getType() == mixxx::CueType::Loop ||
+                        currentCue->getType() == mixxx::CueType::Jump) &&
                     hotcueNumber != Cue::kNoHotCue) {
                 // Prepend the hotcue number to hotcues' labels
                 QString newLabel = currentCue->getLabel();
@@ -970,6 +973,7 @@ void WOverview::drawMarks(QPainter* pPainter, const float offset, const float ga
                 offset + static_cast<float>(samplePosition) * gain,
                 0.0f,
                 static_cast<float>(width()));
+        float markStartPosition = markPosition;
         pMark->m_linePosition = markPosition;
 
         QLineF line;
@@ -985,15 +989,22 @@ void WOverview::drawMarks(QPainter* pPainter, const float offset, const float ga
         QRectF rect;
         double sampleEndPosition = pMark->getSampleEndPosition();
         if (sampleEndPosition > 0) {
-            const float markEndPosition = math_clamp(
+            float markEndPosition = math_clamp(
                     offset + static_cast<float>(sampleEndPosition) * gain,
                     0.0f,
                     static_cast<float>(width()));
 
+            // If it's a Jump cue, end is later than start for a forward jump,
+            // so swap positions in this case to get a valid rect for
+            // painting the range.
+            if (pMark->getType() == mixxx::CueType::Jump &&
+                    markEndPosition < markStartPosition) {
+                std::swap(markStartPosition, markEndPosition);
+            }
             if (m_orientation == Qt::Horizontal) {
-                rect.setCoords(markPosition, 0, markEndPosition, height());
+                rect.setCoords(markStartPosition, 0, markEndPosition, height());
             } else {
-                rect.setCoords(0, markPosition, width(), markEndPosition);
+                rect.setCoords(0, markStartPosition, width(), markEndPosition);
             }
         }
 
@@ -1004,9 +1015,18 @@ void WOverview::drawMarks(QPainter* pPainter, const float offset, const float ga
         pPainter->drawLine(line);
 
         if (rect.isValid()) {
-            QColor loopColor = pMark->fillColor();
-            loopColor.setAlphaF(0.5f);
-            pPainter->fillRect(rect, loopColor);
+            QColor rangeColor = pMark->fillColor();
+            // Less opacity for inactive jump cues to not unnecessarily obstruct
+            // the waveform image.
+            // TODO Use played color for forward jumps to clarify we'll skip that region?
+            if (pMark->getType() == mixxx::CueType::Jump && pMark->isActive()) {
+                rangeColor.setAlphaF(0.2f);
+            } else {
+                rangeColor.setAlphaF(0.5f);
+            }
+            // TODO Instead of uniform painting, use different types of gradients
+            // loops, jump, intro/outro
+            pPainter->fillRect(rect, rangeColor);
         }
 
         if (!pMark->m_text.isEmpty()) {

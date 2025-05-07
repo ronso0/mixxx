@@ -64,6 +64,12 @@ class WaveformMark {
     int getPriority() const {
         return m_iPriority;
     };
+    mixxx::CueType getType() const {
+        if (!m_typeCO) {
+            return mixxx::CueType::Invalid;
+        }
+        return static_cast<mixxx::CueType>(m_typeCO->get());
+    }
 
     // The m_pPositionCO related function
     bool isValid() const {
@@ -80,6 +86,19 @@ class WaveformMark {
             m_pEndPositionCO->connectValueChanged(receiver, slot, Qt::AutoConnection);
         }
     };
+    template<typename Receiver, typename Slot>
+    void connectTypeChanged(Receiver receiver, Slot slot) const {
+        if (m_typeCO) {
+            m_typeCO->connectValueChanged(receiver, slot, Qt::AutoConnection);
+        }
+    };
+    template<typename Receiver, typename Slot>
+    void connectStatusChanged(Receiver receiver, Slot slot) const {
+        if (m_statusCO) {
+            m_statusCO->connectValueChanged(receiver, slot, Qt::AutoConnection);
+        }
+    };
+
     double getSamplePosition() const {
         return m_pPositionCO->get();
     }
@@ -89,10 +108,10 @@ class WaveformMark {
                 // loop or jump anymore. This happens when the user changes the cue
                 // type. However, we persist the end position if the user wants
                 // to restore the cue to a saved loop
-                (m_typeCO.valid() &&
-                        static_cast<mixxx::CueType>(m_typeCO.get()) !=
+                (m_typeCO &&
+                        static_cast<mixxx::CueType>(m_typeCO->get()) !=
                                 mixxx::CueType::Loop &&
-                        static_cast<mixxx::CueType>(m_typeCO.get()) !=
+                        static_cast<mixxx::CueType>(m_typeCO->get()) !=
                                 mixxx::CueType::Jump)) {
             return Cue::kNoPosition;
         }
@@ -114,18 +133,20 @@ class WaveformMark {
     }
     // A cue is always considered active if it isn't a saved loop or a saved jump
     bool isActive() const {
-        return (!m_typeCO.valid() || !m_statusCO.valid() ||
-                (static_cast<mixxx::CueType>(m_typeCO.get()) !=
+        return (m_typeCO || m_statusCO ||
+                (static_cast<mixxx::CueType>(m_typeCO->get()) !=
                                 mixxx::CueType::Loop &&
-                        static_cast<mixxx::CueType>(m_typeCO.get()) !=
+                        static_cast<mixxx::CueType>(m_typeCO->get()) !=
                                 mixxx::CueType::Jump) ||
-                static_cast<HotcueControl::Status>(m_statusCO.get()) ==
+                static_cast<HotcueControl::Status>(m_statusCO->get()) ==
                         HotcueControl::Status::Active);
     }
     bool fillRange() const {
-        return (!m_typeCO.valid() ||
-                static_cast<mixxx::CueType>(m_typeCO.get()) ==
-                        mixxx::CueType::Loop);
+        return (m_typeCO ||
+                static_cast<mixxx::CueType>(m_typeCO->get()) ==
+                        mixxx::CueType::Loop ||
+                static_cast<mixxx::CueType>(m_typeCO->get()) ==
+                        mixxx::CueType::Jump);
     }
     bool isShowUntilNext() const {
         return m_showUntilNext;
@@ -226,8 +247,8 @@ class WaveformMark {
     std::unique_ptr<ControlProxy> m_pPositionCO;
     std::unique_ptr<ControlProxy> m_pEndPositionCO;
     std::unique_ptr<ControlProxy> m_pVisibleCO;
-    PollingControlProxy m_typeCO;
-    PollingControlProxy m_statusCO;
+    std::unique_ptr<ControlProxy> m_typeCO;
+    std::unique_ptr<ControlProxy> m_statusCO;
 
     std::unique_ptr<Graphics> m_pGraphics;
     std::unique_ptr<Graphics> m_pEndGraphics;
