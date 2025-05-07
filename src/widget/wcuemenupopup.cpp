@@ -229,20 +229,26 @@ void WCueMenuPopup::slotUpdate() {
         Cue::StartAndEndPositions pos = m_pCue->getStartAndEndPosition();
         if (pos.startPosition.isValid()) {
             double startPositionSeconds = pos.startPosition.value() / m_pTrack->getSampleRate();
-            positionText = mixxx::Duration::formatTime(startPositionSeconds, mixxx::Duration::Precision::CENTISECONDS);
+            QString startPositionText =
+                    mixxx::Duration::formatTime(startPositionSeconds,
+                            mixxx::Duration::Precision::CENTISECONDS);
             if (pos.endPosition.isValid() && m_pCue->getType() != mixxx::CueType::HotCue) {
                 double endPositionSeconds = pos.endPosition.value() / m_pTrack->getSampleRate();
+                QString endPositionText = mixxx::Duration::formatTime(
+                        endPositionSeconds,
+                        mixxx::Duration::Precision::
+                                CENTISECONDS);
+                if (m_pCue->getType() == mixxx::CueType::Jump) {
+                    std::swap(startPositionText, endPositionText);
+                }
                 positionText =
                         QString("%1 %2 %3")
-                                .arg(positionText,
+                                .arg(startPositionText,
                                         m_pCue->getType() ==
                                                         mixxx::CueType::Loop
                                                 ? "-"
                                                 : "->",
-                                        mixxx::Duration::formatTime(
-                                                endPositionSeconds,
-                                                mixxx::Duration::Precision::
-                                                        CENTISECONDS));
+                                        endPositionText);
             }
         }
         m_pCuePosition->setText(positionText);
