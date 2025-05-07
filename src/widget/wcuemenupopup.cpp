@@ -135,13 +135,15 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
 
     m_pSavedJumpCue = std::make_unique<CueTypePushButton>(this);
     m_pSavedJumpCue->setToolTip(
+            //: \n is a linebreak. Try to not to extend the translation beyond the length
+            //: of the longest source line so the tooltip remains compact.
             tr("Toggle this cue type between normal cue and saved jump, to \n"
                "the current play position or the current beatjump size ") +
             "\n\n" +
             tr("Left-click: Toggle this cue type to saved beatjump, using \n"
                "the current play position if not previous destination was known. \nIf "
                "the play position is the cue position, uses the current beatjump size") +
-            "\n" +
+            "\n\n" +
             tr("Right-click: Set the current play position as the jump \n"
                "destination and make the cue a saved jump if not"));
     m_pSavedJumpCue->setObjectName("CueSavedJumpButton");
