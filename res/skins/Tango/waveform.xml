@@ -42,6 +42,8 @@ Variables:
           <Color>#666666</Color>
           <TextColor>#FFFFFF</TextColor>
           <Text> %1 </Text>
+          <Opacity>0.8</Opacity>
+         <DisabledOpacity>0.3</DisabledOpacity>
         </DefaultMark>
         <Mark>
           <Control>cue_point</Control>

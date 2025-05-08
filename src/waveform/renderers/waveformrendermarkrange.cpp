@@ -37,7 +37,7 @@ void WaveformRenderMarkRange::draw(QPainter *painter, QPaintEvent * /*event*/) {
         generateImages();
     }
 
-    for (auto&& markRange: m_markRanges) {
+    for (WaveformMarkRange& markRange : m_markRanges) {
         // If the mark range is not active we should not draw it.
         if (!markRange.active()) {
             continue;
@@ -82,7 +82,7 @@ void WaveformRenderMarkRange::draw(QPainter *painter, QPaintEvent * /*event*/) {
 }
 
 void WaveformRenderMarkRange::generateImages() {
-    for (auto&& markRange: m_markRanges) {
+    for (WaveformMarkRange& markRange : m_markRanges) {
         markRange.generateImage(m_waveformRenderer->getWidth(), m_waveformRenderer->getHeight());
     }
     setDirty(false);

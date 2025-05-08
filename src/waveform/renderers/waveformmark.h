@@ -134,12 +134,8 @@ class WaveformMark {
     // A cue is always considered active if it isn't a saved loop or a saved jump
     bool isActive() const {
         return (m_typeCO || m_statusCO ||
-                (static_cast<mixxx::CueType>(m_typeCO->get()) !=
-                                mixxx::CueType::Loop &&
-                        static_cast<mixxx::CueType>(m_typeCO->get()) !=
-                                mixxx::CueType::Jump) ||
-                static_cast<HotcueControl::Status>(m_statusCO->get()) ==
-                        HotcueControl::Status::Active);
+                (static_cast<mixxx::CueType>(m_typeCO->get()) != mixxx::CueType::Loop /*&& static_cast<mixxx::CueType>(m_typeCO->get()) != mixxx::CueType::Jump*/) ||
+                static_cast<HotcueControl::Status>(m_statusCO->get()) == HotcueControl::Status::Active);
     }
     bool fillRange() const {
         return (m_typeCO ||
