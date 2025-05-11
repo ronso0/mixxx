@@ -1869,11 +1869,6 @@ WBpmEditor QDoubleSpinBox {
   }
 
 /* Orange for 'active' status */
-WPushButton#PlayDeck[displayValue="1"],
-WPushButton#PlayDeckMini[displayValue="1"],
-WPushButton#PlaySampler[displayValue="1"],
-WPushButton#PlayPreview[displayValue="1"],
-WPushButton#PlayIndicator[displayValue="1"],
 #LibraryPreviewButton:checked,
 #CueDeck[displayValue="1"],
 WPushButton#Reverse[pressed="true"],
@@ -1891,13 +1886,6 @@ WPushButton#StemMuteButton,
 QPushButton#pushButtonAutoDJ:checked,
 QPushButton#pushButtonAnalyze:checked {
   background-color: #b24c12;
-  }
-  /* Orange border for Play buttons when previewing from
-    Cue or Hotcue */
-  WPushButton#PreviewIndicator[value="1"] {
-    border: 3px solid #b24c12;
-    /* work around round borders being painted outside the actual border area */
-    border-radius: 0px;
   }
 /* dim orange for momentary controls */
 #KeyControls WPushButton[pressed="true"],
@@ -1925,6 +1913,11 @@ QPushButton#pushButtonRecording:checked,
 }
 
 /* Green for Fx toggles, QuickEffect + Fx12 */
+WPushButton#PlayDeck[displayValue="1"],
+WPushButton#PlayDeckMini[displayValue="1"],
+WPushButton#PlaySampler[displayValue="1"],
+WPushButton#PlayPreview[displayValue="1"],
+WPushButton#PlayIndicator[displayValue="1"],
 WPushButton#VinylStatus[displayValue="1"], /* enabled, OK */
 #BroadcastButton[displayValue="2"] {
   background-color: #438225;
