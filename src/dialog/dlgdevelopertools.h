@@ -18,6 +18,7 @@ class DlgDeveloperTools : public QDialog, public Ui::DlgDeveloperTools {
 
   protected:
     void timerEvent(QTimerEvent* pTimerEvent) override;
+    void showEvent(QShowEvent*) override;
 
   private slots:
     void slotControlSearch(const QString& search);
