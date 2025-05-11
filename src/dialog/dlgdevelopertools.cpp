@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QKeyEvent>
 
 #include "control/control.h"
 #include "moc_dlgdevelopertools.cpp"
@@ -75,6 +76,9 @@ DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
 
     // Delete this dialog when its closed. We don't want any persistence.
     setAttribute(Qt::WA_DeleteOnClose);
+
+    // Just to catch Ctrl+F to focus searchbar
+    installEventFilter(this);
 }
 
 void DlgDeveloperTools::showEvent(QShowEvent*) {
@@ -157,4 +161,20 @@ void DlgDeveloperTools::slotLogSearch() {
     QString textToFind = logSearch->text();
     m_logCursor = logTextView->document()->find(textToFind, m_logCursor);
     logTextView->setTextCursor(m_logCursor);
+}
+
+bool DlgDeveloperTools::eventFilter(QObject* pObj, QEvent* pEvent) {
+    if (pEvent->type() == QEvent::ShortcutOverride) {
+        QKeyEvent* pKE = static_cast<QKeyEvent*>(pEvent);
+        VERIFY_OR_DEBUG_ASSERT(pKE) {
+            return QDialog::eventFilter(pObj, pEvent);
+        }
+
+        if (pKE->key() == Qt::Key_F && (pKE->modifiers() & Qt::ControlModifier)) {
+            controlSearch->setFocus(Qt::ShortcutFocusReason);
+            pEvent->accept();
+            return true;
+        }
+    }
+    return QDialog::eventFilter(pObj, pEvent);
 }
