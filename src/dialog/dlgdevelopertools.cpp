@@ -77,6 +77,10 @@ DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
+void DlgDeveloperTools::showEvent(QShowEvent*) {
+    controlSearch->setFocus(Qt::ShortcutFocusReason);
+}
+
 void DlgDeveloperTools::timerEvent(QTimerEvent* pEvent) {
     Q_UNUSED(pEvent);
     if (!isVisible() || !m_fullDevMode) {
