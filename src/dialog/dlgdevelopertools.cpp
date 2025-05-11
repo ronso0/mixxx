@@ -81,6 +81,10 @@ DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
     installEventFilter(this);
 }
 
+void DlgDeveloperTools::showEvent(QShowEvent*) {
+    controlSearch->setFocus(Qt::ShortcutFocusReason);
+}
+
 void DlgDeveloperTools::timerEvent(QTimerEvent* pEvent) {
     Q_UNUSED(pEvent);
     if (!isVisible() || !m_fullDevMode) {
