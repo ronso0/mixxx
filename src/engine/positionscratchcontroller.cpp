@@ -82,7 +82,7 @@ constexpr double kTimeToStop = 1.0;
 
 // Notes: sample intervals
 // mouse: 7ms
-// S4mk3: 1.2 - 2.4 ms
+// S4mk3: 1.2 - 2.4 ms //
 
 } // anonymous namespace
 
@@ -216,11 +216,11 @@ void PositionScratchController::process(double currentSamplePos,
                 double triggerPos = trigger.toEngineSamplePos();
                 double targetPos = target.toEngineSamplePos();
                 double loopLength = triggerPos - targetPos;
-                qWarning() << "     .";
-                qWarning() << "     wrappedAround:" << wrappedAround;
-                qWarning() << "     sampleDelta:  " << sampleDelta;
-                qWarning() << "     totalSamDelta:" << sampleDelta + loopLength * wrappedAround;
-                qWarning() << "     .";
+                qWarning() << "         .";
+                qWarning() << "         wrappedAround:" << wrappedAround;
+                qWarning() << "         sampleDelta:  " << sampleDelta;
+                qWarning() << "         totalSamDelta:" << sampleDelta + loopLength * wrappedAround;
+                qWarning() << "         .";
                 sampleDelta += loopLength * wrappedAround;
             }
 
@@ -282,9 +282,9 @@ void PositionScratchController::process(double currentSamplePos,
                         // we cannot get closer
                         m_rate = 0;
                     }
-                    if (wrappedAround > 0) {
+                    if (wrappedAround > 0 || fabs(m_rate) > 5.0) {
                         qWarning() << "     .";
-                        qWarning() << "     ---------- rate:" << m_rate;
+                        qWarning() << "     --- rate:" << m_rate;
                         qWarning() << "     .";
                     }
                 }
