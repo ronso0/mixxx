@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QKeyEvent>
 #include <QModelIndex>
+#include <QSplashScreen>
+#include <QTimer>
 #include <QWindow>
 #include <QtDebug>
 
@@ -18,6 +20,7 @@
 #include "moc_librarycontrol.cpp"
 #include "track/track.h"
 #include "util/cmdlineargs.h"
+#include "util/widgethelper.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wsearchlineedit.h"
@@ -68,6 +71,7 @@ LoadToGroupController::LoadToGroupController(LibraryControl* pLibraryControl, co
                     ConfigKey(m_group, "append_deck_track_to_prep_playlist"));
     connect(m_pAppendLoadedTrackToPrepPlaylistControl.get(),
             &ControlObject::valueChanged,
+            this,
             [this, pLibraryControl](double value) {
                 pLibraryControl->slotAppendDeckTrackToPrepPlaylist(value, m_group);
             });
@@ -106,6 +110,8 @@ LibraryControl::LibraryControl(Library* pLibrary)
           m_pLibraryWidget(nullptr),
           m_pSidebarWidget(nullptr),
           m_pSearchbox(nullptr),
+          m_prepSplashScreen(nullptr),
+          m_prepSplashScreenTimer(nullptr),
           m_numDecks(kAppGroup, QStringLiteral("num_decks"), this),
           m_numSamplers(kAppGroup, QStringLiteral("num_samplers"), this),
           m_numPreviewDecks(kAppGroup, QStringLiteral("num_preview_decks"), this) {
@@ -535,7 +541,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
             this,
             &LibraryControl::slotLoadSelectedIntoFirstStopped);
 
-    // TODO Create control per deck in slotNumDecksChanged
     m_pAppendSelectedTrackToPrepPlaylistControl =
             std::make_unique<ControlPushButton>(
                     ConfigKey("[Library]", "append_selected_track_to_prep_playlist"));
@@ -760,8 +765,47 @@ void LibraryControl::appendTrackToPrepPlaylist(TrackId id) {
     PlaylistDAO& playlistDao = m_pLibrary->trackCollectionManager()
                                        ->internalCollection()
                                        ->getPlaylistDAO();
-    // TODO Show warning when no prep playlist is set
-    playlistDao.appendTrackToPrepPlaylist(id);
+    if (!playlistDao.appendTrackToPrepPlaylist(id)) {
+        qWarning() << "Appending track" << id << "to Prep playlist failed!";
+        return;
+    }
+    qInfo() << "Appended track" << id << "to Prep playlist";
+    // Show floating heart icon for 1.5 s
+    QScreen* pScreen = mixxx::widgethelper::getMainScreen();
+    if (!pScreen) {
+        qWarning() << "--no main screen found!";
+        return;
+    }
+    QPixmap heart(":/images/library/ic_heart_cyan_xxl.png");
+    if (!m_prepSplashScreen) {
+        // For some reason the splashscreen won't be shown on top the fullscreen
+        // main window when it's constructed like this:
+        // QSplashScreen(pScreen, heart, flags) // seen with Qt 6.2.3
+        m_prepSplashScreen = std::make_unique<QSplashScreen>(heart);
+        m_prepSplashScreen->setScreen(pScreen);
+        m_prepSplashScreen->setWindowFlags(
+                // This would cover other dialogs raised afterwards.
+                // Apparently, with another popup, this also makes the timeout
+                // event/callback to be ignored so the splashscreen wouldn't disappear.
+                // Qt::WindowStaysOnTopHint |
+                Qt::WindowDoesNotAcceptFocus |
+                // required to make it visible with fullscreen main window
+                Qt::FramelessWindowHint);
+        m_prepSplashScreen->resize(280, 235);
+    }
+    if (!m_prepSplashScreenTimer) {
+        m_prepSplashScreenTimer = std::make_unique<QTimer>();
+        m_prepSplashScreenTimer->setSingleShot(true);
+        m_prepSplashScreenTimer->setInterval(1500);
+        m_prepSplashScreenTimer->callOnTimeout(this, [this]() { m_prepSplashScreen->close(); });
+    }
+    if (m_prepSplashScreen->isVisible()) {
+        m_prepSplashScreen->close();
+        m_prepSplashScreenTimer->stop();
+    }
+    m_prepSplashScreen->show();
+    m_prepSplashScreen->raise();
+    m_prepSplashScreenTimer->start();
 }
 
 void LibraryControl::slotSelectNextTrack(double v) {
