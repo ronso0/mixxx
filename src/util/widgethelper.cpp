@@ -71,6 +71,17 @@ QWidget* getSkinWidget() {
     return nullptr;
 }
 
+QScreen* getMainScreen() {
+    QMainWindow* pMainWindow = nullptr;
+    const QWidgetList pwidgets = QApplication::topLevelWidgets();
+    for (auto* pWidget : pwidgets) {
+        if ((pMainWindow = qobject_cast<QMainWindow*>(pWidget))) {
+            return pMainWindow->screen();
+        }
+    }
+    return nullptr;
+}
+
 void growListWidget(QListWidget& listWidget, const QWidget& parent) {
     // Try to display all files and the complete file locations to avoid
     // horizontal scrolling.
