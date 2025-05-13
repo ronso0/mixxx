@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QKeyEvent>
 #include <QModelIndex>
+#include <QSplashScreen>
+#include <QTimer>
 #include <QWindow>
 #include <QtDebug>
 
@@ -535,7 +537,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
             this,
             &LibraryControl::slotLoadSelectedIntoFirstStopped);
 
-    // TODO Create control per deck in slotNumDecksChanged
     m_pAppendSelectedTrackToPrepPlaylistControl =
             std::make_unique<ControlPushButton>(
                     ConfigKey("[Library]", "append_selected_track_to_prep_playlist"));
@@ -760,8 +761,14 @@ void LibraryControl::appendTrackToPrepPlaylist(TrackId id) {
     PlaylistDAO& playlistDao = m_pLibrary->trackCollectionManager()
                                        ->internalCollection()
                                        ->getPlaylistDAO();
-    // TODO Show warning when no prep playlist is set
-    playlistDao.appendTrackToPrepPlaylist(id);
+    if (playlistDao.appendTrackToPrepPlaylist(id)) {
+        // Show floating heart icon for 1.5 s
+        QPixmap heart(":/images/library/ic_heart_cyan_xxl.svg");
+        QSplashScreen* pSplash = new QSplashScreen(heart);
+        pSplash->resize(100, 100); // SVG is 100x100
+        pSplash->show();
+        QTimer::singleShot(1500, [pSplash]() { pSplash->close(); });
+    }
 }
 
 void LibraryControl::slotSelectNextTrack(double v) {
