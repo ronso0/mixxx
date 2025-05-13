@@ -59,6 +59,9 @@ inline QString skinWidgetName() {
 /// for their dialogs so they inherit the skin's stylesheet.
 QWidget* getSkinWidget();
 
+/// Get the screen the main window is displayed on
+QScreen* getMainScreen();
+
 /// QSize for stretching a list widget attempting to show entire column
 void growListWidget(QListWidget& listWidget, const QWidget& parent);
 
