@@ -5,15 +5,30 @@
 #include <QTreeView>
 
 #include "library/library_decl.h"
+#include "util/performancetimer.h"
 #include "widget/wbasewidget.h"
 
 class LibraryFeature;
+class SidebarItemDelegate;
+class SidebarModel;
 class QPoint;
 
 class WLibrarySidebar : public QTreeView, public WBaseWidget {
     Q_OBJECT
   public:
     explicit WLibrarySidebar(QWidget* parent = nullptr);
+
+    Q_PROPERTY(QColor bookmarkColor
+                    MEMBER m_bookmarkColor
+                            NOTIFY bookmarkColorChanged
+                                    DESIGNABLE true);
+
+    Q_PROPERTY(QColor watchedPathColor
+                    MEMBER m_watchedPathColor
+                            NOTIFY watchedPathColorChanged
+                                    DESIGNABLE true);
+
+    void setModel(QAbstractItemModel* pModel) override;
 
     void contextMenuEvent(QContextMenuEvent * event) override;
     void dragMoveEvent(QDragMoveEvent * event) override;
@@ -29,10 +44,14 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     bool isChildIndexSelected(const QModelIndex& index);
     bool isFeatureRootIndexSelected(LibraryFeature* pFeature);
 
+    void setBookmarkColor(const QColor& color);
+
   public slots:
     void selectIndex(const QModelIndex&);
     void selectChildIndex(const QModelIndex&, bool selectItem = true);
     void slotSetFont(const QFont& font);
+    void queueHeaderAdjustRequest();
+    void adjustHeaderStretch();
 
   signals:
     void rightClicked(const QPoint&, const QModelIndex&);
@@ -40,14 +59,27 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void deleteItem(const QModelIndex&);
     FocusWidget setLibraryFocus(FocusWidget newFocus,
             Qt::FocusReason focusReason = Qt::OtherFocusReason);
+    void bookmarkColorChanged(QColor m_bookmarkColor);
+    void watchedPathColorChanged(QColor m_watchedPathColor);
 
   protected:
     bool event(QEvent* pEvent) override;
 
   private:
-    void focusSelectedIndex();
+    bool focusSelectedIndex();
+    bool selectFocusedIndex();
     QModelIndex selectedIndex();
 
+    void toggleBookmark();
+    void goToNextPrevBookmark(int direction);
+
+    SidebarModel* m_pSidebarModel;
+    SidebarItemDelegate* m_pItemDelegate;
     QBasicTimer m_expandTimer;
+    QBasicTimer m_headerAdjustTimer;
+    PerformanceTimer m_eventFrequencyTimer;
+
     QModelIndex m_hoverIndex;
+    QColor m_bookmarkColor;
+    QColor m_watchedPathColor;
 };

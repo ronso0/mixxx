@@ -115,16 +115,26 @@ class PlaylistDAO : public QObject, public virtual DAO {
 
     void getPlaylistsTrackIsIn(TrackId trackId, QSet<int>* playlistSet) const;
 
+    void togglePrepPlaylist(int playlistId);
+    int getPrepPlaylistId() {
+        return m_prepPlaylistId;
+    }
+    bool appendTrackToPrepPlaylist(TrackId id);
+
     void setAutoDJProcessor(AutoDJProcessor* pAutoDJProcessor);
 
   signals:
-    void added(int playlistId);
-    void deleted(int playlistId);
+    // Added/deleted triggers rebuild of the feature's sidebar model.
+    // Pass the type so receivers (library features) can easily decide
+    // whether to act or not.
+    void added(int playlistId, HiddenType type);
+    void deleted(int playlistId, HiddenType type);
     void renamed(int playlistId, const QString& newName);
     void lockChanged(const QSet<int>& playlistIds);
     void trackAdded(int playlistId, TrackId trackId, int position);
     void trackRemoved(int playlistId, TrackId trackId, int position);
-    // added / removed / un/locked. Triggers playlist features to update the sidebar
+    // Track(s) added/removed or un/locked. Triggers playlist features
+    // to update the sidebar labels or icons.
     void playlistContentChanged(const QSet<int>& playlistIds);
     // Separate signals for PlaylistTableModel
     void tracksAdded(const QSet<int>& playlistIds);
@@ -147,5 +157,6 @@ class PlaylistDAO : public QObject, public virtual DAO {
 
     QMultiHash<TrackId, int> m_playlistsTrackIsIn;
     AutoDJProcessor* m_pAutoDJProcessor;
+    int m_prepPlaylistId;
     DISALLOW_COPY_AND_ASSIGN(PlaylistDAO);
 };

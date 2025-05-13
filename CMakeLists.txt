@@ -973,6 +973,15 @@ if(NOT MSVC)
       endif()
     endif()
   endif()
+  # cpu pinning / isolate support
+  find_program(CPUSET_EXECUTABLE "cset")
+  if(CPUSET_EXECUTABLE)
+    message(STATUS "Found cpuset: ${CPUSET_EXECUTABLE}")
+    set(CPUSET_FOUND TRUE)
+  else()
+    message(STATUS "Could NOT find cpuset (missing executable)")
+  endif()
+  message(STATUS "Support for cpu pinning / isolate: ${CPUSET_FOUND}")
 endif()
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
@@ -1212,6 +1221,7 @@ add_library(
   src/library/basetrackcache.cpp
   src/library/basetracktablemodel.cpp
   src/library/browse/browsefeature.cpp
+  src/library/browse/browselibrarytablemodel.cpp
   src/library/browse/browsetablemodel.cpp
   src/library/browse/browsethread.cpp
   src/library/browse/foldertreemodel.cpp
@@ -1283,6 +1293,7 @@ add_library(
   src/library/searchqueryparser.cpp
   src/library/serato/seratofeature.cpp
   src/library/serato/seratoplaylistmodel.cpp
+  src/library/sidebaritemdelegate.cpp
   src/library/sidebarmodel.cpp
   src/library/starrating.cpp
   src/library/tabledelegates/bpmdelegate.cpp
@@ -1461,6 +1472,7 @@ add_library(
   src/util/color/predefinedcolorpalettes.cpp
   src/util/colorcomponents.cpp
   src/util/console.cpp
+  src/util/cpupinning.cpp
   src/util/db/dbconnection.cpp
   src/util/db/dbconnectionpool.cpp
   src/util/db/dbconnectionpooled.cpp
@@ -2263,6 +2275,13 @@ install(
   TARGETS mixxx
   RUNTIME DESTINATION "${MIXXX_INSTALL_BINDIR}"
   BUNDLE DESTINATION .
+)
+
+# Script for cpu pinning of the engine thread
+install(
+  FILES tools/mixxx-isolate.py
+  DESTINATION "${MIXXX_INSTALL_BINDIR}"
+  RENAME "mixxx-isolate"
 )
 
 # Skins

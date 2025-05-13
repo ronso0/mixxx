@@ -135,7 +135,7 @@ bool WaveformRendererPreroll::preprocessInner() {
     const float halfBreadth = m_waveformRenderer->getBreadth() * 0.5f;
     const float halfMarkerBreadth = markerBreadth * 0.5f;
 
-    const float markerLength = 40.f / static_cast<float>(vSamplesPerPixel);
+    const float markerLength = 80.f / static_cast<float>(vSamplesPerPixel);
 
     // A series of markers will be drawn (by repeating the texture in a pattern)
     // from the left of the screen up until start (preroll) and from the right

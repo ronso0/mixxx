@@ -38,6 +38,12 @@ const ConfigKey kVScrollBarPosConfigKey{
         QStringLiteral("[Library]"),
         QStringLiteral("VScrollBarPos")};
 
+// Delay after track selection changed before loading un-cached covers and
+// updating the sidebar labels. Default is 100.
+// Longer delays will decrease CPU/memory load when scrolling the library with
+// Up/Down keys (or [Library],MoveUp/Down.
+constexpr int kTrackSelectDelayMillis = 500;
+
 } // anonymous namespace
 
 WTrackTableView::WTrackTableView(QWidget* pParent,
@@ -124,10 +130,10 @@ void WTrackTableView::slotGuiTick50ms(double /*unused*/) {
         return;
     }
 
-    // if the user is stopped in the same row for more than 0.1 s,
-    // we load un-cached cover arts as well.
+    // if the user is stopped in the same row for more than N millis, we load
+    // un-cached cover arts as well and emit a signal to update the sidebar labels.
     mixxx::Duration timeDelta = mixxx::Time::elapsed() - m_lastUserAction;
-    if (m_loadCachedOnly && timeDelta > mixxx::Duration::fromMillis(100)) {
+    if (m_loadCachedOnly && timeDelta > mixxx::Duration::fromMillis(kTrackSelectDelayMillis)) {
         // Show the currently selected track in the large cover art view and
         // highlights crate and playlists. Doing this in selectionChanged
         // slows down scrolling performance so we wait until the user has
@@ -1149,14 +1155,41 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             const QString columnName = columnNameOfIndex(currentIndex());
             m_pTrackMenu->setTrackPropertyName(columnName);
             m_pTrackMenu->slotShowDlgTrackInfo();
+        } else if (event->modifiers() & kTrackMenuModifier) {
+            const QPoint evPos = QPoint(10, 10);
+            // might as well use QCursor::pos(), but keeping the menu within the
+            // tracks table is clearer. Note that with QCursor::pos() we'd need
+            // to consider multiple screens / virtual screens, too.
+            QContextMenuEvent* cme = // mapToGlobal() is required!
+                    new QContextMenuEvent(QContextMenuEvent::Keyboard, evPos, mapToGlobal(evPos));
+            contextMenuEvent(cme);
+            return;
         }
         return;
     }
     case kHideRemoveShortcutKey: {
         if (event->modifiers() == kHideRemoveShortcutModifier) {
             hideOrRemoveSelectedTracks();
+        } else if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+            slotDeleteTracksFromDisk();
         }
         return;
+    }
+    case Qt::Key_C: { // Alt+C clears comment of selected tracks
+        if (event->modifiers().testFlag(Qt::AltModifier)) {
+            // Clear comment
+            VERIFY_OR_DEBUG_ASSERT(m_pTrackMenu.get()) {
+                initTrackMenu();
+            }
+            const QModelIndexList indices = getSelectedRows();
+            if (indices.isEmpty()) {
+                return;
+            }
+            m_pTrackMenu->loadTrackModelIndices(indices);
+            m_pTrackMenu->clearComments();
+            return;
+        }
+        break;
     }
     default:
         break;
@@ -1316,7 +1349,7 @@ void WTrackTableView::hideOrRemoveSelectedTracks() {
             }
         }
 
-        QMessageBox msg;
+        QMessageBox msg(this);
         msg.setIcon(QMessageBox::Question);
         msg.setWindowTitle(title);
         msg.setText(message);
