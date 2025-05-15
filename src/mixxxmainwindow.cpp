@@ -1230,6 +1230,8 @@ void MixxxMainWindow::slotShowKeywheel(bool toggle) {
 
 void MixxxMainWindow::slotTooltipModeChanged(mixxx::preferences::Tooltips tt) {
     m_toolTipsCfg = tt;
+    m_pCoreServices->getKeyboardEventFilter()->setShowOnlyKbdShortcuts(
+            tt == mixxx::preferences::Tooltips::OnlyKbdShortcuts);
 #ifdef MIXXX_USE_QOPENGL
     ToolTipQOpenGL::singleton().setActive(
             m_toolTipsCfg == mixxx::preferences::Tooltips::On);
@@ -1342,6 +1344,7 @@ bool MixxxMainWindow::eventFilter(QObject* obj, QEvent* event) {
             // return true for no tool tips
             switch (m_toolTipsCfg) {
             case mixxx::preferences::Tooltips::OnlyInLibrary:
+                // WLibrary's stacked widgets are not reived from WBaseWidget
                 if (dynamic_cast<WBaseWidget*>(obj) != nullptr) {
                     return true;
                 }
@@ -1350,6 +1353,11 @@ bool MixxxMainWindow::eventFilter(QObject* obj, QEvent* event) {
                 break;
             case mixxx::preferences::Tooltips::Off:
                 return true;
+            case mixxx::preferences::Tooltips::OnlyKbdShortcuts:
+                if (dynamic_cast<WBaseWidget*>(obj) == nullptr) {
+                    return true;
+                }
+                break;
             default:
                 DEBUG_ASSERT(!"m_toolTipsCfg value unknown");
                 return true;
