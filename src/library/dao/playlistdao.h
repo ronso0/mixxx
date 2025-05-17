@@ -133,7 +133,7 @@ class PlaylistDAO : public QObject, public virtual DAO {
         m_currentHistoryPlaylist = id;
     }
 
-    void togglePrepPlaylist(int playlistId);
+    int togglePrepPlaylist(int playlistId);
     int getPrepPlaylistId() {
         return m_prepPlaylistId;
     }
