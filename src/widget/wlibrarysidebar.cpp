@@ -346,15 +346,20 @@ void WLibrarySidebar::keyPressEvent(QKeyEvent* event) {
     // Alt + B: un/bookmark selected item
     // Alt + Up/Down: jump to and highlight next/previous bookmarked item
     // Press Enter to activate
+    // Alt + P: toggle Prep playlist for selected item (only PlaylistFeature
+    // created a connection)
     if (event->modifiers().testFlag(Qt::AltModifier)) {
         if (event->key() == Qt::Key_Down || event->key() == Qt::Key_Up) {
             goToNextPrevBookmark(event->key() == Qt::Key_Down ? 1 : -1);
         } else if (event->key() == Qt::Key_B) {
             toggleBookmark();
+        } else if (event->key() == Qt::Key_P) {
+            emit togglePrepPlaylist();
         }
         // No further Alt, might as well be a system shortcut
         return;
     }
+
 
     switch (event->key()) {
     case Qt::Key_Return:
