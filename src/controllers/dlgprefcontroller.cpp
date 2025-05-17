@@ -1127,13 +1127,16 @@ void DlgPrefController::showMapping(std::shared_ptr<LegacyControllerMapping> pMa
             for (auto* pBox : std::as_const(boxes)) {
                 const QString title = pBox->title();
                 pBox->setCheckable(true);
+                // ronso0: Collapse groups by default
                 // The collapsed state is saved/restored via the groupbox' title.
-                // Note: If multiple top-levle groups happen to have the same title
+                // Note: If multiple top-level groups happen to have the same title
                 // (which should not normally happen in well-behaved controller mappings,
                 // but is not strictly prohibited), the last one to be expanded/
                 // collapsed determines the state that will be restored.
                 if (m_settingsCollapsedStates.contains(title)) {
                     pBox->setChecked(m_settingsCollapsedStates.value(title));
+                } else {
+                    pBox->setChecked(false);
                 }
 
                 connect(pBox,
