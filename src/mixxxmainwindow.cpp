@@ -1316,6 +1316,10 @@ bool MixxxMainWindow::eventFilter(QObject* obj, QEvent* event) {
         if (QApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
             return QMainWindow::eventFilter(obj, event);
         }
+        // Always show tooltips for cue type buttons in the Cue menu
+        if (QLatin1String(obj->metaObject()->className()) == "CueMenuPushButton") {
+            return QMainWindow::eventFilter(obj, event);
+        }
         // Always show tooltips in Preferences
         QWidget* activeWindow = QApplication::activeWindow();
         if (activeWindow &&

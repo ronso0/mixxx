@@ -13,7 +13,7 @@ const ConfigKey kLoopDefaultColorIndexConfigKey("[Controls]", "LoopDefaultColorI
 const ConfigKey kJumpDefaultColorIndexConfigKey("[Controls]", "jump_default_color_index");
 } // namespace
 
-void CueTypePushButton::mousePressEvent(QMouseEvent* e) {
+void CueMenuPushButton::mousePressEvent(QMouseEvent* e) {
     if (e->type() == QEvent::MouseButtonPress && e->button() == Qt::RightButton) {
         emit rightClicked();
         return;
@@ -103,19 +103,22 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
             this,
             &WCueMenuPopup::slotChangeCueColor);
 
-    m_pDeleteCue = std::make_unique<QPushButton>("", this);
+    m_pDeleteCue = std::make_unique<CueMenuPushButton>(this);
     m_pDeleteCue->setToolTip(tr("Delete this cue"));
     m_pDeleteCue->setObjectName("CueDeleteButton");
     connect(m_pDeleteCue.get(), &QPushButton::clicked, this, &WCueMenuPopup::slotDeleteCue);
 
-    m_pStandardCue = std::make_unique<QPushButton>("", this);
+    m_pStandardCue = std::make_unique<CueMenuPushButton>(this);
     m_pStandardCue->setToolTip(
             tr("Turn this cue into a regular hotcue"));
     m_pStandardCue->setObjectName("CueStandardButton");
     m_pStandardCue->setCheckable(true);
-    connect(m_pStandardCue.get(), &QPushButton::clicked, this, &WCueMenuPopup::slotStandardCue);
+    connect(m_pStandardCue.get(),
+            &CueMenuPushButton::clicked,
+            this,
+            &WCueMenuPopup::slotStandardCue);
 
-    m_pSavedLoopCue = std::make_unique<CueTypePushButton>(this);
+    m_pSavedLoopCue = std::make_unique<CueMenuPushButton>(this);
     m_pSavedLoopCue->setToolTip(
             tr("Turn this cue into a saved loop") +
             "\n\n" +
@@ -125,15 +128,15 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
     m_pSavedLoopCue->setObjectName("CueSavedLoopButton");
     m_pSavedLoopCue->setCheckable(true);
     connect(m_pSavedLoopCue.get(),
-            &CueTypePushButton::clicked,
+            &CueMenuPushButton::clicked,
             this,
             &WCueMenuPopup::slotSavedLoopCueAuto);
     connect(m_pSavedLoopCue.get(),
-            &CueTypePushButton::rightClicked,
+            &CueMenuPushButton::rightClicked,
             this,
             &WCueMenuPopup::slotSavedLoopCueManual);
 
-    m_pSavedJumpCue = std::make_unique<CueTypePushButton>(this);
+    m_pSavedJumpCue = std::make_unique<CueMenuPushButton>(this);
     m_pSavedJumpCue->setToolTip(
             //: \n is a linebreak. Try to not to extend the translation beyond the length
             //: of the longest source line so the tooltip remains compact.
@@ -149,11 +152,11 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
     m_pSavedJumpCue->setObjectName("CueSavedJumpButton");
     m_pSavedJumpCue->setCheckable(true);
     connect(m_pSavedJumpCue.get(),
-            &CueTypePushButton::clicked,
+            &CueMenuPushButton::clicked,
             this,
             &WCueMenuPopup::slotSavedJumpCueAuto);
     connect(m_pSavedJumpCue.get(),
-            &CueTypePushButton::rightClicked,
+            &CueMenuPushButton::rightClicked,
             this,
             &WCueMenuPopup::slotSavedJumpCueManual);
 

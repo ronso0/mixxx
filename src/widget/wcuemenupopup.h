@@ -15,10 +15,10 @@
 class ControlProxy;
 
 // Custom PushButton which emit a custom signal when right-clicked
-class CueTypePushButton : public QPushButton {
+class CueMenuPushButton : public QPushButton {
     Q_OBJECT
   public:
-    explicit CueTypePushButton(QWidget* parent = 0)
+    explicit CueMenuPushButton(QWidget* parent = 0)
             : QPushButton(parent) {
     }
 
@@ -96,10 +96,10 @@ class WCueMenuPopup : public QWidget {
     std::unique_ptr<QLabel> m_pCuePosition;
     std::unique_ptr<QLineEdit> m_pEditLabel;
     std::unique_ptr<WColorPicker> m_pColorPicker;
-    std::unique_ptr<QPushButton> m_pDeleteCue;
-    std::unique_ptr<QPushButton> m_pStandardCue;
-    std::unique_ptr<CueTypePushButton> m_pSavedLoopCue;
-    std::unique_ptr<CueTypePushButton> m_pSavedJumpCue;
+    std::unique_ptr<CueMenuPushButton> m_pDeleteCue;
+    std::unique_ptr<CueMenuPushButton> m_pStandardCue;
+    std::unique_ptr<CueMenuPushButton> m_pSavedLoopCue;
+    std::unique_ptr<CueMenuPushButton> m_pSavedJumpCue;
 
   protected:
     void closeEvent(QCloseEvent* event) override;
