@@ -278,13 +278,14 @@ void WCueMenuPopup::slotUpdate() {
             } else {
                 direction = "backward";
             }
-        } else {
+        } else if (m_pCue->getType() == mixxx::CueType::Loop) {
             // Use forward icon if this is a saved loop, or forward/back if this
             // already is a jump cue
-            direction = m_pCue->getType() != mixxx::CueType::Jump ||
-                            m_pCue->getPosition() > m_pCue->getEndPosition()
-                    ? "forward"
-                    : "backward";
+            direction = "forward";
+        } else { // mixxx::CueType::Jump
+            direction = m_pCue->getPosition() > m_pCue->getEndPosition()
+                    ? "forward_toggle"
+                    : "backward_toggle";
         }
         m_pSavedJumpCue->setProperty("direction", direction);
         m_pSavedJumpCue->style()->polish(m_pSavedJumpCue.get());

@@ -2756,36 +2756,38 @@ QPushButton#pushButtonRepeatPlaylist:!checked {
 
 /* widgets in cue popup menu */
 WCueMenuPopup #CueDeleteButton {
+  /* For some reason `image` would show two icon with slightly different size / position
+     while `image` works just fine for the cue type buttons */
   icon: url(skins:LateNight/palemoon/buttons/btn__delete.svg);
   width: 24px;
   height: 24px;
-  icon-size: 18px;
+  /* icon-size: 18px; */
 }
 WCueMenuPopup #CueStandardButton {
-  icon: url(skins:LateNight/palemoon/buttons/btn__beats_hotcues_later.svg);
+  image: url(skins:LateNight/palemoon/buttons/btn__beats_hotcues_later.svg);
   width: 24px;
   height: 42px;
   /* make the icon slightly larger than default 16px */
-  icon-size: 24px;
+  /* icon-size: 24px; */
 }
 WCueMenuPopup #CueSavedLoopButton {
-  icon: url(skins:LateNight/palemoon/buttons/btn__loop.svg);
+  image: url(skins:LateNight/palemoon/buttons/btn__loop.svg);
   width: 24px;
   height: 42px;
   /* make the icon slightly larger than default 16px */
-  icon-size: 24px;
+  /* icon-size: 24px; */
 }
 WCueMenuPopup #CueSavedJumpButton {
   width: 24px;
   height: 42px;
   /* make the icon slightly larger than default 16px */
-  icon-size: 24px;
+  /* icon-size: 24px; */
 }
 WCueMenuPopup #CueSavedJumpButton[direction="forward"] {
-  icon: url(skins:LateNight/palemoon/buttons/btn__beatjump_right.svg);
+  image: url(skins:LateNight/palemoon/buttons/btn__beatjump_right.svg);
 }
 WCueMenuPopup #CueSavedJumpButton[direction="backward"] {
-  icon: url(skins:LateNight/palemoon/buttons/btn__beatjump_left.svg);
+  image: url(skins:LateNight/palemoon/buttons/btn__beatjump_left.svg);
 }
 
 #CueDeleteButton:hover {
@@ -2800,18 +2802,25 @@ WCueMenuPopup #CueSavedJumpButton[direction="backward"] {
 #CueSavedLoopButton:pressed, #CueSavedLoopButton:checked {
   background-color: #b24c12;
   outline: none;
-  icon: url(skins:LateNight/palemoon/buttons/btn__loop_active.svg);
+  image: url(skins:LateNight/palemoon/buttons/btn__loop_active.svg);
 }
 #CueSavedJumpButton:pressed, #CueSavedJumpButton:checked {
   background-color: #b24c12;
   outline: none;
 }
 #CueSavedJumpButton[direction="forward"]:pressed, #CueSavedJumpButton[direction="forward"]:checked {
-  icon: url(skins:LateNight/palemoon/buttons/btn__beatjump_right_active.svg);
-}
+  image: url(skins:LateNight/palemoon/buttons/btn__beatjump_right_active.svg);
+  }
+  #CueSavedJumpButton[direction="forward_toggle"]:pressed, #CueSavedJumpButton[direction="forward_toggle"]:checked {
+    image: url(skins:LateNight/palemoon/buttons/btn__beatjump_right_toggle_active.svg);
+  }
 #CueSavedJumpButton[direction="backward"]:pressed, #CueSavedJumpButton[direction="backward"]:checked {
-  icon: url(skins:LateNight/palemoon/buttons/btn__beatjump_left_active.svg);
-}
+  image: url(skins:LateNight/palemoon/buttons/btn__beatjump_left_active.svg);
+  }
+  #CueSavedJumpButton[direction="backward_toggle"]:pressed, #CueSavedJumpButton[direction="backward_toggle"]:checked {
+    image: url(skins:LateNight/palemoon/buttons/btn__beatjump_left_toggle_active.svg);
+  }
+
 #CueStandardButton:pressed, #CueStandardButton:checked {
   background-color: #b24c12;
   outline: none;
