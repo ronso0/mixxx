@@ -77,6 +77,8 @@ class WCueMenuPopup : public QWidget {
     /// which effectively makes the cue a saved loop and use the current play
     /// position as loop end
     void slotSavedLoopCueManual();
+    void slotSavedJumpCueAutoForward();
+    void slotSavedJumpCueAutoBackward();
     void slotChangeCueColor(mixxx::RgbColor::optional_t color);
 
   private:
@@ -100,6 +102,8 @@ class WCueMenuPopup : public QWidget {
     std::unique_ptr<CueMenuPushButton> m_pStandardCue;
     std::unique_ptr<CueMenuPushButton> m_pSavedLoopCue;
     std::unique_ptr<CueMenuPushButton> m_pSavedJumpCue;
+    std::unique_ptr<CueMenuPushButton> m_pSavedJumpCueFw;
+    std::unique_ptr<CueMenuPushButton> m_pSavedJumpCueBw;
 
   protected:
     void closeEvent(QCloseEvent* event) override;

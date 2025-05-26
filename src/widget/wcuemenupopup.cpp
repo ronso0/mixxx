@@ -168,6 +168,62 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
             this,
             &WCueMenuPopup::slotSavedJumpCueManual);
 
+    m_pSavedJumpCueFw = std::make_unique<CueMenuPushButton>(this);
+    m_pSavedJumpCueFw->setToolTip(
+            //: \n is a linebreak. Try to not to extend the translation beyond
+            //: the length of the longest source line so the tooltip remains
+            //: compact.
+            tr("Turn this cue into a forward jump.") + "\n\n" +
+            tr("Left-click: If this is saved loop, use the start as jump position and the "
+               "end as cue/target position.\n"
+               "If this is already a jump cue, swap the jump position and the "
+               "cue/target position.") +
+            "\n\n" +
+            tr("Right-click: use current play position as the jump position") +
+            "\n" +
+            tr("The cue type will remain unchanged if the play position is at "
+               "the cue position\n"
+               "or jump position cannot be figured out."));
+    m_pSavedJumpCueFw->setObjectName("CueSavedJumpButtonFw");
+    m_pSavedJumpCueFw->setCheckable(true);
+    connect(m_pSavedJumpCueFw.get(),
+            &CueMenuPushButton::clicked,
+            this,
+            &WCueMenuPopup::slotSavedJumpCueAuto);
+    connect(m_pSavedJumpCueFw.get(),
+            &CueMenuPushButton::rightClicked,
+            this,
+            &WCueMenuPopup::slotSavedJumpCueManual);
+    m_pSavedJumpCueFw->setVisible(false);
+
+    m_pSavedJumpCueBw = std::make_unique<CueMenuPushButton>(this);
+    m_pSavedJumpCueBw->setToolTip(
+            //: \n is a linebreak. Try to not to extend the translation beyond
+            //: the length of the longest source line so the tooltip remains
+            //: compact.
+            tr("Turn this cue into a backward jump.") + "\n\n" +
+            tr("Left-click: If this is saved loop, use the end as jump position and the "
+               "start as cue/target position.\n"
+               "If this is already a jump cue, swap the jump position and the "
+               "cue/target position.") +
+            "\n\n" +
+            tr("Right-click: use current play position as the jump position") +
+            "\n" +
+            tr("The cue type will remain unchanged if the play position is at "
+               "the cue position\n"
+               "or jump position cannot be figured out."));
+    m_pSavedJumpCueBw->setObjectName("CueSavedJumpButtonBw");
+    m_pSavedJumpCueBw->setCheckable(true);
+    connect(m_pSavedJumpCueBw.get(),
+            &CueMenuPushButton::clicked,
+            this,
+            &WCueMenuPopup::slotSavedJumpCueAutoBackward);
+    connect(m_pSavedJumpCueBw.get(),
+            &CueMenuPushButton::rightClicked,
+            this,
+            &WCueMenuPopup::slotSavedJumpCueManual);
+    m_pSavedJumpCueBw->setVisible(false);
+
     QHBoxLayout* pLabelLayout = new QHBoxLayout();
     pLabelLayout->addWidget(m_pCueNumber.get());
     pLabelLayout->addStretch(1);
@@ -180,11 +236,18 @@ WCueMenuPopup::WCueMenuPopup(UserSettingsPointer pConfig, QWidget* parent)
 
     QVBoxLayout* pRightLayout = new QVBoxLayout();
     pRightLayout->addWidget(m_pDeleteCue.get());
+    pRightLayout->insertStretch(1, 10);
     pRightLayout->addWidget(m_pStandardCue.get());
-    pRightLayout->addStretch(1);
+    // pRightLayout->addStretch(1);
+    pRightLayout->insertStretch(3, 1);
     pRightLayout->addWidget(m_pSavedLoopCue.get());
-    pRightLayout->addStretch(1);
+    // pRightLayout->addStretch(1);
+    pRightLayout->insertStretch(5, 1);
     pRightLayout->addWidget(m_pSavedJumpCue.get());
+    pRightLayout->addWidget(m_pSavedJumpCueFw.get());
+    pRightLayout->addWidget(m_pSavedJumpCueBw.get());
+    // Renders the stretch useless??
+    pRightLayout->setSpacing(0);
 
     QHBoxLayout* pMainLayout = new QHBoxLayout();
     pMainLayout->addLayout(pLeftLayout);
@@ -267,27 +330,30 @@ void WCueMenuPopup::slotUpdate() {
         m_pStandardCue->setChecked(m_pCue->getType() == mixxx::CueType::HotCue);
         m_pSavedLoopCue->setChecked(m_pCue->getType() == mixxx::CueType::Loop);
         m_pSavedJumpCue->setChecked(m_pCue->getType() == mixxx::CueType::Jump);
-        QString direction;
+        m_pSavedJumpCueFw->setChecked(m_pCue->getType() == mixxx::CueType::Jump &&
+                m_pCue->getPosition() > m_pCue->getEndPosition());
+        m_pSavedJumpCueBw->setChecked(m_pCue->getType() == mixxx::CueType::Jump &&
+                m_pCue->getPosition() < m_pCue->getEndPosition());
+        // The order of hide/show is important to not unnecessarily stretch the layout.
+        // It would stretch, but it would not shrink automatically.
         if (m_pCue->getType() == mixxx::CueType::HotCue) {
-            // Use forward/backward icon if the playposition is before/after
-            // the hotcue position
+            m_pSavedJumpCueFw->hide();
+            m_pSavedJumpCueBw->hide();
+            m_pSavedJumpCue->show();
             auto cueStartEnd = m_pCue->getStartAndEndPosition();
             auto newPosition = getCurrentPlayPositionWithQuantize();
+            QString direction;
             if (!newPosition.has_value() || newPosition < cueStartEnd.startPosition) {
                 direction = "forward";
             } else {
                 direction = "backward";
             }
-        } else if (m_pCue->getType() == mixxx::CueType::Loop) {
-            // Use forward icon if this is a saved loop, or forward/back if this
-            // already is a jump cue
-            direction = "forward";
-        } else { // mixxx::CueType::Jump
-            direction = m_pCue->getPosition() > m_pCue->getEndPosition()
-                    ? "forward_toggle"
-                    : "backward_toggle";
+            m_pSavedJumpCue->setProperty("direction", direction);
+        } else {
+            m_pSavedJumpCue->hide();
+            m_pSavedJumpCueFw->show();
+            m_pSavedJumpCueBw->show();
         }
-        m_pSavedJumpCue->setProperty("direction", direction);
         m_pSavedJumpCue->style()->polish(m_pSavedJumpCue.get());
         m_pSavedJumpCue->repaint();
     } else {
@@ -448,6 +514,61 @@ void WCueMenuPopup::slotSavedJumpCueAuto() {
             return;
         }
         cueStartEnd.endPosition = newPosition.value();
+    }
+    m_pCue->setStartAndEndPosition(cueStartEnd.startPosition, cueStartEnd.endPosition);
+    updateTypeAndColorIfDefault(mixxx::CueType::Jump);
+    slotUpdate();
+}
+
+void WCueMenuPopup::slotSavedJumpCueAutoForward() {
+    VERIFY_OR_DEBUG_ASSERT(m_pCue != nullptr) {
+        slotUpdate();
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(m_pTrack != nullptr) {
+        slotUpdate();
+        return;
+    }
+    auto cueStartEnd = m_pCue->getStartAndEndPosition();
+    if (m_pCue->getType() == mixxx::CueType::Jump &&
+            cueStartEnd.endPosition < cueStartEnd.startPosition) {
+        // This already is a forward jump.
+        return;
+    }
+    // If we are changing the cue type from a loop, we need to permute the position
+    // Also, if the type is already a jump, we swap to the to/from point
+    if (m_pCue->getType() == mixxx::CueType::Loop) {
+        auto endPosition = cueStartEnd.endPosition;
+        cueStartEnd.endPosition = cueStartEnd.startPosition;
+        cueStartEnd.startPosition = endPosition;
+    }
+    m_pCue->setStartAndEndPosition(cueStartEnd.startPosition, cueStartEnd.endPosition);
+    updateTypeAndColorIfDefault(mixxx::CueType::Jump);
+    slotUpdate();
+}
+
+void WCueMenuPopup::slotSavedJumpCueAutoBackward() {
+    VERIFY_OR_DEBUG_ASSERT(m_pCue != nullptr) {
+        slotUpdate();
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(m_pTrack != nullptr) {
+        slotUpdate();
+        return;
+    }
+    auto cueStartEnd = m_pCue->getStartAndEndPosition();
+    if (m_pCue->getType() == mixxx::CueType::Jump &&
+            cueStartEnd.endPosition > cueStartEnd.startPosition) {
+        // This already is a backward jump.
+        return;
+    }
+    // If we are changing the cue type from a loop, we adopt start/end as
+    // target/jump position.
+    // If the type is already a jump, we swap to the to/from point
+    if (m_pCue->getType() == mixxx::CueType::Jump) {
+        auto endPosition = cueStartEnd.endPosition;
+        cueStartEnd.endPosition = cueStartEnd.startPosition;
+        cueStartEnd.startPosition = endPosition;
     }
     m_pCue->setStartAndEndPosition(cueStartEnd.startPosition, cueStartEnd.endPosition);
     updateTypeAndColorIfDefault(mixxx::CueType::Jump);
