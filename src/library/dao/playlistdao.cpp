@@ -1516,6 +1516,18 @@ void PlaylistDAO::addTracksToAutoDJQueue(const QList<TrackId>& trackIds, AutoDJS
     }
 }
 
+bool PlaylistDAO::isTrackInPrepPlaylist(TrackId id) {
+    if (!id.isValid()) {
+        return false;
+    }
+    if (m_prepPlaylistId == kInvalidPlaylistId) {
+        // append to AutoDJQueue?
+        // Just to make append control more versatile?
+        return false;
+    }
+    return isTrackInPlaylist(id, m_prepPlaylistId);
+}
+
 bool PlaylistDAO::appendTrackToPrepPlaylist(TrackId id) {
     if (!id.isValid()) {
         return false;
@@ -1532,6 +1544,25 @@ bool PlaylistDAO::appendTrackToPrepPlaylist(TrackId id) {
         return false;
     }
     return appendTracksToPlaylist(QList<TrackId>{id}, m_prepPlaylistId);
+}
+
+bool PlaylistDAO::removeTrackFromPrepPlaylist(TrackId id) {
+    if (!id.isValid()) {
+        return false;
+    }
+    if (m_prepPlaylistId == kInvalidPlaylistId) {
+        // append to AutoDJQueue?
+        // Just to make append control more versatile?
+        return false;
+    }
+    if (isPlaylistLocked(m_prepPlaylistId)) {
+        return false;
+    }
+    if (!isTrackInPlaylist(id, m_prepPlaylistId)) {
+        return false;
+    }
+    removeTracksFromPlaylistById(m_prepPlaylistId, id);
+    return true;
 }
 
 /// use kInvalidPlaylistId to unset

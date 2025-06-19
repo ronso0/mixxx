@@ -8,13 +8,13 @@
 #ifdef __STEM__
 #include "engine/engine.h"
 #endif
+#include "track/track.h"
 
 class ControlEncoder;
 class ControlObject;
 class ControlPushButton;
 class Library;
 class LibraryControl;
-class TrackId;
 class WLibrary;
 class WLibrarySidebar;
 class WSearchLineEdit;
@@ -235,6 +235,7 @@ class LibraryControl : public QObject {
 
     std::unique_ptr<QSplashScreen> m_prepSplashScreen;
     std::unique_ptr<QTimer> m_prepSplashScreenTimer;
+    TrackId m_lastPrepTrack;
 
     // Other variables
     ControlProxy m_numDecks;

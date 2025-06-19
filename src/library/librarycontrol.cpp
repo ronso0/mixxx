@@ -18,7 +18,6 @@
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
 #include "moc_librarycontrol.cpp"
-#include "track/track.h"
 #include "util/cmdlineargs.h"
 #include "util/widgethelper.h"
 #include "widget/wlibrary.h"
@@ -765,23 +764,50 @@ void LibraryControl::appendTrackToPrepPlaylist(TrackId id) {
     PlaylistDAO& playlistDao = m_pLibrary->trackCollectionManager()
                                        ->internalCollection()
                                        ->getPlaylistDAO();
-    if (!playlistDao.appendTrackToPrepPlaylist(id)) {
-        qWarning() << "Appending track" << id << "to Prep playlist failed!";
-        return;
+
+    // If the track is not in the Prep playlist, append it.
+    // If it's already in there, show a confirmation (grey heart + blue checkmark)
+    // If it's already in there and the splashscreen is still visible, remove it.
+    bool contains = false;
+    bool appended = false;
+    if (playlistDao.isTrackInPrepPlaylist(id)) {
+        if (m_lastPrepTrack == id && m_prepSplashScreen && m_prepSplashScreen->isVisible()) {
+            // We just added it, or tried to and got the confirmation screen.
+            // Remove immediately.
+            if (playlistDao.removeTrackFromPrepPlaylist(id)) {
+                qInfo() << "Removed track" << id << "from Prep playlist";
+            } else {
+                qWarning() << "Removing track" << id << "from Prep playlist failed!";
+                return;
+            }
+        } else {
+            // Show confirmation
+            contains = true;
+        }
+    } else {
+        // Append
+        if (playlistDao.appendTrackToPrepPlaylist(id)) {
+            qInfo() << "Appended track" << id << "to Prep playlist";
+            appended = true;
+        } else {
+            qWarning() << "Appending track" << id << "to Prep playlist failed!";
+            return;
+        }
     }
-    qInfo() << "Appended track" << id << "to Prep playlist";
+
+    m_lastPrepTrack = id;
+
     // Show floating heart icon for 1.5 s
-    QScreen* pScreen = mixxx::widgethelper::getMainScreen();
-    if (!pScreen) {
-        qWarning() << "--no main screen found!";
-        return;
-    }
-    QPixmap heart(":/images/library/ic_heart_cyan_xxl.png");
     if (!m_prepSplashScreen) {
+        QScreen* pScreen = mixxx::widgethelper::getMainScreen();
+        if (!pScreen) {
+            qWarning() << "--no main screen found!";
+            return;
+        }
         // For some reason the splashscreen won't be shown on top the fullscreen
         // main window when it's constructed like this:
         // QSplashScreen(pScreen, heart, flags) // seen with Qt 6.2.3
-        m_prepSplashScreen = std::make_unique<QSplashScreen>(heart);
+        m_prepSplashScreen = std::make_unique<QSplashScreen>();
         m_prepSplashScreen->setScreen(pScreen);
         m_prepSplashScreen->setWindowFlags(
                 // This would cover other dialogs raised afterwards.
@@ -799,13 +825,36 @@ void LibraryControl::appendTrackToPrepPlaylist(TrackId id) {
         m_prepSplashScreenTimer->setInterval(1500);
         m_prepSplashScreenTimer->callOnTimeout(this, [this]() { m_prepSplashScreen->close(); });
     }
+
+    // Pick the appropriate pixmap.
+    // Don't set it right away, the splashscreen may still be visible.
+    QPixmap pixmap;
+    if (contains) {
+        pixmap = QPixmap(":/images/library/ic_heart_checked_xxl.png");
+    } else if (appended) {
+        pixmap = QPixmap(":/images/library/ic_heart_cyan_xxl.png");
+    } else { // removed
+        pixmap = QPixmap(":/images/library/ic_heart_broken_xxl.png");
+    }
+
     if (m_prepSplashScreen->isVisible()) {
         m_prepSplashScreen->close();
         m_prepSplashScreenTimer->stop();
+        QTimer::singleShot(300,
+                Qt::CoarseTimer,
+                this,
+                [this, pixmap]() {
+                    m_prepSplashScreen->setPixmap(pixmap);
+                    m_prepSplashScreen->show();
+                    m_prepSplashScreen->raise();
+                    m_prepSplashScreenTimer->start();
+                });
+    } else {
+        m_prepSplashScreen->setPixmap(pixmap);
+        m_prepSplashScreen->show();
+        m_prepSplashScreen->raise();
+        m_prepSplashScreenTimer->start();
     }
-    m_prepSplashScreen->show();
-    m_prepSplashScreen->raise();
-    m_prepSplashScreenTimer->start();
 }
 
 void LibraryControl::slotSelectNextTrack(double v) {
