@@ -13,10 +13,13 @@
         <file>images/library/ic_heart_beige.svg</file>
         <file>images/library/ic_heart_beige_crossed.svg</file>
         <file>images/library/ic_heart_disabled.svg</file>
+        <!-- heart for Prep playlist, sidebar -->
         <file>images/library/ic_heart_cyan.svg</file>
-        <file>images/library/ic_heart_cyan_xxl.svg</file>
-        <!-- same icon with black blur -->
+        <!-- Hearts for splashscreen -->
+        <!-- Use PNG, SVG won't show black, blurred background filter -->
         <file>images/library/ic_heart_cyan_xxl.png</file>
+        <file>images/library/ic_heart_checked_xxl.png</file>
+        <file>images/library/ic_heart_broken_xxl.png</file>
         <file>images/library/ic_library_autodj.svg</file>
         <file>images/library/ic_library_banshee.svg</file>
         <file>images/library/ic_library_computer.svg</file> <!-- from Gnome high contrast icons LGPL 2.1 -->
