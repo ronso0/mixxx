@@ -55,6 +55,7 @@ class WTrackTableView : public WLibraryTableView {
 #endif
     void assignNextTrackColor() override;
     void assignPreviousTrackColor() override;
+    void trackRatingChangeRequestRelative(int change);
     TrackModel::SortColumnId getColumnIdFromCurrentIndex() override;
     QList<TrackId> getSelectedTrackIds() const;
     bool isTrackInCurrentView(const TrackId& trackId);
