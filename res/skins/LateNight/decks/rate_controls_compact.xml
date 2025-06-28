@@ -120,6 +120,7 @@
 
                       <WidgetGroup><!-- Rate slider + center indicator -->
                         <Size>54f,81f</Size>
+                        <!-- <Size>70f,81f</Size> -->
                         <Children>
                           <Label>
                             <ObjectName>RateCenter</ObjectName>
@@ -151,19 +152,9 @@
                         </Children>
                       </WidgetGroup><!-- Rate slider + center indicator -->
 
-                      <WidgetGroup><!-- Rate range indicators -->
-                        <SizePolicy>min,me</SizePolicy>
-                        <Layout>vertical</Layout>
-                        <Children>
-                          <SingletonContainer>
-                            <ObjectName>RateRangeDisplayTop<Variable name="ChanNum"/></ObjectName>
-                          </SingletonContainer>
-                          <WidgetGroup><Size>0min,0me</Size></WidgetGroup>
-                          <SingletonContainer>
-                            <ObjectName>RateRangeDisplayBottom<Variable name="ChanNum"/></ObjectName>
-                          </SingletonContainer>
-                        </Children>
-                      </WidgetGroup><!-- Rate range indicators -->
+                      <SingletonContainer><!-- Rate range indicators -->
+                        <ObjectName>RateRangeDisplay<Variable name="ChanNum"/></ObjectName>
+                      </SingletonContainer>
                     </Children>
                   </WidgetGroup><!-- Rate slider + range displays -->
                 </Children>
@@ -179,26 +170,24 @@
                 <Layout>stacked</Layout>
                 <Children>
                   <WidgetGroup><!-- Rate slider + center indicator -->
-                    <ObjectName></ObjectName>
-                    <Size>54f,97f</Size>
+                    <Size>54f,121f</Size>
                     <Children>
                       <Label>
                         <ObjectName>RateCenter</ObjectName>
                         <Size>5f,5f</Size>
-                        <Pos>2,47</Pos>
+                        <Pos>2,59</Pos>
                         <Connection>
                           <ConfigKey><Variable name="Group"/>,rate_set_default</ConfigKey>
                           <BindProperty>highlight</BindProperty>
                         </Connection>
                       </Label>
-
                       <SliderComposed>
                         <ObjectName>RateSlider</ObjectName>
-                        <Size>40f,95f</Size>
+                        <Size>40f,119f</Size>
                         <Pos>5,2</Pos>
                         <TooltipId>rate</TooltipId>
                         <Handle scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck.svg</Handle>
-                        <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact.svg</Slider>
+                        <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck.svg</Slider>
                         <Horizontal>false</Horizontal>
                         <BarWidth><Variable name="BarWidth"/></BarWidth>
                         <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
@@ -213,19 +202,9 @@
                     </Children>
                   </WidgetGroup><!-- Rate slider + center indicator -->
 
-                  <WidgetGroup><!-- Rate range indicators -->
-                    <SizePolicy>min,me</SizePolicy>
-                    <Layout>vertical</Layout>
-                    <Children>
-                      <SingletonContainer>
-                        <ObjectName>RateRangeDisplayTop<Variable name="ChanNum"/></ObjectName>
-                      </SingletonContainer>
-                      <WidgetGroup><Size>0min,0me</Size></WidgetGroup>
-                      <SingletonContainer>
-                        <ObjectName>RateRangeDisplayBottom<Variable name="ChanNum"/></ObjectName>
-                      </SingletonContainer>
-                    </Children>
-                  </WidgetGroup><!-- Rate range indicators -->
+                  <SingletonContainer><!-- Rate range indicators -->
+                    <ObjectName>RateRangeDisplay<Variable name="ChanNum"/></ObjectName>
+                  </SingletonContainer>
                 </Children>
                 <Connection>
                   <ConfigKey persist="true">[LateNight],show_sync_button_compact</ConfigKey>
@@ -233,6 +212,51 @@
                   <BindProperty>visible</BindProperty>
                 </Connection>
               </WidgetGroup><!-- Rate controls (no Sync button) -->
+
+              <!-- <SliderComposed>
+                <ObjectName>RateSliderUltra</ObjectName>
+                <Size>16f,79f</Size>
+                <TooltipId>rate_ultra</TooltipId>
+                <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck_ultra.svg</Handle>
+                <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact_sync_ultra.svg</Slider>
+                <Horizontal>false</Horizontal>
+                <BarWidth><Variable name="BarWidth"/></BarWidth>
+                <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
+                <BarColor><Variable name="BarColorPitch"/></BarColor>
+                <BarRoundCaps>true</BarRoundCaps>
+                <BarAxisPos>8.0</BarAxisPos>
+                <BarUnipolar>false</BarUnipolar>
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,rate_ultra</ConfigKey>
+                </Connection>
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,rate_ultra_enabled</ConfigKey>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
+              </SliderComposed> -->
+
+              <!--SliderComposed>
+                <ObjectName>RateSliderUltra</ObjectName>
+                <Size>16f,95f</Size>
+                <Pos>45,2</Pos>
+                <TooltipId>rate_ultra</TooltipId>
+                <Handle scalemode="STRETCH_ASPECT">skin:/<Variable name="SliderScheme"/>/sliders/knob_pitch_deck_ultra.svg</Handle>
+                <Slider scalemode="STRETCH_ASPECT">skins:LateNight/<Variable name="SliderScheme"/>/sliders/slider_pitch_deck_compact_ultra.svg</Slider>
+                <Horizontal>false</Horizontal>
+                <BarWidth><Variable name="BarWidth"/></BarWidth>
+                <BarMargins><Variable name="BarMarginPitch"/></BarMargins>
+                <BarColor><Variable name="BarColorPitch"/></BarColor>
+                <BarRoundCaps>true</BarRoundCaps>
+                <BarAxisPos>8.0</BarAxisPos>
+                <BarUnipolar>false</BarUnipolar>
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,rate_ultra</ConfigKey>
+                </Connection>
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,rate_ultra_enabled</ConfigKey>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
+              </SliderComposed-->
             </Children>
           </WidgetGroup><!-- RateControls -->
 

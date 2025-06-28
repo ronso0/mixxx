@@ -33,59 +33,61 @@
       </Children>
     </SingletonDefinition>
 
-    <!-- Rate range displays, top & bottom -->
+    <!-- Rate range displays, top & bottom with expanding spacer -->
     <SingletonDefinition>
-      <ObjectName>RateRangeDisplayTop<Variable name="ChanNum"/></ObjectName>
+      <ObjectName>RateRangeDisplay<Variable name="ChanNum"/></ObjectName>
       <Children>
         <WidgetGroup>
-          <Size>53f,17f</Size>
+          <SizePolicy>min,me</SizePolicy>
+          <Layout>vertical</Layout>
           <Children>
-            <RateRange>
-              <TooltipId>rate_range_display</TooltipId>
-              <ObjectName>RateRangePrefix</ObjectName>
-              <Channel><Variable name="ChanNum"/></Channel>
-              <Position>Top</Position>
-              <Display>prefix</Display>
-              <Size>7f,16f</Size>
-              <Pos>3,0</Pos>
-            </RateRange>
-            <RateRange>
-              <TooltipId>rate_range_display</TooltipId>
-              <ObjectName>RateRangeText</ObjectName>
-              <Channel><Variable name="ChanNum"/></Channel>
-              <Position>Top</Position>
-              <Display>range</Display>
-              <Size>18f,16f</Size>
-              <Pos>35,1</Pos>
-            </RateRange>
-          </Children>
-        </WidgetGroup>
-      </Children>
-    </SingletonDefinition>
-    <SingletonDefinition>
-      <ObjectName>RateRangeDisplayBottom<Variable name="ChanNum"/></ObjectName>
-      <Children>
-        <WidgetGroup>
-          <Size>53f,16f</Size>
-          <Children>
-            <RateRange>
-              <TooltipId>rate_range_display</TooltipId>
-              <ObjectName>RateRangePrefix</ObjectName>
-              <Channel><Variable name="ChanNum" /></Channel>
-              <Position>Bottom</Position>
-              <Display>prefix</Display>
-              <Size>7f,16f</Size>
-              <Pos>3,0</Pos>
-            </RateRange>
-            <RateRange>
-              <TooltipId>rate_range_display</TooltipId>
-              <ObjectName>RateRangeText</ObjectName>
-              <Channel><Variable name="ChanNum" /></Channel>
-              <Position>Bottom</Position>
-              <Display>range</Display>
-              <Size>18f,16f</Size>
-              <Pos>35,0</Pos>
-            </RateRange>
+            <WidgetGroup>
+              <Size>53f,17f</Size>
+              <Children>
+                <RateRange>
+                  <TooltipId>rate_range_display</TooltipId>
+                  <ObjectName>RateRangePrefix</ObjectName>
+                  <Channel><Variable name="ChanNum"/></Channel>
+                  <Position>Top</Position>
+                  <Display>prefix</Display>
+                  <Size>7f,16f</Size>
+                  <Pos>3,0</Pos>
+                </RateRange>
+                <RateRange>
+                  <TooltipId>rate_range_display</TooltipId>
+                  <ObjectName>RateRangeText</ObjectName>
+                  <Channel><Variable name="ChanNum"/></Channel>
+                  <Position>Top</Position>
+                  <Display>range</Display>
+                  <Size>18f,16f</Size>
+                  <Pos>35,1</Pos>
+                </RateRange>
+              </Children>
+            </WidgetGroup>
+            <WidgetGroup><Size>0min,0me</Size></WidgetGroup>
+            <WidgetGroup>
+              <Size>53f,16f</Size>
+              <Children>
+                <RateRange>
+                  <TooltipId>rate_range_display</TooltipId>
+                  <ObjectName>RateRangePrefix</ObjectName>
+                  <Channel><Variable name="ChanNum" /></Channel>
+                  <Position>Bottom</Position>
+                  <Display>prefix</Display>
+                  <Size>7f,16f</Size>
+                  <Pos>3,0</Pos>
+                </RateRange>
+                <RateRange>
+                  <TooltipId>rate_range_display</TooltipId>
+                  <ObjectName>RateRangeText</ObjectName>
+                  <Channel><Variable name="ChanNum" /></Channel>
+                  <Position>Bottom</Position>
+                  <Display>range</Display>
+                  <Size>18f,16f</Size>
+                  <Pos>35,0</Pos>
+                </RateRange>
+              </Children>
+            </WidgetGroup>
           </Children>
         </WidgetGroup>
       </Children>
