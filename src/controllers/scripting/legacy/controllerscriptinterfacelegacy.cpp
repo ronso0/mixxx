@@ -1027,7 +1027,13 @@ void ControllerScriptInterfaceLegacy::softStart(int deck, bool activate, double 
 
     double initRate = 0.0;
     // acquire deck rate
-    m_rampTo[deck] = getDeckRate(group);
+    double targetRate = getDeckRate(group);
+    // TEST Try to ramp to reverse rate if reverse is pressed when we softStart
+    ControlObjectScript* pReverse = getControlObjectScript(group, "reverse");
+    if (pReverse != nullptr && pReverse->toBool()) {
+        targetRate = 0 - targetRate;
+    }
+    m_rampTo[deck] = targetRate;
 
     // if braking or spinning back, get current rate from filter
     if (m_brakeActive[deck] || m_spinbackActive[deck]) {
