@@ -297,6 +297,10 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
     updateColoredLinkTexts();
 
     setScrollSafeGuardForAllInputWidgets(this);
+
+    // Now that the latency/buffer underflow labels and their values are close, add a ':'
+    latencyLabel->setText(latencyLabel->text() + ':');
+    underflowLabel->setText(underflowLabel->text() + ':');
 }
 
 /// Slot called when the preferences dialog is opened.
