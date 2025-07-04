@@ -235,7 +235,9 @@ void WLibrarySidebar::toggleSelectedItem() {
         return;
     }
     // Expand or collapse the item as necessary.
-    setExpanded(index, !isExpanded(index));
+    // setExpanded(index, !isExpanded(index));
+    // Jump to Tracks
+    emit setLibraryFocus(FocusWidget::TracksTable);
 }
 
 bool WLibrarySidebar::isLeafNodeSelected() {
