@@ -1,14 +1,18 @@
 #include "widget/weffectchainpresetselector.h"
 
 #include <QAbstractItemView>
+#include <QLabel>
+#include <QScreen>
 #include <QStyleOption>
 #include <QStylePainter>
+#include <QTimer>
 
 #include "effects/chains/quickeffectchain.h"
 #include "effects/effectsmanager.h"
 #include "effects/presets/effectchainpreset.h"
 #include "effects/presets/effectpreset.h"
 #include "moc_weffectchainpresetselector.cpp"
+#include "util/widgethelper.h"
 #include "widget/effectwidgetutils.h"
 
 class QPaintEvent;
@@ -136,6 +140,58 @@ void WEffectChainPresetSelector::slotEffectChainPresetSelected(int index) {
 void WEffectChainPresetSelector::slotChainPresetChanged(const QString& name) {
     setCurrentIndex(findData(name));
     setBaseTooltip(itemData(currentIndex(), Qt::ToolTipRole).toString());
+
+    // Show Tooltip-like popup with preset name
+    // for hidden main deck Quick Effect chains
+    if (!m_bQuickEffectChain || isVisible()) {
+        return;
+    }
+
+    QWindow* pWindow = mixxx::widgethelper::getWindow(*this);
+    if (!pWindow) {
+        return;
+    }
+
+    // QToolTip::showText(m_lastTopLeft, baseTooltip(), this);
+    // only works while the widget is visible.
+    // passing nullptr might work, but then we wouldn't inherit the stylesheet
+    //
+    // Use QLabel.
+    auto* pLabel = new QLabel(mixxx::widgethelper::getSkinWidget());
+    pLabel->setObjectName("QuickEffectPresetTooltip");
+    pLabel->setWindowFlags(Qt::ToolTip | Qt::FramelessWindowHint);
+    const QString tooltip = baseTooltip();
+    pLabel->setText(tooltip);
+    pLabel->setStyleSheet(QStringLiteral(
+            "QLabel { margin: 3px;};"));
+    // Show first so the label is rendered and we have a geometry that allows us
+    // to position the label at specific points for left/right decks
+    pLabel->show();
+
+    QRect geometry = pWindow->geometry();
+    // qWarning() << "     geom:" << geometry;
+
+    // Calculate the window center (QRect::center() doesn't seem to work as expected)
+    int winCenterY = geometry.top() + static_cast<int>(geometry.height() / 2);
+    int winCenterX = geometry.left() + static_cast<int>(geometry.width() / 2);
+    // qWarning() << "     cenX:" << winCenterX;
+    // qWarning() << "     cenY:" << winCenterY;
+    // if left:
+    int labelWidth = pLabel->width();
+    QPoint topLeft;
+    if (m_pChain->getGroup().contains("Channel1]]") ||
+            m_pChain->getGroup().contains("Channel3]]")) {
+        topLeft = QPoint(winCenterX - labelWidth - 50, winCenterY - 100);
+    } else { // Channel2/4
+        topLeft = QPoint(winCenterX + 50, winCenterY - 100);
+    }
+
+    pLabel->move(topLeft);
+    // Auto-hide after 1 second
+    QTimer::singleShot(1000,
+            Qt::CoarseTimer,
+            this,
+            [pLabel]() { pLabel->hide(); });
 }
 
 void WEffectChainPresetSelector::slotPresetListShowRequest(bool show) {
@@ -171,6 +227,15 @@ bool WEffectChainPresetSelector::event(QEvent* pEvent) {
     } else if (pEvent->type() == QEvent::Wheel && !hasFocus()) {
         // don't change preset by scrolling hovered preset selector
         return true;
+    } else if (pEvent->type() == QEvent::Hide) {
+        // Store geometry.
+        // When hidden, display Tooltip when effect
+        // m_lastTopLeft = mapToGlobal(geometry().topLeft());
+        // if (m_pChain->getGroup().contains("nel1]]")) {
+        //    qWarning() << "     .";
+        //    qWarning() << "     on hide, m_lastTopLeft =" << m_lastTopLeft;
+        //    qWarning() << "     .";
+        // }
     }
 
     return QComboBox::event(pEvent);
