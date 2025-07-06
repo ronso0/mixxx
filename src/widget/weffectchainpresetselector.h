@@ -28,4 +28,5 @@ class WEffectChainPresetSelector : public QComboBox, public WBaseWidget {
     EffectChainPresetManagerPointer m_pChainPresetManager;
     EffectsManager* m_pEffectsManager;
     EffectChainPointer m_pChain;
+    QPoint m_lastTopLeft;
 };
