@@ -343,6 +343,13 @@ void MixxxMainWindow::initialize() {
             Qt::DirectConnection);
 #endif
 
+    m_pShowPreferences = std::make_unique<ControlObject>(
+            ConfigKey(QStringLiteral("[Controls]"), QStringLiteral("show_preferences")));
+    connect(m_pShowPreferences.get(),
+            &ControlObject::valueChanged,
+            this,
+            &MixxxMainWindow::slotOptionsPreferences);
+
     // Connect signals to the menubar. Should be done before emit skinLoaded.
     connectMenuBar();
 
@@ -1116,9 +1123,11 @@ void MixxxMainWindow::slotViewFullScreen(bool toggle) {
 }
 
 void MixxxMainWindow::slotOptionsPreferences() {
-    m_pPrefDlg->show();
-    m_pPrefDlg->raise();
-    m_pPrefDlg->activateWindow();
+    if (!m_pPrefDlg->isVisible()) {
+        m_pPrefDlg->show();
+        m_pPrefDlg->raise();
+        m_pPrefDlg->activateWindow();
+    }
 }
 
 void MixxxMainWindow::slotNoVinylControlInputConfigured() {
