@@ -153,6 +153,8 @@ class MixxxMainWindow : public QMainWindow {
     DlgPreferences* m_pPrefDlg;
     parented_ptr<DlgKeywheel> m_pKeywheel;
 
+    std::unique_ptr<ControlObject> m_pShowPreferences;
+
 #ifdef __ENGINEPRIME__
     // Library exporter
     std::unique_ptr<mixxx::LibraryExporter> m_pLibraryExporter;
