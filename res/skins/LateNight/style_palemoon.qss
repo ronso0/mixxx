@@ -1679,7 +1679,7 @@ QPushButton#pushButtonRecording:checked {
 #GuiToggleButton[displayValue="0"],
 #RecFeedback[displayValue="0"],
 #BroadcastButton[displayValue="0"],
-#SkinSettingsToggle[displayValue="0"],
+/*#SkinSettingsToggle[displayValue="0"],*/
 #KeyMatch[displayValue="0"],
 #KeyReset[displayValue="0"],
 WPushButton#VinylStatus[displayValue="0"],
@@ -1722,7 +1722,7 @@ WPushButton#FxAssignButton1[displayValue="0"],
   #BroadcastButton[displayValue="2"],
   #BroadcastButton[displayValue="3"],
   #BroadcastButton[displayValue="4"],
-  #SkinSettingsToggle[displayValue="1"],
+  /*#SkinSettingsToggle[displayValue="1"],*/
   #LibraryFeatureControls QPushButton:pressed
   QPushButton#pushButtonAutoDJ:checked,
   QPushButton#pushButtonRepeatPlaylist:checked,
@@ -2039,8 +2039,8 @@ WPushButton#VinylStatus[displayValue="3"] { /* needle skip detected */
 }
 
 /* Grey for GUI toggles */
-#GuiToggleButton[displayValue="1"],
-#SkinSettingsToggle[displayValue="1"] {
+#GuiToggleButton[displayValue="1"] {
+/*#SkinSettingsToggle[displayValue="1"] {*/
   background-color: #777;
 }
 
