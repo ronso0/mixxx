@@ -22,6 +22,8 @@ constexpr mixxx::audio::FrameDiff_t kMinimumAudibleLoopSizeFrames = 150;
 bool positionNear(mixxx::audio::FramePos a, mixxx::audio::FramePos target) {
     return a.isValid() && a > target - 1 && a < target + 1;
 }
+
+const double kDefaultBeatloopSize = 4.0;
 } // namespace
 
 double LoopingControl::s_dBeatSizes[] = { 0.03125, 0.0625, 0.125, 0.25, 0.5,
@@ -140,7 +142,10 @@ LoopingControl::LoopingControl(const QString& group,
     m_pCOLoopAnchor->setButtonMode(mixxx::control::ButtonMode::Toggle);
 
     m_pCOBeatLoopSize = new ControlObject(ConfigKey(group, "beatloop_size"),
-                                          true, false, false, 4.0);
+            true,
+            false,
+            false,
+            kDefaultBeatloopSize);
     m_pCOBeatLoopSize->connectValueChangeRequest(this,
             &LoopingControl::slotBeatLoopSizeChangeRequest, Qt::DirectConnection);
     m_pCOBeatLoopActivate = new ControlPushButton(ConfigKey(group, "beatloop_activate"));
@@ -173,7 +178,10 @@ LoopingControl::LoopingControl(const QString& group,
     connect(m_pCOBeatJump, &ControlObject::valueChanged,
             this, &LoopingControl::slotBeatJump, Qt::DirectConnection);
     m_pCOBeatJumpSize = new ControlObject(ConfigKey(group, "beatjump_size"),
-                                          true, false, false, 4.0);
+            true,
+            false,
+            false,
+            kDefaultBeatloopSize);
     m_pCOBeatJumpSize->connectValueChangeRequest(this,
             &LoopingControl::slotBeatJumpSizeChangeRequest,
             Qt::DirectConnection);
@@ -1004,6 +1012,9 @@ void LoopingControl::slotLoopOut(double pressed) {
         if (pressed > 0.0) {
             setLoopOutToCurrentPosition();
             m_bLoopOutPressedWhileLoopDisabled = true;
+            // This updates m_pCOBeatLoopSize
+            LoopInfo loopInfo = m_loopInfo.getValue();
+            setLoop(loopInfo.startPosition, loopInfo.endPosition, m_bLoopingEnabled);
         }
         m_bAdjustingLoopOut = false;
     }
@@ -1252,6 +1263,7 @@ void LoopingControl::trackLoaded(TrackPointer pNewTrack) {
 
 void LoopingControl::trackBeatsUpdated(mixxx::BeatsPointer pBeats) {
     clearActiveBeatLoop();
+//<<<<<<< HEAD
     if (pBeats) {
         m_pBeats = pBeats;
         m_trueTrackBeats = true;
@@ -1270,6 +1282,11 @@ void LoopingControl::trackBeatsUpdated(mixxx::BeatsPointer pBeats) {
                 loopInfo.startPosition, loopInfo.endPosition);
         if (loaded_loop_size != -1) {
             m_pCOBeatLoopSize->setAndConfirm(loaded_loop_size);
+        }
+        // Reset to default value if track has no loop
+        // TODO Also reset if current loop size is odd or has decimals?
+        if (loaded_loop_size == -1) {
+            m_pCOBeatLoopSize->setAndConfirm(kDefaultBeatloopSize);
         }
     }
 }
@@ -1309,6 +1326,15 @@ void LoopingControl::slotBeatLoopDeactivate(BeatLoopingControl* pBeatLoopControl
 
 void LoopingControl::slotBeatLoopDeactivateRoll(BeatLoopingControl* pBeatLoopControl) {
     pBeatLoopControl->deactivate();
+
+    if (!m_bLoopRollActive) {
+        // beatloop_activate was pressed while rolling and slotBeatLoopToggle()
+        // did already reset roll status (m_activeLoopRolls, m_bLoopRollActive)
+        // and EngineBuffer quit slip mode (but didn't seek).
+        // So nothing to do here, just leave the adopted loop active.
+        return;
+    }
+
     const double size = pBeatLoopControl->getSize();
     // clang-tidy wants auto to be auto* because QStack inherits from QVector
     // and QVector::iterator is a pointer type in Qt5, but QStack inherits
@@ -1325,18 +1351,15 @@ void LoopingControl::slotBeatLoopDeactivateRoll(BeatLoopingControl* pBeatLoopCon
 
     // Make sure slip mode is not turned off if it was turned on
     // by something that was not a rolling beatloop.
-    if (m_bLoopRollActive && m_activeLoopRolls.empty()) {
+    if (m_activeLoopRolls.empty()) {
         setLoopingEnabled(false);
         m_pSlipEnabled->set(0);
         m_bLoopRollActive = false;
-    }
-
-    // Return to the previous beatlooproll if necessary.
-    // Else previous regular beatloop if no rolling loops are active.
-    if (!m_activeLoopRolls.empty()) {
-        slotBeatLoop(m_activeLoopRolls.top(), m_bLoopRollActive, true);
-    } else {
         restoreLoopInfo();
+    } else {
+        // Return to the previous beatlooproll if necessary.
+        // Else previous regular beatloop if no rolling loops are active.
+        slotBeatLoop(m_activeLoopRolls.top(), m_bLoopRollActive, true);
     }
 }
 
@@ -1476,7 +1499,7 @@ mixxx::audio::FramePos LoopingControl::findQuantizedBeatloopStart(
     // ...|...................^........|...
     //
     // If we press 1/2 beatloop we want loop from 50% to 100%,
-    // If I press 1/4 beatloop, we want loop from 50% to 75% etc
+    // if we press 1/4 beatloop we want loop from 50% to 75% etc
     const mixxx::audio::FrameDiff_t framesSinceLastBeat =
             currentPosition - prevBeatPosition;
     // find the previous beat fraction and check if the current position is closer to this or the next one
@@ -1694,14 +1717,25 @@ void LoopingControl::slotBeatLoopSizeChangeRequest(double beats) {
 }
 
 void LoopingControl::slotBeatLoopToggle(double pressed) {
-    if (pressed > 0) {
-        if (m_bLoopingEnabled) {
+    if (pressed <= 0) {
+        return;
+    }
+
+    if (m_bLoopingEnabled) {
+        // If we're in a rolling loop, quit slip mode and adopt it as regular loop.
+        // Use case is to have a looproll button pressed, then press loop_activate
+        // and nothing should happen when releasing the looproll button.
+        if (m_bLoopRollActive) {
+            m_bLoopRollActive = false;
+            m_activeLoopRolls.clear();
+            getEngineBuffer()->slipQuitAndAdopt();
+        } else {
             // Deactivate the loop if we're already looping
             setLoopingEnabled(false);
-        } else {
-            // Create a loop at current position
-            slotBeatLoop(m_pCOBeatLoopSize->get());
         }
+    } else {
+        // Create a loop at current position
+        slotBeatLoop(m_pCOBeatLoopSize->get());
     }
 }
 
@@ -1723,6 +1757,14 @@ void LoopingControl::slotBeatLoopRollActivate(double pressed) {
             m_bLoopRollActive = true;
         }
     } else {
+        if (!m_bLoopRollActive) {
+            // beatloop_activate was pressed while rolling and slotBeatLoopToggle()
+            // did already reset roll status (m_activeLoopRolls, m_bLoopRollActive)
+            // and EngineBuffer quit slip mode (but didn't seek).
+            // So nothing to do here, just leave the adopted loop active.
+            return;
+        }
+
         setLoopingEnabled(false);
         // Make sure slip mode is not turned off if it was turned on
         // by something that was not a rolling beatloop.

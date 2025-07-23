@@ -58,6 +58,11 @@ class LegacySkinParser : public QObject, public SkinParser {
 
     static QString getStyleFromNode(const QDomNode& node);
     static QDomElement openSkin(const QString& skinPath);
+    /// Does what it says: returns all rules for the given selectors
+    /// Note: tested only with single strings, eg. "#MainMenu"
+    static QString extractRulesFromStylesheet(
+            const QString& styleSheet,
+            const QStringList& selectors);
 
   private:
 
@@ -142,8 +147,14 @@ class LegacySkinParser : public QObject, public SkinParser {
     void setupWidget(const QDomNode& node, QWidget* pWidget,
                      bool setupPosition=true);
     void setupConnections(const QDomNode& node, WBaseWidget* pWidget);
-    void addShortcutToToolTip(WBaseWidget* pWidget, const QString& shortcut, const QString& cmd);
+
     QString localizeShortcutKeys(const QString& shortcut);
+
+    /// Helper to create a ConfigKey from a ControlPotmeter base key
+    inline const ConfigKey subKey(const ConfigKey& cfgKey, const QString& subctrl) {
+        return ConfigKey{cfgKey.group, cfgKey.item + subctrl};
+    }
+
     QString getLibraryStyle(const QDomNode& node);
 
     QString lookupNodeGroup(const QDomElement& node);

@@ -72,20 +72,20 @@ SearchQueryParser::SearchQueryParser(TrackCollection* pTrackCollection, QStringL
           m_searchCrates(false) {
     setSearchColumns(std::move(searchColumns));
 
-    m_textFilters << "artist"
+    m_textFilters << "a" << "artist"
                   << "album_artist"
                   << "album"
-                  << "title"
+                  << "t" << "title"
                   << "genre"
                   << "composer"
                   << "grouping"
-                  << "comment"
+                  << "cm" << "comment"
                   << "location"
                   << "crate"
                   << "type";
     m_numericFilters << "track"
                      << "played"
-                     << "rating"
+                     << "r" << "rating"
                      << "bitrate"
                      << "id";
     m_specialFilters << "year"
@@ -97,14 +97,18 @@ SearchQueryParser::SearchQueryParser(TrackCollection* pTrackCollection, QStringL
                      << "datetime_added"
                      << "date_added";
 
+    m_fieldToSqlColumns["a"] << "artist" << "album_artist";
     m_fieldToSqlColumns["artist"] << "artist" << "album_artist";
     m_fieldToSqlColumns["album_artist"] << "album_artist";
     m_fieldToSqlColumns["album"] << "album";
+    m_fieldToSqlColumns["t"] << "title";
     m_fieldToSqlColumns["title"] << "title";
     m_fieldToSqlColumns["genre"] << "genre";
     m_fieldToSqlColumns["composer"] << "composer";
     m_fieldToSqlColumns["grouping"] << "grouping";
+    m_fieldToSqlColumns["cm"] << "comment";
     m_fieldToSqlColumns["comment"] << "comment";
+    m_fieldToSqlColumns["y"] << "year";
     m_fieldToSqlColumns["year"] << "year";
     m_fieldToSqlColumns["track"] << "tracknumber";
     m_fieldToSqlColumns["bpm"] << "bpm";
@@ -114,6 +118,7 @@ SearchQueryParser::SearchQueryParser(TrackCollection* pTrackCollection, QStringL
     m_fieldToSqlColumns["key_id"] << "key_id";
     m_fieldToSqlColumns["played"] << "timesplayed";
     m_fieldToSqlColumns["lastplayed"] << "last_played_at";
+    m_fieldToSqlColumns["r"] << "rating";
     m_fieldToSqlColumns["rating"] << "rating";
     m_fieldToSqlColumns["location"] << "location";
     m_fieldToSqlColumns["type"] << "filetype";
@@ -262,7 +267,11 @@ void SearchQueryParser::parseTokens(QStringList tokens,
                         // restore = operator removed by getTextArgument()
                         argument.prepend('=');
                     }
-                    pNode = std::make_unique<BpmFilterNode>(argument, fuzzy, negate);
+                    pNode = std::make_unique<BpmFilterNode>(
+                            argument,
+                            fuzzy,
+                            negate,
+                            m_pTrackCollection->database());
                 }
             }
         } else {

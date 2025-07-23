@@ -1,0 +1,43 @@
+#pragma once
+
+#include <QColor>
+#include <QStyledItemDelegate>
+
+class SidebarModel;
+class WLibrarySidebar;
+
+class SidebarItemDelegate : public QStyledItemDelegate {
+    Q_OBJECT
+  public:
+    explicit SidebarItemDelegate(
+            WLibrarySidebar* pSidebarwidget,
+            SidebarModel* pSidebarModel);
+    ~SidebarItemDelegate() override = default;
+
+    void paint(
+            QPainter* pPainter,
+            const QStyleOptionViewItem& option,
+            const QModelIndex& index) const override;
+
+    void setBookmarkColor(const QColor& color) {
+        if (color.isValid()) {
+            m_bookmarkColor = color;
+        }
+    }
+
+    void setWatchedPathColor(const QColor& color) {
+        if (color.isValid()) {
+            m_watchedPathColor = color;
+        }
+    }
+
+    bool editorEvent(QEvent* pEvent,
+            QAbstractItemModel* pModel,
+            const QStyleOptionViewItem& option,
+            const QModelIndex& index) override;
+
+  private:
+    SidebarModel* m_pSidebarModel; // shared_ptr?
+    QColor m_bookmarkColor;
+    QColor m_watchedPathColor;
+};

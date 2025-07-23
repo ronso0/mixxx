@@ -155,19 +155,9 @@
                     </Children>
                   </WidgetGroup><!-- Rate slider + center indicator -->
 
-                  <WidgetGroup><!-- Rate range indicators -->
-                    <SizePolicy>min,me</SizePolicy>
-                    <Layout>vertical</Layout>
-                    <Children>
-                      <SingletonContainer>
-                        <ObjectName>RateRangeDisplayTop<Variable name="ChanNum"/></ObjectName>
-                      </SingletonContainer>
-                      <WidgetGroup><Size>0min,0me</Size></WidgetGroup>
-                      <SingletonContainer>
-                        <ObjectName>RateRangeDisplayBottom<Variable name="ChanNum"/></ObjectName>
-                      </SingletonContainer>
-                    </Children>
-                  </WidgetGroup><!-- Rate range indicators -->
+                  <SingletonContainer><!-- Rate range indicators -->
+                    <ObjectName>RateRangeDisplay<Variable name="ChanNum"/></ObjectName>
+                  </SingletonContainer>
                 </Children>
               </WidgetGroup><!-- Rate slider + range displays -->
 

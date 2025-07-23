@@ -36,6 +36,11 @@ void WEffectSelector::setup(const QDomNode& node, const SkinContext& context) {
                 &EffectSlot::effectChanged,
                 this,
                 &WEffectSelector::slotEffectUpdated);
+        connect(m_pEffectSlot.data(),
+                &EffectSlot::enabledChanged,
+                this,
+                &WEffectSelector::slotEffectEnabledChanged);
+        slotEffectEnabledChanged(m_pEffectSlot.data()->isEnabled());
         connect(this,
                 QOverload<int>::of(&QComboBox::activated),
                 this,
@@ -119,6 +124,10 @@ void WEffectSelector::slotEffectUpdated() {
         setCurrentIndex(newIndex);
         setBaseTooltip(itemData(newIndex, Qt::ToolTipRole).toString());
     }
+}
+
+void WEffectSelector::slotEffectEnabledChanged(bool enabled) {
+    setPropEffectEnabled(enabled);
 }
 
 bool WEffectSelector::event(QEvent* pEvent) {
