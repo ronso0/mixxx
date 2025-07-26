@@ -86,6 +86,8 @@ class LibraryControl : public QObject {
 
     void slotUpdateTrackMenuControl(bool visible);
 
+    void slotSelectNextPrevSidebarBookmark(int direction);
+
   private slots:
     void libraryWidgetDeleted();
     void sidebarWidgetDeleted();

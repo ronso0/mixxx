@@ -117,6 +117,7 @@ class WTrackTableView : public WLibraryTableView {
     void focusBorderColorChanged(QColor col);
     void trackPlayedColorChanged(QColor col);
     void trackMissingColorChanged(QColor col);
+    void selectNextPrevBookmark(int direction);
 
   public slots:
     void loadTrackModel(QAbstractItemModel* model, bool restoreState = false);

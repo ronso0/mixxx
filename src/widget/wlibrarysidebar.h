@@ -44,6 +44,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     bool isChildIndexSelected(const QModelIndex& index);
     bool isFeatureRootIndexSelected(LibraryFeature* pFeature);
 
+    void goToNextPrevBookmark(int direction);
     void setBookmarkColor(const QColor& color);
 
   public slots:
@@ -72,7 +73,6 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     QModelIndex selectedIndex();
 
     void toggleBookmark();
-    void goToNextPrevBookmark(int direction);
 
     SidebarModel* m_pSidebarModel;
     SidebarItemDelegate* m_pItemDelegate;

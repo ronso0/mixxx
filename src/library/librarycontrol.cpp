@@ -1236,6 +1236,13 @@ void LibraryControl::slotToggleSelectedSidebarItem(double v) {
     }
 }
 
+void LibraryControl::slotSelectNextPrevSidebarBookmark(int direction) {
+    if (m_pSidebarWidget) {
+        m_pSidebarWidget->setFocus(Qt::ShortcutFocusReason);
+        m_pSidebarWidget->goToNextPrevBookmark(direction);
+    }
+}
+
 void LibraryControl::slotEditItem(double v) {
     if (v <= 0) {
         return;

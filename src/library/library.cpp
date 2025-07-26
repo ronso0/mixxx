@@ -470,6 +470,11 @@ void Library::bindLibraryWidget(
             &WTrackTableView::trackMenuVisible,
             m_pLibraryControl,
             &LibraryControl::slotUpdateTrackMenuControl);
+    // Bookmark (pre-)selection from within tracks view
+    connect(pTrackTableView,
+            &WTrackTableView::selectNextPrevBookmark,
+            m_pLibraryControl,
+            &LibraryControl::slotSelectNextPrevSidebarBookmark);
 
     for (const auto& feature : std::as_const(m_features)) {
         feature->bindLibraryWidget(m_pLibraryWidget, pKeyboard);

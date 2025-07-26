@@ -1266,14 +1266,15 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         // ronso0: Alt+Up/Down should focus sidebar and pre-select next bookmark
         // Same for Alt+P: focus sidebar and pre-select Prep playlist
         if (event->modifiers().testFlag(Qt::AltModifier) &&
-                (event->key() == Qt::Key_Up ||
-                        event->key() == Qt::Key_Down ||
-                        event->key() == Qt::Key_PageUp ||
-                        event->key() == Qt::Key_PageDown ||
-                        event->key() == Qt::Key_Home ||
-                        event->key() == Qt::Key_End) &&
-                pTrackModel->hasCapabilities(TrackModel::Capability::Reorder)) {
-            moveSelectedTracks(event);
+                (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down)) {
+            //          event->key() == Qt::Key_Down ||
+            //          event->key() == Qt::Key_PageUp ||
+            //          event->key() == Qt::Key_PageDown ||
+            //          event->key() == Qt::Key_Home ||
+            //          event->key() == Qt::Key_End) &&
+            //  pTrackModel->hasCapabilities(TrackModel::Capability::Reorder)) {
+            // moveSelectedTracks(event);
+            emit selectNextPrevBookmark(event->key() == Qt::Key_Up ? -1 : 1);
             return;
         }
         if (event->modifiers().testFlag(Qt::ControlModifier) &&
