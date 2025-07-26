@@ -1263,6 +1263,8 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             copySelectedTracks();
             return;
         }
+        // ronso0: Alt+Up/Down should focus sidebar and pre-select next bookmark
+        // Same for Alt+P: focus sidebar and pre-select Prep playlist
         if (event->modifiers().testFlag(Qt::AltModifier) &&
                 (event->key() == Qt::Key_Up ||
                         event->key() == Qt::Key_Down ||
