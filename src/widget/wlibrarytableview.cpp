@@ -428,7 +428,7 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
         // case QAbstractItemView::MoveLeft:
         // case QAbstractItemView::MoveRight:
         //     if (modifiers & Qt::ControlModifier) {
-        //         // Ignore, so it can be handled by WLibrary::keyEvent
+        //         // Ignore, so it can be handled by WLibrary::keyPressEvent
         //         // to navigate to the sidebar
         //         return currentIndex();
         //     }
