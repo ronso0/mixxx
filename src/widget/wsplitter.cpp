@@ -98,6 +98,17 @@ void WSplitter::setup(const QDomNode& node, const SkinContext& context) {
             }
         }
     }
+
+    // If we have two children, allow to collapse the left/top section with
+    // double-click on the handle
+    qWarning() << "     Splitter count:" << count();
+    if (count() == 2) {
+        // Apparently the handle between two widgets belongs to the second one,
+        // so if we want to control the handle between widget 0 and 1 we
+        // need to check out handle(1) ¯\_(ツ)_/¯
+        qWarning() << "     -> inst. evFilt for handle 1";
+        handle(1)->installEventFilter(this);
+    }
 }
 
 void WSplitter::slotSplitterMoved() {
@@ -110,6 +121,43 @@ void WSplitter::slotSplitterMoved() {
         QString sizesStr = sizeStrList.join(",");
         m_pConfig->set(m_configKey, ConfigValue(sizesStr));
     }
+}
+
+bool WSplitter::eventFilter(QObject* pObj, QEvent* pEvent) {
+    if (pEvent->type() == QEvent::MouseButtonDblClick &&
+            count() == 2 &&
+            isCollapsible(0)) {
+        QList<int> currSizes = sizes();
+        qWarning() << "     Splitter DblClick" << pObj << "| curr sizes:" << currSizes;
+
+        bool leftCollapsed = currSizes[0] == 0;
+        if (leftCollapsed && m_prevSizes[0] > 0) {
+            // re-expand first child
+            qWarning() << "     -> Expand. restore sizes:" << m_prevSizes;
+            setSizes(m_prevSizes);
+        } else {
+            qWarning() << "     -> Collapse. curr sizes:" << sizes();
+            // collapse first child
+            m_prevSizes = sizes();
+            // Create list of proportional sizes
+            // 0: collapse, 1: 100 % of remaining space
+            // TODO multiple 1 means children will share space equally, which would
+            // could resize when the splitter ahs more that two children
+            QList<int> newSizes;
+            newSizes.append(0);
+            int i = 1;
+            while (newSizes.size() < count()) {
+                // for (int i = 1; i < count(); i++) {
+                qWarning() << "     -> insert prop.size #" << i;
+                newSizes.append(1);
+                i++;
+            }
+            setSizes(newSizes);
+            qWarning() << "     -> Collapsed, new sizes:" << sizes();
+        }
+        return false;
+    }
+    return QSplitter::eventFilter(pObj, pEvent);
 }
 
 bool WSplitter::event(QEvent* pEvent) {

@@ -104,6 +104,10 @@
                   </Splitter><!-- SidebarCoverSplitter -->
 
                 </Children>
+                <Connection>
+                  <ConfigKey>[Skin],show_sidebar</ConfigKey>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
               </WidgetGroup><!-- LibSidebarContainer -->
 
               <!-- Library Table-->

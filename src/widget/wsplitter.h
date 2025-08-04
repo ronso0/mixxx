@@ -14,6 +14,7 @@ class WSplitter : public QSplitter, public WBaseWidget {
     WSplitter(QWidget* pParent, UserSettingsPointer pConfig);
 
     void setup(const QDomNode& node, const SkinContext& context);
+    bool eventFilter(QObject* pObj, QEvent* pEvent) override;
 
   protected:
     bool event(QEvent* pEvent) override;
@@ -24,4 +25,5 @@ class WSplitter : public QSplitter, public WBaseWidget {
   private:
     UserSettingsPointer m_pConfig;
     ConfigKey m_configKey;
+    QList<int> m_prevSizes;
 };
