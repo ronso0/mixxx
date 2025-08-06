@@ -217,6 +217,7 @@ void DlgPrefRecord::slotApply() {
     saveSplitSize();
     saveRecSampleRate();
 }
+
 // only called on a user-triggered index change.
 void DlgPrefRecord::slotComboBoxItemClicked([[maybe_unused]] int index) {
     RadioButtonUseCustomSampleRate->setChecked(true);
