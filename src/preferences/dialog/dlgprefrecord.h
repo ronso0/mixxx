@@ -34,12 +34,10 @@ class DlgPrefRecord : public DlgPreferencePage, public Ui::DlgPrefRecordDlg  {
     void slotGroupChanged();
 
     void slotDefaultSampleRateUpdated(mixxx::audio::SampleRate newRate);
-    void slotComboBoxItemClicked(int index);
+    void slotComboBoxItemClicked();
 
   private slots:
     void slotToggleCueEnabled();
-    void slotSampleRateChanged(int newRateIdx);
-    void slotToggleCustomSampleRateIgnore(int buttonState);
 
   signals:
     void apply(const QString &);
@@ -56,8 +54,8 @@ class DlgPrefRecord : public DlgPreferencePage, public Ui::DlgPrefRecordDlg  {
     void saveUseCueFileAnnotation();
     void saveSplitSize();
     void saveRecSampleRate();
-    void updateSampleRates(const QList<mixxx::audio::SampleRate>& sampleRates);
-    const QList<mixxx::audio::SampleRate>& createSampleRateGUIForFormat(const QString& recFormat);
+    void populateSampleRateComboboxForFormat(const QString& recFormat);
+    void updateDefaultSampleRateText();
 
     // Pointer to config object
     UserSettingsPointer m_pConfig;
@@ -71,6 +69,6 @@ class DlgPrefRecord : public DlgPreferencePage, public Ui::DlgPrefRecordDlg  {
     PollingControlProxy m_recSampleRate;
     PollingControlProxy m_useEngineSampleRate;
 
-    double m_defaultSampleRate; // tracks the engine sample rate
-    double m_oldRecSampleRate;
+    mixxx::audio::SampleRate m_defaultSampleRate; // tracks the engine sample rate
+    mixxx::audio::SampleRate m_oldRecSampleRate;
 };

@@ -120,13 +120,15 @@ information from filepaths (i.e. username)</string>
      </layout>
     </widget>
    </item>
+
    <item row="1" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBoxFileformat">
      <property name="title">
       <string>Output File Format</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
-      <item row="8" column="0">
+
+      <item row="7" column="0">
        <widget class="QLabel" name="LabelRecSampleRate">
         <property name="text">
          <string>Sample Rate</string>
@@ -142,33 +144,60 @@ information from filepaths (i.e. username)</string>
         </property>
        </widget>
       </item>
-      <item row="8" column="1">
-       <widget class="QRadioButton" name="RadioButtonUseDefaultSampleRate">
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <property name="toolTip">
-         <string>Use the engine sample rate for better recording quality</string>
-        </property>
-       </widget>
-      </item>
-      <item row="8" column="2">
-       <layout class="QHBoxLayout" name="horizontalLayoutCustomSampleRate">
-        <property name="spacing">
+      <item row="7" column="1" colspan="3">
+       <layout class="QHBoxLayout" name="sampleRateLayout">
+        <property name="topMargin">
          <number>0</number>
         </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QRadioButton" name="RadioButtonUseDefaultSampleRate">
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Use the engine sample rate for better recording quality</string>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">buttonGroupSampleRate</string>
+          </attribute>
+         </widget>
+        </item>
         <item>
          <widget class="QRadioButton" name="RadioButtonUseCustomSampleRate">
           <property name="text">
            <string>Custom:</string>
           </property>
+          <attribute name="buttonGroup">
+           <string notr="true">buttonGroupSampleRate</string>
+          </attribute>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="comboBoxRecSampleRate"/>
+         <widget class="QComboBox" name="comboBoxRecSampleRate">
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_samplerate">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::MinimumExpanding</enum>
+          </property>
+         </spacer>
         </item>
        </layout>
       </item>
+
       <item row="0" column="0">
        <widget class="QLabel" name="LabelLossless">
         <property name="text">
@@ -318,6 +347,7 @@ information from filepaths (i.e. username)</string>
      </layout>
     </widget>
    </item>
+
    <item row="2" column="0" colspan="3">
     <widget class="QGroupBox" name="groupBoxTags">
      <property name="title">
@@ -375,6 +405,7 @@ information from filepaths (i.e. username)</string>
      </layout>
     </widget>
    </item>
+
    <item row="7" column="1">
     <spacer>
      <property name="orientation">
@@ -397,6 +428,8 @@ information from filepaths (i.e. username)</string>
   <tabstop>comboBoxSplitting</tabstop>
   <tabstop>CheckBoxRecordCueFile</tabstop>
   <tabstop>CheckBoxUseCueFileAnnotation</tabstop>
+  <tabstop>RadioButtonUseDefaultSampleRate</tabstop>
+  <tabstop>RadioButtonUseCustomSampleRate</tabstop>
   <tabstop>comboBoxRecSampleRate</tabstop>
   <tabstop>SliderCompression</tabstop>
   <tabstop>SliderQuality</tabstop>
@@ -406,4 +439,7 @@ information from filepaths (i.e. username)</string>
  </tabstops>
  <resources/>
  <connections/>
+ <buttongroups>
+  <buttongroup name="buttonGroupSampleRate"/>
+ </buttongroups>
 </ui>
