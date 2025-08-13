@@ -485,7 +485,7 @@ WSpinny { /*
   qproperty-layoutAlignment: 'AlignHCenter | AlignTop';
 }
 #BpmRateTapContainer {
-  margin: 1px;
+  /*margin: 1px;*/
 }
 
 #RateControls {
