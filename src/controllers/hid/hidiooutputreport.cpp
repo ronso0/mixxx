@@ -28,7 +28,7 @@ HidIoOutputReport::HidIoOutputReport(
 void HidIoOutputReport::updateCachedData(const QByteArray& data,
         const RuntimeLoggingCategory& logOutput,
         bool useNonSkippingFIFO) {
-    auto cacheLock = lockMutex(&m_cachedDataMutex);
+    QMutexLocker cacheLock(&m_cachedDataMutex);
 
     if (!m_lastCachedDataSize) {
         // First call updateCachedData for this report
@@ -78,7 +78,7 @@ bool HidIoOutputReport::sendCachedData(QMutex* pHidDeviceAndPollMutex,
         const RuntimeLoggingCategory& logOutput) {
     auto startOfHidWrite = mixxx::Time::elapsed();
 
-    auto cacheLock = lockMutex(&m_cachedDataMutex);
+    QMutexLocker cacheLock(&m_cachedDataMutex);
 
     if (!m_possiblyUnsentDataCached) {
         // Return with false, to signal the caller, that no time consuming IO operation was necessary
@@ -120,7 +120,7 @@ bool HidIoOutputReport::sendCachedData(QMutex* pHidDeviceAndPollMutex,
 
     cacheLock.unlock();
 
-    auto hidDeviceLock = lockMutex(pHidDeviceAndPollMutex);
+    QMutexLocker hidDeviceLock(pHidDeviceAndPollMutex);
 
     // hid_write can take several milliseconds, because hidapi synchronizes
     // the asyncron HID communication from the OS

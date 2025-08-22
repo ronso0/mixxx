@@ -128,7 +128,7 @@ bool ErrorDialogHandler::requestErrorDialog(ErrorDialogProperties* props) {
     }
 
     // Skip if a dialog with the same key is already displayed
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     bool keyExists = m_dialogKeys.contains(props->getKey());
     locker.unlock();
     if (keyExists) {
@@ -208,7 +208,7 @@ void ErrorDialogHandler::errorDialog(ErrorDialogProperties* pProps) {
     // into account QWidget windows.
     pMsgBox->setAttribute(Qt::WA_QuitOnClose, false);
 
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     // To avoid duplicate dialogs on the same error
     m_dialogKeys.append(props->m_key);
 
@@ -246,7 +246,7 @@ void ErrorDialogHandler::errorDialog(ErrorDialogProperties* pProps) {
 }
 
 void ErrorDialogHandler::boxClosed(const QString& key, QMessageBox* msgBox) {
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     locker.unlock();
 
     QMessageBox::StandardButton whichStdButton = msgBox->standardButton(msgBox->clickedButton());
@@ -260,7 +260,7 @@ void ErrorDialogHandler::boxClosed(const QString& key, QMessageBox* msgBox) {
         return;
     }
 
-    const auto locker2 = lockMutex(&m_mutex);
+    const QMutexLocker locker2(&m_mutex);
     if (m_dialogKeys.contains(key)) {
         if (!m_dialogKeys.removeOne(key)) {
             qWarning() << "Error dialog key removal from list failed!";

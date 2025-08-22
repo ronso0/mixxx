@@ -164,7 +164,7 @@ inline void writeToFile(
             QChar('\n');
     QByteArray formattedMessage = formattedMessageStr.toLocal8Bit();
 
-    const auto locked = lockMutex(&s_mutexLogfile);
+    const QMutexLocker locked(&s_mutexLogfile);
     // Writing to a closed QFile could cause an infinite recursive loop
     // by logging to qWarning!
     if (s_logfile.isOpen()) {
@@ -198,7 +198,7 @@ inline void writeToStdErr(
             formattedMessageStr.replace(kThreadNamePattern, threadName)
                     .toLocal8Bit();
 
-    const auto locked = lockMutex(&s_mutexStdErr);
+    const QMutexLocker locked(&s_mutexStdErr);
     const std::size_t written = fwrite(
             formattedMessage.constData(), sizeof(char), formattedMessage.size(), stderr);
     Q_UNUSED(written);
@@ -462,7 +462,7 @@ void Logging::shutdown() {
 
     // Even though we uninstalled the message handler, other threads may have
     // already entered it.
-    const auto locker = lockMutex(&s_mutexLogfile);
+    const QMutexLocker locker(&s_mutexLogfile);
     if (s_logfile.isOpen()) {
         s_logfile.close();
     }

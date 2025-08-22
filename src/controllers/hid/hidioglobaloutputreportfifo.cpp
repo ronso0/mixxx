@@ -4,7 +4,6 @@
 
 #include "controllers/hid/hiddevice.h"
 #include "util/cmdlineargs.h"
-#include "util/compatibility/qmutex.h"
 #include "util/runtimeloggingcategory.h"
 #include "util/string.h"
 #include "util/time.h"
@@ -63,7 +62,7 @@ bool HidIoGlobalOutputReportFifo::sendNextReportDataset(QMutex* pHidDeviceAndPol
     QByteArray reportToSend(std::move(*pFront));
     m_fifoQueue.pop();
 
-    auto hidDeviceLock = lockMutex(pHidDeviceAndPollMutex);
+    QMutexLocker hidDeviceLock(pHidDeviceAndPollMutex);
 
     // hid_write can take several milliseconds, because hidapi synchronizes
     // the asyncron HID communication from the OS

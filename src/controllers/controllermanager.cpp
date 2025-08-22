@@ -1,5 +1,6 @@
 #include "controllers/controllermanager.h"
 
+#include <QMutex>
 #include <QSet>
 #include <QThread>
 
@@ -9,7 +10,6 @@
 #include "controllers/defs_controllers.h"
 #include "moc_controllermanager.cpp"
 #include "util/cmdlineargs.h"
-#include "util/compatibility/qmutex.h"
 #include "util/duration.h"
 #include "util/thread_affinity.h"
 #include "util/time.h"
@@ -173,7 +173,7 @@ void ControllerManager::slotShutdown() {
 
     // Clear m_enumerators before deleting the enumerators to prevent other code
     // paths from accessing them.
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     QList<ControllerEnumerator*> enumerators = m_enumerators;
     m_enumerators.clear();
     locker.unlock();
@@ -191,7 +191,7 @@ void ControllerManager::updateControllerList() {
     // NOTE: Currently this function is only called on startup. If hotplug is added, changes to the
     // controller list must be synchronized with dlgprefcontrollers to avoid dangling connections
     // and possible crashes.
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     if (m_enumerators.isEmpty()) {
         qWarning() << "updateControllerList called but no enumerators have been added!";
         return;
@@ -213,14 +213,14 @@ void ControllerManager::updateControllerList() {
 }
 
 QList<Controller*> ControllerManager::getControllers() const {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     return m_controllers;
 }
 
 QList<Controller*> ControllerManager::getControllerList(bool bOutputDevices, bool bInputDevices) {
     qDebug() << "ControllerManager::getControllerList";
 
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     QList<Controller*> controllers = m_controllers;
     locker.unlock();
 
@@ -308,7 +308,7 @@ void ControllerManager::slotSetUpDevices() {
 }
 
 void ControllerManager::pollIfAnyControllersOpen() {
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     QList<Controller*> controllers = m_controllers;
     locker.unlock();
 

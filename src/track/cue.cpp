@@ -108,7 +108,7 @@ Cue::Cue(
 
 mixxx::CueInfo Cue::getCueInfo(
         mixxx::audio::SampleRate sampleRate) const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return mixxx::CueInfo(
             m_type,
             positionFramesToMillis(m_startPosition, sampleRate),
@@ -119,12 +119,12 @@ mixxx::CueInfo Cue::getCueInfo(
 }
 
 DbId Cue::getId() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return m_dbId;
 }
 
 void Cue::setId(DbId cueId) {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     m_dbId = cueId;
     // Neither mark as dirty nor do emit the updated() signal.
     // This function is only called after adding the Cue object
@@ -135,12 +135,12 @@ void Cue::setId(DbId cueId) {
 }
 
 mixxx::CueType Cue::getType() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return m_type;
 }
 
 void Cue::setType(mixxx::CueType type) {
-    auto lock = lockMutex(&m_mutex);
+    QMutexLocker lock(&m_mutex);
     if (m_type == type) {
         return;
     }
@@ -151,12 +151,12 @@ void Cue::setType(mixxx::CueType type) {
 }
 
 mixxx::audio::FramePos Cue::getPosition() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return m_startPosition;
 }
 
 void Cue::setStartPosition(mixxx::audio::FramePos position) {
-    auto lock = lockMutex(&m_mutex);
+    QMutexLocker lock(&m_mutex);
     if (m_startPosition == position) {
         return;
     }
@@ -167,7 +167,7 @@ void Cue::setStartPosition(mixxx::audio::FramePos position) {
 }
 
 void Cue::setEndPosition(mixxx::audio::FramePos position) {
-    auto lock = lockMutex(&m_mutex);
+    QMutexLocker lock(&m_mutex);
     if (m_endPosition == position) {
         return;
     }
@@ -180,7 +180,7 @@ void Cue::setEndPosition(mixxx::audio::FramePos position) {
 void Cue::setStartAndEndPosition(
         mixxx::audio::FramePos startPosition,
         mixxx::audio::FramePos endPosition) {
-    auto lock = lockMutex(&m_mutex);
+    QMutexLocker lock(&m_mutex);
     if (m_startPosition == startPosition &&
             m_endPosition == endPosition) {
         return;
@@ -193,12 +193,12 @@ void Cue::setStartAndEndPosition(
 }
 
 Cue::StartAndEndPositions Cue::getStartAndEndPosition() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return {m_startPosition, m_endPosition};
 }
 
 void Cue::shiftPositionFrames(mixxx::audio::FrameDiff_t frameOffset) {
-    auto lock = lockMutex(&m_mutex);
+    QMutexLocker lock(&m_mutex);
     if (m_startPosition.isValid()) {
         m_startPosition += frameOffset;
     }
@@ -211,7 +211,7 @@ void Cue::shiftPositionFrames(mixxx::audio::FrameDiff_t frameOffset) {
 }
 
 mixxx::audio::FrameDiff_t Cue::getLengthFrames() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     if (!m_endPosition.isValid()) {
         return 0;
     }
@@ -225,7 +225,7 @@ void Cue::setHotCue(int n) {
     VERIFY_OR_DEBUG_ASSERT(n >= mixxx::kFirstHotCueIndex) {
         return;
     }
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     if (m_iHotCue == n) {
         return;
     }
@@ -233,17 +233,17 @@ void Cue::setHotCue(int n) {
 }
 
 int Cue::getHotCue() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return m_iHotCue;
 }
 
 QString Cue::getLabel() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return m_label;
 }
 
 void Cue::setLabel(const QString& label) {
-    auto lock = lockMutex(&m_mutex);
+    QMutexLocker lock(&m_mutex);
     if (m_label == label) {
         return;
     }
@@ -254,12 +254,12 @@ void Cue::setLabel(const QString& label) {
 }
 
 mixxx::RgbColor Cue::getColor() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return m_color;
 }
 
 void Cue::setColor(mixxx::RgbColor color) {
-    auto lock = lockMutex(&m_mutex);
+    QMutexLocker lock(&m_mutex);
     if (m_color == color) {
         return;
     }
@@ -270,16 +270,16 @@ void Cue::setColor(mixxx::RgbColor color) {
 }
 
 bool Cue::isDirty() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return m_bDirty;
 }
 
 void Cue::setDirty(bool dirty) {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     m_bDirty = dirty;
 }
 
 mixxx::audio::FramePos Cue::getEndPosition() const {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     return m_endPosition;
 }

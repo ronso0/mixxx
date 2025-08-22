@@ -20,7 +20,7 @@ bool ControllerEngineThreadControl::pause() {
     VERIFY_OR_DEBUG_ASSERT_THIS_QOBJECT_THREAD_ANTI_AFFINITY() {
         return false;
     }
-    const auto lock = lockMutex(&m_pauseMutex);
+    const QMutexLocker lock(&m_pauseMutex);
     m_pauseCount++;
 
     if (m_canPause && !m_isPaused) {
@@ -40,7 +40,7 @@ void ControllerEngineThreadControl::resume() {
     VERIFY_OR_DEBUG_ASSERT_THIS_QOBJECT_THREAD_ANTI_AFFINITY() {
         return;
     }
-    const auto lock = lockMutex(&m_pauseMutex);
+    const QMutexLocker lock(&m_pauseMutex);
     if (m_pauseCount > 0) {
         m_pauseCount--;
     }
@@ -49,7 +49,7 @@ void ControllerEngineThreadControl::resume() {
 }
 void ControllerEngineThreadControl::setCanPause(bool canPause) {
     DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY();
-    auto lock = lockMutex(&m_pauseMutex);
+    QMutexLocker lock(&m_pauseMutex);
     m_canPause = canPause;
 
     if (m_canPause) {
@@ -81,7 +81,7 @@ void ControllerEngineThreadControl::doPause() {
     VERIFY_OR_DEBUG_ASSERT_THIS_QOBJECT_THREAD_AFFINITY() {
         return;
     }
-    const auto lock = lockMutex(&m_pauseMutex);
+    const QMutexLocker lock(&m_pauseMutex);
     m_isPaused = m_pauseCount > 0;
     m_isPausedCondition.wakeOne();
 

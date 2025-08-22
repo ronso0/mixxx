@@ -14,7 +14,7 @@ TapFilter::~TapFilter() {
 }
 
 void TapFilter::tap() {
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     mixxx::Duration elapsed = m_timer.restart();
     if (elapsed <= m_maxInterval) {
         double averageLength = m_mean.insert(elapsed.toDoubleMillis());

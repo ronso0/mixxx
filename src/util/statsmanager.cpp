@@ -163,7 +163,7 @@ void StatsManager::writeTimeline(const QString& filename) {
 }
 
 void StatsManager::onStatsPipeDestroyed(StatsPipe* pPipe) {
-    const auto locker = lockMutex(&m_statsPipeLock);
+    const QMutexLocker locker(&m_statsPipeLock);
     processIncomingStatReports();
     m_statsPipes.removeAll(pPipe);
 }
@@ -174,7 +174,7 @@ StatsPipe* StatsManager::getStatsPipeForThread() {
     }
     StatsPipe* pResult = new StatsPipe(this);
     m_threadStatsPipes.setLocalData(pResult);
-    const auto locker = lockMutex(&m_statsPipeLock);
+    const QMutexLocker locker(&m_statsPipeLock);
     m_statsPipes.push_back(pResult);
     return pResult;
 }

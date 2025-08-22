@@ -16,7 +16,6 @@
 #include "effects/backends/audiounit/audiouniteffectprocessor.h"
 #include "effects/backends/audiounit/audiounitmanifest.h"
 #include "effects/defs.h"
-#include "util/compatibility/qmutex.h"
 
 /// An effects backend for Audio Unit (AU) plugins. macOS-only.
 class AudioUnitBackend : public EffectsBackend {
@@ -121,7 +120,7 @@ class AudioUnitBackend : public EffectsBackend {
                         new AudioUnitManifest(effectId, component));
 
                 // Register manifest
-                auto locker = lockMutex(&m_mutex);
+                QMutexLocker locker(&m_mutex);
                 m_manifestsById[effectId] = manifest;
             });
         }

@@ -5,9 +5,10 @@
 // See: http://clang.llvm.org/docs/ThreadSafetyAnalysis.html
 
 #include <QMutex>
+#include <QMutexLocker>
 #include <QReadWriteLock>
+#include <QRecursiveMutex>
 
-#include "util/compatibility/qmutex.h"
 #include "util/thread_annotations.h"
 
 class CAPABILITY("mutex") MMutex {
@@ -57,7 +58,7 @@ class SCOPED_CAPABILITY MMutexLocker {
     inline void unlock() RELEASE() { m_locker.unlock(); }
 
   private:
-    QT_MUTEX_LOCKER m_locker;
+    QMutexLocker m_locker;
 };
 
 class SCOPED_CAPABILITY MMutexLockerDebug {

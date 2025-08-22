@@ -36,7 +36,7 @@ void WLibrary::setup(const QDomNode& node, const SkinContext& context) {
 
 bool WLibrary::registerView(const QString& name, QWidget* pView) {
     //qDebug() << "WLibrary::registerView" << name;
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     if (m_viewMap.contains(name)) {
         return false;
     }
@@ -52,7 +52,7 @@ bool WLibrary::registerView(const QString& name, QWidget* pView) {
 }
 
 void WLibrary::switchToView(const QString& name) {
-    const auto lock = lockMutex(&m_mutex);
+    const QMutexLocker lock(&m_mutex);
     //qDebug() << "WLibrary::switchToView" << name;
 
     LibraryView* pOldLibrartView = dynamic_cast<LibraryView*>(
@@ -88,7 +88,7 @@ void WLibrary::pasteFromSidebar() {
 }
 
 void WLibrary::search(const QString& name) {
-    auto lock = lockMutex(&m_mutex);
+    QMutexLocker lock(&m_mutex);
     QWidget* pCurrent = currentWidget();
     LibraryView* pView = dynamic_cast<LibraryView*>(pCurrent);
     if (pView == nullptr) {

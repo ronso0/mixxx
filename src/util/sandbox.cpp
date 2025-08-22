@@ -49,14 +49,14 @@ void Sandbox::checkSandboxed() {
 }
 
 void Sandbox::setPermissionsFilePath(const QString& permissionsFile) {
-    const auto locker = lockMutex(&s_mutex);
+    const QMutexLocker locker(&s_mutex);
     s_pSandboxPermissions = QSharedPointer<ConfigObject<ConfigValue>>(
             new ConfigObject<ConfigValue>(permissionsFile));
 }
 
 // static
 void Sandbox::shutdown() {
-    const auto locker = lockMutex(&s_mutex);
+    const QMutexLocker locker(&s_mutex);
     QSharedPointer<ConfigObject<ConfigValue>> pSandboxPermissions = s_pSandboxPermissions;
     s_pSandboxPermissions.clear();
     if (pSandboxPermissions) {
@@ -179,7 +179,7 @@ bool Sandbox::createSecurityToken(const QString& canonicalPath,
     if (!enabled()) {
         return false;
     }
-    const auto locker = lockMutex(&s_mutex);
+    const QMutexLocker locker(&s_mutex);
     if (s_pSandboxPermissions == nullptr) {
         return false;
     }
@@ -249,7 +249,7 @@ SecurityTokenPointer Sandbox::openSecurityToken(mixxx::FileInfo* pFileInfo, bool
         return nullptr;
     }
 
-    const auto locker = lockMutex(&s_mutex);
+    const QMutexLocker locker(&s_mutex);
     if (!s_pSandboxPermissions) {
         return nullptr;
     }
@@ -314,7 +314,7 @@ SecurityTokenPointer Sandbox::openSecurityTokenForDir(const QDir& dir, bool crea
         return nullptr;
     }
 
-    const auto locker = lockMutex(&s_mutex);
+    const QMutexLocker locker(&s_mutex);
     if (!s_pSandboxPermissions) {
         return nullptr;
     }

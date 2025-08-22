@@ -147,7 +147,7 @@ PlayerManager::PlayerManager(UserSettingsPointer pConfig,
 PlayerManager::~PlayerManager() {
     kLogger.debug() << "Destroying";
 
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
 
     m_pSamplerBank->saveSamplerBankToPath(getDefaultSamplerPath(m_pConfig));
     // No need to delete anything because they are all parented to us and will
@@ -170,7 +170,7 @@ PlayerManager::~PlayerManager() {
 
 void PlayerManager::bindToLibrary(Library* pLibrary) {
     m_pLibrary = pLibrary;
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     connect(pLibrary, &Library::loadTrackToPlayer, this, &PlayerManager::slotLoadTrackToPlayer);
     connect(pLibrary,
             &Library::loadTrack,
@@ -298,7 +298,7 @@ unsigned int PlayerManager::numPreviewDecks() {
 }
 
 void PlayerManager::slotChangeNumDecks(double v) {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     int num = (int)v;
 
     VERIFY_OR_DEBUG_ASSERT(num <= kMaxNumberOfDecks) {
@@ -328,7 +328,7 @@ void PlayerManager::slotChangeNumDecks(double v) {
 }
 
 void PlayerManager::slotChangeNumSamplers(double v) {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     int num = (int)v;
     if (num < m_samplers.size()) {
         // The request was invalid -- don't set the value.
@@ -344,7 +344,7 @@ void PlayerManager::slotChangeNumSamplers(double v) {
 }
 
 void PlayerManager::slotChangeNumPreviewDecks(double v) {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     int num = (int)v;
     if (num < m_previewDecks.size()) {
         // The request was invalid -- don't set the value.
@@ -358,7 +358,7 @@ void PlayerManager::slotChangeNumPreviewDecks(double v) {
 }
 
 void PlayerManager::slotChangeNumMicrophones(double v) {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     int num = (int)v;
     if (num < m_microphones.size()) {
         // The request was invalid -- don't set the value.
@@ -372,7 +372,7 @@ void PlayerManager::slotChangeNumMicrophones(double v) {
 }
 
 void PlayerManager::slotChangeNumAuxiliaries(double v) {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     int num = (int)v;
     if (num < m_auxiliaries.size()) {
         // The request was invalid -- don't set the value.
@@ -386,7 +386,7 @@ void PlayerManager::slotChangeNumAuxiliaries(double v) {
 }
 
 void PlayerManager::addDeck() {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     double count = m_pCONumDecks->get() + 1;
     slotChangeNumDecks(count);
 }
@@ -472,7 +472,7 @@ void PlayerManager::loadSamplers() {
 }
 
 void PlayerManager::addSampler() {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     double count = m_pCONumSamplers->get() + 1;
     slotChangeNumSamplers(count);
 }
@@ -510,7 +510,7 @@ void PlayerManager::addSamplerInner() {
 }
 
 void PlayerManager::addPreviewDeck() {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     slotChangeNumPreviewDecks(m_pCONumPreviewDecks->get() + 1);
 }
 
@@ -543,7 +543,7 @@ void PlayerManager::addPreviewDeckInner() {
 }
 
 void PlayerManager::addMicrophone() {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     slotChangeNumMicrophones(m_pCONumMicrophones->get() + 1);
 }
 
@@ -565,7 +565,7 @@ void PlayerManager::addMicrophoneInner() {
 }
 
 void PlayerManager::addAuxiliary() {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     slotChangeNumAuxiliaries(m_pCONumAuxiliaries->get() + 1);
 }
 
@@ -588,7 +588,7 @@ BaseTrackPlayer* PlayerManager::getPlayer(const QString& group) const {
 }
 
 BaseTrackPlayer* PlayerManager::getPlayer(const ChannelHandle& handle) const {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
 
     if (m_players.contains(handle)) {
         return m_players[handle];
@@ -597,7 +597,7 @@ BaseTrackPlayer* PlayerManager::getPlayer(const ChannelHandle& handle) const {
 }
 
 Deck* PlayerManager::getDeck(unsigned int deck) const {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     VERIFY_OR_DEBUG_ASSERT(deck > 0 && deck <= numDecks()) {
         qWarning() << "getDeck() called with invalid number:" << deck;
         return nullptr;
@@ -606,7 +606,7 @@ Deck* PlayerManager::getDeck(unsigned int deck) const {
 }
 
 PreviewDeck* PlayerManager::getPreviewDeck(unsigned int libPreviewPlayer) const {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     if (libPreviewPlayer < 1 || libPreviewPlayer > numPreviewDecks()) {
         kLogger.warning() << "Warning getPreviewDeck() called with invalid index: "
                    << libPreviewPlayer;
@@ -616,7 +616,7 @@ PreviewDeck* PlayerManager::getPreviewDeck(unsigned int libPreviewPlayer) const 
 }
 
 Sampler* PlayerManager::getSampler(unsigned int sampler) const {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     if (sampler < 1 || sampler > numSamplers()) {
         kLogger.warning() << "Warning getSampler() called with invalid index: "
                    << sampler;
@@ -640,7 +640,7 @@ TrackPointer PlayerManager::getSecondLastEjectedTrack() const {
 }
 
 Microphone* PlayerManager::getMicrophone(unsigned int microphone) const {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     if (microphone < 1 || microphone >= static_cast<unsigned int>(m_microphones.size())) {
         kLogger.warning() << "Warning getMicrophone() called with invalid index: "
                    << microphone;
@@ -650,7 +650,7 @@ Microphone* PlayerManager::getMicrophone(unsigned int microphone) const {
 }
 
 Auxiliary* PlayerManager::getAuxiliary(unsigned int auxiliary) const {
-    const auto locker = lockMutex(&m_mutex);
+    const QMutexLocker locker(&m_mutex);
     if (auxiliary < 1 || auxiliary > static_cast<unsigned int>(m_auxiliaries.size())) {
         kLogger.warning() << "Warning getAuxiliary() called with invalid index: "
                    << auxiliary;
@@ -778,7 +778,7 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 }
 
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
@@ -793,7 +793,7 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
 }
 
 void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& location, bool play) {
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
@@ -804,7 +804,7 @@ void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& locatio
 }
 
 void PlayerManager::slotLoadTrackIntoNextAvailableSampler(TrackPointer pTrack) {
-    auto locker = lockMutex(&m_mutex);
+    QMutexLocker locker(&m_mutex);
     BaseTrackPlayer* pSampler = findFirstStoppedPlayerInList(m_samplers);
     if (pSampler == nullptr) {
         qDebug() << "PlayerManager: No stopped sampler found, not loading track!";
