@@ -122,6 +122,18 @@ EffectSlot::EffectSlot(const QString& group,
             this,
             &EffectSlot::slotClear);
 
+    m_pControlShowEffectList =
+            std::make_unique<ControlPushButton>(ConfigKey(m_group, "show_effects_list"));
+    m_pControlShowEffectList->connectValueChangeRequest(
+            this,
+            [this](double value) {
+                emit effectsListShowRequest(value > 0);
+            });
+    // All WEffectSelector of this slot receive this. If one of them is visible,
+    // it'll return a 'confirm' signal which we handle in slotEeffectsListVisibleChanged
+    // and set the control accordingly.
+    // TODO test how reliable this is with multiple WEffectSeletors for a single slot.
+
     for (unsigned int i = 0; i < kDefaultMaxParameters; ++i) {
         addEffectParameterSlot(EffectParameterType::Knob);
         addEffectParameterSlot(EffectParameterType::Button);
@@ -596,4 +608,8 @@ void EffectSlot::slotEffectMetaParameter(double v, bool force) {
             pParameterSlot->onEffectMetaParameterChanged(v, force);
         }
     }
+}
+
+void EffectSlot::slotEeffectsListVisibleChanged(bool visible) {
+    m_pControlShowEffectList->setAndConfirm(visible ? 1.0 : 0.0);
 }

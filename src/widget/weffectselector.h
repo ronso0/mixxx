@@ -23,13 +23,18 @@ class WEffectSelector : public QComboBox, public WBaseWidget {
 
     void setup(const QDomNode& node, const SkinContext& context);
 
+    void showPopup();
+    void hidePopup();
+
   signals:
     void effectEnabledChanged(bool enabled);
+    void effectsListVisibleChanged(bool visible);
 
   private slots:
     void slotEffectUpdated();
     void slotEffectSelected(int newIndex);
     void slotEffectEnabledChanged(bool enabled);
+    void slotEffectsListShowRequest(bool show);
     void populate();
     bool event(QEvent* pEvent) override;
 

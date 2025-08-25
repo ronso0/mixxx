@@ -46,6 +46,15 @@ void WEffectSelector::setup(const QDomNode& node, const SkinContext& context) {
                 QOverload<int>::of(&QComboBox::activated),
                 this,
                 &WEffectSelector::slotEffectSelected);
+        // Show/hide the effects list
+        connect(m_pEffectSlot.data(),
+                &EffectSlot::effectsListShowRequest,
+                this,
+                &WEffectSelector::slotEffectsListShowRequest);
+        connect(this,
+                &WEffectSelector::effectsListVisibleChanged,
+                m_pEffectSlot.data(),
+                &EffectSlot::slotEeffectsListVisibleChanged);
     } else {
         SKIN_WARNING(node,
                 context,
@@ -58,7 +67,7 @@ void WEffectSelector::setup(const QDomNode& node, const SkinContext& context) {
 
 void WEffectSelector::populate() {
     blockSignals(true);
-    clear();
+    clear(); // Should hide popup
 
     const QList<EffectManifestPointer> visibleEffectManifests = m_pVisibleEffectsList->getList();
     QFontMetrics metrics(font());
@@ -135,6 +144,29 @@ void WEffectSelector::slotEffectEnabledChanged(bool enabled) {
     style()->polish(this);
     update();
     emit effectEnabledChanged(m_effectEnabled);
+}
+
+void WEffectSelector::slotEffectsListShowRequest(bool show) {
+    if (!isVisible()) {
+        return;
+    }
+    if (show) {
+        showPopup();
+    } else {
+        hidePopup();
+    }
+}
+
+void WEffectSelector::showPopup() {
+    if (count() > 0) {
+        QComboBox::showPopup();
+        emit effectsListVisibleChanged(true);
+    }
+}
+
+void WEffectSelector::hidePopup() {
+    QComboBox::hidePopup();
+    emit effectsListVisibleChanged(false);
 }
 
 bool WEffectSelector::event(QEvent* pEvent) {
