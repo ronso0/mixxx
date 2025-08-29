@@ -67,8 +67,7 @@ void EnginePregain::setSpeedAndScratching(double speed, bool scratching) {
 void EnginePregain::process(CSAMPLE* pInOut, const int iBufferSize) {
     const auto fReplayGain = static_cast<CSAMPLE_GAIN>(m_pCOReplayGain->get());
     CSAMPLE_GAIN fReplayGainCorrection;
-    if (!s_pEnableReplayGain->toBool() || m_pPassthroughEnabled->toBool()) {
-        // Override replaygain value if passing through
+    if (!s_pEnableReplayGain->toBool()) {
         // TODO(XXX): consider a good default.
         // Do we expect an replaygain leveled input or
         // Normalized to 1 input?
@@ -115,10 +114,18 @@ void EnginePregain::process(CSAMPLE* pInOut, const int iBufferSize) {
     // Clamp gain to within [0, 10.0] to prevent insane gains. This can happen
     // (some corrupt files get really high replay gain values).
     // 10 allows a maximum replay Gain Boost * calculated replay gain of ~2
-    auto totalGain = static_cast<CSAMPLE_GAIN>(m_pPotmeterPregain->get()) *
+    CSAMPLE_GAIN totalGain; // for the audio
+    // for the waveforms
+    CSAMPLE_GAIN visualGain = static_cast<CSAMPLE_GAIN>(m_pPotmeterPregain->get()) *
             math_clamp(fReplayGainCorrection, 0.0f, 10.0f);
+    if (m_pPassthroughEnabled->toBool()) {
+        // Override replaygain value if passing through
+        totalGain = static_cast<CSAMPLE_GAIN>(m_pPotmeterPregain->get());
+    } else {
+        totalGain = visualGain;
+    }
 
-    m_pTotalGain->set(totalGain);
+    m_pTotalGain->set(visualGain);
 
     // Vinylsoundemu:
     // Apply Gain change depending on the speed.
