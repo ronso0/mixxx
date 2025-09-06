@@ -16,6 +16,7 @@ function TerminalMix() {}
 // cycle through the following pitch ranges. Edit the array to choose
 // the ranges you need. For example '0.08' means +/-8%
 TerminalMix.pitchRanges = [ 0.08, 0.12, 0.25, 0.5, 1.0 ];
+TerminalMix.usePositionScratchMode= !!engine.getSetting("positionScratchMode");
 
 // ----------   Other global variables    ----------
 TerminalMix.timers = [];
@@ -144,29 +145,45 @@ TerminalMix.halfSec = function () {
 
 // The button that enables/disables scratching
 TerminalMix.wheelTouch = function (channel, control, value, status, group) {
-    var deck = script.deckFromGroup(group);
-    if (value == 0x7F) {
-        var alpha = 1.0/8;
-        var beta = alpha/32;
-        engine.scratchEnable(deck, 800, 33+1/3, alpha, beta);
-    }
-    else {    // If button up
-        engine.scratchDisable(deck);
+    const deck = script.deckFromGroup(group);
+    if (TerminalMix.usePositionScratchMode) {
+        // Alternative method via `scratch_poition` as used for waveform scratching
+        // Reset position (tick accumulator)
+        TerminalMix.scratchPos[deck] = 0;
+        engine.setValue(group, "scratch_position_enable", value ? 1 : 0);
+    } else {
+        // Traditional mode
+        if (value === 0x7F) {
+            // Pressed
+            const alpha = 1.0/8;
+            const beta = alpha/32;
+            engine.scratchEnable(deck, 800, 33+1/3, alpha, beta);
+        } else {    // If button up
+            // Released
+            engine.scratchDisable(deck);
+        }
     }
 }
 
 // The wheel that actually controls the scratching
 TerminalMix.wheelTurn = function (channel, control, value, status, group) {
-    var deck = script.deckFromGroup(group);
-    var newValue=(value-64);
-    // See if we're scratching. If not, do wheel jog.
-    if (!engine.isScratching(deck)) {
-        engine.setValue(group, "jog", newValue/4);
-        return;
-    }
+    const deck = script.deckFromGroup(group);
+    const newValue = value - 64;
 
-    // Register the movement
-    engine.scratchTick(deck,newValue);
+    // See if we're scratching. If not, do wheel jog.
+    if (TerminalMix.usePositionScratchMode && engine.getValue(group, "scratch_position_enable")) {
+        // Alternative method via `scratch_poition` as used for waveform scratching
+        const oldPos = TerminalMix.scratchPos[deck];
+        const newPos = oldPos + (newValue * 500);
+        TerminalMix.scratchPos[deck] = newPos;
+        engine.setValue(group, "scratch_position", newPos);
+    } else if (engine.isScratching(deck)) {
+        // Traditional mode
+        // Register the movement
+        engine.scratchTick(deck, newValue);
+    } else {
+        engine.setValue(group, "jog", newValue/4);
+    }
 }
 
 TerminalMix.samplerVolume = function (channel, control, value) {

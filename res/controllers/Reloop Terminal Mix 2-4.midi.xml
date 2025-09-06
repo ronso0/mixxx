@@ -6,6 +6,17 @@
     <description>A complete 4-deck preset for a single Reloop Terminal Mix 2 or 4.</description>
     <manual>reloop_terminal_mix_series</manual>
   </info>
+  <settings>
+    <option
+      variable="positionScratchMode"
+      type="boolean"
+      default="false"
+      label="Use alternative scratch method">
+      <description>
+        This method does not have sticker drift, but due to different filtering it may sound odd at low speeds.
+      </description>
+    </option>
+  </settings>
   <controller id="TerminalMix">
     <scriptfiles>
       <file functionprefix="" filename="lodash.mixxx.js"/>
