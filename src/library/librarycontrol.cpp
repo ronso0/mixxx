@@ -758,7 +758,7 @@ void LibraryControl::slotAppendDeckTrackToPrepPlaylist(double value, const QStri
         return;
     }
     TrackId id = pTrack->getId();
-    appendTrackToPrepPlaylist(id);
+    appendTrackToPrepPlaylist(id, group);
 }
 
 void LibraryControl::slotAppendSelectedTrackToPrepPlaylist(double value) {
@@ -777,7 +777,7 @@ void LibraryControl::slotAppendSelectedTrackToPrepPlaylist(double value) {
     appendTrackToPrepPlaylist(id);
 }
 
-void LibraryControl::appendTrackToPrepPlaylist(TrackId id) {
+void LibraryControl::appendTrackToPrepPlaylist(TrackId id, const QString& group) {
     if (!id.isValid()) {
         return;
     }
@@ -871,6 +871,17 @@ void LibraryControl::appendTrackToPrepPlaylist(TrackId id) {
                 });
     } else {
         m_prepSplashScreen->setPixmap(pixmap);
+        // move SplashScreen
+        // for decks: left|right
+        //   x = 1/4 or 3/4 of window width
+        //   y = 1/4 of window height
+        // for library: lower window center
+        int deckNum = -1;
+        if (group.isEmpty() && PlayerManager::isDeckGroup(group, &deckNum) && deckNum > 0) {
+            // m_prepSplashScreen->move()
+        } else {
+            // m_prepSplashScreen->move()
+        }
         m_prepSplashScreen->show();
         m_prepSplashScreen->raise();
         m_prepSplashScreenTimer->start();
