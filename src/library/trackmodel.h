@@ -169,6 +169,11 @@ class TrackModel {
     virtual void purgeTracks(const QModelIndexList& indices) {
         Q_UNUSED(indices);
     }
+    virtual void shuffleTracks(const QModelIndexList& shuffle,
+            const QModelIndex& exclude = QModelIndex()) {
+        Q_UNUSED(shuffle);
+        Q_UNUSED(exclude);
+    }
     virtual int addTracks(const QModelIndex& index, const QList<QString>& locations) {
         Q_UNUSED(index);
         Q_UNUSED(locations);

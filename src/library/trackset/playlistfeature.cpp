@@ -238,7 +238,7 @@ void PlaylistFeature::slotShufflePlaylist() {
                 selection = view->selectionModel()->selectedIndexes();
             }
         }
-        m_pPlaylistTableModel->shuffleTracks(selection, QModelIndex());
+        m_pPlaylistTableModel->shuffleTracks(selection);
     } else {
         // Create a temp model so we don't need to select the playlist
         // in the persistent model in order to shuffle it
@@ -253,7 +253,7 @@ void PlaylistFeature::slotShufflePlaylist() {
                 Qt::AscendingOrder);
         pPlaylistTableModel->select();
 
-        pPlaylistTableModel->shuffleTracks(selection, QModelIndex());
+        pPlaylistTableModel->shuffleTracks(selection);
     }
 }
 

@@ -306,7 +306,7 @@ void WTrackTableView::loadTrackModel(QAbstractItemModel* model, bool restoreStat
         connect(pHeader,
                 &WTrackTableViewHeader::shuffle,
                 this,
-                &WTrackTableView::slotRandomSorting);
+                &WTrackTableView::slotShuffleTracks);
 
         Qt::SortOrder sortOrder;
         TrackModel::SortColumnId sortColumn =
@@ -1838,13 +1838,24 @@ void WTrackTableView::slotSortingChanged(int headerSection, Qt::SortOrder order)
     }
 }
 
-void WTrackTableView::slotRandomSorting() {
-    // There's no need to remove the shuffle feature of the Preview column
-    // (and replace it with a dedicated randomize slot to BaseSqltableModel),
-    // so we simply abuse that column.
-    auto previewCol = TrackModel::SortColumnId::Preview;
-    m_pSortColumn->set(static_cast<int>(previewCol));
-    applySortingIfVisible();
+void WTrackTableView::slotShuffleTracks() {
+    TrackModel* pTrackModel = getTrackModel();
+    if (!pTrackModel) {
+        return;
+    }
+
+    if (pTrackModel->hasCapabilities(TrackModel::Capability::Reorder)) {
+        // If this is a PlaylistTableModel, we use its own shuffle method
+        // that preserves the current sort column.
+        // Shuffle only selected tracks, or all if none is selected
+        const QModelIndexList selection = selectionModel()->selectedIndexes();
+        pTrackModel->shuffleTracks(selection, QModelIndex());
+    } else {
+        // For any other view we abuse the shuffle feature of the Preview column.
+        auto previewCol = TrackModel::SortColumnId::Preview;
+        m_pSortColumn->set(static_cast<int>(previewCol));
+        applySortingIfVisible();
+    }
 }
 
 bool WTrackTableView::hasFocus() const {
