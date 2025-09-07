@@ -802,7 +802,7 @@ void LibraryControl::slotAppendDeckTrackToPrepPlaylist(double value, const QStri
         return;
     }
     TrackId id = pTrack->getId();
-    appendTrackToPrepPlaylist(id);
+    appendTrackToPrepPlaylist(id, group);
 }
 
 void LibraryControl::slotAppendSelectedTrackToPrepPlaylist(double value) {
@@ -821,7 +821,7 @@ void LibraryControl::slotAppendSelectedTrackToPrepPlaylist(double value) {
     appendTrackToPrepPlaylist(id);
 }
 
-void LibraryControl::appendTrackToPrepPlaylist(TrackId id) {
+void LibraryControl::appendTrackToPrepPlaylist(TrackId id, const QString& group) {
     if (!id.isValid()) {
         return;
     }
