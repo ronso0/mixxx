@@ -150,7 +150,7 @@ class LibraryControl : public QObject {
   private:
     Library* m_pLibrary;
 
-    void appendTrackToPrepPlaylist(TrackId id);
+    void appendTrackToPrepPlaylist(TrackId id, const QString& group = QString());
 
     // Simulate pressing a key on the keyboard
     void emitKeyEvent(QKeyEvent&& event);
