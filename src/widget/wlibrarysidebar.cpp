@@ -23,6 +23,7 @@ WLibrarySidebar::WLibrarySidebar(QWidget* parent)
           WBaseWidget(this),
           m_pSidebarModel(nullptr),
           m_hoverExpandDelay(mixxx::library::prefs::kSidebarHoverExpandDelayDefault),
+          m_lastDragMoveAccepted(false),
           m_watchedPathColor(kDefaultWatchedPathColor) {
     qRegisterMetaType<FocusWidget>("FocusWidget");
     //Set some properties
@@ -453,7 +454,7 @@ void WLibrarySidebar::selectChildIndex(const QModelIndex& index, bool selectItem
     scrollTo(translated, EnsureVisible);
 }
 
-QModelIndex WLibrarySidebar::selectedIndex() {
+QModelIndex WLibrarySidebar::selectedIndex() const {
     QModelIndexList selectedIndices = selectionModel()->selectedRows();
     if (selectedIndices.isEmpty()) {
         return QModelIndex();
