@@ -75,8 +75,6 @@ class MixxxLibraryFeature final : public LibraryFeature {
     DlgMissing* m_pMissingView;
     DlgHidden* m_pHiddenView;
 
-    TreeItem* m_pTracksTreeItem;
-
     int m_trackCount;
 
 #ifdef __ENGINEPRIME__

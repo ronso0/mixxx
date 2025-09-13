@@ -33,7 +33,6 @@ MixxxLibraryFeature::MixxxLibraryFeature(Library* pLibrary,
           m_pSidebarModel(make_parented<TreeItemModel>(this)),
           m_pMissingView(nullptr),
           m_pHiddenView(nullptr),
-          m_pTracksTreeItem(nullptr),
           m_trackCount{0} {
     QString idColumn = LIBRARYTABLE_ID;
     QStringList columns = {
@@ -122,7 +121,6 @@ MixxxLibraryFeature::MixxxLibraryFeature(Library* pLibrary,
             &MixxxLibraryFeature::slotUpdateTrackCount);
 
     std::unique_ptr<TreeItem> pRootItem = TreeItem::newRoot(this);
-    m_pTracksTreeItem = pRootItem.get();
     pRootItem->appendChild(kMissingTitle);
     pRootItem->appendChild(kHiddenTitle);
 
@@ -195,12 +193,9 @@ void MixxxLibraryFeature::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
 void MixxxLibraryFeature::slotUpdateTrackCount() {
     m_trackCount = m_pLibraryTableModel->rowCount();
 
-    if (m_pTracksTreeItem && m_pSidebarModel) {
-        QModelIndex rootIndex = m_pSidebarModel->getRootIndex();
-        QModelIndex tracksIndex = m_pSidebarModel->index(
-                m_pTracksTreeItem->parentRow(), 0, rootIndex);
-        m_pSidebarModel->triggerRepaint(tracksIndex);
-    }
+    // Force updating the Tracks sidebar item.
+    // `select` must be false as we don't want to select again
+    emit featureIsLoading(this, false);
 }
 
 void MixxxLibraryFeature::activate() {
