@@ -786,6 +786,24 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
         return;
     }
 
+    // Don't load into invisible decks 3/4
+    int deckNum = -1;
+    VERIFY_OR_DEBUG_ASSERT(extractIntFromRegex(kDeckRegex, pDeck->getGroup(), &deckNum)) {
+        qWarning() << "PlayerManager: couldn't extract number from deck group" << pDeck->getGroup();
+        return;
+    }
+    if (deckNum > 2) {
+        // Don't care if we have a skin that didn't create the [Skin],show_4decks control.
+        ControlObject* pSkinShowDeck34Control = ControlObject::getControl(
+                // TODO Move ConfigKey to some defs.h file, it's also used by
+                // AutoDJProcessor and listed in ControlPickerMenu
+                ConfigKey(QStringLiteral("[Skin]"), QStringLiteral("show_4decks")));
+        if (pSkinShowDeck34Control != nullptr && !pSkinShowDeck34Control->toBool()) {
+            qDebug() << "PlayerManager: don't load into invisible deck" << deckNum;
+            return;
+        }
+    }
+
     pDeck->slotLoadTrack(pTrack,
 #ifdef __STEM__
             mixxx::StemChannelSelection(),
@@ -800,7 +818,7 @@ void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& locatio
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
     }
-
+    // Do we need a the decks 3/4 check here, too?
     slotLoadLocationToPlayer(location, pDeck->getGroup(), play);
 }
 

@@ -66,6 +66,8 @@ void CoverArtDelegate::requestUncachedCover(
         int width,
         int row) const {
     if (coverInfo.imageDigest().isEmpty()) {
+        kLogger.warning() << "requestUncachedCover, imageDigest empty, get track by ref:";
+        kLogger.warning() << "coverInfo.trackLocation:" << coverInfo.trackLocation;
         // This happens if we have the legacy hash
         // The CoverArtCache will take care of the update
         const auto pTrack = m_pTrackModel->getTrackByRef(
@@ -75,6 +77,7 @@ void CoverArtDelegate::requestUncachedCover(
         // This is the fast path with an internal temporary track
         CoverArtCache::requestUncachedCover(this, coverInfo, width);
     }
+    kLogger.warning() << "add to m_pendingCacheRows" << row << coverInfo.cacheKey();
     m_pendingCacheRows.insert(coverInfo.cacheKey(), row);
 }
 
@@ -111,6 +114,7 @@ void CoverArtDelegate::slotCoverFound(
     }
     mixxx::cache_key_t requestedImageHash = coverInfo.cacheKey();
     QList<int> refreshRows = m_pendingCacheRows.values(requestedImageHash);
+    kLogger.warning() << "rm from m_pendingCacheRows" << refreshRows << requestedImageHash;
     m_pendingCacheRows.remove(requestedImageHash);
     if (pixmap.isNull()) {
         kLogger.warning() << "Failed to load cover" << coverInfo;

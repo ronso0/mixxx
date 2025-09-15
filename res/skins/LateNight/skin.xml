@@ -238,17 +238,17 @@
       <!-- Arc Colors -->
       <SetVariable name="ArcColorEq">#858585</SetVariable>
       <SetVariable name="ArcColorGain">#b96300</SetVariable>
-      <SetVariable name="ArcColorFx12Quick">#518f00</SetVariable>
-      <SetVariable name="ArcColorFx34">#028392</SetVariable>
+      <SetVariable name="ArcColorFx12Quick">#028392</SetVariable>
+      <SetVariable name="ArcColorFx34">#b321be</SetVariable>
       <SetVariable name="ArcColorFxParameter">#6d6d6d</SetVariable>
       <SetVariable name="ArcColorGainLow">#8d3b11</SetVariable>
       <SetVariable name="ArcColorMstBal">#a00000</SetVariable>
       <SetVariable name="ArcColorFxMix">#a00000</SetVariable>
       <!-- Knob pointers = suffix for indicator image url -->
       <SetVariable name="KnobColorEq">grey</SetVariable>
-      <SetVariable name="KnobColorQuickEffect">green</SetVariable>
-      <SetVariable name="KnobColorFx12">green</SetVariable>
-      <SetVariable name="KnobColorFx34">blue</SetVariable>
+      <SetVariable name="KnobColorQuickEffect">blue</SetVariable>
+      <SetVariable name="KnobColorFx12">blue</SetVariable>
+      <SetVariable name="KnobColorFx34">purple</SetVariable>
       <SetVariable name="KnobColorFxParameter">grey</SetVariable>
       <!-- Size of the small EQ kill indicators:
           svg is 6x6 px, set size to '0f,0f' to hide them -->
@@ -392,7 +392,7 @@
     <SingletonDefinition>
       <ObjectName>Deck3_Src</ObjectName>
       <Children>
-      <Template src="skins:LateNight/decks/deck.xml">
+      <Template src="skins:LateNight/decks/deck_34.xml">
         <SetVariable name="ChanNum">3</SetVariable>
         <SetVariable name="DeckGroup">34</SetVariable>
         <SetVariable name="SignalColor"><Variable name="SignalColor_34"/></SetVariable>
@@ -404,7 +404,7 @@
     <SingletonDefinition>
       <ObjectName>Deck4_Src</ObjectName>
       <Children>
-      <Template src="skins:LateNight/decks/deck.xml">
+      <Template src="skins:LateNight/decks/deck_34.xml">
         <SetVariable name="ChanNum">4</SetVariable>
         <SetVariable name="DeckGroup">34</SetVariable>
         <SetVariable name="SignalColor"><Variable name="SignalColor_34"/></SetVariable>
@@ -495,8 +495,8 @@
                           </Children>
                         </WidgetGroup>
 
-                        <Template src="skins:LateNight/fx_rack.xml"/>
                         <Template src="skins:LateNight/samplers_rack.xml"/>
+                        <Template src="skins:LateNight/fx_rack.xml"/>
                         <Template src="skins:LateNight/mic_aux_rack.xml"/>
 
                         <SingletonContainer>

@@ -100,10 +100,10 @@ void setCommonValueOrVariousStringAndFormatFont(QLabel* pLabel,
 
 } // namespace
 
-DlgTrackInfoMulti::DlgTrackInfoMulti(UserSettingsPointer pUserSettings)
-        // No parent because otherwise it inherits the style parent's
-        // style which can make it unreadable. Bug #673411
-        : QDialog(nullptr),
+DlgTrackInfoMulti::DlgTrackInfoMulti(
+        QWidget* pParent,
+        UserSettingsPointer pUserSettings)
+        : QDialog(pParent),
           m_pUserSettings(std::move(pUserSettings)),
           m_pWCoverArtMenu(make_parented<WCoverArtMenu>(this)),
           m_pWCoverArtLabel(make_parented<WCoverArtLabel>(this, m_pWCoverArtMenu)),
@@ -171,6 +171,13 @@ void DlgTrackInfoMulti::init() {
             &QPushButton::clicked,
             this,
             &DlgTrackInfoMulti::slotOpenInFileBrowser);
+
+    // Show, hide, enable widgets when comment edit mode is changed
+    connect(commentEditModeGroup,
+            &QButtonGroup::buttonToggled,
+            this,
+            &DlgTrackInfoMulti::slotCommentEditModeChanged);
+    btnCommentSelect->setChecked(true);
 
     QList<QComboBox*> valueComboBoxes;
     valueComboBoxes.append(txtArtist);
@@ -678,12 +685,14 @@ void DlgTrackInfoMulti::saveTracks() {
     // Check if the Comment has been changed.
     // (same as in validEditText(), just for the QPlainTextEdit)
     QString comment;
-    const QString origText = txtComment->property(kOrigValProp).toString();
-    const QString currText = txtComment->toPlainText();
-    if ((txtCommentBox->count() > 0 && txtComment->placeholderText().isNull()) ||
-            (txtCommentBox->count() == 0 && currText != origText)) {
-        // Remove trailing whitespaces.
-        comment = mixxx::removeTrailingWhitespaces(currText);
+    if (btnCommentSelect->isChecked()) {
+        const QString origText = txtComment->property(kOrigValProp).toString();
+        const QString currText = txtComment->toPlainText();
+        if ((txtCommentBox->count() > 0 && txtComment->placeholderText().isNull()) ||
+                (txtCommentBox->count() == 0 && currText != origText)) {
+            // Remove trailing whitespaces.
+            comment = mixxx::removeTrailingWhitespaces(currText);
+        }
     }
 
     for (auto& rec : m_trackRecords) {
@@ -719,14 +728,107 @@ void DlgTrackInfoMulti::saveTracks() {
         if (!num.isNull()) {
             rec.refMetadata().refTrackInfo().setTrackNumber(num);
         }
-        if (!comment.isNull()) {
-            rec.refMetadata().refTrackInfo().setComment(comment);
+
+        // See special Find/Replace/Insert routine below
+        if (btnCommentSelect->isChecked()) {
+            if (!comment.isNull()) {
+                rec.refMetadata().refTrackInfo().setComment(comment);
+            }
         }
         if (m_colorChanged) {
             rec.setColor(m_newColor);
         }
         if (m_starRatingModified) {
             rec.setRating(m_newRating);
+        }
+    }
+
+    if (btnCommentReplace->isChecked()) {
+        const QString findStr = txtCommentFind->text();
+        const QString replaceStr = txtCommentReplace->text();
+        // Replace or remove
+        bool doFindReplace = !findStr.isEmpty();
+        // Insert only
+        bool doInsert = findStr.isEmpty() && !replaceStr.isEmpty();
+        if (doFindReplace || doInsert) {
+            QRegularExpression findRegEx(QStringLiteral("\\b(%1)\\b").arg(findStr));
+            QRegularExpression replaceRegEx(QStringLiteral("\\b(%1)\\b").arg(replaceStr));
+            QRegularExpressionMatch regexMatch;
+            for (auto& rec : m_trackRecords) {
+                bool writeNewComment = false;
+                QString comment = rec.refMetadata().refTrackInfo().getComment();
+                // Edit only first line, like in WTrackProperty editor:
+                // Split comment, edit 1st line, rm whitespaces, join, apply.
+                QString commFirstLine = comment;
+                QString commRest;
+                // Separate first line and rest
+                int firstLbIdx = commFirstLine.indexOf(QStringLiteral("\n"));
+                if (firstLbIdx >= 0) {
+                    qWarning() << "  split comm:";
+                    qWarning() << "  1st: " << commFirstLine;
+                    qWarning() << "  rest:" << commRest;
+                    commFirstLine.truncate(firstLbIdx);
+                    commRest = comment.sliced(firstLbIdx);
+                }
+
+                if (doFindReplace && !commFirstLine.isEmpty()) {
+                    qWarning() << "  find/replace:" << commFirstLine << "|" << findStr
+                               << "->" << replaceStr;
+                    regexMatch = findRegEx.match(commFirstLine);
+                    if (regexMatch.hasMatch()) {
+                        qWarning() << "    has match, replace";
+                        commFirstLine.replace(findRegEx, replaceStr);
+                        qWarning() << "    ==" << commFirstLine;
+                        writeNewComment = true;
+                    }
+                } else if (doInsert) {
+                    qWarning() << "  replace/insert";
+                    regexMatch = replaceRegEx.match(commFirstLine);
+                    if (!regexMatch.hasMatch()) {
+                        qWarning() << "    no match, insert at start";
+                        qWarning() << "      ==" << commFirstLine;
+                        commFirstLine.insert(0, QString(replaceStr + ' '));
+                        qWarning() << "      ==" << commFirstLine;
+                        writeNewComment = true;
+                    }
+                }
+
+                if (writeNewComment) {
+                    qWarning() << "      rm whitespaces";
+                    qWarning() << "      ==" << commFirstLine;
+                    // Shrink consecutive whitespaces to one
+                    // TODO Use QRegEx
+                    while (commFirstLine.contains("  ")) {
+                        qWarning() << "      remove multi ws";
+                        qWarning() << "      ==" << commFirstLine;
+                        commFirstLine.replace("  ", " ");
+                        qWarning() << "      ==" << commFirstLine;
+                    }
+                    // Remove leading and trailing whitespace in first line
+                    while (commFirstLine.startsWith(' ')) {
+                        qWarning() << "      remove leading ws";
+                        qWarning() << "      ==" << commFirstLine;
+                        // TODO Replace with removeFirst() in Qt 6.5
+                        comment = comment.remove(0, 1);
+                        qWarning() << "      ==" << commFirstLine;
+                    }
+                    while (commFirstLine.endsWith(' ')) {
+                        qWarning() << "      remove trailing ws";
+                        qWarning() << "      ==" << commFirstLine;
+                        // TODO Replace with removeLast() in Qt 6.5
+                        commFirstLine.truncate(commFirstLine.length() - 1);
+                        qWarning() << "      ==" << commFirstLine;
+                    }
+                    // commRest may be empty
+                    if (!commRest.isEmpty()) {
+                        qWarning() << "      join" << commFirstLine;
+                        qWarning() << "      and " << commRest;
+                    }
+                    QString newComment = commFirstLine + commRest;
+                    qWarning() << "    write:" << newComment;
+                    rec.refMetadata().refTrackInfo().setComment(newComment);
+                }
+            }
         }
     }
 
@@ -1117,4 +1219,11 @@ void DlgTrackInfoMulti::slotReloadCoverArt() {
         rec.setCoverInfo(cover);
     }
     updateCoverArtFromTracks();
+}
+
+void DlgTrackInfoMulti::slotCommentEditModeChanged(QAbstractButton* pBtn) {
+    bool commentSelect = pBtn == btnCommentSelect;
+    txtComment->setVisible(commentSelect);
+    txtCommentBox->setEnabled(commentSelect);
+    commentFindReplaceBox->setVisible(!commentSelect);
 }

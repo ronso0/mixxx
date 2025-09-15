@@ -894,8 +894,20 @@ void ControllerScriptInterfaceLegacy::scratchDisable(int deck, bool ramp) {
 
 bool ControllerScriptInterfaceLegacy::isScratching(int deck) {
     // PlayerManager::groupForDeck is 0-indexed.
-    QString group = PlayerManager::groupForDeck(deck - 1);
+    const QString group = PlayerManager::groupForDeck(deck - 1);
     return getValue(group, "scratch2_enable") > 0;
+}
+
+bool ControllerScriptInterfaceLegacy::isSoftStarting(int deck) {
+    // PlayerManager::groupForDeck is 0-indexed.
+    const QString group = PlayerManager::groupForDeck(deck - 1);
+    return m_softStartActive[deck];
+}
+
+bool ControllerScriptInterfaceLegacy::isBraking(int deck) {
+    // PlayerManager::groupForDeck is 0-indexed.
+    const QString group = PlayerManager::groupForDeck(deck - 1);
+    return m_brakeActive[deck];
 }
 
 void ControllerScriptInterfaceLegacy::spinback(
@@ -1015,7 +1027,13 @@ void ControllerScriptInterfaceLegacy::softStart(int deck, bool activate, double 
 
     double initRate = 0.0;
     // acquire deck rate
-    m_rampTo[deck] = getDeckRate(group);
+    double targetRate = getDeckRate(group);
+    // TEST Try to ramp to reverse rate if reverse is pressed when we softStart
+    ControlObjectScript* pReverse = getControlObjectScript(group, "reverse");
+    if (pReverse != nullptr && pReverse->toBool()) {
+        targetRate = 0 - targetRate;
+    }
+    m_rampTo[deck] = targetRate;
 
     // if braking or spinning back, get current rate from filter
     if (m_brakeActive[deck] || m_spinbackActive[deck]) {

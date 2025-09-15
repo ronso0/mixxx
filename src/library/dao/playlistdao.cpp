@@ -13,7 +13,8 @@
 #include "util/math.h"
 
 PlaylistDAO::PlaylistDAO()
-        : m_pAutoDJProcessor(nullptr) {
+        : m_pAutoDJProcessor(nullptr),
+          m_prepPlaylistId(kInvalidPlaylistId) {
 }
 
 void PlaylistDAO::initialize(const QSqlDatabase& database) {
@@ -88,7 +89,7 @@ int PlaylistDAO::createPlaylist(const QString& name, const HiddenType hidden) {
     int playlistId = query.lastInsertId().toInt();
     // Commit the transaction
     transaction.commit();
-    emit added(playlistId);
+    emit added(playlistId, hidden);
     return playlistId;
 }
 
@@ -192,7 +193,8 @@ void PlaylistDAO::deletePlaylist(const int playlistId) {
     ScopedTransaction transaction(m_database);
 
     QSet<TrackId> playedTrackIds;
-    if (getHiddenType(playlistId) == PLHT_SET_LOG) {
+    PlaylistDAO::HiddenType type = getHiddenType(playlistId);
+    if (type == PLHT_SET_LOG) {
         const QList<TrackId> trackIds = getTrackIds(playlistId);
 
         // TODO: QSet<T>::fromList(const QList<T>&) is deprecated and should be
@@ -240,7 +242,7 @@ void PlaylistDAO::deletePlaylist(const int playlistId) {
         }
     }
 
-    emit deleted(playlistId);
+    emit deleted(playlistId, type);
     if (!playedTrackIds.isEmpty()) {
         emit tracksRemovedFromPlayedHistory(playedTrackIds);
     }
@@ -254,6 +256,14 @@ bool PlaylistDAO::deletePlaylists(const QStringList& idStringList) {
 
     qInfo() << "Deleting" << idStringList.size() << "playlists";
 
+    PlaylistDAO::HiddenType type = PlaylistDAO::HiddenType::PLHT_UNKNOWN;
+    // Get playlist type. Assumes playlist batch deletion was invoked
+    // by the same library feature, ie. all are of same type.
+    bool ok = false;
+    int firstId = idStringList.first().toInt(&ok);
+    if (ok) {
+        type = getHiddenType(firstId);
+    }
     // delete tracks assigned to these playlists
     auto deleteTracks = FwdSqlQuery(m_database,
             QString("DELETE FROM PlaylistTracks WHERE playlist_id IN (%1)")
@@ -269,7 +279,7 @@ bool PlaylistDAO::deletePlaylists(const QStringList& idStringList) {
         return false;
     }
 
-    emit deleted(kInvalidPlaylistId);
+    emit deleted(kInvalidPlaylistId, type);
     return true;
 }
 
@@ -436,6 +446,11 @@ int PlaylistDAO::setPlaylistsLocked(const QSet<int>& playlistIds, const bool loc
         return -1;
     }
 
+    // Unset Prep playlist
+    if (m_prepPlaylistId != kInvalidPlaylistId && playlistIds.contains(m_prepPlaylistId)) {
+        togglePrepPlaylist(m_prepPlaylistId);
+    }
+
     emit lockChanged(playlistIds);
     return playlistIds.size();
 }
@@ -593,6 +608,30 @@ QList<QPair<int, QString>> PlaylistDAO::getUnlockedPlaylists(const HiddenType hi
         playlists.append(qMakePair(id, name));
     }
     return playlists;
+}
+
+QSet<int> PlaylistDAO::getPlaylistIds(const HiddenType hidden) const {
+    // qDebug() << "PlaylistDAO::getPlaylistIds(hidden =" << hidden
+    //          << QThread::currentThread() << m_database.connectionName();
+
+    QSqlQuery query(m_database);
+    query.prepare(
+            mixxx::DbConnection::collateLexicographically(
+                    QString("SELECT id FROM Playlists WHERE hidden = %1")
+                            .arg(hidden)));
+
+    QSet<int> ids;
+
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query);
+        return ids;
+    }
+
+    while (query.next()) {
+        const int id = query.value(0).toInt();
+        ids.insert(id);
+    }
+    return ids;
 }
 
 int PlaylistDAO::getPlaylistId(const int index) const {
@@ -1431,4 +1470,65 @@ void PlaylistDAO::addTracksToAutoDJQueue(const QList<TrackId>& trackIds, AutoDJS
         }
         break;
     }
+}
+
+bool PlaylistDAO::isTrackInPrepPlaylist(TrackId id) {
+    if (!id.isValid()) {
+        return false;
+    }
+    if (m_prepPlaylistId == kInvalidPlaylistId) {
+        // append to AutoDJQueue?
+        // Just to make append control more versatile?
+        return false;
+    }
+    return isTrackInPlaylist(id, m_prepPlaylistId);
+}
+
+bool PlaylistDAO::appendTrackToPrepPlaylist(TrackId id) {
+    if (!id.isValid()) {
+        return false;
+    }
+    if (m_prepPlaylistId == kInvalidPlaylistId) {
+        // append to AutoDJQueue?
+        // Just to make append control more versatile?
+        return false;
+    }
+    if (isPlaylistLocked(m_prepPlaylistId)) {
+        return false;
+    }
+    if (isTrackInPlaylist(id, m_prepPlaylistId)) {
+        return false;
+    }
+    return appendTracksToPlaylist(QList<TrackId>{id}, m_prepPlaylistId);
+}
+
+bool PlaylistDAO::removeTrackFromPrepPlaylist(TrackId id) {
+    if (!id.isValid()) {
+        return false;
+    }
+    if (m_prepPlaylistId == kInvalidPlaylistId) {
+        // append to AutoDJQueue?
+        // Just to make append control more versatile?
+        return false;
+    }
+    if (isPlaylistLocked(m_prepPlaylistId)) {
+        return false;
+    }
+    if (!isTrackInPlaylist(id, m_prepPlaylistId)) {
+        return false;
+    }
+    removeTracksFromPlaylistById(m_prepPlaylistId, id);
+    return true;
+}
+
+/// use kInvalidPlaylistId to unset
+int PlaylistDAO::togglePrepPlaylist(int playlistId) {
+    if (!isPlaylistLocked(playlistId)) {
+        if (m_prepPlaylistId == playlistId) {
+            m_prepPlaylistId = kInvalidPlaylistId;
+        } else {
+            m_prepPlaylistId = playlistId;
+        }
+    }
+    return m_prepPlaylistId;
 }
