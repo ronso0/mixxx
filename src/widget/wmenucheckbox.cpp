@@ -22,6 +22,12 @@ bool WMenuCheckBox::eventFilter(QObject* pObj, QEvent* pEvent) {
         // when we have other Q[Widget]Actions in the same menu which have a
         // 'selected' but no 'focus' property.
         clearFocus();
+    } else if (pEvent->type() == QEvent::HoverMove) {
+        auto he = static_cast<QHoverEvent*>(pEvent);
+        if (!rect().contains(he->globalPosition().toPoint())) {
+            clearFocus();
+            return true;
+        }
     } else if (isEnabled() && pEvent->type() == QEvent::MouseButtonRelease) {
         // Note: QCheckBox/QAbstractButton and QMenu act on release, not on click.
         // With the original QCheckBox/QAbstractButton in QWidgetAction implementation,
@@ -31,7 +37,10 @@ bool WMenuCheckBox::eventFilter(QObject* pObj, QEvent* pEvent) {
         // the parent menu to close.
         // For consistency with clicks on the text or box, we need to prevent that.
         // Just toggle the box and swallow the event.
-        toggle();
+        auto me = static_cast<QMouseEvent*>(pEvent);
+        if (rect().contains(me->position().toPoint())) {
+            toggle();
+        }
         return true;
     } else if (pEvent->type() == QEvent::MouseButtonDblClick) {
         return true;
