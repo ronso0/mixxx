@@ -504,13 +504,26 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
     // In case it has been removed or replaced, it is still "valid", but
     // holds dangling internalPointer() that causes a crash.
     // These sanity checks will pass in such case.
-    if (!index.isValid()) {
-        qWarning() << "BrowseFeature::onLazyChildExpandation: index invalid" << index;
+    //
+    // Note: Below we remove child rows. This emits signal &QAbstractItemModel::
+    // rowsAboutToBeRemoved() which calls invalidateRightClickIndex() (of which
+    // we received a reference here when called from slotRefreshDirectoryTree())
+    // This in turn makes m_pSidebarModel->insertTreeItemRows() act on a now
+    // invalid index, and add the new items to the top level.
+    // Avoid that by either
+    // a) making a copy of index (this points to the original sidebar index and
+    //    we can safely incalidate m_lastRightClickedIndex)
+    // b) creating a QPersistentModelIndex from index which has the extra benefit
+    //    (not needed here) that "the model will ensure that references to items
+    //    will continue to be valid as long as they can be accessed by the model"
+    QPersistentModelIndex idx(index);
+    if (!idx.isValid()) {
+        qWarning() << "BrowseFeature::onLazyChildExpandation -> index invalid, abort.";
         return;
     }
-    TreeItem* pItem = static_cast<TreeItem*>(index.internalPointer());
+    TreeItem* pItem = static_cast<TreeItem*>(idx.internalPointer());
     if (!(pItem && pItem->getData().isValid())) {
-        qWarning() << "BrowseFeature::onLazyChildExpandation: no item or item data invalid";
+        qWarning() << "BrowseFeature::onLazyChildExpandation -> no item or no item data, abort.";
         return;
     }
 
@@ -594,7 +607,7 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
 
     // Before we populate the subtree, we need to delete old subtrees
     if (childRows > 0) {
-        m_pSidebarModel->removeRows(0, childRows, index);
+        m_pSidebarModel->removeRows(0, childRows, idx);
     }
 #if defined(__LINUX__)
     if (path == DEVICE_NODE) {
@@ -606,7 +619,7 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
     }
 #endif
     if (!folders.empty()) {
-        m_pSidebarModel->insertTreeItemRows(std::move(folders), 0, index);
+        m_pSidebarModel->insertTreeItemRows(std::move(folders), 0, idx);
     }
 }
 
