@@ -314,6 +314,7 @@ class EngineMixer : public QObject, public AudioSource {
     std::unique_ptr<ControlPotmeter> m_pCrossfader;
     std::unique_ptr<ControlPotmeter> m_pHeadMix;
     std::unique_ptr<ControlPotmeter> m_pBalance;
+    std::unique_ptr<ControlPushButton> m_pMainPfl;
     std::unique_ptr<ControlPushButton> m_pXFaderMode;
     std::unique_ptr<ControlPotmeter> m_pXFaderCurve;
     std::unique_ptr<ControlPotmeter> m_pXFaderCalibration;
