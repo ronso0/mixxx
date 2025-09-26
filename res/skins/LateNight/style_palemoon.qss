@@ -1718,6 +1718,7 @@ WBpmEditor QDoubleSpinBox {
   #CueStandardButton,
   #CueSavedLoopButton,
   #CueSavedJumpButton,
+  #MainPfl[displayValue="0"],
   #SplitCue[displayValue="0"],
   #PlayPreview[displayValue="0"],
   /* library controls */
@@ -1927,6 +1928,7 @@ QPushButton#pushButtonRepeatPlaylist:checked {
 }
 
 /* Darker grey */
+#MainPfl[value="1"],
 #SplitCue[value="1"] {
   background-color: #555;
 }
@@ -2533,6 +2535,12 @@ WPushButton#PlayDeck[value="0"] {
     image: url(skins:LateNight/palemoon/buttons/btn__rate_center_cyan.svg) no-repeat center center;
   }
 
+#MainPfl[value="0"] {
+  image: url(skins:LateNight/palemoon/buttons/btn__main.svg) no-repeat center center;
+  }
+  #MainPfl[value="1"] {
+    image: url(skins:LateNight/palemoon/buttons/btn__main_active.svg) no-repeat center center;
+  }
 #SplitCue[value="0"] {
   image: url(skins:LateNight/palemoon/buttons/btn__split.svg) no-repeat center center;
   }
