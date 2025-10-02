@@ -4,6 +4,7 @@
 #include <QUrl>
 #include <QtDebug>
 
+#include "library/library_prefs.h"
 #include "library/sidebaritemdelegate.h"
 #include "library/sidebarmodel.h"
 #include "moc_wlibrarysidebar.cpp"
@@ -30,7 +31,8 @@ WLibrarySidebar::WLibrarySidebar(QWidget* parent)
           m_pSidebarModel(nullptr),
           m_pItemDelegate(nullptr),
           m_bookmarkColor(kDefaultBookmarkColor),
-          m_watchedPathColor(kDefaultWatchedPathColor) {
+          m_watchedPathColor(kDefaultWatchedPathColor),
+          m_hoverExpandDelay(mixxx::library::prefs::kSidebarHoverExpandDelayDefault) {
     qRegisterMetaType<FocusWidget>("FocusWidget");
     //Set some properties
     setHeaderHidden(true);
@@ -115,10 +117,11 @@ void WLibrarySidebar::dragMoveEvent(QDragMoveEvent * event) {
     QPoint pos = event->pos();
 #endif
     QModelIndex index = indexAt(pos);
-    if (m_hoverIndex != index) {
+    // Timeout of < 0 disables auto-expand
+    if (m_hoverIndex != index && m_hoverExpandDelay >= 0) {
         m_expandTimer.stop();
         m_hoverIndex = index;
-        m_expandTimer.start(expand_time, this);
+        m_expandTimer.start(m_hoverExpandDelay, this);
     }
     // This has to be here instead of after, otherwise all drags will be
     // rejected -- rryan 3/2011
@@ -598,4 +601,8 @@ void WLibrarySidebar::slotSetFont(const QFont& font) {
     // Resize the feature icons to be a bit taller than the label's capital
     int iconSize = static_cast<int>(QFontMetrics(font).height() * 0.8);
     setIconSize(QSize(iconSize, iconSize));
+}
+
+void WLibrarySidebar::slotSetExpandOnHoverDelay(int delay) {
+    m_hoverExpandDelay = delay;
 }

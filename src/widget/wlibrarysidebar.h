@@ -49,6 +49,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void selectIndex(const QModelIndex& index, bool scrollToIndex = true);
     void selectChildIndex(const QModelIndex&, bool selectItem = true);
     void slotSetFont(const QFont& font);
+    void slotSetExpandOnHoverDelay(int delay);
 
   signals:
     void rightClicked(const QPoint&, const QModelIndex&);
@@ -74,6 +75,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     SidebarModel* m_pSidebarModel;
     SidebarItemDelegate* m_pItemDelegate;
     QBasicTimer m_expandTimer;
+    int m_hoverExpandDelay;
     QModelIndex m_hoverIndex;
     QColor m_bookmarkColor;
     QColor m_watchedPathColor;
