@@ -164,12 +164,12 @@ function(fatal_error_missing_env)
     elseif(CMAKE_BUILD_TYPE MATCHES "Debug")
       message(
         FATAL_ERROR
-        "Did you download the Mixxx build environment using `${CMAKE_SOURCE_DIR}/tools/macos_buildenv.sh`"
+        "Did you download the Mixxx build environment using `source ${CMAKE_SOURCE_DIR}/tools/macos_buildenv.sh setup`"
       )
     else()
       message(
         FATAL_ERROR
-        "Did you download the Mixxx build environment using `${CMAKE_SOURCE_DIR}/tools/macos_release_buildenv.sh` or `${CMAKE_SOURCE_DIR}/tools/macos_buildenv.sh`(includes Debug)?"
+        "Did you download the Mixxx build environment using `source ${CMAKE_SOURCE_DIR}/tools/macos_release_buildenv.sh setup` or `source ${CMAKE_SOURCE_DIR}/tools/macos_buildenv.sh setup` (includes Debug)?"
       )
     endif()
   elseif(UNIX AND NOT APPLE)
@@ -177,17 +177,17 @@ function(fatal_error_missing_env)
     if(EXISTS "/etc/debian_version") # exists also on Ubuntu and Mint
       message(
         FATAL_ERROR
-        "Did you install the required Debian dev packages via `${CMAKE_SOURCE_DIR}/tools/debian_buildenv.sh`?"
+        "Did you install the required Debian dev packages via `${CMAKE_SOURCE_DIR}/tools/debian_buildenv.sh setup`?"
       )
     elseif(EXISTS "/etc/redhat-release") # exists also on Fedora Mageia Madndriva Alma CentOS
       message(
         FATAL_ERROR
-        "Did you install the required RPM dev packages via `${CMAKE_SOURCE_DIR}/tools/rpm_buildenv.sh`?"
+        "Did you install the required RPM dev packages via `${CMAKE_SOURCE_DIR}/tools/rpm_buildenv.sh setup`?"
       )
     else()
       message(
         FATAL_ERROR
-        "Did you install the equivalent dev packages listed in `${CMAKE_SOURCE_DIR}/tools/debian_buildenv.sh`?"
+        "Did you install the equivalent dev packages listed in `${CMAKE_SOURCE_DIR}/tools/debian_buildenv.sh setup`?"
       )
     endif()
   elseif(DEFINED VCPKG_TARGET_TRIPLET)
@@ -1067,6 +1067,15 @@ if(NOT MSVC)
       endif()
     endif()
   endif()
+  # cpu pinning / isolate support
+  find_program(CPUSET_EXECUTABLE "cset")
+  if(CPUSET_EXECUTABLE)
+    message(STATUS "Found cpuset: ${CPUSET_EXECUTABLE}")
+    set(CPUSET_FOUND TRUE)
+  else()
+    message(STATUS "Could NOT find cpuset (missing executable)")
+  endif()
+  message(STATUS "Support for cpu pinning / isolate: ${CPUSET_FOUND}")
 endif()
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
@@ -1307,6 +1316,7 @@ add_library(
   src/library/basetrackcache.cpp
   src/library/basetracktablemodel.cpp
   src/library/browse/browsefeature.cpp
+  src/library/browse/browselibrarytablemodel.cpp
   src/library/browse/browsetablemodel.cpp
   src/library/browse/browsethread.cpp
   src/library/browse/foldertreemodel.cpp
@@ -1378,6 +1388,7 @@ add_library(
   src/library/searchqueryparser.cpp
   src/library/serato/seratofeature.cpp
   src/library/serato/seratoplaylistmodel.cpp
+  src/library/sidebaritemdelegate.cpp
   src/library/sidebarmodel.cpp
   src/library/starrating.cpp
   src/library/tabledelegates/bpmdelegate.cpp
@@ -1556,6 +1567,7 @@ add_library(
   src/util/color/predefinedcolorpalettes.cpp
   src/util/colorcomponents.cpp
   src/util/console.cpp
+  src/util/cpupinning.cpp
   src/util/db/dbconnection.cpp
   src/util/db/dbconnectionpool.cpp
   src/util/db/dbconnectionpooled.cpp
@@ -2362,6 +2374,13 @@ install(
   TARGETS mixxx
   RUNTIME DESTINATION "${MIXXX_INSTALL_BINDIR}"
   BUNDLE DESTINATION .
+)
+
+# Script for cpu pinning of the engine thread
+install(
+  FILES tools/mixxx-isolate.py
+  DESTINATION "${MIXXX_INSTALL_BINDIR}"
+  RENAME "mixxx-isolate"
 )
 
 # Skins
@@ -3171,7 +3190,7 @@ if(KEYFINDER)
         -DCMAKE_PREFIX_PATH=${PIPE_DELIMITED_CMAKE_PREFIX_PATH}
         -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
         -$<IF:$<BOOL:${CMAKE_TOOLCHAIN_FILE}>,D,U>CMAKE_TOOLCHAIN_FILE:PATH=${CMAKE_TOOLCHAIN_FILE}
-        -$<IF:$<BOOL:${CMAKE_OSX_DEPLOYMENT_TARGET}>,D,U>CMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMEN_TARGET}
+        -$<IF:$<BOOL:${CMAKE_OSX_DEPLOYMENT_TARGET}>,D,U>CMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
         -$<IF:$<BOOL:${CMAKE_OSX_ARCHITECTURES}>,D,U>CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
         -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
         -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME} -DBUILD_TESTING=OFF
@@ -3474,6 +3493,15 @@ if(QML)
 
   set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
   qt_add_library(mixxx-qml-lib STATIC)
+
+  if(WIN32)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __WINDOWS__)
+  endif()
+
+  if(ENGINEPRIME)
+    target_compile_definitions(mixxx-qml-lib PUBLIC __ENGINEPRIME__)
+  endif()
+
   foreach(component ${QT_COMPONENTS})
     target_link_libraries(
       mixxx-qml-lib
@@ -3555,10 +3583,15 @@ if(QML)
       src/qml/qmleffectslotproxy.cpp
       src/qml/qmleffectsmanagerproxy.cpp
       src/qml/qmllibraryproxy.cpp
+      src/qml/qmllibrarysource.cpp
+      src/qml/qmllibrarysourcetree.cpp
       src/qml/qmllibrarytracklistmodel.cpp
       src/qml/qmlmixxxcontrollerscreen.cpp
       src/qml/qmlplayermanagerproxy.cpp
       src/qml/qmlplayerproxy.cpp
+      src/qml/qmlsidebarmodelproxy.cpp
+      src/qml/qmllibrarytracklistcolumn.cpp
+      src/qml/qmltrackproxy.cpp
       src/qml/qmlvisibleeffectsmodel.cpp
       src/qml/qmlwaveformdisplay.cpp
       src/qml/qmlwaveformoverview.cpp

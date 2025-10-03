@@ -36,12 +36,18 @@ class PositionScratchController : public QObject {
     void reset();
 
   private slots:
-    void slotUpdateFilterParameters(double sampleRate);
+    void slotUpdateFilterParameters();
 
   private:
     const QString m_group;
     std::unique_ptr<ControlObject> m_pScratchEnable;
+    std::unique_ptr<ControlObject> m_pScratchActive;
     std::unique_ptr<ControlObject> m_pScratchPos;
+    // Throwback / inertia parameters
+    std::unique_ptr<ControlObject> m_pThrowThresholdCO;
+    std::unique_ptr<ControlObject> m_pMaxVelocityCO;
+    std::unique_ptr<ControlObject> m_pTimeToStopCO;
+
     std::unique_ptr<ControlProxy> m_pMainSampleRate;
     std::unique_ptr<VelocityController> m_pVelocityController;
     std::unique_ptr<RateIIFilter> m_pRateIIFilter;
@@ -55,6 +61,10 @@ class PositionScratchController : public QObject {
     double m_rate;
     double m_moveDelay;
     double m_scratchPosSampleTime;
+
+    double m_pThrowThreshold;
+    double m_pMaxVelocity;
+    double m_pTimeToStop;
 
     std::size_t m_bufferSize;
 

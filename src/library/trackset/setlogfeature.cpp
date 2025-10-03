@@ -1,6 +1,5 @@
 #include "library/trackset/setlogfeature.h"
 
-#include <QDateTime>
 #include <QMenu>
 #include <QSqlTableModel>
 
@@ -15,6 +14,7 @@
 #include "moc_setlogfeature.cpp"
 #include "track/track.h"
 #include "util/make_const_iterator.h"
+#include "util/widgethelper.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wtracktableview.h"
@@ -164,15 +164,12 @@ void SetlogFeature::onRightClick(const QPoint& globalPos) {
     Q_UNUSED(globalPos);
     m_lastRightClickedIndex = QModelIndex();
 
-    // Create the right-click menu
-    // QMenu menu(NULL);
-    // menu.addAction(m_pCreatePlaylistAction);
+    // There is no action associated with the root item
     // TODO(DASCHUER) add something like disable logging
-    // menu.exec(globalPos);
 }
 
 void SetlogFeature::onRightClickChild(const QPoint& globalPos, const QModelIndex& index) {
-    //Save the model index so we can get it in the action slots...
+    // Save the model index so we can get it in the action slots...
     m_lastRightClickedIndex = index;
 
     int playlistId = playlistIdFromIndex(index);
@@ -252,7 +249,6 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
             "  GROUP BY Playlists.id")
                                   .arg(m_countsDurationTableName,
                                           QString::number(PlaylistDAO::PLHT_SET_LOG));
-    ;
     queryString.append(
             mixxx::DbConnection::collateLexicographically(
                     " ORDER BY sort_name"));
@@ -275,6 +271,7 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
     int createdColumn = record.indexOf("date_created");
     int countColumn = record.indexOf("count");
     int durationColumn = record.indexOf("durationSeconds");
+    int currentYear = QDate::currentDate().year();
 
     // Nice to have: restore previous expanded/collapsed state of YEAR items
     clearChildModel();
@@ -282,6 +279,8 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
     std::vector<std::unique_ptr<TreeItem>> itemList;
     // Generous estimate (number of years the db is used ;))
     itemList.reserve(kNumToplevelHistoryEntries + 15);
+
+    bool skipTopLevel = false;
 
     for (int row = 0; row < playlistTableModel.rowCount(); ++row) {
         int id =
@@ -292,10 +291,12 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
                 playlistTableModel
                         .data(playlistTableModel.index(row, nameColumn))
                         .toString();
-        QDateTime dateCreated =
+        int yearCreated =
                 playlistTableModel
                         .data(playlistTableModel.index(row, createdColumn))
-                        .toDateTime();
+                        .toDateTime()
+                        .date()
+                        .year();
         int count = playlistTableModel
                             .data(playlistTableModel.index(row, countColumn))
                             .toInt();
@@ -305,13 +306,20 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
                         .toInt();
         QString label = createPlaylistLabel(name, count, duration);
 
-        // Create the TreeItem whose parent is the invisible root item.
-        // Show only [kNumToplevelHistoryEntries] recent playlists at the top level
+        // Show [kNumToplevelHistoryEntries] recent playlists at the top level
         // before grouping them by year.
-        if (row >= kNumToplevelHistoryEntries) {
-            // group by year
-            int yearCreated = dateCreated.date().year();
+        // Only add playlists of current year to the top level
+        if (!skipTopLevel && yearCreated < currentYear) {
+            skipTopLevel = true;
+        }
+        if (!skipTopLevel && (row < kNumToplevelHistoryEntries)) {
+            auto pItem = std::make_unique<TreeItem>(name, id);
+            pItem->setBold(m_playlistIdsOfSelectedTrack.contains(id));
+            decorateChild(pItem.get(), id);
 
+            itemList.push_back(std::move(pItem));
+        } else {
+            // group by year
             auto i = groups.find(yearCreated);
             TreeItem* pGroupItem;
             if (i != groups.end() && i.key() == yearCreated) {
@@ -330,13 +338,6 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
             TreeItem* pItem = pGroupItem->appendChild(label, id);
             pItem->setBold(m_playlistIdsOfSelectedTrack.contains(id));
             decorateChild(pItem, id);
-        } else {
-            // add most recent top-level playlist
-            auto pItem = std::make_unique<TreeItem>(label, id);
-            pItem->setBold(m_playlistIdsOfSelectedTrack.contains(id));
-            decorateChild(pItem.get(), id);
-
-            itemList.push_back(std::move(pItem));
         }
     }
 
@@ -358,14 +359,11 @@ void SetlogFeature::decorateChild(TreeItem* item, int playlistId) {
 
 /// Invoked on startup to create new current playlist and by "Finish current and start new"
 void SetlogFeature::slotGetNewPlaylist() {
-    //qDebug() << "slotGetNewPlaylist() successfully triggered !";
+    // qDebug() << "slotGetNewPlaylist() successfully triggered !";
 
     // create a new playlist for today
-    QString set_log_name_format;
-    QString set_log_name;
-
-    set_log_name = QDate::currentDate().toString(Qt::ISODate);
-    set_log_name_format = set_log_name + " #%1";
+    QString set_log_name = QDate::currentDate().toString(Qt::ISODate);
+    QString set_log_name_format = set_log_name + " #%1";
     int i = 1;
 
     // calculate name of the todays setlog
@@ -373,7 +371,8 @@ void SetlogFeature::slotGetNewPlaylist() {
         set_log_name = set_log_name_format.arg(++i);
     }
 
-    //qDebug() << "Creating session history playlist name:" << set_log_name;
+    // qDebug() << "Creating session history playlist name:" << set_log_name;
+    int previousPlaylistid = m_currentPlaylistId;
     m_currentPlaylistId = m_playlistDao.createPlaylist(
             set_log_name, PlaylistDAO::PLHT_SET_LOG);
 
@@ -385,10 +384,10 @@ void SetlogFeature::slotGetNewPlaylist() {
         m_recentTracks.clear();
     }
 
-    // reload child model again because the 'added' signal fired by PlaylistDAO
-    // might have triggered slotPlaylistTableChanged() before m_currentPlaylistId was set,
-    // which causes the wrong playlist being decorated as 'current'
-    slotPlaylistTableChanged(m_currentPlaylistId);
+    // Update child model again because the 'added' signal fired by PlaylistDAO
+    // might have triggered slotPlaylistTableChanged() before m_currentPlaylistId
+    // was set, which causes the wrong playlist being decorated as 'current'.
+    slotPlaylistContentOrLockChanged(QSet<int>{previousPlaylistid, m_currentPlaylistId});
 }
 
 void SetlogFeature::slotJoinWithPrevious() {
@@ -505,9 +504,11 @@ void SetlogFeature::lockOrUnlockAllChildPlaylists(bool lock) {
         return;
     }
     if (lock) {
-        qWarning() << "lock all child playlists of" << m_lastRightClickedIndex.data().toString();
+        qDebug() << "SetlogFeature: locking all child playlists of"
+                 << m_lastRightClickedIndex.data().toString();
     } else {
-        qWarning() << "unlock all child playlists of" << m_lastRightClickedIndex.data().toString();
+        qWarning() << "SetlogFeature: unlocking all child playlists of"
+                   << m_lastRightClickedIndex.data().toString();
     }
     TreeItem* item = static_cast<TreeItem*>(m_lastRightClickedIndex.internalPointer());
     if (!item) {
@@ -543,7 +544,8 @@ void SetlogFeature::slotDeleteAllUnlockedChildPlaylists() {
     }
     QString year = m_lastRightClickedIndex.data().toString();
 
-    QMessageBox::StandardButton btn = QMessageBox::question(nullptr,
+    QMessageBox::StandardButton btn = QMessageBox::question(
+            mixxx::widgethelper::getSkinWidget(), // parent to apply skin styles,
             tr("Confirm Deletion"),
             //: %1 is the year
             //: <b> + </b> are used to make the text in between bold in the popup
@@ -567,7 +569,8 @@ void SetlogFeature::slotDeleteAllUnlockedChildPlaylists() {
         }
     }
     // Double-check, this is a weighty decision
-    btn = QMessageBox::warning(nullptr,
+    btn = QMessageBox::warning(
+            mixxx::widgethelper::getSkinWidget(), // parent to apply skin styles,
             tr("Confirm Deletion"),
             //: %1 is the number of playlists to be deleted
             //: %2 is the year
@@ -660,11 +663,12 @@ void SetlogFeature::slotPlayingTrackChanged(TrackPointer currentPlayingTrack) {
     }
 }
 
-void SetlogFeature::slotPlaylistTableChanged(int playlistId) {
-    // qDebug() << "SetlogFeature::slotPlaylistTableChanged() id:" << playlistId;
-    PlaylistDAO::HiddenType type = m_playlistDao.getHiddenType(playlistId);
-    if (type != PlaylistDAO::PLHT_SET_LOG &&
-            type != PlaylistDAO::PLHT_UNKNOWN) { // deleted Playlist
+void SetlogFeature::slotPlaylistTableChanged(int playlistId, PlaylistDAO::HiddenType type) {
+    // qDebug() << "SetlogFeature::slotPlaylistTableChanged() id:" << playlistId << type;
+    // Note: we only care about PLHT_SET_LOG as that's the only relevant type for
+    // rebuilding the tree. Type PLHT_UNKNOWN is only used for YEAR placeholder
+    // playlist and is assigned to items dynamically with YEAR label.
+    if (type != PlaylistDAO::PLHT_SET_LOG) {
         return;
     }
 
@@ -679,10 +683,12 @@ void SetlogFeature::slotPlaylistTableChanged(int playlistId) {
             // a YEAR item was selected
             selectedYearIndexRow = m_lastClickedIndex.row();
         } else if (playlistId == lastClickedPlaylistId &&
-                type == PlaylistDAO::PLHT_UNKNOWN) {
+                m_playlistDao.getHiddenType(lastClickedPlaylistId) == PlaylistDAO::PLHT_UNKNOWN) {
             // selected playlist was deleted, find a sibling.
             // prev/next works here because history playlists are always
             // sorted by date of creation.
+            // TODO When deleting a top-level playlist don't jump to 'next'
+            // if that is inside the first YEAR group
             selectedPlaylistId = m_playlistDao.getPreviousPlaylist(
                     lastClickedPlaylistId,
                     PlaylistDAO::PLHT_SET_LOG);

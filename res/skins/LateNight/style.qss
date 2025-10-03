@@ -47,6 +47,7 @@ WLabel#FxUnitLabel,
 WLabel#MicAuxLabel, WLabel#MicAuxLabelUnconfigured,
 #VinylControls WPushButton,
 #FxAssignButtons WPushButton,
+#FxAssignButtonsBig WPushButton,
 WPushButton#GuiToggleButton,
 WLabel#RecFeedback, WLabel#RecDuration,
 WPushButton#BroadcastButton,
@@ -69,6 +70,7 @@ QLabel#labelRecFilename {
 #MicAuxLabel, #MicAuxLabelUnconfigured,
 #VinylControls WPushButton,
 #FxAssignButtons WPushButton,
+#FxAssignButtonsBig WPushButton,
 #GuiToggleButton,
 #RecFeedback, #RecDuration,
 #BroadcastButton,
@@ -101,7 +103,7 @@ QLabel#labelRecStatistics {
 
 /* It is difficult to achieve identical styles WMainMenuBar #MainMenu
   on Windows AND Linux because item and checkbox properties are rendered
-  slightly different.
+  slightly differently.
   For details see
     * default-menu-styles-linux.qss
     * default-menu-styles-windows.qss
@@ -153,6 +155,7 @@ WEffectChainPresetSelector::drop-down,
 WSearchLineEdit::checked,
 WSearchLineEdit::indicator,
 WSearchLineEdit::indicator:unchecked,
+#DlgTrackInfoMulti QComboBox::drop-down,
 WSearchLineEdit::drop-down,
 #fadeModeCombobox::checked,
 #fadeModeCombobox::indicator,
@@ -239,10 +242,13 @@ WPushButton,
 }
 
 WKey,
+#FxAssignButtonsBig WPushButton,
 WEffectSelector,
 WEffectSelector QAbstractScrollArea,
 WEffectChainPresetSelector,
 WEffectChainPresetSelector QAbstractScrollArea,
+#Sampler WTrackPropertyEditor,
+#Sampler WTrackPropertyEditor QLineEdit,
 #fadeModeCombobox,
 #fadeModeCombobox QAbstractScrollArea,
 #LibraryFeatureControls QLabel,
@@ -259,6 +265,7 @@ WEffectChainPresetSelector QAbstractScrollArea,
 #SamplerTitleMini, #SamplerBpm,
 #MicAuxLabel, #MicAuxLabelUnconfigured,
 #PreviewTitle,
+#PreviewTitle WTrackPropertyEditor,
 #PreviewLabel,
 WBeatSpinBox,
 #spinBoxTransition {
@@ -268,6 +275,7 @@ WBeatSpinBox,
 #TitleTextSmall,
 #ArtistTextSmall,
 #PlayPositionText,
+#CommentText,
 #BpmText,
 #BpmTextSmall,
 #FxUnitLabel,
@@ -285,7 +293,9 @@ WRecordingDuration {
 }
 
 #ArtistText,
-#TitleText {
+#TitleText,
+#CommentText,
+WTrackProperty QLineEdit {
   font-size: 18px;
 }
 
@@ -610,7 +620,7 @@ WBpmEditor,
   qproperty-layoutAlignment: 'AlignRight | AlignTop';
 }
 #FxUnitControlsExpanded,
-#FxUnitControlsCollapsed,
+/*#FxUnitControlsCollapsed,*/
 #FxSlotContainer,
 #FxSlotControls,
 #FxFocusButtonBox,
@@ -626,6 +636,7 @@ WBpmEditor,
   qproperty-layoutAlignment: 'AlignRight | AlignVCenter';
 }
 
+#FxUnitControlsCollapsed,
 #FxParameterKnobBox {
   qproperty-layoutAlignment: 'AlignHCenter | AlignTop';
 }
@@ -647,6 +658,7 @@ WEffectSelector {
   padding: 4px 0px 4px 4px;
   /* The 3D frame on the combo box becomes flat when you give it a border
   border-radius: 3px; */
+  text-align: center;
   }
 WEffectChainPresetSelector {
   border:  0px;
@@ -826,6 +838,7 @@ WEffectChainPresetButton::menu-indicator {
 
 /************** Skin settings *************************************************/
 
+#SkinSettingsContainer,
 #SkinSettings {
   qproperty-layoutAlignment: 'AlignLeft | AlignTop';
   }

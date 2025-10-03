@@ -12,7 +12,8 @@ WEffectSelector::WEffectSelector(QWidget* pParent, EffectsManager* pEffectsManag
         : QComboBox(pParent),
           WBaseWidget(this),
           m_pEffectsManager(pEffectsManager),
-          m_pVisibleEffectsList(pEffectsManager->getVisibleEffectsList()) {
+          m_pVisibleEffectsList(pEffectsManager->getVisibleEffectsList()),
+          m_effectEnabled(false) {
     // Prevent this widget from getting focused by Tab/Shift+Tab
     // to avoid interfering with using the library via keyboard.
     // Allow click focus though so the list can always be opened by mouse,
@@ -36,10 +37,24 @@ void WEffectSelector::setup(const QDomNode& node, const SkinContext& context) {
                 &EffectSlot::effectChanged,
                 this,
                 &WEffectSelector::slotEffectUpdated);
+        connect(m_pEffectSlot.data(),
+                &EffectSlot::enabledChanged,
+                this,
+                &WEffectSelector::slotEffectEnabledChanged);
+        slotEffectEnabledChanged(m_pEffectSlot.data()->isEnabled());
         connect(this,
                 QOverload<int>::of(&QComboBox::activated),
                 this,
                 &WEffectSelector::slotEffectSelected);
+        // Show/hide the effects list
+        connect(m_pEffectSlot.data(),
+                &EffectSlot::effectsListShowRequest,
+                this,
+                &WEffectSelector::slotEffectsListShowRequest);
+        connect(this,
+                &WEffectSelector::effectsListVisibleChanged,
+                m_pEffectSlot.data(),
+                &EffectSlot::slotEeffectsListVisibleChanged);
     } else {
         SKIN_WARNING(node,
                 context,
@@ -52,7 +67,7 @@ void WEffectSelector::setup(const QDomNode& node, const SkinContext& context) {
 
 void WEffectSelector::populate() {
     blockSignals(true);
-    clear();
+    clear(); // Should hide popup
 
     const QList<EffectManifestPointer> visibleEffectManifests = m_pVisibleEffectsList->getList();
     QFontMetrics metrics(font());
@@ -119,6 +134,39 @@ void WEffectSelector::slotEffectUpdated() {
         setCurrentIndex(newIndex);
         setBaseTooltip(itemData(newIndex, Qt::ToolTipRole).toString());
     }
+}
+
+void WEffectSelector::slotEffectEnabledChanged(bool enabled) {
+    if (m_effectEnabled == enabled) {
+        return;
+    }
+    m_effectEnabled = enabled;
+    style()->polish(this);
+    update();
+    emit effectEnabledChanged(m_effectEnabled);
+}
+
+void WEffectSelector::slotEffectsListShowRequest(bool show) {
+    if (!isVisible()) {
+        return;
+    }
+    if (show) {
+        showPopup();
+    } else {
+        hidePopup();
+    }
+}
+
+void WEffectSelector::showPopup() {
+    if (count() > 0) {
+        QComboBox::showPopup();
+        emit effectsListVisibleChanged(true);
+    }
+}
+
+void WEffectSelector::hidePopup() {
+    QComboBox::hidePopup();
+    emit effectsListVisibleChanged(false);
 }
 
 bool WEffectSelector::event(QEvent* pEvent) {

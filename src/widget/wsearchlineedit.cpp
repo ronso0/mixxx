@@ -11,6 +11,7 @@
 #include <QStringLiteral>
 #include <QToolButton>
 
+#include "controllers/keyboard/keyboardeventfilter.h"
 #include "moc_wsearchlineedit.cpp"
 #include "preferences/configobject.h"
 #include "skin/legacy/skincontext.h"
@@ -117,6 +118,7 @@ WSearchLineEdit::WSearchLineEdit(QWidget* pParent, UserSettingsPointer pConfig)
     m_clearButton->setObjectName(QStringLiteral("SearchClearButton"));
 
     m_clearButton->hide();
+    m_clearButton->setFocusPolicy(Qt::NoFocus);
     connect(m_clearButton,
             &QAbstractButton::clicked,
             this,
@@ -325,14 +327,24 @@ QString WSearchLineEdit::getSearchText() const {
 bool WSearchLineEdit::eventFilter(QObject* obj, QEvent* event) {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        // KeyboardEventFilter::getKeySeq(keyEvent); // logs keypress
         const int key = keyEvent->key();
         // Esc has already closed the popup by now and we don't want to process it.
         // We don't need to handle Up/Down in the popup either.
         // Any other keypress is forwarded.
         if (key != Qt::Key_Escape &&
                 key != Qt::Key_Down &&
-                key != Qt::Key_Up) {
+                key != Qt::Key_Up &&
+                key != Qt::Key_Return &&
+                key != Qt::Key_Enter) {
             keyPressEvent(keyEvent);
+            return true;
+        }
+        // Enter: immediately trigger search and jump to tracks
+        if (key == Qt::Key_Return || key == Qt::Key_Enter) {
+            QComboBox::eventFilter(obj, event);
+            slotTriggerSearch();
+            emit setLibraryFocus(FocusWidget::TracksTable);
             return true;
         }
     }
@@ -379,6 +391,12 @@ void WSearchLineEdit::keyPressEvent(QKeyEvent* keyEvent) {
         // then selects the previous query
         if (findCurrentTextIndex() == -1) {
             slotSaveSearch();
+        }
+        // Immediately show the popup to see all saved queries.
+        // For quick apply, we need to catch Enter and trigger the search.
+        if (!view()->isVisible()) {
+            showPopup();
+            return;
         }
         break;
     case Qt::Key_Left:

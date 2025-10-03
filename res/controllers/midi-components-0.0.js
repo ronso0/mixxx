@@ -806,7 +806,7 @@
     };
 
     JogWheelBasic.prototype = new Component({
-        vinylMode: true,
+        _vinylMode: true, // private, accessible via setters defined below
         isPress: Button.prototype.isPress,
         inValueScale: function(value) {
             // default implementation for converting signed ints
@@ -844,6 +844,19 @@
                 "Please bind jogwheel-related messages to inputWheel and inputTouch!\n";
         },
         reset() {},
+    });
+    Object.defineProperty(JogWheelBasic.prototype, "vinylMode", {
+        get() {
+            return this._vinylMode;
+        },
+        set(vinylMode) {
+            // Disable scratching immediately when disabling vinylMode in case
+            // the touch surface malfunctions
+            if (!vinylMode && engine.isScratching(this.deck)) {
+                engine.scratchDisable(this.deck);
+            }
+            this._vinylMode = vinylMode;
+        },
     });
 
     const EffectUnit = function(unitNumbers, allowFocusWhenParametersHidden, colors) {
@@ -911,10 +924,14 @@
                 for (let n = 1; n <= 3; n++) {
                     const effect = "[EffectRack1_EffectUnit" + this.currentUnitNumber +
                                 "_Effect" + n + "]";
-                    engine.softTakeover(effect, "meta", true);
-                    engine.softTakeover(effect, "parameter1", true);
-                    engine.softTakeover(effect, "parameter2", true);
-                    engine.softTakeover(effect, "parameter3", true);
+                    // ronso0
+                    // Disable meta knob softTakeover for immediate response.
+                    // Though it might be enabled, so reset it to 'false'
+                    // Also change it in this.EffectUnitKnob.prototype
+                    engine.softTakeover(effect, "meta", false);
+                    engine.softTakeover(effect, "parameter1", false);
+                    engine.softTakeover(effect, "parameter2", false);
+                    engine.softTakeover(effect, "parameter3", false);
                 }
             }
 
@@ -943,6 +960,9 @@
             } else {
                 index += 1;
             }
+            // ronso0
+            // make sure we have 4 units on screen
+            engine.setValue("[Skin]", "show_4effectunits", 1);
             this.setCurrentUnit(this.unitNumbers[index]);
         };
 
@@ -999,7 +1019,11 @@
         this.EffectUnitKnob.prototype = new Pot({
             group: this.group,
             number: this.currentUnitNumber,
-            unshift: function() {
+            // ronso0
+            // Do the same for shift and unshift (remove shift: body and unshift: prefix)
+            // When shift is pressed (i.e. for brake) simultaneous use of Fx Meta
+            // should be possible. (shifted it would scroll WEffectSelector)
+            function() {
                 this.input = function(channel, control, value, _status, _group) {
                     if (this.MSB !== undefined) {
                         value = (this.MSB << 7) + value;
@@ -1009,45 +1033,15 @@
                     if (this.previousValueReceived === undefined) {
                         const effect = "[EffectRack1_EffectUnit" + eu.currentUnitNumber +
                                     "_Effect" + this.number + "]";
-                        engine.softTakeover(effect, "meta", true);
-                        engine.softTakeover(effect, "parameter1", true);
-                        engine.softTakeover(effect, "parameter2", true);
-                        engine.softTakeover(effect, "parameter3", true);
+                        // ronso0
+                        // Disable meta knob softTakeover for immediate response.
+                        // Though it might be enabled, so reset it to 'false'
+                        // Also change it in this.setCurrentUnit > this.hasInitialized
+                        engine.softTakeover(effect, "meta", false);
+                        engine.softTakeover(effect, "parameter1", false);
+                        engine.softTakeover(effect, "parameter2", false);
+                        engine.softTakeover(effect, "parameter3", false);
                     }
-                    this.previousValueReceived = value;
-                };
-            },
-            shift: function() {
-                engine.softTakeoverIgnoreNextValue(this.group, this.inKey);
-                this.valueAtLastEffectSwitch = this.previousValueReceived;
-                // Floor the threshold to ensure that every effect can be selected
-                this.changeThreshold = Math.floor(this.max /
-                    engine.getValue("[Master]", "num_effectsavailable"));
-
-                this.input = function(channel, control, value, _status, _group) {
-                    if (this.MSB !== undefined) {
-                        value = (this.MSB << 7) + value;
-                    }
-
-                    // Prevent attempt to set the effect_selector CO to NaN
-                    if (this.valueAtLastEffectSwitch === undefined) {
-                        this.valueAtLastEffectSwitch = value;
-                        this.previousValueReceived = value;
-                        return;
-                    }
-
-                    const change = value - this.valueAtLastEffectSwitch;
-                    if (Math.abs(change) >= this.changeThreshold
-                        // this.valueAtLastEffectSwitch can be undefined if
-                        // shift was pressed before the first MIDI value was received.
-                        || this.valueAtLastEffectSwitch === undefined) {
-                        const effectGroup = "[EffectRack1_EffectUnit" +
-                                           eu.currentUnitNumber + "_Effect" +
-                                           this.number + "]";
-                        engine.setValue(effectGroup, "effect_selector", change);
-                        this.valueAtLastEffectSwitch = value;
-                    }
-
                     this.previousValueReceived = value;
                 };
             },
@@ -1230,7 +1224,11 @@
                             });
                             eu.focusChooseModeActive = false;
                         } else {
-                            if (!showParameters && allowFocusWhenParametersHidden) {
+                            // ronso0
+                            // Quick press while in focus mode will exit focus mode
+                            if (engine.getValue(this.group, "focused_effect") !== 0) {
+                                engine.setValue(this.group, "focused_effect", 0);
+                            } else if (!showParameters && allowFocusWhenParametersHidden) {
                                 engine.setValue(this.group, "show_parameters", 1);
                             } else if (showParameters && !this.pressedWhenParametersHidden) {
                                 engine.setValue(this.group, "show_parameters", 0);

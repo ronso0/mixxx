@@ -6,6 +6,7 @@
 #include "util/assert.h"
 #include "util/math.h"
 #include "util/thread_affinity.h"
+#include "util/widgethelper.h"
 
 namespace mixxx {
 
@@ -170,7 +171,8 @@ void TaskMonitor::updateProgress() {
                 m_labelText,
                 tr("Abort"),
                 currentProgress,
-                static_cast<int>(kPercentageOfCompletionMax * m_taskInfos.size()));
+                static_cast<int>(kPercentageOfCompletionMax * m_taskInfos.size()),
+                mixxx::widgethelper::getSkinWidget());
         m_pProgressDlg->setWindowModality(Qt::ApplicationModal);
         m_pProgressDlg->setMinimumDuration(m_minimumProgressDuration.toIntegerMillis());
         connect(m_pProgressDlg.get(),

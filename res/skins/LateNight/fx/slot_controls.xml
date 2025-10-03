@@ -18,23 +18,37 @@
     so the Fx unit controls layout is independent. -->
   <WidgetGroup>
     <ObjectName>FxSlotContainer</ObjectName>
-    <SizePolicy>min,min</SizePolicy>
+    <SizePolicy>min,me</SizePolicy>
     <Layout>horizontal</Layout>
     <Children>
 
       <WidgetGroup>
         <ObjectName>FxSlotControls</ObjectName>
         <Layout>horizontal</Layout>
-        <SizePolicy>p,min</SizePolicy>
-        <MaximumSize>190,</MaximumSize>
+        <SizePolicy>me,me</SizePolicy>
+        <!-- <MaximumSize>230,</MaximumSize> -->
         <Children>
 
-          <Template src="skins:LateNight/fx/focus_button.xml"/>
+
+          <WidgetGroup>
+            <ObjectName>FxFocusButtonBox</ObjectName>
+            <Layout>vertical</Layout>
+            <SizePolicy>f,f</SizePolicy>
+            <Children>
+              <Template src="skins:LateNight/fx/focus_button.xml"/>
+              <!-- Focus button placeholder to v-align slot controls in units 1/2 (3/4)
+                   if show_focus differs for the two -->
+              <WidgetGroup>
+                <Layout>horizontal</Layout>
+                <Size>16f,0f</Size>
+              </WidgetGroup>
+            </Children>
+          </WidgetGroup>
 
           <Template src="skins:LateNight/controls/button_2state.xml">
             <SetVariable name="TooltipId">EffectSlot_enabled</SetVariable>
             <SetVariable name="ObjectName">FxToggleButton</SetVariable>
-            <SetVariable name="BtnSize">square</SetVariable>
+            <SetVariable name="BtnSize"></SetVariable>
             <SetVariable name="Size">26f,26f</SetVariable>
             <SetVariable name="ConfigKey">[<Variable name="FxRack_FxUnit_FxNum"/>],enabled</SetVariable>
           </Template>
@@ -45,6 +59,7 @@
             <MinimumSize>60,24</MinimumSize>
             <MaximumSize>,24</MaximumSize>
             <SizePolicy>me,f</SizePolicy>
+            <Alignment>center</Alignment>
             <EffectRack>1</EffectRack>
             <EffectUnit><Variable name="FxUnit"/></EffectUnit>
             <Effect><Variable name="FxNum"/></Effect>
@@ -56,7 +71,21 @@
             </Connection> -->
           </EffectSelector>
 
+          <WidgetGroup>
+            <Size>16f,16f</Size>
+            <Children/>
+            <Connection>
+              <ConfigKey>[<Variable name="FxRack_FxUnit"/>],show_parameters</ConfigKey>
+              <Transform><Not/></Transform>
+              <BindProperty>visible</BindProperty>
+            </Connection>
+          </WidgetGroup>
+
         </Children>
+        <Connection>
+          <ConfigKey>[<Variable name="FxRack_FxUnit_FxNum"/>],enabled</ConfigKey>
+          <BindProperty>highlight</BindProperty>
+        </Connection>
       </WidgetGroup><!-- FxSlotControls -->
 
     </Children>

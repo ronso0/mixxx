@@ -175,7 +175,12 @@ class Library: public QObject {
     void setTrackTableRowHeight(int rowHeight);
     void setSelectedClick(bool enable);
 
+    void setSidebarHoverExpandDelay(int delay);
+
     void onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);
+
+    void directoryAdded(const QString& dir);
+    void directoryRemoved(const QString& dir);
 
   private slots:
       void onPlayerManagerTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);

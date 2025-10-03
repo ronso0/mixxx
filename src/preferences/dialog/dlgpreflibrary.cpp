@@ -132,26 +132,19 @@ DlgPrefLibrary::DlgPrefLibrary(
 #endif
     builtInFormats->setText(builtInFormatsStr);
 
+    // Store translated label texts
+    label_settingsManualLink->setProperty(kOriginalText, tr("See the manual for details"));
+    label_searchBpmFuzzyRangeInfo->setProperty(
+            kOriginalText, label_searchBpmFuzzyRangeInfo->text());
     // Create text color manual links
-    createLinkColor();
-    // Add link to the manual where configuration files are explained in detail
-    label_settingsManualLink->setText(coloredLinkString(
-            m_pLinkColor,
-            tr("See the manual for details"),
-            MIXXX_MANUAL_SETTINGS_DIRECTORY_URL));
+    updateColoredLinkTexts();
+
     // TODO It seems this isnot required anymore with Qt 6.2.3
     connect(label_settingsManualLink,
             &QLabel::linkActivated,
             [](const QString& url) {
                 mixxx::DesktopHelper::openUrl(url);
             });
-
-    // Add link to the track search documentation
-    label_searchBpmFuzzyRangeInfo->setText(
-            label_searchBpmFuzzyRangeInfo->text() + QStringLiteral(" ") +
-            coloredLinkString(m_pLinkColor,
-                    QStringLiteral("(?)"),
-                    MIXXX_MANUAL_SETTINGS_DIRECTORY_URL));
     connect(label_searchBpmFuzzyRangeInfo,
             &QLabel::linkActivated,
             [](const QString& url) {
@@ -265,6 +258,8 @@ void DlgPrefLibrary::slotResetToDefaults() {
             WSearchLineEdit::kHistoryShortcutsEnabledDefault);
     comboBox_search_bpm_fuzzy_range->setCurrentIndex(
             comboBox_search_bpm_fuzzy_range->findData(kDefaultFuzzyRateRangePercent));
+
+    spinBox_sidebar_hover_expand_delay->setValue(kSidebarHoverExpandDelayDefault);
 
     checkBox_show_rhythmbox->setChecked(true);
     checkBox_show_banshee->setChecked(true);
@@ -385,9 +380,31 @@ void DlgPrefLibrary::slotUpdate() {
 
     const auto applyPlayedTrackColor =
             m_pConfig->getValue(
-                    mixxx::library::prefs::kApplyPlayedTrackColorConfigKey,
+                    kApplyPlayedTrackColorConfigKey,
                     BaseTrackTableModel::kApplyPlayedTrackColorDefault);
     checkbox_played_track_color->setChecked(applyPlayedTrackColor);
+
+    const auto sidebarHoverExpandDelay =
+            m_pConfig->getValue(
+                    kSidebarHoverExpandDelayConfigKey,
+                    kSidebarHoverExpandDelayDefault);
+    spinBox_sidebar_hover_expand_delay->setValue(sidebarHoverExpandDelay);
+}
+
+void DlgPrefLibrary::updateColoredLinkTexts() {
+    createLinkColor();
+    // Add link to the manual where configuration files are explained in detail
+    label_settingsManualLink->setText(coloredLinkString(
+            m_pLinkColor,
+            label_settingsManualLink->property(kOriginalText).toString(),
+            MIXXX_MANUAL_SETTINGS_DIRECTORY_URL));
+    // Add link to the track search documentation
+    label_searchBpmFuzzyRangeInfo->setText(
+            label_searchBpmFuzzyRangeInfo->property(kOriginalText).toString() +
+            QStringLiteral(" ") +
+            coloredLinkString(m_pLinkColor,
+                    QStringLiteral("(?)"),
+                    MIXXX_MANUAL_SETTINGS_DIRECTORY_URL));
 }
 
 void DlgPrefLibrary::slotCancel() {
@@ -593,8 +610,12 @@ void DlgPrefLibrary::slotApply() {
     BaseTrackTableModel::setApplyPlayedTrackColor(
             checkbox_played_track_color->isChecked());
     m_pConfig->set(
-            mixxx::library::prefs::kApplyPlayedTrackColorConfigKey,
+            kApplyPlayedTrackColorConfigKey,
             ConfigValue(checkbox_played_track_color->isChecked()));
+
+    int sidebarHoverExpandDelay = spinBox_sidebar_hover_expand_delay->value();
+    m_pConfig->setValue(kSidebarHoverExpandDelayConfigKey, sidebarHoverExpandDelay);
+    emit m_pLibrary->setSidebarHoverExpandDelay(sidebarHoverExpandDelay);
 
     // TODO(rryan): Don't save here.
     m_pConfig->save();

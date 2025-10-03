@@ -248,10 +248,11 @@ void KeyControl::updateRate() {
                         KeyUtils::powerOf2ToSemitoneChange(m_pitchRateInfo.pitchTweakRatio));
             } else { // Unlock and reset to linear pitch (orig. key + pitch fader offset)
                 m_pitchRateInfo.pitchTweakRatio = 1.0;
-                m_pPitchAdjust->set(0);
+                m_pPitchAdjust->set(
+                        KeyUtils::powerOf2ToSemitoneChange(m_pitchRateInfo.pitchTweakRatio));
                 if constexpr (kEnableDebugOutput) {
                     qDebug() << "   UNLOCKING reset to linear pitch";
-                    qDebug() << "   : pitchTweakRatio = 1.0";
+                    qDebug() << "   : pitchTweakRatio =" << m_pitchRateInfo.pitchTweakRatio;
                     qDebug() << "   |";
                 }
             }

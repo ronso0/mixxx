@@ -669,7 +669,7 @@ void GlobalTrackCache::resolve(
         kLogger.debug()
                 << "Cache miss - inserting new track into cache"
                 << trackRef
-                << deletingPtr.get();
+                << deletingPtr.get(); // NOTE: is null, due to std::move above??
     }
 
     if (trackRef.hasId()) {

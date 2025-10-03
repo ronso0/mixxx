@@ -111,6 +111,7 @@ class MixxxMainWindow : public QMainWindow {
     /// Load skin to a QWidget that we set as the central widget.
     bool loadConfiguredSkin();
     void tryParseAndSetDefaultStyleSheet();
+    void styleMenubarPreferencesAndDialogs();
 
     bool confirmExit();
 #ifndef __APPLE__
@@ -151,6 +152,8 @@ class MixxxMainWindow : public QMainWindow {
 
     DlgPreferences* m_pPrefDlg;
     parented_ptr<DlgKeywheel> m_pKeywheel;
+
+    std::unique_ptr<ControlObject> m_pShowPreferences;
 
 #ifdef __ENGINEPRIME__
     // Library exporter

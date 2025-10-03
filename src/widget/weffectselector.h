@@ -14,11 +14,27 @@ class WEffectSelector : public QComboBox, public WBaseWidget {
   public:
     WEffectSelector(QWidget* pParent, EffectsManager* pEffectsManager);
 
+    Q_PROPERTY(bool effectEnabled READ isEffectEnabled WRITE slotEffectEnabledChanged
+                    NOTIFY effectEnabledChanged);
+
+    bool isEffectEnabled() const {
+        return m_effectEnabled;
+    }
+
     void setup(const QDomNode& node, const SkinContext& context);
+
+    void showPopup();
+    void hidePopup();
+
+  signals:
+    void effectEnabledChanged(bool enabled);
+    void effectsListVisibleChanged(bool visible);
 
   private slots:
     void slotEffectUpdated();
     void slotEffectSelected(int newIndex);
+    void slotEffectEnabledChanged(bool enabled);
+    void slotEffectsListShowRequest(bool show);
     void populate();
     bool event(QEvent* pEvent) override;
 
@@ -26,4 +42,5 @@ class WEffectSelector : public QComboBox, public WBaseWidget {
     EffectsManager* m_pEffectsManager;
     VisibleEffectsListPointer m_pVisibleEffectsList;
     EffectSlotPointer m_pEffectSlot;
+    bool m_effectEnabled;
 };

@@ -281,35 +281,37 @@
         <SetVariable name="ConfigKeyDisp">[Shoutcast],status</SetVariable>
       </Template>
 
-      <WidgetGroup>
-        <ObjectName>ToolbarSeparator</ObjectName>
-        <Size>12f,9min</Size>
-      </WidgetGroup>
-
       <PushButton>
-        <Size>80f,20f</Size>
+        <Size>45f,20f</Size>
         <TooltipId>skin_settings</TooltipId>
         <ObjectName>SkinSettingsToggle</ObjectName>
-        <NumberStates>2</NumberStates>
+        <NumberStates>1</NumberStates>
         <State>
           <Number>0</Number>
-          <Text>      SETTINGS</Text>
-        </State>
-        <State>
-          <Number>1</Number>
-          <Text>      SETTINGS</Text>
+          <Text>      PREF</Text>
         </State>
         <Connection>
-          <ConfigKey>[Skin],show_settings</ConfigKey>
+          <ConfigKey>[Controls],show_preferences</ConfigKey>
         </Connection>
       </PushButton>
 
       <WidgetGroup><Size>7f,min</Size></WidgetGroup>
 
-      <Label>
+      <PushButton>
+        <TooltipId>skin_settings</TooltipId>
         <ObjectName>ToolbarLogo</ObjectName>
         <Size>74f,24f</Size>
-      </Label>
+        <NumberStates>2</NumberStates>
+        <State>
+          <Number>0</Number>
+        </State>
+        <State>
+          <Number>1</Number>
+        </State>
+        <Connection>
+          <ConfigKey>[Skin],show_settings</ConfigKey>
+        </Connection>
+      </PushButton>
 
       <WidgetGroup><Size>2f,min</Size></WidgetGroup>
 

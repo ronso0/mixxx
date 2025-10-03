@@ -92,6 +92,8 @@ class ControllerScriptInterfaceLegacy : public QObject {
     Q_INVOKABLE void scratchTick(int deck, int interval);
     Q_INVOKABLE void scratchDisable(int deck, bool ramp = true);
     Q_INVOKABLE bool isScratching(int deck);
+    Q_INVOKABLE bool isSoftStarting(int deck);
+    Q_INVOKABLE bool isBraking(int deck);
     Q_INVOKABLE void softTakeover(const QString& group, const QString& name, bool set);
     Q_INVOKABLE void softTakeoverIgnoreNextValue(const QString& group, const QString& name);
     Q_INVOKABLE bool softTakeoverWillIgnore(

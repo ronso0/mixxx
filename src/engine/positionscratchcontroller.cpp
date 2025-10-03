@@ -73,12 +73,16 @@ constexpr double kDefaultSampleInterval = 0.016;
 constexpr double kMoveDelayMax = 0.04;
 // The rate threshold above which disabling position scratching will enable
 // an 'inertia' mode.
-constexpr double kThrowThreshold = 2.5;
+constexpr double kThrowThresholdDefault = 2.5;
 // Max velocity we would like to stop in a given time period.
-constexpr double kMaxVelocity = 100;
+constexpr double kMaxVelocityDefault = 100;
 // Seconds to stop a throw at the max velocity.
 // TODO make configurable, eg. to customize spinbacks with controllers
-constexpr double kTimeToStop = 1.0;
+constexpr double kTimeToStopDefault = 1.0;
+
+// Notes: sample intervals
+// mouse: 7ms
+// S4mk3: 1.2 - 2.4 ms //
 
 } // anonymous namespace
 
@@ -86,8 +90,17 @@ PositionScratchController::PositionScratchController(const QString& group)
         : m_group(group),
           m_pScratchEnable(std::make_unique<ControlObject>(
                   ConfigKey(group, QStringLiteral("scratch_position_enable")))),
+          m_pScratchActive(std::make_unique<ControlObject>(
+                  ConfigKey(group, QStringLiteral("scratch_position_active")))),
           m_pScratchPos(std::make_unique<ControlObject>(
                   ConfigKey(group, QStringLiteral("scratch_position")))),
+          // Throw / inertia parameters
+          m_pThrowThresholdCO(std::make_unique<ControlObject>(
+                  ConfigKey(group, QStringLiteral("scratch_position_throw_threshold")))),
+          m_pMaxVelocityCO(std::make_unique<ControlObject>(
+                  ConfigKey(group, QStringLiteral("scratch_position_max_velocity")))),
+          m_pTimeToStopCO(std::make_unique<ControlObject>(
+                  ConfigKey(group, QStringLiteral("scratch_position_time_to_stop")))),
           m_pMainSampleRate(std::make_unique<ControlProxy>(
                   ConfigKey(QStringLiteral("[App]"), QStringLiteral("samplerate")))),
           m_pVelocityController(std::make_unique<VelocityController>()),
@@ -104,6 +117,9 @@ PositionScratchController::PositionScratchController(const QString& group)
           m_rate(0),
           m_moveDelay(0),
           m_scratchPosSampleTime(0),
+          m_pThrowThreshold(kThrowThresholdDefault),
+          m_pMaxVelocity(kMaxVelocityDefault),
+          m_pTimeToStop(kTimeToStopDefault),
           m_bufferSize(-1),
           m_dt(1),
           m_callsPerDt(1),
@@ -111,16 +127,49 @@ PositionScratchController::PositionScratchController(const QString& group)
           m_p(1),
           m_d(1),
           m_f(0.4) {
+    // Note: this control is supposed to allow better scratch control with
+    // controller wheels, eg. don't use "jog" on wheelturn input while we are
+    // still in inertia mode.
+    m_pScratchActive->setReadOnly();
+
     m_pMainSampleRate->connectValueChanged(this,
             &PositionScratchController::slotUpdateFilterParameters);
+
+    m_pThrowThresholdCO->set(kThrowThresholdDefault);
+    connect(m_pThrowThresholdCO.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this](double v) {
+                // TODO Clamp to reasonable range
+                m_pThrowThreshold = v;
+            });
+
+    m_pMaxVelocityCO->set(kMaxVelocityDefault);
+    connect(m_pMaxVelocityCO.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this](double v) {
+                // TODO Clamp to reasonable range
+                m_pMaxVelocity = v;
+            });
+
+    m_pTimeToStopCO->set(kTimeToStopDefault);
+    connect(m_pTimeToStopCO.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this](double v) {
+                // TODO Clamp to reasonable range
+                m_pTimeToStop = v;
+                slotUpdateFilterParameters();
+            });
 }
 
 PositionScratchController::~PositionScratchController() {
 }
 
-void PositionScratchController::slotUpdateFilterParameters(double sampleRate) {
+void PositionScratchController::slotUpdateFilterParameters() {
     // The latency or time difference between process calls.
-    m_dt = static_cast<double>(m_bufferSize) / sampleRate / 2;
+    m_dt = static_cast<double>(m_bufferSize) / m_pMainSampleRate->get() / 2;
 
     // Sample Mouse with fixed timing intervals to iron out significant jitters
     // that are added on the way from mouse to engine thread
@@ -129,7 +178,7 @@ void PositionScratchController::slotUpdateFilterParameters(double sampleRate) {
     // lowpass filter
     m_callsPerDt = static_cast<int>(ceil(kDefaultSampleInterval / m_dt));
 
-    m_callsToStop = m_dt / kTimeToStop;
+    m_callsToStop = m_dt / m_pTimeToStop;
 
     // Tweak PD controller for different latencies
     m_p = 0.3;
@@ -154,7 +203,7 @@ void PositionScratchController::process(double currentSamplePos,
 
     if (bufferSize != m_bufferSize) {
         m_bufferSize = bufferSize;
-        slotUpdateFilterParameters(m_pMainSampleRate->get());
+        slotUpdateFilterParameters();
     }
 
     if (m_isScratching) {
@@ -172,12 +221,14 @@ void PositionScratchController::process(double currentSamplePos,
 
             // We calculate the exponential decay constant based on the above
             // constants. Roughly we backsolve what the decay should be if we want to
-            // stop a throw of max velocity kMaxVelocity in kTimeToStop seconds. Here is
+            // stop a throw of max velocity kMaxVelocityDefault in kTimeToStopDefault seconds. Here is
             // the derivation:
-            // decayThreshold = kMaxVelocity * alpha ^ (# callbacks to stop in)
-            // # callbacks = kTimeToStop / m_dt
-            // alpha = (decayThreshold / kMaxVelocity) ^ (m_dt / kTimeToStop)
-            const double kExponentialDecay = pow(decayThreshold / kMaxVelocity, m_callsToStop);
+            // decayThreshold = kMaxVelocityDefault * alpha ^ (# callbacks to stop in)
+            // # callbacks = kTimeToStopDefault / m_dt
+            // alpha = (decayThreshold / kMaxVelocityDefault) ^ (m_dt / kTimeToStopDefault)
+            const double kExponentialDecay =
+                    pow(decayThreshold / m_pMaxVelocity,
+                            m_callsToStop);
 
             m_rate *= kExponentialDecay;
 
@@ -186,6 +237,7 @@ void PositionScratchController::process(double currentSamplePos,
             if (fabs(m_rate) < decayThreshold || scratchEnable) {
                 m_inertiaEnabled = false;
                 m_isScratching = false;
+                m_pScratchActive->set(0);
             }
             // qDebug() << m_rate << kExponentialDecay << m_dt;
         } else if (scratchEnable) {
@@ -212,6 +264,11 @@ void PositionScratchController::process(double currentSamplePos,
                 double triggerPos = trigger.toEngineSamplePos();
                 double targetPos = target.toEngineSamplePos();
                 double loopLength = triggerPos - targetPos;
+                qWarning() << "         .";
+                qWarning() << "         wrappedAround:" << wrappedAround;
+                qWarning() << "         sampleDelta:  " << sampleDelta;
+                qWarning() << "         totalSamDelta:" << sampleDelta + loopLength * wrappedAround;
+                qWarning() << "         .";
                 sampleDelta += loopLength * wrappedAround;
             }
 
@@ -273,6 +330,11 @@ void PositionScratchController::process(double currentSamplePos,
                         // we cannot get closer
                         m_rate = 0;
                     }
+                    if (wrappedAround > 0 || fabs(m_rate) > 5.0) {
+                        qWarning() << "     .";
+                        qWarning() << "     --- rate:" << m_rate;
+                        qWarning() << "     .";
+                    }
                 }
 
                 // qDebug() << m_rate << scratchTargetDelta << m_samplePosDeltaSum << m_dt;
@@ -281,10 +343,11 @@ void PositionScratchController::process(double currentSamplePos,
             // We quit scratch mode.
             // Disable everything, or optionally enable inertia mode if
             // the previous rate was high enough to count as a 'throw'
-            if (fabs(m_rate) > kThrowThreshold) {
+            if (fabs(m_rate) > m_pThrowThreshold) {
                 m_inertiaEnabled = true;
             } else {
                 m_isScratching = false;
+                m_pScratchActive->set(0);
             }
             //qDebug() << "disable";
         }
@@ -292,6 +355,7 @@ void PositionScratchController::process(double currentSamplePos,
         // We were not previously in scratch mode but now we are.
         // Enable scratching.
         m_isScratching = true;
+        m_pScratchActive->set(1);
         m_inertiaEnabled = false;
         m_moveDelay = 0;
         // Set up initial values, in a way that the system is settled

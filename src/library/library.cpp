@@ -391,6 +391,11 @@ void Library::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
             pSidebarWidget,
             &WLibrarySidebar::slotSetFont);
 
+    connect(this,
+            &Library::setSidebarHoverExpandDelay,
+            pSidebarWidget,
+            &WLibrarySidebar::slotSetExpandOnHoverDelay);
+
     for (const auto& feature : std::as_const(m_features)) {
         feature->bindSidebarWidget(pSidebarWidget);
     }
@@ -655,6 +660,7 @@ bool Library::requestAddDir(const QString& dir) {
         return false;
     }
 
+    emit directoryAdded(dir);
     return true;
 }
 
@@ -692,6 +698,7 @@ bool Library::requestRemoveDir(const QString& dir, LibraryRemovalType removalTyp
         DEBUG_ASSERT(!"unreachable");
     }
 
+    emit directoryRemoved(dir);
     return true;
 }
 

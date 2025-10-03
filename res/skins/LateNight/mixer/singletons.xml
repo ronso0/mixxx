@@ -128,4 +128,69 @@
       </WidgetGroup>
     </Children>
   </SingletonDefinition>
+
+  <SingletonDefinition>
+    <ObjectName>QuickEffectSelector1</ObjectName>
+    <Children>
+      <WidgetGroup>
+        <Layout>horizontal</Layout>
+        <Children>
+          <EffectChainPresetSelector>
+            <ObjectName>QuickEffectSelectorLeft</ObjectName>
+            <Size>40min,18f</Size>
+            <EffectUnitGroup>[QuickEffectRack1_[Channel1]]</EffectUnitGroup>
+          </EffectChainPresetSelector>
+        </Children>
+      </WidgetGroup>
+    </Children>
+  </SingletonDefinition>
+
+  <SingletonDefinition>
+    <ObjectName>QuickEffectSelector2</ObjectName>
+    <Children>
+      <WidgetGroup>
+        <Layout>horizontal</Layout>
+        <Children>
+          <EffectChainPresetSelector>
+            <ObjectName>QuickEffectSelectorRight</ObjectName>
+            <Size>40min,18f</Size>
+            <EffectUnitGroup>[QuickEffectRack1_[Channel2]]</EffectUnitGroup>
+          </EffectChainPresetSelector>
+        </Children>
+      </WidgetGroup>
+    </Children>
+  </SingletonDefinition>
+
+  <SingletonDefinition>
+    <ObjectName>QuickEffectSelector3</ObjectName>
+    <Children>
+      <WidgetGroup>
+        <Layout>horizontal</Layout>
+        <Children>
+          <EffectChainPresetSelector>
+            <ObjectName>QuickEffectSelectorLeft</ObjectName>
+            <Size>40min,18f</Size>
+            <EffectUnitGroup>[QuickEffectRack1_[Channel3]]</EffectUnitGroup>
+          </EffectChainPresetSelector>
+        </Children>
+      </WidgetGroup>
+    </Children>
+  </SingletonDefinition>
+
+  <SingletonDefinition>
+    <ObjectName>QuickEffectSelector4</ObjectName>
+    <Children>
+      <WidgetGroup>
+        <Layout>horizontal</Layout>
+        <Children>
+          <EffectChainPresetSelector>
+            <ObjectName>QuickEffectSelectorRight</ObjectName>
+            <Size>40min,18f</Size>
+            <EffectUnitGroup>[QuickEffectRack1_[Channel4]]</EffectUnitGroup>
+          </EffectChainPresetSelector>
+        </Children>
+      </WidgetGroup>
+    </Children>
+  </SingletonDefinition>
+
 </Template>

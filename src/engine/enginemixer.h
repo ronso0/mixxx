@@ -254,6 +254,7 @@ class EngineMixer : public QObject, public AudioSource {
     // m_activeTalkoverChannels with each channel that is active for the
     // respective output.
     void processChannels(std::size_t bufferSize);
+    void finishStartup();
 
     ChannelHandleFactoryPointer m_pChannelHandleFactory;
     void applyMainEffects(std::size_t bufferSize);
@@ -313,6 +314,7 @@ class EngineMixer : public QObject, public AudioSource {
     std::unique_ptr<ControlPotmeter> m_pCrossfader;
     std::unique_ptr<ControlPotmeter> m_pHeadMix;
     std::unique_ptr<ControlPotmeter> m_pBalance;
+    std::unique_ptr<ControlPushButton> m_pMainPfl;
     std::unique_ptr<ControlPushButton> m_pXFaderMode;
     std::unique_ptr<ControlPotmeter> m_pXFaderCurve;
     std::unique_ptr<ControlPotmeter> m_pXFaderCalibration;
@@ -346,4 +348,7 @@ class EngineMixer : public QObject, public AudioSource {
     // TODO (Swiftb0y): remove volatile (probably supposed to be std::atomic instead).
     volatile bool m_bBusOutputConnected[3];
     bool m_bExternalRecordBroadcastInputConnected;
+
+    const qint64 m_cpuId;
+    const QString m_cpuSet;
 };

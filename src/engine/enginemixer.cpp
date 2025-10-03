@@ -23,6 +23,7 @@
 #include "moc_enginemixer.cpp"
 #include "preferences/configobject.h"
 #include "preferences/usersettings.h"
+#include "util/cpupinning.h"
 #include "util/defs.h"
 #include "util/parented_ptr.h"
 #include "util/sample.h"
@@ -105,6 +106,8 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
                   ConfigKey(group, "headMix"), -1., 1.)),
           m_pBalance(std::make_unique<ControlPotmeter>(
                   ConfigKey(group, "balance"), -1., 1.)),
+          m_pMainPfl(std::make_unique<ControlPushButton>(
+                  ConfigKey(group, QStringLiteral("pfl")))),
           m_pXFaderMode(std::make_unique<ControlPushButton>(
                   ConfigKey(EngineXfader::kXfaderConfigKey, "xFaderMode"))),
           m_pXFaderCurve(std::make_unique<ControlPotmeter>(
@@ -147,7 +150,9 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
           m_pMainMonoMixdown(std::make_unique<ControlObject>(
                   ConfigKey(group, "mono_mixdown"), true, false, true)),
           m_pMicMonitorMode(std::make_unique<ControlObject>(
-                  ConfigKey(group, "talkover_mix"), true, false, true)) {
+                  ConfigKey(group, "talkover_mix"), true, false, true)),
+          m_cpuId(CmdlineArgs::Instance().getEngineCpuId()),
+          m_cpuSet(CmdlineArgs::Instance().getEngineCpuSet()) {
     pEffectsManager->registerInputChannel(m_mainHandle);
     pEffectsManager->registerInputChannel(m_headphoneHandle);
     pEffectsManager->registerOutputChannel(m_mainHandle);
@@ -230,6 +235,18 @@ std::span<const CSAMPLE> EngineMixer::getSidechainBuffer() const {
     return m_sidechainMix.span();
 }
 
+void EngineMixer::finishStartup() {
+    QThread::currentThread()->setObjectName("Engine");
+#ifdef __LINUX__
+    if (!m_cpuSet.isNull() && !m_cpuSet.isEmpty()) {
+        mixxx::CpuPinning::moveThreadToCpuset(m_cpuSet);
+    }
+#endif
+    if (m_cpuId != -1) {
+        mixxx::CpuPinning::pinThreadToCpu(m_cpuId);
+    }
+}
+
 void EngineMixer::processChannels(std::size_t bufferSize) {
     // Update internal sync lock rate.
     m_pEngineSync->onCallbackStart(m_sampleRate, bufferSize);
@@ -297,7 +314,7 @@ void EngineMixer::processChannels(std::size_t bufferSize) {
 
         // If the channel is enabled for previewing in headphones, copy it
         // over to the headphone buffer
-        if (pChannel->isPflEnabled()) {
+        if (pChannel->isPflEnabled() && !m_pMainPfl->toBool()) {
             m_activeHeadphoneChannels.append(pChannelInfo);
         } else {
             // Check if we need to fade out the channel
@@ -389,7 +406,14 @@ void EngineMixer::process(const std::size_t bufferSize) {
     CSAMPLE pflMixGainInHeadphones = 1;
     CSAMPLE mainMixGainInHeadphones = 0;
     if (mainEnabled) {
-        const auto cf_val = static_cast<CSAMPLE_GAIN>(m_pHeadMix->get());
+        CSAMPLE_GAIN cf_val;
+        if (m_pMainPfl->toBool()) {
+            // Only Main on headphones
+            cf_val = 1.0;
+        } else {
+            // Regular channel Pfl
+            cf_val = static_cast<CSAMPLE_GAIN>(m_pHeadMix->get());
+        }
         pflMixGainInHeadphones = 0.5f * (-cf_val + 1.0f);
         mainMixGainInHeadphones = 0.5f * (cf_val + 1.0f);
         // qDebug() << "head val " << cf_val << ", head " << chead_gain

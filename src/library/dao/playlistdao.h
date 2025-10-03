@@ -66,6 +66,8 @@ class PlaylistDAO : public QObject, public virtual DAO {
     // Get all playlist ids and names of a specific type
     QList<QPair<int, QString>> getPlaylists(const HiddenType hidden) const;
     QList<QPair<int, QString>> getUnlockedPlaylists(const HiddenType hidden) const;
+    // Get all playlist ids of a specific type
+    QSet<int> getPlaylistIds(const HiddenType hidden) const;
     // Find out the name of the playlist at the given Id
     QString getPlaylistName(const int playlistId) const;
     // Get the playlist id by its name
@@ -76,6 +78,7 @@ class PlaylistDAO : public QObject, public virtual DAO {
     int getPlaylistId(const int index) const;
     QList<TrackId> getTrackIds(const int playlistId) const;
     QList<TrackId> getTrackIdsInPlaylistOrder(const int playlistId) const;
+    QList<TrackId> getAutoDJTrackIds() const;
     // Returns true if the playlist with playlistId is hidden
     bool isHidden(const int playlistId) const;
     // Returns the HiddenType of playlistId
@@ -110,6 +113,10 @@ class PlaylistDAO : public QObject, public virtual DAO {
     bool copyPlaylistTracks(const int sourcePlaylistID, const int targetPlaylistID);
     // Returns the number of tracks in the given playlist.
     int tracksInPlaylist(const int playlistId) const;
+    // This receives a track list that represents the current order (sorted by BPM for example)
+    // and adopts this order for `position` in the playlist.
+    // Returns true on success.
+    void orderTracksByCurrPos(const int playlistId, QList<std::pair<TrackId, int>>& newOrder);
     // moved Track to a new position
     void moveTrack(const int playlistId,
             const int oldPosition, const int newPosition);
@@ -119,16 +126,28 @@ class PlaylistDAO : public QObject, public virtual DAO {
 
     void getPlaylistsTrackIsIn(TrackId trackId, QSet<int>* playlistSet) const;
 
+    int togglePrepPlaylist(int playlistId);
+    int getPrepPlaylistId() {
+        return m_prepPlaylistId;
+    }
+    bool isTrackInPrepPlaylist(TrackId id);
+    bool appendTrackToPrepPlaylist(TrackId id);
+    bool removeTrackFromPrepPlaylist(TrackId id);
+
     void setAutoDJProcessor(AutoDJProcessor* pAutoDJProcessor);
 
   signals:
-    void added(int playlistId);
-    void deleted(int playlistId);
+    // Added/deleted triggers rebuild of the feature's sidebar model.
+    // Pass the type so receivers (library features) can easily decide
+    // whether to act or not.
+    void added(int playlistId, HiddenType type);
+    void deleted(int playlistId, HiddenType type);
     void renamed(int playlistId, const QString& newName);
     void lockChanged(const QSet<int>& playlistIds);
     void trackAdded(int playlistId, TrackId trackId, int position);
     void trackRemoved(int playlistId, TrackId trackId, int position);
-    // added / removed / un/locked. Triggers playlist features to update the sidebar
+    // Track(s) added/removed or un/locked. Triggers playlist features
+    // to update the sidebar labels or icons.
     void playlistContentChanged(const QSet<int>& playlistIds);
     // Separate signals for PlaylistTableModel
     void tracksAdded(const QSet<int>& playlistIds);
@@ -151,5 +170,6 @@ class PlaylistDAO : public QObject, public virtual DAO {
 
     QMultiHash<TrackId, int> m_playlistsTrackIsIn;
     AutoDJProcessor* m_pAutoDJProcessor;
+    int m_prepPlaylistId;
     DISALLOW_COPY_AND_ASSIGN(PlaylistDAO);
 };

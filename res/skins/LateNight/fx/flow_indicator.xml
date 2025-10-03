@@ -1,0 +1,47 @@
+<!--
+Description:
+  A widget with a chevron that indicates the fx flow (left to right).
+  Areas at left/right side of chevron are painted (SVG) depending on 'enabled' state
+  of the both effects.
+  SVG bg color is hard-coded and needs to match that 'background-color' of
+  #FxSlotControls
+
+Variables:
+  Left    num of effect on the left side
+  Right   num of effect on the right side
+-->
+<Template>
+  <WidgetGroup>
+    <ObjectName>FxFlowStackH</ObjectName>
+    <Layout>stacked</Layout>
+    <Children>
+
+      <WidgetGroup>
+        <ObjectName>FxFlowLine</ObjectName>
+        <Children/>
+      </WidgetGroup>
+
+      <Label>
+        <ObjectName>FxFlowBgLeft</ObjectName>
+        <Connection>
+          <ConfigKey>[EffectRack1_EffectUnit<Variable name="FxUnit"/>_Effect<Variable name="Left"/>],enabled</ConfigKey>
+          <BindProperty>highlight</BindProperty>
+        </Connection>
+      </Label>
+
+      <Label>
+        <ObjectName>FxFlowBgRight</ObjectName>
+        <Connection>
+          <ConfigKey>[EffectRack1_EffectUnit<Variable name="FxUnit"/>_Effect<Variable name="Right"/>],enabled</ConfigKey>
+          <BindProperty>highlight</BindProperty>
+        </Connection>
+      </Label>
+
+      <WidgetGroup>
+        <ObjectName>FxFlowTopBottomBorder</ObjectName>
+        <Children/>
+      </WidgetGroup>
+
+    </Children>
+  </WidgetGroup>
+</Template>

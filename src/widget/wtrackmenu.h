@@ -111,8 +111,13 @@ class WTrackMenu : public QMenu {
     void popup(const QPoint& pos, QAction* at = nullptr);
     void slotShowDlgTrackInfo();
     // Library management
+    void clearComments() {
+        slotClearComment();
+    }
     void slotRemoveFromDisk();
     const QString getDeckGroup() const;
+
+    void keyPressEvent(QKeyEvent* pEvent) override;
 
   signals:
 #ifdef __STEM__
@@ -135,7 +140,7 @@ class WTrackMenu : public QMenu {
     void slotSelectInLibrary();
 
     // Track rating
-    void slotSetRating(int rating);
+    void slotSetRating(int rating, bool close = true);
 
     // Row color
     void slotColorPicked(const mixxx::RgbColor::optional_t& color);
@@ -298,9 +303,6 @@ class WTrackMenu : public QMenu {
     parented_ptr<WCoverArtMenu> m_pCoverMenu;
     parented_ptr<WSearchRelatedTracksMenu> m_pSearchRelatedMenu;
     parented_ptr<WFindOnWebMenu> m_pFindOnWebMenu;
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    QMenu* m_pRemoveFromDiskMenu{};
-#endif
 
     // Update ReplayGain from Track
     parented_ptr<QAction> m_pUpdateReplayGainAct;
@@ -402,6 +404,7 @@ class WTrackMenu : public QMenu {
     QString m_trackProperty;
 
     static bool s_showPurgeSuccessPopup;
+    static bool s_confirmForAutoDjReplace;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(WTrackMenu::Features)

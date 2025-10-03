@@ -48,8 +48,9 @@ DlgPrefWaveform::DlgPrefWaveform(
     int cfgTypeIndex = waveformOverviewComboBox->findData(QVariant::fromValue(overviewType));
     if (cfgTypeIndex == -1) {
         // Invalid config value, set default type RGB and write it to config
-        waveformOverviewComboBox->setCurrentIndex(
-                waveformOverviewComboBox->findData(QVariant::fromValue(OverviewType::RGB)));
+        cfgTypeIndex = waveformOverviewComboBox->findData(
+                QVariant::fromValue(OverviewType::RGB));
+        waveformOverviewComboBox->setCurrentIndex(cfgTypeIndex);
         m_pConfig->setValue(kOverviewTypeCfgKey, cfgTypeIndex);
     } else {
         waveformOverviewComboBox->setCurrentIndex(cfgTypeIndex);
@@ -79,6 +80,11 @@ DlgPrefWaveform::DlgPrefWaveform(
         defaultZoomComboBox->addItem(QString::number(100 / static_cast<double>(i), 'f', 1) + " %");
     }
 
+    m_pOverviewStereoControl = std::make_unique<ControlObject>(
+            ConfigKey(kWaveformGroup,
+                    QStringLiteral("overview_stereo_mode")));
+    m_pOverviewStereoControl->setReadOnly();
+
     m_pOverviewMinuteMarkersControl = std::make_unique<ControlObject>(
             ConfigKey(kWaveformGroup, QStringLiteral("draw_overview_minute_markers")));
     m_pOverviewMinuteMarkersControl->setReadOnly();
@@ -91,6 +97,9 @@ DlgPrefWaveform::DlgPrefWaveform(
     //: options for "Text height limit"
     untilMarkTextHeightLimitComboBox->addItem(tr("1/3 of waveform viewer"));
     untilMarkTextHeightLimitComboBox->addItem(tr("Entire waveform viewer"));
+
+    // Adopt tr string from first GLSL hint
+    requiresGLSLLabel2->setText(requiresGLSLLabel->text());
 
     // The GUI is not fully setup so connecting signals before calling
     // slotUpdate can generate rebootMixxxView calls.
@@ -189,6 +198,10 @@ DlgPrefWaveform::DlgPrefWaveform(
             &QCheckBox::toggled,
             this,
             &DlgPrefWaveform::slotSetOverviewMinuteMarkers);
+    connect(overviewStereoCheckBox,
+            &QCheckBox::toggled,
+            this,
+            &DlgPrefWaveform::slotSetOverviewStereoMode);
 
     connect(factory,
             &WaveformWidgetFactory::waveformMeasured,
@@ -300,6 +313,7 @@ void DlgPrefWaveform::slotUpdate() {
     waveformTypeComboBox->setEnabled(useWaveform);
     updateEnableUntilMark();
     updateWaveformGeneralOptionsEnabled();
+    updateStemOptionsEnabled();
 
     frameRateSpinBox->setValue(factory->getFrameRate());
     frameRateSlider->setValue(factory->getFrameRate());
@@ -344,6 +358,11 @@ void DlgPrefWaveform::slotUpdate() {
     } else {
         overview_scale_allReplayGain->setChecked(true);
     }
+
+    bool overviewStereo = m_pConfig->getValue(
+            ConfigKey(kWaveformGroup, QStringLiteral("overview_stereo_mode")), true);
+    overviewStereoCheckBox->setChecked(overviewStereo);
+    m_pOverviewStereoControl->forceSet(overviewStereo);
 
     bool drawOverviewMinuteMarkers = m_pConfig->getValue(
             ConfigKey(kWaveformGroup, QStringLiteral("draw_overview_minute_markers")), true);
@@ -403,6 +422,9 @@ void DlgPrefWaveform::slotResetToDefaults() {
     // RGB overview.
     waveformOverviewComboBox->setCurrentIndex(
             waveformOverviewComboBox->findData(QVariant::fromValue(OverviewType::RGB)));
+
+    // Default to overview stereo mode
+    overviewStereoCheckBox->setChecked(true);
 
     // Show minute markers.
     overviewMinuteMarkersCheckBox->setChecked(true);
@@ -472,6 +494,7 @@ void DlgPrefWaveform::slotSetWaveformType(int index) {
             WaveformRendererSignalBase::Option::None);
     updateWaveformTypeOptions(true, backend, currentOptions);
     updateEnableUntilMark();
+    updateStemOptionsEnabled();
 }
 
 void DlgPrefWaveform::slotSetWaveformEnabled(bool checked) {
@@ -508,6 +531,7 @@ void DlgPrefWaveform::slotSetWaveformAcceleration(bool checked) {
             WaveformRendererSignalBase::Option::None);
     updateWaveformTypeOptions(true, backend, currentOptions);
     updateEnableUntilMark();
+    updateStemOptionsEnabled();
 }
 
 void DlgPrefWaveform::updateWaveformAcceleration(
@@ -613,6 +637,25 @@ void DlgPrefWaveform::updateWaveformGeneralOptionsEnabled() {
     defaultZoomComboBox->setEnabled(enabled);
     synchronizeZoomCheckBox->setEnabled(enabled);
     updateWaveformGainEnabled();
+    updateStemOptionsEnabled();
+}
+
+void DlgPrefWaveform::updateStemOptionsEnabled() {
+#ifndef MIXXX_USE_QOPENGL
+    const bool stemsSupported = false;
+#else
+    WaveformWidgetFactory* factory = WaveformWidgetFactory::instance();
+    const bool stemsSupported =
+            factory->widgetTypeSupportsStems() &&
+            factory->getBackendFromConfig() == WaveformWidgetBackend::AllShader;
+#endif
+    bool enabled = useWaveformCheckBox->isChecked();
+    stemOpacityMainLabel->setEnabled(stemsSupported && enabled);
+    stemOpacityOutlineLabel->setEnabled(stemsSupported && enabled);
+    stemReorderLayerOnChangedCheckBox->setEnabled(stemsSupported && enabled);
+    stemOpacitySpinBox->setEnabled(stemsSupported && enabled);
+    stemOutlineOpacitySpinBox->setEnabled(stemsSupported && enabled);
+    requiresGLSLLabel2->setVisible(!stemsSupported && enabled);
 }
 
 void DlgPrefWaveform::updateWaveformGainEnabled() {
@@ -668,6 +711,11 @@ void DlgPrefWaveform::slotSetOverviewMinuteMarkers(bool draw) {
                                 QStringLiteral("draw_overview_minute_markers")),
             draw);
     m_pOverviewMinuteMarkersControl->forceSet(draw);
+}
+
+void DlgPrefWaveform::slotSetOverviewStereoMode(bool stereo) {
+    m_pConfig->setValue(ConfigKey(kWaveformGroup, QStringLiteral("overview_stereo_mode")), stereo);
+    m_pOverviewStereoControl->forceSet(stereo);
 }
 
 void DlgPrefWaveform::slotWaveformMeasured(float frameRate, int droppedFrames) {
