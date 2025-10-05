@@ -35,6 +35,9 @@ void TableItemDelegate::paint(
         const QModelIndex& index) const {
     PainterScope painterScope(painter);
     painter->setClipRect(option.rect);
+    if (index.column() == 2) {
+        qWarning() << "~~~ TableItemDelegate::paint row" << index.row();
+    }
 
     // Clone the const option so we can change palette colors.
     QStyleOptionViewItem opt = option;

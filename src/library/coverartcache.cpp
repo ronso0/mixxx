@@ -79,19 +79,15 @@ QPixmap CoverArtCache::getCachedCover(
 
     QPixmap pixmap;
     if (!QPixmapCache::find(cacheKey, &pixmap)) {
-        if (kLogger.traceEnabled()) {
-            kLogger.trace()
-                    << "requestCover cache miss"
-                    << coverInfo;
-        }
+        kLogger.warning()
+                << "requestCover cache miss"
+                << coverInfo;
         return QPixmap();
     }
 
-    if (kLogger.traceEnabled()) {
-        kLogger.trace()
-                << "requestCover cache hit"
-                << coverInfo;
-    }
+    kLogger.warning()
+            << "requestCover cache hit"
+            << coverInfo;
     return pixmap;
 }
 
@@ -136,17 +132,21 @@ void CoverArtCache::tryLoadCover(
         const TrackPointer& pTrack,
         const CoverInfo& coverInfo,
         int desiredWidth) {
-    if (kLogger.traceEnabled()) {
-        kLogger.trace()
-                << "requestCover"
-                << pRequester
-                << coverInfo
-                << desiredWidth;
-    }
+    kLogger.warning()
+            << "requestCover"
+            << pRequester
+            << coverInfo
+            << desiredWidth;
     DEBUG_ASSERT(!pTrack ||
                 pTrack->getLocation() == coverInfo.trackLocation);
 
     if (!coverInfo.hasImage()) {
+        kLogger.warning()
+                << "cover info has no image, track:"
+                << coverInfo.trackLocation;
+        kLogger.warning()
+                << "cover location:"
+                << coverInfo.coverLocation;
         emit coverFound(pRequester, coverInfo, QPixmap());
         return;
     }
@@ -159,14 +159,15 @@ void CoverArtCache::tryLoadCover(
     bool requestPending = m_runningRequests.contains(requestedCacheKey);
     m_runningRequests.insert(requestedCacheKey, {pRequester, desiredWidth});
     if (requestPending) {
+        kLogger.warning()
+                << "request pending for"
+                << coverInfo.trackLocation;
         return;
     }
 
-    if (kLogger.traceEnabled()) {
-        kLogger.trace()
-                << "requestCover starting future for"
-                << coverInfo;
-    }
+    kLogger.warning()
+            << "requestCover starting future for"
+            << coverInfo;
 
     // The watcher will be deleted in coverLoaded()
     QFutureWatcher<FutureResult>* watcher = new QFutureWatcher<FutureResult>(this);
@@ -188,12 +189,10 @@ CoverArtCache::FutureResult CoverArtCache::loadCover(
         TrackPointer pTrack,
         CoverInfo coverInfo,
         int desiredWidth) {
-    if (kLogger.traceEnabled()) {
-        kLogger.trace()
-                << "loadCover"
-                << coverInfo
-                << desiredWidth;
-    }
+    kLogger.warning()
+            << "loadCover"
+            << coverInfo
+            << desiredWidth;
     DEBUG_ASSERT(!pTrack ||
             pTrack->getLocation() == coverInfo.trackLocation);
 
@@ -222,6 +221,8 @@ CoverArtCache::FutureResult CoverArtCache::loadCover(
             // or downsize the image for efficiency.
             loadedImage.image = resizeImageWidth(loadedImage.image, desiredWidth);
         }
+    } else {
+        kLogger.warning() << "loaded image is NULL";
     }
 
     res.coverArt = CoverArt(
@@ -244,9 +245,7 @@ void CoverArtCache::coverLoaded() {
         pFutureWatcher->deleteLater();
     }
 
-    if (kLogger.traceEnabled()) {
-        kLogger.trace() << "coverLoaded" << res.coverArt;
-    }
+    kLogger.warning() << "coverLoaded" << res.coverArt;
 
     QString cacheKey = pixmapCacheKey(
             res.coverArt.cacheKey(), res.coverArt.resizedToWidth);
@@ -287,6 +286,9 @@ void CoverArtCache::coverLoaded() {
             // be displayed when loaded from the cache.
             QPixmapCache::insert(cacheKey, pixmap);
         }
+    } else {
+        kLogger.warning()
+                << "Failed. Result == LoadedImage::Result::NoImage";
     }
 
     auto runningRequests = m_runningRequests;

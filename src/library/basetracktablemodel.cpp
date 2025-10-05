@@ -976,8 +976,10 @@ void BaseTrackTableModel::slotTrackChanged(
 void BaseTrackTableModel::slotRefreshCoverRows(
         const QList<int>& rows) {
     if (rows.isEmpty()) {
+        qWarning() << "BaseTrackTableModel slotRefreshCoverRows -- rows empty--";
         return;
     }
+    qWarning() << "BaseTrackTableModel slotRefreshCoverRows, rows" << rows.size();
     const int column = fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART);
     VERIFY_OR_DEBUG_ASSERT(column >= 0) {
         return;
@@ -986,6 +988,7 @@ void BaseTrackTableModel::slotRefreshCoverRows(
 }
 
 void BaseTrackTableModel::slotRefreshAllRows() {
+    qWarning() << "BaseTrackTableModel slotRefresh ALL Rows";
     select();
 }
 
@@ -1075,6 +1078,7 @@ void BaseTrackTableModel::slotCoverFound(
             getTrackLocation(m_toolTipIndex) != coverInfo.trackLocation) {
         return;
     }
+    qWarning() << "BaseTrackTableModel slotCoverFound";
     emit dataChanged(m_toolTipIndex, m_toolTipIndex, {Qt::ToolTipRole});
 }
 

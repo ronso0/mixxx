@@ -603,6 +603,7 @@ void GlobalTrackCache::resolve(
         if (debugLogEnabled()) {
             kLogger.debug()
                     << "Resolving track by canonical location"
+                    << trackRef.getId()
                     << trackRef.getCanonicalLocation();
         }
         auto strongPtr = lookupByCanonicalLocation(
@@ -644,13 +645,15 @@ void GlobalTrackCache::resolve(
         DEBUG_ASSERT(isEmpty());
         kLogger.warning()
                 << "Cache miss - caching has already been deactivated"
-                << trackRef;
+                << trackRef.getId()
+                << trackRef.getLocation();
         return;
     }
     if (debugLogEnabled()) {
         kLogger.debug()
                 << "Cache miss - allocating track"
-                << trackRef;
+                << trackRef.getId()
+                << trackRef.getLocation();
     }
     auto deletingPtr = std::unique_ptr<Track, GlobalTrackCacheEntry::TrackDeleter>(
             new Track(
@@ -668,8 +671,8 @@ void GlobalTrackCache::resolve(
     if (debugLogEnabled()) {
         kLogger.debug()
                 << "Cache miss - inserting new track into cache"
-                << trackRef
-                << deletingPtr.get();
+                << trackRef.getId()
+                << trackRef.getLocation();
     }
 
     if (trackRef.hasId()) {

@@ -43,8 +43,7 @@ CoverArtDelegate::CoverArtDelegate(QTableView* parent)
     }
 }
 
-void CoverArtDelegate::emitRowsChanged(
-        QList<int>&& rows) {
+void CoverArtDelegate::emitRowsChanged(QList<int>&& rows) {
     if (rows.isEmpty()) {
         return;
     }
@@ -58,6 +57,13 @@ void CoverArtDelegate::emitRowsChanged(
             rows.constEnd());
     // ...before emitting the signal.
     DEBUG_ASSERT(!rows.isEmpty());
+
+    QStringList rowsStrL;
+    for (int row : rows) {
+        rowsStrL.append(QString::number(row));
+    };
+
+    kLogger.warning() << "emitRowsChanged" << rowsStrL.join(',');
     emit rowsChanged(std::move(rows));
 }
 
@@ -66,6 +72,7 @@ void CoverArtDelegate::requestUncachedCover(
         int width,
         int row) const {
     if (coverInfo.imageDigest().isEmpty()) {
+        kLogger.warning() << "requestUncachedCover, imageDigest empty, get track by ref";
         // This happens if we have the legacy hash
         // The CoverArtCache will take care of the update
         const auto pTrack = m_pTrackModel->getTrackByRef(
@@ -75,11 +82,13 @@ void CoverArtDelegate::requestUncachedCover(
         // This is the fast path with an internal temporary track
         CoverArtCache::requestUncachedCover(this, coverInfo, width);
     }
+    kLogger.warning() << "reUnCover > add to m_pendingCacheRows: row" << row
+                      << coverInfo.cacheKey();
+    // TODO Avoid duplicate rows
     m_pendingCacheRows.insert(coverInfo.cacheKey(), row);
 }
 
-void CoverArtDelegate::slotInhibitLazyLoading(
-        bool inhibitLazyLoading) {
+void CoverArtDelegate::slotInhibitLazyLoading(bool inhibitLazyLoading) {
     m_inhibitLazyLoading = inhibitLazyLoading;
     if (m_inhibitLazyLoading || m_cacheMissRows.isEmpty()) {
         return;
@@ -87,6 +96,7 @@ void CoverArtDelegate::slotInhibitLazyLoading(
     VERIFY_OR_DEBUG_ASSERT(m_pTrackModel) {
         return;
     }
+    kLogger.warning() << "slotInhibitLazyLoading OFF";
     const double scaleFactor = m_pTableView->devicePixelRatioF();
     const int width = static_cast<int>(m_pTableView->columnWidth(m_column) * scaleFactor);
 
@@ -95,6 +105,7 @@ void CoverArtDelegate::slotInhibitLazyLoading(
         const QRect rect = m_pTableView->visualRect(index);
         if (rect.intersects(m_pTableView->rect())) {
             const CoverInfo coverInfo = m_pTrackModel->getCoverInfo(index);
+            kLogger.warning() << " > requestUncachedCover for visible row" << row;
             requestUncachedCover(coverInfo, width, row);
         }
     }
@@ -109,11 +120,25 @@ void CoverArtDelegate::slotCoverFound(
     if (pRequester != this) {
         return;
     }
+    kLogger.warning() << "--------------------------------------------------------------------";
+    kLogger.warning() << "slotCoverFound ----"
+                      << QString(pixmap.isNull() ? "--no image--" : "has image")
+                      << "----------------------------------";
     mixxx::cache_key_t requestedImageHash = coverInfo.cacheKey();
     QList<int> refreshRows = m_pendingCacheRows.values(requestedImageHash);
+
+    QStringList rowsStrL;
+    for (int row : refreshRows) {
+        rowsStrL.append(QString::number(row));
+    };
+
+    kLogger.warning() << " > remove cover hash from m_pendingCacheRows"
+                      << QString(rowsStrL.isEmpty() ? "--no rows--" : rowsStrL.join(','))
+                      << requestedImageHash;
+
     m_pendingCacheRows.remove(requestedImageHash);
     if (pixmap.isNull()) {
-        kLogger.warning() << "Failed to load cover" << coverInfo;
+        kLogger.warning() << " > Failed to load cover" << coverInfo;
     } else {
         // Only refresh the rows if loading succeeded, otherwise
         // we would enter an infinite repaint loop and churn CPU.
@@ -128,6 +153,10 @@ void CoverArtDelegate::paintItem(
     VERIFY_OR_DEBUG_ASSERT(m_pTrackModel) {
         return;
     }
+    kLogger.warning() << "--------------------------------------------------------------------";
+    kLogger.warning() << "paintItem ----" << index.row()
+                      << "| id:" << m_pTrackModel->getTrackId(index)
+                      << "----------------------------------";
     CoverInfo coverInfo = m_pTrackModel->getCoverInfo(index);
     bool drewPixmap = false;
     if (coverInfo.hasImage()) {
@@ -139,10 +168,16 @@ void CoverArtDelegate::paintItem(
         QPixmap pixmap = CoverArtCache::getCachedCover(coverInfo, width);
         if (pixmap.isNull()) {
             // Cache miss
+            kLogger.warning() << "---------- paint: cache miss for row:" << index.row()
+                              << "| id:" << m_pTrackModel->getTrackId(index);
             if (m_inhibitLazyLoading) {
                 // We are requesting cache-only covers and got a cache
                 // miss. Record row in a list for later lookup.
                 if (!m_cacheMissRows.contains(index.row())) {
+                    kLogger.warning() << "---------- paint: inhibit lazy "
+                                         "loading > add row to m_cacheMissRows";
+                    // TODO Check whether this causes the massive redundant cover lookup
+                    // and thereby GUI slowdown (stuttering waveforms, low FPS)
                     cleanCacheMissRows();
                     m_cacheMissRows.insert(index.row());
                 }
@@ -178,11 +213,13 @@ void CoverArtDelegate::paintItem(
 }
 
 void CoverArtDelegate::cleanCacheMissRows() const {
+    kLogger.warning() << "cleanCacheMissRows() --------------------------------------------";
     auto it = m_cacheMissRows.cbegin();
     while (it != m_cacheMissRows.cend()) {
         const QModelIndex index = m_pTableView->model()->index(*it, m_column);
         const QRect rect = m_pTableView->visualRect(index);
         if (!rect.intersects(m_pTableView->rect())) {
+            kLogger.warning() << "--- remove invisible row" << *it;
             // Cover image row is no longer shown. We keep the set
             // small which likely reuses the allocatd memory later
             it = constErase(&m_cacheMissRows, it);
