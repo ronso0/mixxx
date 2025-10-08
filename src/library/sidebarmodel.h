@@ -3,7 +3,10 @@
 #include <QAbstractItemModel>
 #include <QList>
 #include <QModelIndex>
+#include <QString>
 #include <QVariant>
+
+#include "preferences/usersettings.h"
 
 class LibraryFeature;
 class QTimer;
@@ -24,6 +27,10 @@ class SidebarModel : public QAbstractItemModel {
     explicit SidebarModel(
             QObject* parent = nullptr);
     ~SidebarModel() override = default;
+
+    void setConfig(UserSettingsPointer pConfig) {
+        m_pConfig = pConfig;
+    }
 
     void addLibraryFeature(LibraryFeature* feature);
     QModelIndex getDefaultSelection();
@@ -93,10 +100,14 @@ class SidebarModel : public QAbstractItemModel {
     QModelIndex translateSourceIndex(const QModelIndex& parent);
     QModelIndex translateIndex(const QModelIndex& index, const QAbstractItemModel* model);
     void featureRenamed(LibraryFeature*);
+    void saveCurrentSelection(const QModelIndex& index);
+    QModelIndex restoreSavedSelection();
+
     unsigned int m_iDefaultSelectedIndex; /** Index of the item in the sidebar model to select at startup. */
 
     QTimer* const m_pressedUntilClickedTimer;
     QModelIndex m_pressedIndex;
+    UserSettingsPointer m_pConfig;
 
     void startPressedUntilClickedTimer(const QModelIndex& pressedIndex);
     void stopPressedUntilClickedTimer();

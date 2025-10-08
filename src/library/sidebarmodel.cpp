@@ -2,6 +2,7 @@
 
 #include <QTimer>
 #include <QUrl>
+#include <functional>
 
 #include "library/libraryfeature.h"
 #include "library/treeitem.h"
@@ -94,6 +95,16 @@ void SidebarModel::setDefaultSelection(unsigned int index) {
 }
 
 void SidebarModel::activateDefaultSelection() {
+    // try to restore previously selected item
+    QModelIndex savedIndex = restoreSavedSelection();
+    if (savedIndex.isValid()) {
+        emit selectIndex(savedIndex, true /* scrollTo */);
+        // reuse clicked() method to activate the restored selection
+        clicked(savedIndex);
+        return;
+    }
+
+    // fallback to default selection if restoration failed
     if (m_iDefaultSelectedIndex <
             static_cast<unsigned int>(m_sFeatures.size())) {
         emit selectIndex(getDefaultSelection(), true /* scrollTo */);
@@ -354,6 +365,9 @@ void SidebarModel::clicked(const QModelIndex& index) {
     // this event.
     stopPressedUntilClickedTimer();
     if (index.isValid()) {
+        // save the selection for restoration on restart
+        saveCurrentSelection(index);
+
         if (index.internalPointer() == this) {
             m_sFeatures[index.row()]->activate();
         } else {
@@ -609,4 +623,91 @@ void SidebarModel::slotFeatureSelect(LibraryFeature* pFeature,
         }
     }
     emit selectIndex(ind, scrollTo);
+}
+
+void SidebarModel::saveCurrentSelection(const QModelIndex& index) {
+    if (!m_pConfig || !index.isValid()) {
+        return;
+    }
+
+    QString featureIconName;
+    QString childData;
+
+    if (index.internalPointer() == this) {
+        // root feature selected
+        if (index.row() >= 0 && index.row() < m_sFeatures.size()) {
+            featureIconName = m_sFeatures[index.row()]->iconName();
+        }
+    } else {
+        // child item selected
+        TreeItem* pTreeItem = static_cast<TreeItem*>(index.internalPointer());
+        if (pTreeItem) {
+            LibraryFeature* pFeature = pTreeItem->feature();
+            if (pFeature) {
+                featureIconName = pFeature->iconName();
+                childData = pTreeItem->getData().toString();
+            }
+        }
+    }
+
+    if (!featureIconName.isEmpty()) {
+        m_pConfig->setValue(
+                ConfigKey("[Library]", "LastSelectedFeature"),
+                featureIconName);
+        m_pConfig->setValue(
+                ConfigKey("[Library]", "LastSelectedChild"),
+                childData);
+    }
+}
+
+QModelIndex SidebarModel::restoreSavedSelection() {
+    if (!m_pConfig || m_sFeatures.isEmpty()) {
+        return QModelIndex();
+    }
+
+    QString savedFeatureIconName = m_pConfig->getValueString(
+            ConfigKey("[Library]", "LastSelectedFeature"));
+    QString savedChildData = m_pConfig->getValueString(
+            ConfigKey("[Library]", "LastSelectedChild"));
+
+    if (savedFeatureIconName.isEmpty()) {
+        return QModelIndex();
+    }
+
+    // find the feature by icon name (non-translated, programmatic identifier)
+    for (int i = 0; i < m_sFeatures.size(); ++i) {
+        if (m_sFeatures[i]->iconName() == savedFeatureIconName) {
+            // if no child data, return the feature root
+            if (savedChildData.isEmpty()) {
+                return index(i, 0);
+            }
+
+            // search for matching child by data using QAbstractItemModel::match()
+            QAbstractItemModel* pChildModel = m_sFeatures[i]->sidebarModel();
+            if (pChildModel && pChildModel->rowCount() > 0) {
+                QModelIndexList matches = pChildModel->match(
+                        pChildModel->index(0, 0),
+                        SidebarModel::DataRole,
+                        savedChildData,
+                        1, // stop at first match
+                        Qt::MatchExactly | Qt::MatchRecursive);
+
+                if (!matches.isEmpty() && matches.first().isValid()) {
+                    // translate child model index to sidebar model index
+                    QModelIndex childIndex = matches.first();
+                    TreeItem* pTreeItem = static_cast<TreeItem*>(
+                            childIndex.internalPointer());
+                    if (pTreeItem) {
+                        return createIndex(childIndex.row(), childIndex.column(), pTreeItem);
+                    }
+                }
+            }
+
+            // child not found, return feature root
+            return index(i, 0);
+        }
+    }
+
+    // feature not found
+    return QModelIndex();
 }

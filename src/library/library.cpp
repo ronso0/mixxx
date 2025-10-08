@@ -79,6 +79,9 @@ Library::Library(
           m_pAnalysisFeature(nullptr) {
     qRegisterMetaType<LibraryRemovalType>("LibraryRemovalType");
 
+    // provide config to sidebar model for selection persistence
+    m_pSidebarModel->setConfig(m_pConfig);
+
     m_pKeyNotation.reset(
             new ControlObject(mixxx::library::prefs::kKeyNotationConfigKey));
 
