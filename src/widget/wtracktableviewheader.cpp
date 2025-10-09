@@ -87,6 +87,7 @@ QString HeaderViewState::saveState() const {
 }
 
 void HeaderViewState::restoreState(WTrackTableViewHeader* pHeaders) {
+    qWarning() << "   State: restore state";
     const int max_columns =
             math_min(pHeaders->count(), m_view_state.header_state_size());
 
@@ -147,6 +148,7 @@ WTrackTableViewHeader::WTrackTableViewHeader(QWidget* pParent)
         : QHeaderView(Qt::Horizontal, pParent),
           m_pMenu(make_parented<QMenu>(tr("Show or hide columns."), this)),
           m_preferredHeight(-1) {
+    qWarning() << "   Header # new header";
     // Here we can override values to prevent restoring corrupt values from database
     setSectionsMovable(true);
 
@@ -173,8 +175,10 @@ void WTrackTableViewHeader::contextMenuEvent(QContextMenuEvent* pEvent) {
 
 void WTrackTableViewHeader::setModel(QAbstractItemModel* pModel) {
     TrackModel* pOldTrackModel = getTrackModel();
+    qWarning() << "   Header: setModel, has TrackModel:" << bool(pOldTrackModel != nullptr);
 
     if (dynamic_cast<QAbstractItemModel*>(pOldTrackModel) == pModel) {
+        qWarning() << "   -> same model already loaded, return";
         // If the models are the same, do nothing but the redundant call.
         QHeaderView::setModel(pModel);
         return;
@@ -195,6 +199,7 @@ void WTrackTableViewHeader::setModel(QAbstractItemModel* pModel) {
     TrackModel* pTrackModel = dynamic_cast<TrackModel*>(pModel);
 
     if (!pTrackModel) {
+        qWarning() << "   -> model is no TrackModel, return";
         return;
     }
 
@@ -212,6 +217,7 @@ void WTrackTableViewHeader::setModel(QAbstractItemModel* pModel) {
     //   not just hovered by mouse pointer)
     // * toggle and close by pressing Return on a selected box
     int columns = pModel->columnCount();
+    qWarning() << "   -> create column checkboxes ----------------------";
     for (int i = 0; i < columns; ++i) {
         if (pTrackModel->isColumnInternal(i)) {
             continue;
@@ -272,13 +278,16 @@ void WTrackTableViewHeader::setModel(QAbstractItemModel* pModel) {
             showSection(i);
         }
     }
+    qWarning() << "   /setModel ----------------------------------------";
 }
 
 void WTrackTableViewHeader::saveHeaderState() {
     TrackModel* pTrackModel = getTrackModel();
     if (!pTrackModel) {
+        qWarning() << "   Header: save header state -> NO TrackModel, return";
         return;
     }
+    qWarning() << "   Header: save header state";
     // Convert the QByteArray to a Base64 string and save it.
     HeaderViewState view_state(*this);
     pTrackModel->setModelSetting("header_state_pb", view_state.saveState());
@@ -291,18 +300,23 @@ void WTrackTableViewHeader::restoreHeaderState() {
     if (!pTrackModel) {
         return;
     }
+    qWarning() << "   Header: restore headerState";
 
     const QString headerStateString = pTrackModel->getModelSetting("header_state_pb");
     if (headerStateString.isNull()) {
+        qWarning() << "   --> is NULL, load default state";
         loadDefaultHeaderState();
     } else {
+        qWarning() << "   --> load saved state";
         // Load the previous header state (stored as serialized protobuf).
         // Decode it and restore it.
         //qDebug() << "Restoring header state from proto" << headerStateString;
         HeaderViewState view_state(headerStateString);
         if (!view_state.healthy()) {
+            qWarning() << "   ---> not healthy, load default";
             loadDefaultHeaderState();
         } else {
+            qWarning() << "   ---> healthy, restore state";
             view_state.restoreState(this);
         }
     }
