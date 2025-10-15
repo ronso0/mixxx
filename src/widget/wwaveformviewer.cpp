@@ -178,18 +178,7 @@ void WWaveformViewer::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void WWaveformViewer::mouseReleaseEvent(QMouseEvent* /*event*/) {
-    if (m_bScratching) {
-        m_pScratchPositionEnable->set(0.0);
-        m_bScratching = false;
-    }
-    if (m_bBending) {
-        m_pWheel->setParameter(0.5);
-        m_bBending = false;
-    }
-    m_mouseAnchor = QPoint();
-
-    // Set the cursor back to an arrow.
-    setCursor(Qt::ArrowCursor);
+    stopScratchingAndBending();
 }
 
 void WWaveformViewer::wheelEvent(QWheelEvent* event) {
@@ -219,6 +208,22 @@ void WWaveformViewer::leaveEvent(QEvent*) {
         unhighlightMark(m_pHoveredMark);
         m_pHoveredMark = nullptr;
     }
+    stopScratchingAndBending();
+}
+
+void WWaveformViewer::stopScratchingAndBending() {
+    if (m_bScratching) {
+        m_pScratchPositionEnable->set(0.0);
+        m_bScratching = false;
+    }
+    if (m_bBending) {
+        m_pWheel->setParameter(0.5);
+        m_bBending = false;
+    }
+    m_mouseAnchor = QPoint();
+
+    // Set the cursor back to an arrow.
+    setCursor(Qt::ArrowCursor);
 }
 
 void WWaveformViewer::slotTrackLoaded(TrackPointer track) {
