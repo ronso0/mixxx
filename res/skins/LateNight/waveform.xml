@@ -23,7 +23,7 @@
         <RequiresStem>true</RequiresStem>
         <ObjectName>StemControls</ObjectName>
         <Layout>vertical</Layout>
-        <SizePolicy>max,me</SizePolicy>
+        <Size>240f,0me</Size>
         <Children>
           <WidgetGroup>
             <Size>0me,1me</Size>
@@ -108,6 +108,10 @@
               <!-- /StemControls 4ch -->
 
             </Children>
+            <Connection>
+              <ConfigKey persist="true">[Channel<Variable name="ChanNum"/>],stem_count</ConfigKey>
+              <BindProperty>visible</BindProperty>
+            </Connection>
           </WidgetGroup>
           <!-- /StemControlsInner -->
 
