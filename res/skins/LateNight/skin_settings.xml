@@ -266,6 +266,25 @@ Description:
 
                     </Children>
                   </WidgetGroup>
+
+                  <!-- Cue shift buttons in beatgrid editing section -->
+                  <WidgetGroup>
+                    <ObjectName>SkinSettingsCategory</ObjectName>
+                    <SizePolicy>me,f</SizePolicy>
+                    <Layout>stacked</Layout>
+                    <Children>
+                      <!-- translucent cover when waveforms are hidden -->
+                      <Template src="skins:LateNight/helpers/skin_settings_cover_inverted.xml">
+                        <SetVariable name="Setting">[Skin],show_waveforms</SetVariable>
+                      </Template>
+
+                      <Template src="skins:LateNight/helpers/skin_settings_button_2state.xml">
+                        <SetVariable name="TooltipId">keep_consistent_waveform_breadth</SetVariable>
+                        <SetVariable name="Text">Maintain consistent breadth</SetVariable>
+                        <SetVariable name="Setting">[Skin],keep_consistent_waveform_breadth</SetVariable>
+                      </Template>
+                    </Children>
+                  </WidgetGroup>
                 </Children>
               </WidgetGroup>
             </Children>
