@@ -41,6 +41,8 @@ WWaveformViewer::WWaveformViewer(
 
     setAttribute(Qt::WA_OpaquePaintEvent);
     setFocusPolicy(Qt::NoFocus);
+
+    setCursor(Qt::OpenHandCursor);
 }
 
 WWaveformViewer::~WWaveformViewer() {
@@ -222,8 +224,8 @@ void WWaveformViewer::stopScratchingAndBending() {
     }
     m_mouseAnchor = QPoint();
 
-    // Set the cursor back to an arrow.
-    setCursor(Qt::ArrowCursor);
+    // Set the cursor back to an open hand.
+    setCursor(Qt::OpenHandCursor);
 }
 
 void WWaveformViewer::slotTrackLoaded(TrackPointer track) {
