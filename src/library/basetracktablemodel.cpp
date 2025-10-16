@@ -1238,7 +1238,8 @@ QString BaseTrackTableModel::composeHotCueTooltip(
 
     // Sort hotcues by number
     std::sort(hotcues.begin(), hotcues.end(), [](const CuePointer& a, const CuePointer& b) {
-        return a->getHotCue() < b->getHotCue();
+        // sort by position
+        return a->getPosition() < b->getPosition();
     });
 
     double sampleRate = pTrack->getSampleRate();
@@ -1311,6 +1312,14 @@ QString BaseTrackTableModel::composeHotCueTooltip(
             tooltip += QStringLiteral("<td align=center>\u25B8</td>"); // ▸
         }
 
+        // Add label if present, else add --- placeholder
+        const QString label = pHotcue->getLabel();
+        if (label.isEmpty()) {
+            tooltip += QStringLiteral("<td>---</td>");
+        } else {
+            tooltip += QStringLiteral("<td>%1</td>").arg(label.toHtmlEscaped());
+        }
+
         // Cue position - End is jump position, position is target
         // Show in beats if track has beats
         if (pBeats) {
@@ -1325,15 +1334,6 @@ QString BaseTrackTableModel::composeHotCueTooltip(
                     : pos.value();
             tooltip += QStringLiteral("<td>%1</td>")
                                .arg(posOrLengthToSeconds(position, sampleRate));
-        }
-
-        // Add label if present
-        // FIXME Add empty cell or --- placeholder if label is mepty
-        // in order to keep loop/jump durations aligned?
-        // Or show label in last column?
-        const QString label = pHotcue->getLabel();
-        if (!label.isEmpty()) {
-            tooltip += QStringLiteral("<td>%1</td>").arg(label.toHtmlEscaped());
         }
 
         // Add duration for saved loops/jumps
