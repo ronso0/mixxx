@@ -995,6 +995,25 @@ void Track::shiftCuePositionsMillis(double milliseconds) {
     markDirtyAndUnlock(&locked);
 }
 
+void Track::shiftHotcuePositionMillis(int index, double milliseconds) {
+    auto locked = lockMutex(&m_qMutex);
+
+    auto pCue = findHotcueByIndex(index);
+    if (!pCue) {
+        return;
+    }
+
+    VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
+        return;
+    }
+    const double frames =
+            m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(
+                    milliseconds);
+    pCue->shiftPositionFrames(frames);
+
+    markDirtyAndUnlock(&locked);
+}
+
 void Track::setHotcueIndicesSortedByPosition(HotcueSortMode sortMode) {
     auto locked = lockMutex(&m_qMutex);
 
