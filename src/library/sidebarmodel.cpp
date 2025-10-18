@@ -652,10 +652,10 @@ void SidebarModel::saveCurrentSelection(const QModelIndex& index) {
 
     if (!featureIconName.isEmpty()) {
         m_pConfig->setValue(
-                ConfigKey("[Library]", "LastSelectedFeature"),
+                ConfigKey(QStringLiteral("[Library]"), QStringLiteral("LastSelectedFeature")),
                 featureIconName);
         m_pConfig->setValue(
-                ConfigKey("[Library]", "LastSelectedChild"),
+                ConfigKey(QStringLiteral("[Library]"), QStringLiteral("LastSelectedChild")),
                 childData);
     }
 }
@@ -665,49 +665,85 @@ QModelIndex SidebarModel::restoreSavedSelection() {
         return QModelIndex();
     }
 
-    QString savedFeatureIconName = m_pConfig->getValueString(
-            ConfigKey("[Library]", "LastSelectedFeature"));
-    QString savedChildData = m_pConfig->getValueString(
-            ConfigKey("[Library]", "LastSelectedChild"));
+    const QString savedFeatureIconName = m_pConfig->getValueString(
+            ConfigKey(QStringLiteral("[Library]"), QStringLiteral("LastSelectedFeature")));
 
     if (savedFeatureIconName.isEmpty()) {
         return QModelIndex();
     }
 
-    // find the feature by icon name (non-translated, programmatic identifier)
+    int featureRow = -1;
+    // Find the feature by icon name (non-translated, programmatic identifier)
     for (int i = 0; i < m_sFeatures.size(); ++i) {
         if (m_sFeatures[i]->iconName() == savedFeatureIconName) {
-            // if no child data, return the feature root
-            if (savedChildData.isEmpty()) {
-                return index(i, 0);
-            }
-
-            // search for matching child by data using QAbstractItemModel::match()
-            QAbstractItemModel* pChildModel = m_sFeatures[i]->sidebarModel();
-            if (pChildModel && pChildModel->rowCount() > 0) {
-                QModelIndexList matches = pChildModel->match(
-                        pChildModel->index(0, 0),
-                        SidebarModel::DataRole,
-                        savedChildData,
-                        1, // stop at first match
-                        Qt::MatchExactly | Qt::MatchRecursive);
-
-                if (!matches.isEmpty() && matches.first().isValid()) {
-                    // translate child model index to sidebar model index
-                    QModelIndex childIndex = matches.first();
-                    TreeItem* pTreeItem = static_cast<TreeItem*>(
-                            childIndex.internalPointer());
-                    if (pTreeItem) {
-                        return createIndex(childIndex.row(), childIndex.column(), pTreeItem);
-                    }
-                }
-            }
-
-            // child not found, return feature root
-            return index(i, 0);
+            featureRow = i;
+            break;
         }
     }
 
-    // feature not found
-    return QModelIndex();
+    const QString savedChildDataString = m_pConfig->getValueString(
+            ConfigKey(QStringLiteral("[Library]"), QStringLiteral("LastSelectedChild")));
+    // If no child data, return the feature root.
+    // Returns invalid index if feature was not found.
+    if (savedChildDataString.isEmpty()) {
+        return index(featureRow, 0);
+    }
+
+    // Search for matching child by data using QAbstractItemModel::match()
+    QAbstractItemModel* pChildModel = m_sFeatures[featureRow]->sidebarModel();
+    if (pChildModel && pChildModel->rowCount() > 0) {
+        // The model items' data type may be int (playlist, crate) or
+        // QString (Missing, Quick Links).
+        // Get the model's data type, then create the appropriate QVariant.
+        // Note: assumes the model uses only one data type!
+        const QVariant dataVar = pChildModel->data(
+                pChildModel->index(0, 0), TreeItemModel::kDataRole);
+        auto dataType = dataVar.metaType();
+        QVariant childData;
+        switch (dataType.id()) {
+        case QMetaType::QString: {
+            childData = QVariant::fromValue(savedChildDataString);
+            break;
+        }
+        case QMetaType::Int: {
+            bool convertedToInt = false;
+            int intValue = savedChildDataString.toInt(&convertedToInt);
+            if (convertedToInt) {
+                childData = QVariant::fromValue(intValue);
+            } else {
+                qWarning() << "SidebarModel::restoreSavedSelection: could not "
+                              "convert stored child data to int"
+            }
+            break;
+        }
+        default:
+            qWarning() << "SidebarModel::restoreSavedSelection: "
+                          "model uses unexpected data type"
+                       << dataType.name();
+            qWarning() << "select feature root";
+        }
+
+        if (!childData.isValid()) {
+            return {};
+        }
+
+        const QModelIndexList matches = pChildModel->match(
+                pChildModel->index(0, 0),
+                TreeItemModel::kDataRole,
+                childData,
+                1, // stop at first match
+                Qt::MatchExactly | Qt::MatchRecursive);
+
+        if (!matches.isEmpty() && matches.first().isValid()) {
+            // Translate child model index to sidebar model index
+            const QModelIndex childIndex = matches.first();
+            TreeItem* pTreeItem = static_cast<TreeItem*>(childIndex.internalPointer());
+            if (pTreeItem) {
+                return createIndex(childIndex.row(), childIndex.column(), pTreeItem);
+            }
+        }
+    }
+
+    // Child not found, return feature root or invalid index if feature was not found.
+    return index(featureRow, 0);
 }
