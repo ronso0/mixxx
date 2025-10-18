@@ -609,10 +609,18 @@ void WSpinnyBase::mousePressEvent(QMouseEvent* e) {
 
 void WSpinnyBase::mouseReleaseEvent(QMouseEvent* e) {
     if (e->button() == Qt::LeftButton || e->button() == Qt::RightButton) {
-        QApplication::restoreOverrideCursor();
-        m_pScratchToggle->set(0.0);
-        m_iFullRotations = 0;
+        stopScratching();
     }
+}
+
+void WSpinnyBase::leaveEvent(QEvent*) {
+    stopScratching();
+}
+
+void WSpinnyBase::stopScratching() {
+    QApplication::restoreOverrideCursor();
+    m_pScratchToggle->set(0.0);
+    m_iFullRotations = 0;
 }
 
 void WSpinnyBase::showEvent(QShowEvent* event) {
