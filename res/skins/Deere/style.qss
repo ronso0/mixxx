@@ -1442,6 +1442,7 @@ WEffectChainPresetButton::menu-indicator {
   background-color: #333333;
 }
 
+WWidget, WLabel,
 #ToolBar WWidget, #ToolBar WLabel {
   /* All labels in toolbar should default to a grey that is readable on black. */
   color: #D2D2D2;
