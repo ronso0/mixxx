@@ -134,6 +134,18 @@ void WWaveformViewer::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
 
+    // Apparently it's possible that we don't receive button release events
+    // which means we assume we're still scratching or bending even though
+    // it's not desired anymore.
+    // Stop scratching/bending in this case
+    if (event->buttons().testFlag(Qt::NoButton)) {
+        qWarning() << "     .";
+        qWarning() << "     moved, no button -> stop scratching and bending";
+        qWarning() << "     .";
+        stopScratchingAndBending();
+        return;
+    }
+
     // Only send signals for mouse moving if the left button is pressed
     if (m_bScratching) {
         int eventPosValue = m_waveformWidget->getOrientation() == Qt::Horizontal ?
@@ -206,11 +218,12 @@ bool WWaveformViewer::handleDragAndDropEventFromWindow(QEvent* pEvent) {
 }
 
 void WWaveformViewer::leaveEvent(QEvent*) {
-    if (m_pHoveredMark) {
-        unhighlightMark(m_pHoveredMark);
-        m_pHoveredMark = nullptr;
-    }
-    stopScratchingAndBending();
+    // if (m_pHoveredMark) {
+    //    unhighlightMark(m_pHoveredMark);
+    //    m_pHoveredMark = nullptr;
+    // }
+    // setCursor(Qt::ForbiddenCursor);
+    // stopScratchingAndBending();
 }
 
 void WWaveformViewer::stopScratchingAndBending() {
