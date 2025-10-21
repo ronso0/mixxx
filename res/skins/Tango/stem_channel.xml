@@ -42,18 +42,13 @@
         <SizePolicy>min,min</SizePolicy>
         <Layout>stacked</Layout>
         <Children>
-          <KnobComposed>
-            <TooltipId>QuickEffectRack_super1</TooltipId>
-            <Size>30f,26f</Size>
-            <Knob>skins:Tango/knobs_sliders/knob_blue.svg</Knob>
-            <BackPath>skins:Tango/knobs_sliders/knob_bg.svg</BackPath>
-            <MinAngle><Variable name="PotiMinAngle"/></MinAngle>
-            <MaxAngle><Variable name="PotiMaxAngle"/></MaxAngle>
-            <KnobCenterYOffset>2.000</KnobCenterYOffset>
-            <Connection>
-              <ConfigKey><Variable name="stemGroup"/>,volume</ConfigKey>
-            </Connection>
-          </KnobComposed>
+          <Template src="skins:Tango/controls/knob_textless.xml">
+            <SetVariable name="TooltipId">StemVolumeKnob</SetVariable>
+            <SetVariable name="Size">30f,26f</SetVariable>
+            <SetVariable name="Color">yellow</SetVariable>
+            <SetVariable name="group"><Variable name="stemGroup"/></SetVariable>
+            <SetVariable name="ConfigKey">volume</SetVariable>
+          </Template>
           <Template src="skins:Tango/controls/button_2state.xml">
             <SetVariable name="ObjectName">StemMutedUnderlay</SetVariable>
             <SetVariable name="Size">20,26</SetVariable>
