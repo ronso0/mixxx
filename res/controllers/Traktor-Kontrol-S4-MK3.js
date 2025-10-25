@@ -241,6 +241,47 @@ const SamplerCrossfaderAssign = true;
 const MotorWindUpMilliseconds = 1200;
 const MotorWindDownMilliseconds = 900;
 
+/********************************************************
+                HID REPORT IDs
+ *******************************************************/
+// =======
+// INPUTS:
+// =======
+// There are 3 types of input reports. Components in the
+// mapping get associated with one of these three reports,
+// or if left undefined, have a default association given
+// by their class constructor.
+
+// All button/boolean interface elements
+const HIDInputButtonsReportID = 1;
+
+// Potentiometers, and a couple of FX select buttons
+const HIDInputPotsReportID = 2;
+
+// Wheel position and timing data
+// Also includes touch sensors
+// (touch sensors are also sent along with button report)
+const HIDInputWheelsReportID = 3;
+
+// =======
+// OUTPUTS:
+// =======
+// TODO: incomplete list of output IDs. Many are still hard-coded
+const HIDOutputMotorsReportID = 49;
+const HIDOutputVUMeterReportID = 129;
+
+/********************************************************
+                HARDWARE ADDRESSES
+ *******************************************************/
+//TODO: would be a good idea to put all the byte/bit offsets
+// for the HID reports here. For anyone who hasn't studied
+// the message protocols for this device, it's a pain
+// to get them from further down in the class definitions.
+// Additionally, a lot of them are 1 byte off from their
+// actual positions in the data stream (because of slicing
+// the first byte off the message before passing it to
+// the method in question).
+
 /*
  * Kontrol S4 Mk3 hardware-specific constants
  */
@@ -1498,6 +1539,7 @@ class Mixer extends ComponentContainer {
         this.secondPressedFxSelector = null;
         this.comboSelected = false;
 
+        // FIXME: hardcoded
         const fxSelectsInputs = [
             {inByte: 8, inBit: 5},
             {inByte: 8, inBit: 1},
@@ -1552,7 +1594,7 @@ class Mixer extends ComponentContainer {
             group: "[Master]",
             inKey: "crossfader",
             inByte: 0,
-            inReport: inReports[2],
+            inReport: inReports[HIDInputPotsReportID],
         });
         this.crossfaderCurveSwitch = new Component({
             inByte: 18,
@@ -1586,7 +1628,7 @@ class Mixer extends ComponentContainer {
                 inKey: "gain",
                 inByte: 22,
                 bitLength: 12,
-                inReport: inReports[2]
+                inReport: inReports[HIDInputPotsReportID]
             });
         }
         if (SoftwareMixerBooth) {
@@ -1595,7 +1637,7 @@ class Mixer extends ComponentContainer {
                 inKey: "booth_gain",
                 inByte: 24,
                 bitLength: 12,
-                inReport: inReports[2]
+                inReport: inReports[HIDInputPotsReportID]
             });
         }
         if (SoftwareMixerHeadphone) {
@@ -1604,7 +1646,7 @@ class Mixer extends ComponentContainer {
                 inKey: "headMix",
                 inByte: 28,
                 bitLength: 12,
-                inReport: inReports[2]
+                inReport: inReports[HIDInputPotsReportID]
             });
 
             this.pflGain = new Pot({
@@ -1612,13 +1654,13 @@ class Mixer extends ComponentContainer {
                 inKey: "headGain",
                 inByte: 26,
                 bitLength: 12,
-                inReport: inReports[2]
+                inReport: inReports[HIDInputPotsReportID]
             });
         }
 
         for (const component of this) {
             if (component.inReport === undefined) {
-                component.inReport = inReports[1];
+                component.inReport = inReports[HIDInputButtonsReportID];
             }
             component.outReport = this.outReport;
             component.inConnect();
@@ -1823,13 +1865,13 @@ class S4Mk3EffectUnit extends ComponentContainer {
         this.mixKnob = new Pot({
             inKey: "mix",
             group: this.group,
-            inReport: inReports[2],
+            inReport: inReports[HIDInputPotsReportID],
             inByte: io.mixKnob.inByte,
         });
 
         this.mainButton = new PowerWindowButton({
             unit: this,
-            inReport: inReports[1],
+            inReport: inReports[HIDInputButtonsReportID],
             inByte: io.mainButton.inByte,
             inBit: io.mainButton.inBit,
             outByte: io.mainButton.outByte,
@@ -1880,14 +1922,14 @@ class S4Mk3EffectUnit extends ComponentContainer {
             this.knobs[index] = new Pot({
                 inKey: "meta",
                 group: effectGroup,
-                inReport: inReports[2],
+                inReport: inReports[HIDInputPotsReportID],
                 inByte: io.knobs[index].inByte,
             });
             this.buttons[index] = new Button({
                 unit: this,
                 key: "enabled",
                 group: effectGroup,
-                inReport: inReports[1],
+                inReport: inReports[HIDInputButtonsReportID],
                 inByte: io.buttons[index].inByte,
                 inBit: io.buttons[index].inBit,
                 outByte: io.buttons[index].outByte,
@@ -2740,7 +2782,7 @@ class S4Mk3Deck extends Deck {
                     pad.group = deck.group;
                 }
                 if (pad.inReport === undefined) {
-                    pad.inReport = inReports[1];
+                    pad.inReport = inReports[HIDInputButtonsReportID];
                 }
                 if (shifted && typeof pad.shift === "function" && pad.shift.length === 0) {
                     pad.shift();
@@ -3167,7 +3209,7 @@ class S4Mk3Deck extends Deck {
                         } else {
                             motorData.set(motorDeckData, 5);
                         }
-                        controller.sendOutputReport(49, motorData.buffer, true);
+                        controller.sendOutputReport(HIDOutputMotorsReportID, motorData.buffer, true);
                     }
                 }
                 this.lastPos = samplePos;
@@ -3210,7 +3252,7 @@ class S4Mk3Deck extends Deck {
                 if (component instanceof Component) {
                     Object.assign(component, io[property]);
                     if (component.inReport === undefined) {
-                        component.inReport = inReports[1];
+                        component.inReport = inReports[HIDInputButtonsReportID];
                     }
                     component.outReport = outReport;
                     if (component.group === undefined) {
@@ -3445,9 +3487,9 @@ class S4Mk3MixerColumn extends ComponentContainer {
                 if (component instanceof Component) {
                     Object.assign(component, io[property]);
                     if (component instanceof Pot) {
-                        component.inReport = inReports[2];
+                        component.inReport = inReports[HIDInputPotsReportID];
                     } else {
-                        component.inReport = inReports[1];
+                        component.inReport = inReports[HIDInputButtonsReportID];
                     }
                     component.outReport = outReport;
 
@@ -3523,18 +3565,18 @@ class S4MK3 {
         }
 
         this.inReports = [];
-        this.inReports[1] = new HIDInputReport(1);
+        this.inReports[HIDInputButtonsReportID] = new HIDInputReport(HIDInputButtonsReportID);
         // The master volume, booth volume, headphone mix, and headphone volume knobs
         // control the controller's audio interface in hardware, so they are not mapped.
-        this.inReports[2] = new HIDInputReport(2);
-        this.inReports[3] = new HIDInputReport(3);
+        this.inReports[HIDInputPotsReportID] = new HIDInputReport(HIDInputPotsReportID);
+        this.inReports[HIDInputWheelsReportID] = new HIDInputReport(HIDInputWheelsReportID);
 
         // There are various of other HID report which doesn't seem to have any
         // immediate use but it is likely that some useful settings may be found
         // in them such as the wheel tension.
 
         this.outReports = [];
-        this.outReports[128] = new HIDOutputReport(128, 94);
+        this.outReports[128] = new HIDOutputReport(128, 94); // FIXME: hardcoded
 
         this.effectUnit1 = new S4Mk3EffectUnit(1, this.inReports, this.outReports[128],
             {
@@ -3577,6 +3619,11 @@ class S4MK3 {
         // There is no consistent offset between the left and right deck,
         // so every single components' IO needs to be specified individually
         // for both decks.
+        // FIXME: byte offsets should be declared as constants at the head of the file
+        // for easy reference. Additionally, many of these offsets (for HID input reports 1 and 2)
+        // are incorrectly offset by 1 byte due to a preceding slice operation on the raw data.
+        // The slice throws away the report ID once it's no longer needed, but it makes these byte offsets
+        // confusing as a reference to the real spec of the comms protocol.
         this.leftDeck = new S4Mk3Deck(
             [1, 3], [DeckColors[0], DeckColors[2]], {
                 tempoCenterLower: TempoCenterLowerLeft,
@@ -3624,8 +3671,10 @@ class S4MK3 {
                     {inByte: 3, inBit: 0, outByte: 7},
                 ],
                 tempoFader: {inByte: 12, inBit: 0, inBitLength: 16, inReport: this.inReports[2], outByte: 11},
-                wheelRelative: {inByte: 11, inBit: 0, inBitLength: 16, inReport: this.inReports[3]},
-                wheelAbsolute: {inByte: 15, inBit: 0, inBitLength: 16, inReport: this.inReports[3]},
+                // FIXME: the wheel position here is one byte offset from its position in the raw data,
+                // and is hardcoded as such later on. these entries really must be harmonized for readability and robustness. ZT
+                wheelPosition: {inByte: 11, inBit: 0, inBitLength: 16, inReport: this.inReports[HIDInputWheelsReportID]},
+                wheelAbsolute: {inByte: 15, inBit: 0, inBitLength: 16, inReport: this.inReports[HIDInputWheelsReportID]},
                 wheelTouch: {inByte: 16, inBit: 4},
             }
         );
@@ -3677,8 +3726,10 @@ class S4MK3 {
                     {inByte: 13, inBit: 0, outByte: 30},
                 ],
                 tempoFader: {inByte: 10, inBit: 0, inBitLength: 16, inReport: this.inReports[2], outByte: 34},
-                wheelRelative: {inByte: 39, inBit: 0, inBitLength: 16, inReport: this.inReports[3]},
-                wheelAbsolute: {inByte: 43, inBit: 0, inBitLength: 16, inReport: this.inReports[3]},
+                // FIXME: the relative wheel value here is one byte offset from its position in the raw data,
+                // and is hardcoded as such later on. these entries really must be harmonized for readability and robustness. ZT
+                wheelPosition: {inByte: 39, inBit: 0, inBitLength: 16, inReport: this.inReports[HIDInputWheelsReportID]},
+                wheelAbsolute: {inByte: 43, inBit: 0, inBitLength: 16, inReport: this.inReports[HIDInputWheelsReportID]},
                 wheelTouch: {inByte: 16, inBit: 5},
             }
         );
@@ -3719,7 +3770,7 @@ class S4MK3 {
             // There are more bytes in the report which seem like they should be for the main
             // mix meters, but setting those bytes does not do anything, except for lighting
             // the clip lights on the main mix meters.
-            controller.sendOutputReport(129, deckMeters.buffer);
+            controller.sendOutputReport(HIDOutputVUMeterReportID, deckMeters.buffer);
         });
         if (UseMotors) {
             this.leftMotor = new S4Mk3MotorManager(this.leftDeck);
@@ -3731,13 +3782,21 @@ class S4MK3 {
         var motorData = new Uint8Array(10);
         motorData.set(this.leftMotor.tick());
         motorData.set(this.rightMotor.tick(), 5);
-        controller.sendOutputReport(49, motorData.buffer, true);
+        controller.sendOutputReport(HIDOutputMotorsReportID, motorData.buffer, true);
     }
     incomingData(data) {
+        // The first byte of the HID report is the reportID
         const reportId = data[0];
-        if (reportId in this.inReports && reportId !== 3) {
+        if (reportId in this.inReports && reportId !== HIDInputWheelsReportID) {
+            // Slicing out the first data point is actively harmful to code legibility later on.
+            // FIXME: Should pass the full data buffer to the input handler. This is the slice
+            // operation that causes byte offsets to appear incorrect in the code
             this.inReports[reportId].handleInput(data.buffer.slice(1));
-        } else if (reportId === 3) {
+        } else if (reportId === HIDInputWheelsReportID) {
+            // FIXME: input report # 3 comes the most frequently, so it should
+            //        be at the start of the conditional block for optimization:
+            //        saves a multi-condition check every time an input comes in.
+
             // The 32 bit unsigned ints at bytes 8 and 36 always have exactly the same value,
             // so only process one of them. This must be processed before the wheel positions.
             const oldWheelTimer = wheelTimer;
@@ -3751,6 +3810,9 @@ class S4MK3 {
             if (wheelTimerDelta < 0) {
                 wheelTimerDelta += wheelTimerMax;
             }
+
+            // FIXME: the byte offsets below don't match with the ones in the deck definitions
+            //        the offsets here are the correct ones with reference to the entire HID report
             this.leftDeck.wheelRelative.input(view.getUint32(12, true), view.getUint32(8, true));
             this.rightDeck.wheelRelative.input(view.getUint32(40, true), view.getUint32(36, true));
         } else {
@@ -3850,7 +3912,7 @@ class S4MK3 {
         controller.sendOutputReport(128, new Uint8Array(94).fill(0).buffer);
 
         // meter LEDs
-        controller.sendOutputReport(129, new Uint8Array(78).fill(0).buffer);
+        controller.sendOutputReport(HIDOutputVUMeterReportID, new Uint8Array(78).fill(0).buffer);
 
         const wheelOutput = new Uint8Array(40).fill(0);
         // left wheel LEDs
