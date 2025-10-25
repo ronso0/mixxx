@@ -285,12 +285,12 @@ const HIDOutputVUMeterReportID = 129;
 /*
  * Kontrol S4 Mk3 hardware-specific constants
  */
-const wheelRelativeMax = 2 ** 32 - 1;
-const wheelAbsoluteMax = 2879;
+const WheelRelativeMax = 2 ** 32 - 1;
+const WheelAbsoluteMax = 2879;
 
-const wheelTimerMax = 2 ** 32 - 1;
+const WheelTimerMax = 2 ** 32 - 1;
 
-const baseRevolutionsPerSecond = BaseRevolutionsPerMinute / 60;
+const BaseRevolutionsPerSecond = BaseRevolutionsPerMinute / 60;
 
 // The active tab ID. This is used when SharedDataAPI is active, to communicate with the screens which tab is currently selected.
 const ActiveTabPadID = {
@@ -306,7 +306,7 @@ const ActiveTabPadID = {
     fxbank2: 13,
 };
 
-const wheelLEDmodes = {
+const WheelLEDmodes = {
     off: 0,
     dimFlash: 1,
     spot: 2,
@@ -316,7 +316,7 @@ const wheelLEDmodes = {
 };
 
 // The mode available, which the wheel can be used for.
-const wheelModes = {
+const WheelModes = {
     jog: 0,
     vinyl: 1,
     motor: 2,
@@ -324,7 +324,7 @@ const wheelModes = {
     loopOut: 4,
 };
 
-const moveModes = {
+const MoveModes = {
     beat: 0,
     bpm: 1,
     grid: 2,
@@ -652,10 +652,10 @@ class Deck extends ComponentContainer {
         const newGroup = Deck.groupForNumber(newDeck);
 
         switch (this.moveMode) {
-        case moveModes.beat:
-        case moveModes.bpm:
-        case moveModes.grid:
-        case moveModes.hotcueColor:
+        case MoveModes.beat:
+        case MoveModes.bpm:
+        case MoveModes.grid:
+        case MoveModes.hotcueColor:
             this.moveMode = null;
             this.selectedHotcue = null;
 
@@ -683,7 +683,7 @@ class Deck extends ComponentContainer {
             this.wheelMode = this.secondDeckModes.wheelMode;
             this.moveMode = this.secondDeckModes.moveMode;
 
-            if (this.wheelMode === wheelModes.motor) {
+            if (this.wheelMode === WheelModes.motor) {
                 engine.beginTimer(MotorWindUpMilliseconds, () => {
                     engine.setValue(newGroup, "scratch2_enable", true);
                 }, true);
@@ -901,13 +901,13 @@ class CueButton extends PushButton {
         this.inKey = "start_stop";
     }
     input(pressed) {
-        if (this.deck.moveMode === moveModes.keyboard && !this.deck.keyboardPlayMode) {
+        if (this.deck.moveMode === MoveModes.keyboard && !this.deck.keyboardPlayMode) {
             this.deck.assignKeyboardPlayMode(this.group, this.inKey);
-        } else if (this.deck.wheelMode === wheelModes.motor && engine.getValue(this.group, "play") && pressed) {
+        } else if (this.deck.wheelMode === WheelModes.motor && engine.getValue(this.group, "play") && pressed) {
             engine.setValue(this.group, "cue_goto", pressed);
         } else {
             engine.setValue(this.group, this.inKey, pressed);
-            if (this.deck.wheelMode === wheelModes.motor) {
+            if (this.deck.wheelMode === WheelModes.motor) {
                 engine.setValue(this.group, "scratch2_enable", false);
                 engine.beginTimer(MotorWindDownMilliseconds, () => {
                     engine.setValue(this.group, "scratch2_enable", true);
@@ -965,7 +965,7 @@ class HotcueButton extends PushButton {
         this.indicator(true);
     }
     input(pressed) {
-        if (this.deck.moveMode === moveModes.hotcueColor) {
+        if (this.deck.moveMode === MoveModes.hotcueColor) {
             this.deck.selectedHotcue = pressed ? this.number : null;
 
             updateRuntimeData({
@@ -2168,7 +2168,7 @@ class S4Mk3Deck extends Deck {
                         this.deck.fluxButton.loopModeOff();
                         engine.setValue(this.group, "scratch2_enable", false);
                         this.previousWheelMode = this.deck.wheelMode;
-                        this.deck.wheelMode = wheelModes.loopIn;
+                        this.deck.wheelMode = WheelModes.loopIn;
 
                         if (this.loopModeConnection === null) {
                             this.loopModeConnection = engine.makeConnection(this.group, this.outKey, this.onLoopChange.bind(this));
@@ -2176,7 +2176,7 @@ class S4Mk3Deck extends Deck {
 
                         const wheelOutput = new Uint8Array(40).fill(0);
                         wheelOutput[0] = decks[0] - 1;
-                        wheelOutput[1] = wheelLEDmodes.ringFlash;
+                        wheelOutput[1] = WheelLEDmodes.ringFlash;
                         wheelOutput[4] = this.color + Button.prototype.brightnessOn;
 
                         controller.sendOutputReport(50, wheelOutput.buffer, true);
@@ -2252,14 +2252,14 @@ class S4Mk3Deck extends Deck {
                         this.deck.reverseButton.loopModeOff();
                         engine.setValue(this.group, "scratch2_enable", false);
                         this.previousWheelMode = this.deck.wheelMode;
-                        this.deck.wheelMode = wheelModes.loopOut;
+                        this.deck.wheelMode = WheelModes.loopOut;
                         if (this.loopModeConnection === null) {
                             this.loopModeConnection = engine.makeConnection(this.group, this.outKey, this.onLoopChange.bind(this));
                         }
 
                         const wheelOutput = new Uint8Array(40).fill(0);
                         wheelOutput[0] = decks[0] - 1;
-                        wheelOutput[1] = wheelLEDmodes.ringFlash;
+                        wheelOutput[1] = WheelLEDmodes.ringFlash;
                         wheelOutput[4] = this.color + Button.prototype.brightnessOn;
 
                         controller.sendOutputReport(50, wheelOutput.buffer, true);
@@ -2289,9 +2289,9 @@ class S4Mk3Deck extends Deck {
                 this.previousMoveMode = this.deck.moveMode;
 
                 if (this.shifted) {
-                    this.deck.moveMode = moveModes.grid;
+                    this.deck.moveMode = MoveModes.grid;
                 } else {
-                    this.deck.moveMode = moveModes.bpm;
+                    this.deck.moveMode = MoveModes.bpm;
                 }
 
                 this.indicator(true);
@@ -2384,10 +2384,10 @@ class S4Mk3Deck extends Deck {
                 }
 
                 switch (this.deck.moveMode) {
-                case moveModes.grid:
+                case MoveModes.grid:
                     script.triggerControl(this.group, right ? "beats_adjust_faster" : "beats_adjust_slower");
                     break;
-                case moveModes.keyboard:
+                case MoveModes.keyboard:
                     if (
                         this.deck.pads[0].offset === (right ? 16 : 0)
                     ) {
@@ -2398,10 +2398,10 @@ class S4Mk3Deck extends Deck {
                         pad.outTrigger();
                     });
                     break;
-                case moveModes.bpm:
+                case MoveModes.bpm:
                     script.triggerControl(this.group, right ? "beats_translate_later" : "beats_translate_earlier");
                     break;
-                case moveModes.hotcueColor:{
+                case MoveModes.hotcueColor:{
                     if (this.deck.selectedHotcue === null) {
                         return;
                     }
@@ -2484,7 +2484,7 @@ class S4Mk3Deck extends Deck {
 
                         engine.setValue(quickFxChannel(stemChannel(this.group, stemIdx)), "super1", engine.getValue(quickFxChannel(stemChannel(this.group, stemIdx)), "super1") + (right ? this.tickDelta : -this.tickDelta));
                     });
-                } else if (this.deck.wheelMode === wheelModes.loopIn || this.deck.wheelMode === wheelModes.loopOut) {
+                } else if (this.deck.wheelMode === WheelModes.loopIn || this.deck.wheelMode === WheelModes.loopOut) {
                     const moveFactor = this.shifted ? LoopEncoderShiftMoveFactor : LoopEncoderMoveFactor;
                     const valueIn = engine.getValue(this.group, "loop_start_position") + (right ? moveFactor : -moveFactor);
                     const valueOut = engine.getValue(this.group, "loop_end_position") + (right ? moveFactor : -moveFactor);
@@ -2858,7 +2858,7 @@ class S4Mk3Deck extends Deck {
             } : undefined,
             onLongPress: function() {
                 this.previousMoveMode = this.deck.moveMode;
-                this.deck.moveMode = moveModes.hotcueColor;
+                this.deck.moveMode = MoveModes.hotcueColor;
 
             },
             onLongRelease: function() {
@@ -2948,7 +2948,7 @@ class S4Mk3Deck extends Deck {
                 });
                 if (this.previousMoveMode === null) {
                     this.previousMoveMode = this.deck.moveMode;
-                    this.deck.moveMode = moveModes.keyboard;
+                    this.deck.moveMode = MoveModes.keyboard;
                 }
             },
             onShortRelease: function() {
@@ -2984,7 +2984,7 @@ class S4Mk3Deck extends Deck {
             }
         });
 
-        this.wheelMode = wheelModes.vinyl;
+        this.wheelMode = WheelModes.vinyl;
         this.turntableButton = new Button({
             deck: this,
             onShortPress: function() {
@@ -2994,11 +2994,11 @@ class S4Mk3Deck extends Deck {
             onShortRelease: UseMotors ? function() {
                 this.deck.reverseButton.loopModeOff(true);
                 this.deck.fluxButton.loopModeOff(true);
-                if (this.deck.wheelMode === wheelModes.motor) {
-                    this.deck.wheelMode = wheelModes.vinyl;
+                if (this.deck.wheelMode === WheelModes.motor) {
+                    this.deck.wheelMode = WheelModes.vinyl;
                     engine.setValue(this.group, "scratch2_enable", false);
                 } else {
-                    this.deck.wheelMode = wheelModes.motor;
+                    this.deck.wheelMode = WheelModes.motor;
                     const group = this.group;
                     engine.beginTimer(MotorWindUpMilliseconds, () => {
                         engine.setValue(group, "scratch2_enable", true);
@@ -3007,9 +3007,9 @@ class S4Mk3Deck extends Deck {
                 this.outTrigger();
             } : undefined,
             outTrigger: UseMotors ? function() {
-                const motorOn = this.deck.wheelMode === wheelModes.motor;
+                const motorOn = this.deck.wheelMode === WheelModes.motor;
                 this.send(this.color + (motorOn ? this.brightnessOn : this.brightnessOff));
-                const vinylModeOn = this.deck.wheelMode === wheelModes.vinyl;
+                const vinylModeOn = this.deck.wheelMode === WheelModes.vinyl;
                 this.deck.jogButton.send(this.color + (vinylModeOn ? this.brightnessOn : this.brightnessOff));
             } : undefined,
         });
@@ -3018,19 +3018,19 @@ class S4Mk3Deck extends Deck {
             onPress: function() {
                 this.deck.reverseButton.loopModeOff(true);
                 this.deck.fluxButton.loopModeOff(true);
-                if (this.deck.wheelMode === wheelModes.vinyl) {
-                    this.deck.wheelMode = wheelModes.jog;
+                if (this.deck.wheelMode === WheelModes.vinyl) {
+                    this.deck.wheelMode = WheelModes.jog;
                 } else {
-                    this.deck.wheelMode = wheelModes.vinyl;
+                    this.deck.wheelMode = WheelModes.vinyl;
                 }
                 engine.setValue(this.group, "scratch2_enable", false);
                 this.outTrigger();
             },
             outTrigger: function() {
-                const vinylOn = this.deck.wheelMode === wheelModes.vinyl;
+                const vinylOn = this.deck.wheelMode === WheelModes.vinyl;
                 this.send(this.color + (vinylOn ? this.brightnessOn : this.brightnessOff));
                 if (this.deck.turntableButton) {
-                    const motorOn = this.deck.wheelMode === wheelModes.motor;
+                    const motorOn = this.deck.wheelMode === WheelModes.motor;
                     this.deck.turntableButton.send(this.color + (motorOn ? this.brightnessOn : this.brightnessOff));
                 }
             },
@@ -3041,7 +3041,7 @@ class S4Mk3Deck extends Deck {
             deck: this,
             input: function(touched) {
                 this.touched = touched;
-                if (this.deck.wheelMode === wheelModes.vinyl || this.deck.wheelMode === wheelModes.motor) {
+                if (this.deck.wheelMode === WheelModes.vinyl || this.deck.wheelMode === WheelModes.motor) {
                     if (touched) {
                         engine.setValue(this.group, "scratch2_enable", true);
                     } else {
@@ -3055,7 +3055,7 @@ class S4Mk3Deck extends Deck {
                 }
 
                 if (engine.getValue(this.group, "play") &&
-                    engine.getValue(this.group, "scratch2") < 1.5 * baseRevolutionsPerSecond &&
+                    engine.getValue(this.group, "scratch2") < 1.5 * BaseRevolutionsPerSecond &&
                     engine.getValue(this.group, "scratch2") > 0) {
                     engine.setValue(this.group, "scratch2_enable", false);
                 } else if (engine.getValue(this.group, "scratch2") === 0) {
@@ -3084,14 +3084,14 @@ class S4Mk3Deck extends Deck {
                 let [oldValue, oldTimestamp, speed] = this.oldValue;
 
                 if (timestamp < oldTimestamp) {
-                    oldTimestamp -= wheelTimerMax;
+                    oldTimestamp -= WheelTimerMax;
                 }
 
                 let diff = value - oldValue;
-                if (diff > wheelRelativeMax / 2) {
-                    oldValue += wheelRelativeMax;
-                } else if (diff < -wheelRelativeMax / 2) {
-                    oldValue -= wheelRelativeMax;
+                if (diff > WheelRelativeMax / 2) {
+                    oldValue += WheelRelativeMax;
+                } else if (diff < -WheelRelativeMax / 2) {
+                    oldValue -= WheelRelativeMax;
                 }
 
                 const currentSpeed = (value - oldValue)/(timestamp - oldTimestamp);
@@ -3101,20 +3101,20 @@ class S4Mk3Deck extends Deck {
                     speed = currentSpeed;
                 }
                 this.oldValue = [value, timestamp, speed];
-                this.speed = wheelAbsoluteMax*speed*10;
+                this.speed = WheelAbsoluteMax*speed*10;
 
                 if (this.speed === 0 &&
                     engine.getValue(this.group, "scratch2") === 0 &&
                     engine.getValue(this.group, "jog") === 0 &&
-                    this.deck.wheelMode !== wheelModes.motor) {
+                    this.deck.wheelMode !== WheelModes.motor) {
                     return;
                 }
 
                 switch (this.deck.wheelMode) {
-                case wheelModes.motor:
+                case WheelModes.motor:
                     engine.setValue(this.group, "scratch2", this.speed);
                     break;
-                case wheelModes.loopIn:
+                case WheelModes.loopIn:
                     {
                         const loopStartPosition = engine.getValue(this.group, "loop_start_position");
                         const loopEndPosition = engine.getValue(this.group, "loop_end_position");
@@ -3126,7 +3126,7 @@ class S4Mk3Deck extends Deck {
                         );
                     }
                     break;
-                case wheelModes.loopOut:
+                case WheelModes.loopOut:
                     {
                         const loopEndPosition = engine.getValue(this.group, "loop_end_position");
                         const value = loopEndPosition + (this.speed * LoopWheelMoveFactor);
@@ -3137,7 +3137,7 @@ class S4Mk3Deck extends Deck {
                         );
                     }
                     break;
-                case wheelModes.vinyl:
+                case WheelModes.vinyl:
                     if (this.deck.wheelTouch.touched || engine.getValue(this.group, "scratch2") !== 0) {
                         engine.setValue(this.group, "scratch2", this.speed);
                     } else {
@@ -3180,7 +3180,7 @@ class S4Mk3Deck extends Deck {
                 }
             },
             output: function(fractionOfTrack, playstate, trackLoaded) {
-                if (this.deck.wheelMode > wheelModes.motor) {
+                if (this.deck.wheelMode > WheelModes.motor) {
                     return;
                 }
                 // Emit cue haptic feedback if enabled
@@ -3216,23 +3216,24 @@ class S4Mk3Deck extends Deck {
 
                 const durationSeconds = engine.getValue(this.group, "duration");
                 const positionSeconds = fractionOfTrack * durationSeconds;
-                const revolutions = positionSeconds * baseRevolutionsPerSecond;
+                const revolutions = positionSeconds * BaseRevolutionsPerSecond;
                 const fractionalRevolution = revolutions - Math.floor(revolutions);
-                const LEDposition = fractionalRevolution * wheelAbsoluteMax;
+                const LEDposition = fractionalRevolution * WheelAbsoluteMax;
 
+                // Send commands to the wheel ring LEDs
                 const wheelOutput = new Uint8Array(40).fill(0);
                 wheelOutput[0] = decks[0] - 1;
                 wheelOutput[4] = this.color + Button.prototype.brightnessOn;
 
                 if (!trackLoaded) {
-                    wheelOutput[1] = wheelLEDmodes.off;
+                    wheelOutput[1] = WheelLEDmodes.off;
                 } else if (playstate && fractionOfTrack < 1 && engine.getValue(this.group, "end_of_track") && WheelLedBlinkOnTrackEnd && !this.deck.wheelTouch.touched) {
-                    wheelOutput[1] = wheelLEDmodes.ringFlash;
+                    wheelOutput[1] = WheelLEDmodes.ringFlash;
                 } else {
-                    wheelOutput[1] = wheelLEDmodes.spot;
+                    wheelOutput[1] = WheelLEDmodes.spot;
                     wheelOutput[2] = LEDposition & 0xff;
                     wheelOutput[3] = LEDposition >> 8;
-                    if (this.lastMode === wheelLEDmodes.ringFlash) {
+                    if (this.lastMode === WheelLEDmodes.ringFlash) {
                         wheelOutput[4] = Button.prototype.brightnessOff;
                         engine.beginTimer(200, () => this.output(fractionOfTrack, playstate, trackLoaded), true);
                     }
@@ -3344,14 +3345,14 @@ class S4Mk3MotorManager {
 
         let expectedSpeed = 0;
 
-        const currentSpeed = this.deck.wheelRelative.speed / baseRevolutionsPerSecond;
+        const currentSpeed = this.deck.wheelRelative.speed / BaseRevolutionsPerSecond;
 
-        if (this.deck.wheelMode === wheelModes.motor
+        if (this.deck.wheelMode === WheelModes.motor
             && engine.getValue(this.deck.group, "play")) {
             expectedSpeed = engine.getValue(this.deck.group, "rate_ratio");
             const normalisationFactor = 1/expectedSpeed/5;
             velocity = expectedSpeed + Math.pow(-5 * (expectedSpeed / 1) * (currentSpeed - expectedSpeed), 3);
-        } else if (this.deck.wheelMode !== wheelModes.motor) {
+        } else if (this.deck.wheelMode !== WheelModes.motor) {
             if (TightnessFactor > 0.5) {
                 // Super loose
                 const reduceFactor = (Math.min(0.5, TightnessFactor - 0.5) / 0.5) * 0.7;
@@ -3375,7 +3376,7 @@ class S4Mk3MotorManager {
             motorData[1] = 0xe0;
             motorData[2] = 0xfe;
             velocity = -velocity;
-        } else if (this.deck.wheelMode === wheelModes.motor && engine.getValue(this.deck.group, "play")) {
+        } else if (this.deck.wheelMode === WheelModes.motor && engine.getValue(this.deck.group, "play")) {
             velocity += this.zeroSpeedForce;
         }
 
@@ -3808,7 +3809,7 @@ class S4MK3 {
             }
             wheelTimerDelta = wheelTimer - oldWheelTimer;
             if (wheelTimerDelta < 0) {
-                wheelTimerDelta += wheelTimerMax;
+                wheelTimerDelta += WheelTimerMax;
             }
 
             // FIXME: the byte offsets below don't match with the ones in the deck definitions
