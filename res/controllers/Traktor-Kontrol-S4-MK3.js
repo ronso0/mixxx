@@ -4356,9 +4356,11 @@ class S4MK3 {
         }
     }
     motorCallback() {
-        this.leftMotor.tick();
-        this.rightMotor.tick();
-        controller.sendOutputReport(HIDOutputMotorsReportID, this.motorBuffMgr.getBuff(), true);
+        if (UseMotors) {
+            this.leftMotor.tick();
+            this.rightMotor.tick();
+            controller.sendOutputReport(HIDOutputMotorsReportID, this.motorBuffMgr.getBuff(), true);
+        }
     }
     incomingData(data) {
         // The first byte of the HID report is the reportID
