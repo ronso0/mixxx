@@ -1186,13 +1186,10 @@ class CueButton extends PushButton {
         } else if (this.deck.wheelMode === WheelModes.motor && engine.getValue(this.group, "play") && pressed) {
             engine.setValue(this.group, "cue_goto", pressed);
         } else {
-            engine.setValue(this.group, this.inKey, pressed);
             if (this.deck.wheelMode === WheelModes.motor) {
                 engine.setValue(this.group, "scratch2_enable", false);
-                engine.beginTimer(MotorWindDownMilliseconds, () => {
-                    engine.setValue(this.group, "scratch2_enable", false);
-                }, true);
             }
+            engine.setValue(this.group, this.inKey, pressed);
         }
     }
 }
