@@ -3295,9 +3295,6 @@ class S4Mk3Deck extends Deck {
                     this.deck.wheelMode = WheelModes.motor;
                     engine.setValue(this.group, "scratch2_enable", false);
                     const group = this.group;
-                    engine.beginTimer(MotorWindUpMilliseconds, () => {
-                        engine.setValue(group, "scratch2_enable", true);
-                    }, true);
                 }
                 this.outTrigger();
             } : undefined,
