@@ -299,7 +299,7 @@ const MoveModes = {
 
 // motor wind up/down
 const MotorWindUpMilliseconds = 0;
-const MotorWindDownMilliseconds = 0;
+const MotorWindDownMilliseconds = 500;
 
 // Motor PID controller coefficients
 const ProportionalGain = 80000;
@@ -1184,7 +1184,13 @@ class CueButton extends PushButton {
         if (this.deck.moveMode === MoveModes.keyboard && !this.deck.keyboardPlayMode) {
             this.deck.assignKeyboardPlayMode(this.group, this.inKey);
         } else if (this.deck.wheelMode === WheelModes.motor && engine.getValue(this.group, "play") && pressed) {
-            engine.setValue(this.group, "cue_goto", pressed);
+            engine.setValue(this.group, "cue_gotoandstop", pressed);
+            if (MotorWindDownMilliseconds > 0) {
+                this.deck.motorHardStop = true;
+                engine.beginTimer(MotorWindDownMilliseconds, () => {
+                    this.deck.motorHardStop = false;
+                }, true);
+            }
         } else {
             engine.setValue(this.group, this.inKey, pressed);
             if (this.deck.wheelMode === WheelModes.motor) {
@@ -2303,6 +2309,9 @@ class S4Mk3Deck extends Deck {
         this.cueButton = new CueButton({
             deck: this
         });
+        // TESTING: set this `true` to set play speed to zero and ignore the motorized jogwheel (for cue-and-stop)
+        // (don't forget to re-enable)
+        this.motorHardStop = false;
 
         this.effectUnit = effectUnit;
         this.mixer = mixer;
@@ -3422,8 +3431,14 @@ class S4Mk3Deck extends Deck {
                 // Input filtering:
                 // Using a weighted average convolution filter ie., an FIR filter,
                 // apply a lowpass to the velocity which is otherwise quite noisy.
-                this.vFilter.insert(currentVelocityNormalized); // push/pop to the circular buffer
-                this.velocity = this.vFilter.runFilter(); // sum of products with filter coeffs
+                // EXCEPTION: if we are hard stopping the playback (for cue-and-stop), zero out the velocity & filt buffer
+                if (this.deck.motorHardStop) {
+                    this.vFilter.insert(0); // push/pop to the circular buffer
+                    this.velocity = 0; // zero out the velocity
+                } else {
+                    this.vFilter.insert(currentVelocityNormalized); // push/pop to the circular buffer
+                    this.velocity = this.vFilter.runFilter(); // sum of products with filter coeffs
+                }
 
                 // Overwrite the previous position/time data with the current values
                 this.prevData = [inPosition, inTimestamp];
