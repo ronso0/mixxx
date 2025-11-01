@@ -360,7 +360,7 @@ const TargetMotorOutput45RPM = 5600; //measured in a rough calibration test, not
 // And set the target motor output for nudging
 let rps = 0;
 let TargetMotorOutput = 0;
-if (BaseRevolutionsPerMinute == 33) {
+if (BaseRevolutionsPerMinute === "33") {
     rps = (100/3) / 60;
     TargetMotorOutput = TargetMotorOutput33RPM;
 } else { // 45 RPM
@@ -3823,7 +3823,7 @@ class S4Mk3MotorManager {
                 if (this.deck.wheelTouch.touched && Math.abs(playbackError) > SlipmatErrorThresh) {
                     this.deck.isSlipping = true;
                     engine.setValue(this.deck.group, "scratch2_enable", true);
-                } else if (this.deck.wheelTouch.touched == false && this.deck.isSlipping && Math.abs(playbackError) < SlipmatErrorThresh) {
+                } else if (!this.deck.wheelTouch.touched && this.deck.isSlipping && Math.abs(playbackError) < SlipmatErrorThresh) {
                     // TODO ronso0
                     // make sure we properly reset isSlipping
                     console.warn("---> unset slipping + scratching");
@@ -3879,7 +3879,7 @@ class S4Mk3MotorManager {
                     trackingError = (outputTorque - trackingTarget)/trackingTarget;
 
                     // Only apply nudge/jog if the disc has spun up to the target velocity
-                    if (this.isUpToSpeed == true && Math.abs(trackingError) > 0.02) { //TODO: move this to a config const in header
+                    if (this.isUpToSpeed && Math.abs(trackingError) > 0.02) { //TODO: move this to a config const in header
                         engine.setValue(this.deck.group, "jog", -trackingError*TurnTableNudgeSensitivity);
                         // console.warn(outputTorque, outputTracking, trackingError);
                     } else if (Math.abs(trackingError) < 0.02) { //TODO: move this to a config const in header
@@ -3890,14 +3890,14 @@ class S4Mk3MotorManager {
                 // New torque becomes old torque
                 this.outputTorquePrev = outputTorque;
 
-            } else { // engine.getValue(this.deck.group, "play") == false)
+            } else { // engine.getValue(this.deck.group, "play") === 0)
                 // If the deck isn't playing, ensure that scratch mode is ON (for scrubbing)
                 // and reset the "isUpToSpeed" flag
                 this.isUpToSpeed = false;
                 this.isStopped = true;
                 engine.setValue(this.deck.group, "scratch2_enable", true);
             }
-        } else if (this.deck.wheelMode !== WheelModes.motor) {
+        } else {
             // In any other wheel mode, the motor only provides resistance to scrubbing/scratching
             if (TightnessFactor > 0.5) {
                 // Super loose
