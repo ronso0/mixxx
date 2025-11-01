@@ -299,7 +299,8 @@ const MoveModes = {
 
 // motor wind up/down
 const MotorWindUpMilliseconds = 0;
-const MotorWindDownMilliseconds = 500;
+// Note: this my need some tweaking per device.
+const MotorWindDownMilliseconds = 900;
 
 // Motor PID controller coefficients
 const ProportionalGain = 80000;
@@ -908,6 +909,8 @@ class Deck extends ComponentContainer {
         this.settings = settings;
         this.secondDeckModes = null;
         this.selectedHotcue = null;
+        this.wheelHardStopTimerId = 0;
+        this.wheelScratchPauseTimerId = 0;
 
         updateRuntimeData({
             selectedHotcue: {
@@ -1184,23 +1187,24 @@ class CueButton extends PushButton {
         if (this.deck.moveMode === MoveModes.keyboard && !this.deck.keyboardPlayMode) {
             this.deck.assignKeyboardPlayMode(this.group, this.inKey);
         } else if (this.deck.wheelMode === WheelModes.motor && engine.getValue(this.group, "play") && pressed) {
+            // We want to seek to Cue and stay there. Therefore, if we're in motor mode,
+            // temporarily decouple playback rate from jogwheel motion.
+            this.deck.wheelHardStop();
             engine.setValue(this.group, "cue_gotoandstop", pressed);
-            // We want to seek to Cue and stay there, so temporarily decouple
-            // playback rate from jogwheel motion.
-            if (MotorWindDownMilliseconds > 0) {
-                this.deck.motorHardStop = true;
-                engine.beginTimer(MotorWindDownMilliseconds, () => {
-                    this.deck.motorHardStop = false;
-                }, true);
-            }
+            // engine.setValue(this.group, this.inKey, pressed);
         } else {
-            engine.setValue(this.group, this.inKey, pressed);
             if (this.deck.wheelMode === WheelModes.motor) {
                 engine.setValue(this.group, "scratch2_enable", false);
-                engine.beginTimer(MotorWindDownMilliseconds, () => {
+                if (this.deck.wheelScratchPauseTimerId !== 0) {
+                    engine.stopTimer(this.deck.wheelScratchPauseTimerId);
+                    this.deck.wheelScratchPauseTimerId = 0;
+                }
+                this.deck.wheelScratchPauseTimerId = engine.beginTimer(MotorWindDownMilliseconds, () => {
+                    this.deck.wheelScratchPauseTimerId = 0;
                     engine.setValue(this.group, "scratch2_enable", false);
                 }, true);
             }
+            engine.setValue(this.group, this.inKey, pressed);
         }
     }
 }
@@ -1266,17 +1270,13 @@ class HotcueButton extends PushButton {
         } else {
             engine.setValue(this.group, "scratch2_enable", false);
             // If we're releasing to end hotcue preview, we want to seek back
-            // to hotcue position and stay there, so temporarily decouple
-            // playback rate from jogwheel motion if we're in motor mode..
+            // to hotcue position and stay there. Therefore, if we're in motor mode,
+            // temporarily decouple playback rate from jogwheel motion.
             if (this.deck.wheelMode === WheelModes.motor &&
                     !pressed && !this.shifted &&
-                    engine.getValue(this.group, `hotcue_${this.number}_type`) === 1 &&
-                    engine.getValue(this.group, this.outKey) === 2 &&
-                    MotorWindDownMilliseconds > 0) {
-                this.deck.motorHardStop = true;
-                engine.beginTimer(MotorWindDownMilliseconds, () => {
-                    this.deck.motorHardStop = false;
-                }, true);
+                    engine.getValue(this.group, `hotcue_${this.number}_type`) === 1 && // hotcue
+                    engine.getValue(this.group, this.outKey) === 2) { // currently previewing
+                this.deck.wheelHardStop();
             }
             engine.setValue(this.group, this.inKey, pressed);
             if (this.shifted) {
@@ -3662,6 +3662,21 @@ class S4Mk3Deck extends Deck {
         }
     }
 
+    wheelHardStop() {
+        if (this.wheelMode !== WheelModes.motor || MotorWindDownMilliseconds <= 0) {
+            return;
+        }
+        if (this.wheelHardStopTimerId !== 0) {
+            engine.stopTimer(this.wheelHardStopTimerId);
+            this.wheelHardStopTimerId = 0;
+        }
+        this.motorHardStop = true;
+        this.wheelHardStopTimerId = engine.beginTimer(MotorWindDownMilliseconds, () => {
+            this.wheelHardStopTimerId = 0;
+            this.motorHardStop = false;
+        }, true);
+    }
+
     hasSelectedStem() {
         return this.selectedStem.some((stemSelected) => stemSelected);
     }
@@ -3846,11 +3861,11 @@ class S4Mk3MotorManager {
                     }
                     // Use the slipmat error threshold as a 'dead zone' to avoid chattering
                     // when hand-spinning close to the nominal rotation velocity
-                    if (playbackError > SlipmatErrorThresh) {
-                        console.warn("--- playbackError", playbackError.toFixed(2), " > SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
+                    if (playbackError > SlipmatErrorThresh) { // slipping forward?
+                        console.warn("--- slipping FWD, playbackError", playbackError.toFixed(2), " > SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
                         outputTorque = SlipFrictionForce;
-                    } else if (playbackError < -SlipmatErrorThresh) {
-                        console.warn("--- playbackError", playbackError.toFixed(2), " < SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
+                    } else if (playbackError < -SlipmatErrorThresh) { // slipping backward?
+                        console.warn("--- slipping REV, playbackError", playbackError.toFixed(2), " < SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
                         outputTorque = -SlipFrictionForce;
                     } else {
                         outputTorque = 0;
