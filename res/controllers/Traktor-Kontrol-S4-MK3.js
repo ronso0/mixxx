@@ -2987,7 +2987,7 @@ class S4Mk3Deck extends Deck {
             }
         });
 
-        this.wheelMode = WheelModes.vinyl;
+        this.wheelMode = UseMotors ? WheelModes.motor : WheelModes.vinyl;
         this.turntableButton = new Button({
             deck: this,
             onShortPress: function() {
