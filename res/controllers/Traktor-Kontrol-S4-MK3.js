@@ -1185,6 +1185,8 @@ class CueButton extends PushButton {
             this.deck.assignKeyboardPlayMode(this.group, this.inKey);
         } else if (this.deck.wheelMode === WheelModes.motor && engine.getValue(this.group, "play") && pressed) {
             engine.setValue(this.group, "cue_gotoandstop", pressed);
+            // We want to seek to Cue and stay there, so temporarily decouple
+            // playback rate from jogwheel motion.
             if (MotorWindDownMilliseconds > 0) {
                 this.deck.motorHardStop = true;
                 engine.beginTimer(MotorWindDownMilliseconds, () => {
@@ -1263,6 +1265,19 @@ class HotcueButton extends PushButton {
             engine.setValue(this.deck.libraryPlayButton.group, this.inKey, pressed);
         } else {
             engine.setValue(this.group, "scratch2_enable", false);
+            // If we're releasing to end hotcue preview, we want to seek back
+            // to hotcue position and stay there, so temporarily decouple
+            // playback rate from jogwheel motion if we're in motor mode..
+            if (this.deck.wheelMode === WheelModes.motor &&
+                    !pressed && !this.shifted &&
+                    engine.getValue(this.group, `hotcue_${this.number}_type`) === 1 &&
+                    engine.getValue(this.group, this.outKey) === 2 &&
+                    MotorWindDownMilliseconds > 0) {
+                this.deck.motorHardStop = true;
+                engine.beginTimer(MotorWindDownMilliseconds, () => {
+                    this.deck.motorHardStop = false;
+                }, true);
+            }
             engine.setValue(this.group, this.inKey, pressed);
             if (this.shifted) {
                 this.indicatorColor = LedColors.off;
