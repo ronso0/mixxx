@@ -3810,7 +3810,8 @@ class S4Mk3MotorManager {
                 targetRate = engine.getValue(this.deck.group, "rate_ratio");
 
                 // If the performer is holding the REV button, spin the wheel backwards
-                if (engine.getValue(this.deck.group, "reverseroll")) {
+                if (engine.getValue(this.deck.group, "reverseroll") ||
+                        engine.getValue(this.deck.group, "reverse")) {
                     targetRate = -targetRate;
                 }
 
