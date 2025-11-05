@@ -270,9 +270,17 @@ Library::Library(
     m_editMetadataSelectedClick = m_pConfig->getValue(
             kEditMetadataSelectedClickConfigKey,
             kEditMetadataSelectedClickDefault);
+
+    if (m_pSidebarModel && m_pConfig) {
+        m_pSidebarModel->loadBookmarksFromConfig(m_pConfig);
+    }
 }
 
 Library::~Library() {
+    if (m_pSidebarModel && m_pConfig) {
+        m_pSidebarModel->saveBookmarksToConfig(m_pConfig);
+    }
+
     DateFormatChangedBroadcaster::destroy();
 }
 
