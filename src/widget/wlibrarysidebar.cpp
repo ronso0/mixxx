@@ -233,6 +233,7 @@ void WLibrarySidebar::renameSelectedItem() {
 }
 
 void WLibrarySidebar::toggleSelectedItem() {
+    selectFocusedIndex();
     const QModelIndex index = selectedIndex();
     if (!index.isValid()) {
         return;
