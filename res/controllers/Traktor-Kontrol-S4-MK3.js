@@ -300,7 +300,7 @@ const MoveModes = {
 // motor wind up/down
 const MotorWindUpMilliseconds = 0;
 // Note: this my need some tweaking per device.
-const MotorWindDownMilliseconds = 900;
+const MotorWindDownMilliseconds = 200;
 
 // Motor PID controller coefficients
 const ProportionalGain = 80000;
@@ -3447,13 +3447,16 @@ class S4Mk3Deck extends Deck {
                 // Using a weighted average convolution filter ie., an FIR filter,
                 // apply a lowpass to the velocity which is otherwise quite noisy.
                 // EXCEPTION: if we are hard stopping the playback (for cue-and-stop), zero out the velocity & filt buffer
-                if (this.deck.motorHardStop) {
-                    this.vFilter.insert(0); // push/pop to the circular buffer
-                    this.velocity = 0; // zero out the velocity
-                } else {
-                    this.vFilter.insert(currentVelocityNormalized); // push/pop to the circular buffer
-                    this.velocity = this.vFilter.runFilter(); // sum of products with filter coeffs
-                }
+                // if (this.deck.motorHardStop) {
+                //     this.vFilter.insert(0); // push/pop to the circular buffer
+                //     this.velocity = 0; // zero out the velocity
+                // } else {
+                //     this.vFilter.insert(currentVelocityNormalized); // push/pop to the circular buffer
+                //     this.velocity = this.vFilter.runFilter(); // sum of products with filter coeffs
+                // }
+
+                this.vFilter.insert(currentVelocityNormalized); // push/pop to the circular buffer
+                this.velocity = this.vFilter.runFilter(); // sum of products with filter coeffs
 
                 // Overwrite the previous position/time data with the current values
                 this.prevData = [inPosition, inTimestamp];
@@ -3480,7 +3483,7 @@ class S4Mk3Deck extends Deck {
                 case WheelModes.motor:
                     // Smoothing the output playback (when not slipping/scratching)
                     if (engine.getValue(this.group, "play")) {
-                        if (this.deck.isSlipping === false) {
+                        if (!this.deck.isSlipping) {
                             // Apply simple smoothing filter to the velocity input when the disc is not slipping/scratching
                             this.velocity = this.prevPitch + (NonSlipPitchSmoothing * (this.velocity - this.prevPitch));
                             this.prevPitch = this.velocity;
@@ -3829,89 +3832,107 @@ class S4Mk3MotorManager {
                         engine.getValue(this.deck.group, "reverse")) {
                     targetRate = -targetRate;
                 }
-
-                // First, determine the error between target vs measured
-                playbackError = targetRate - normalizedVelocity;
-
-                // If we are touching the disc AND the playbackError goes beyond
-                // the slipping threshold, apply the slip force only
-                if (this.deck.wheelTouch.touched && Math.abs(playbackError) > SlipmatErrorThresh) {
-                    console.warn("---> set slipping + scratching");
-                    this.deck.isSlipping = true;
-                    engine.setValue(this.deck.group, "scratch2_enable", true);
-                } else if (!this.deck.wheelTouch.touched && this.deck.isSlipping && Math.abs(playbackError) < SlipmatErrorThresh) {
-                    console.warn("---> unset slipping + scratching");
-                    this.deck.isSlipping = false;
-                    engine.setValue(this.deck.group, "scratch2_enable", false);
-                } else if (Math.abs(playbackError) > IntegratorSuppressionErrorThresh) {
-                    // If we are beyond a certain error threshold, suppress
-                    // error integrator --- to help with gracefully restoring rotation
-                    // speed without overshoot when adjusting with the crown.
-                    // Keep the accumulator suppressed so it doesn't go crazy
-                    this.integralAccumulator = 0;
-                }
-
-                // Apply slipmat friction force if slipping
-                if (this.deck.isSlipping) {
-                    if (engine.getValue(this.deck.group, "scratch2_enable")) {
-                        engine.setValue(this.deck.group, "scratch2", normalizedVelocity);
-                    } else if (engine.getValue(this.deck.group, "scratch2") !== 0) {
-                        engine.setValue(this.deck.group, "scratch2", 0);
-                    }
-                    // Use the slipmat error threshold as a 'dead zone' to avoid chattering
-                    // when hand-spinning close to the nominal rotation velocity
-                    if (playbackError > SlipmatErrorThresh) { // slipping forward?
-                        console.warn("--- slipping FWD, playbackError", playbackError.toFixed(2), " > SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
-                        outputTorque = SlipFrictionForce;
-                    } else if (playbackError < -SlipmatErrorThresh) { // slipping backward?
-                        console.warn("--- slipping REV, playbackError", playbackError.toFixed(2), " < SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
-                        outputTorque = -SlipFrictionForce;
-                    } else {
-                        console.warn("--- playbackError ignored");
-                        outputTorque = 0;
-                    }
-                } else {
-                    // If we aren't slipping, apply new motor controller.
-                    // PID motor controller
-                    this.proportionalTerm = playbackError * ProportionalGain;
-                    this.integralAccumulator += playbackError * IntegrativeGain;
-                    this.derivativeTerm = (playbackError - this.prevPlaybackError) * DerivativeGain;
-                    outputTorque = this.proportionalTerm + this.integralAccumulator - this.derivativeTerm;
-
-                    // Difference calculation for a smoothing filter
-                    torqueDiff = outputTorque - this.outputTorquePrev;
-                    // and another smoothing filter, only for pitch analysis
-                    // trackingDiff = outputTorque - this.outputTrackingPrev;
-
-                    // Apply the smoothing filters
-                    outputTorque = this.outputTorquePrev + (torqueDiff * MotorOutSmoothingFactor);
-                    // DEBUG
-                    // outputTracking = this.outputTrackingPrev + (trackingDiff * MotorOutSmoothingFactor);
-                    // Compare the smoothed output to a target expected torque to determine effective output pitch in
-                    // non-slip mode (scratch2 disabled):
-                    // NOTE: assumes linear mapping between motor output and wheel velocity (is not 100% correct but it's close enough for now)
-                    trackingTarget = TargetMotorOutput*engine.getValue(this.deck.group, "rate_ratio");
-                    trackingError = (outputTorque - trackingTarget)/trackingTarget;
-
-                    // Only apply nudge/jog if the disc has spun up to the target velocity
-                    if (this.isUpToSpeed && Math.abs(trackingError) > 0.02) { //TODO: move this to a config const in header
-                        engine.setValue(this.deck.group, "jog", -trackingError*TurnTableNudgeSensitivity);
-                        // console.warn(outputTorque, outputTracking, trackingError);
-                    } else if (Math.abs(trackingError) < 0.02) { //TODO: move this to a config const in header
-                        // If we've spun all the way up to speed, only then act like it's jogging time.
-                        this.isUpToSpeed = true;
-                    }
-                }
-                // New torque becomes old torque
-                this.outputTorquePrev = outputTorque;
-
             } else { // engine.getValue(this.deck.group, "play") === 0)
                 // If the deck isn't playing, ensure that scratch mode is ON (for scrubbing)
+                // DELETEME: TRY WITHOUT SCRATCH ON, ONLY ENABLE SCRATCH MODE WHEN TOUCHING
                 // and reset the "isUpToSpeed" flag
                 this.isUpToSpeed = false;
                 this.isStopped = true;
-                engine.setValue(this.deck.group, "scratch2_enable", true);
+
+                // CUE AND STOP: if you simply disable scratch mode as a rule, your cue-and-stop will work 100%
+                // engine.setValue(this.deck.group, "scratch2_enable", false);
+
+                // CUE AND STOP: but if you _also_ want the vinyl-like spindown on stop, this works, but might
+                // require different wheelHardStop / MotorWindDown timings to adapt to different hardware units
+                if (this.deck.motorHardStop && !this.deck.touched) {
+                    engine.setValue(this.deck.group, "scratch2_enable", false);
+                } else {
+                    engine.setValue(this.deck.group, "scratch2_enable", true);
+                }
+
+                targetRate = 0; //if stopped, we simply set the target rate to zero
+
+                // FUTURE FEATURE NOTE: slow spin-down à la Technics 1200 when turning off the motor:
+                // apply a simple smoothing filter to the targetRate value so the PID controller gently brings
+                // the turntable to a stop
             }
+
+            // First, determine the error between target vs measured
+            playbackError = targetRate - normalizedVelocity;
+
+            // If we are touching the disc AND the playbackError goes beyond
+            // the slipping threshold, apply the slip force only
+            if (this.deck.wheelTouch.touched && Math.abs(playbackError) > SlipmatErrorThresh) {
+                console.warn("---> set slipping + scratching");
+                this.deck.isSlipping = true;
+                engine.setValue(this.deck.group, "scratch2_enable", true);
+            } else if (!this.deck.wheelTouch.touched && this.deck.isSlipping && Math.abs(playbackError) < SlipmatErrorThresh) {
+                // TODO ronso0
+                // make sure we properly reset isSlipping
+                console.warn("---> unset slipping + scratching");
+                this.deck.isSlipping = false;
+                engine.setValue(this.deck.group, "scratch2_enable", false);
+            } else if (Math.abs(playbackError) > IntegratorSuppressionErrorThresh) {
+                // If we are beyond a certain error threshold, suppress
+                // error integrator --- to help with gracefully restoring rotation
+                // speed without overshoot when adjusting with the crown.
+                // Keep the accumulator suppressed so it doesn't go crazy
+                this.integralAccumulator = 0;
+            }
+
+            // Apply slipmat friction force if slipping
+            if (this.deck.isSlipping) {
+                if (engine.getValue(this.deck.group, "scratch2_enable")) {
+                    engine.setValue(this.deck.group, "scratch2", normalizedVelocity);
+                } else if (engine.getValue(this.deck.group, "scratch2") !== 0) {
+                    engine.setValue(this.deck.group, "scratch2", 0);
+                }
+                // Use the slipmat error threshold as a 'dead zone' to avoid chattering
+                // when hand-spinning close to the nominal rotation velocity
+                if (playbackError > SlipmatErrorThresh) { // slipping forward?
+                    console.warn("--- slipping FWD, playbackError", playbackError.toFixed(2), " > SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
+                    outputTorque = SlipFrictionForce;
+                } else if (playbackError < -SlipmatErrorThresh) { // slipping backward?
+                    console.warn("--- slipping REV, playbackError", playbackError.toFixed(2), " < SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
+                    outputTorque = -SlipFrictionForce;
+                } else {
+                    console.warn("--- playbackError ignored");
+                    outputTorque = 0;
+                }
+            } else {
+                // If we aren't slipping, apply new motor controller.
+                // PID motor controller
+                this.proportionalTerm = playbackError * ProportionalGain;
+                this.integralAccumulator += playbackError * IntegrativeGain;
+                this.derivativeTerm = (playbackError - this.prevPlaybackError) * DerivativeGain;
+                outputTorque = this.proportionalTerm + this.integralAccumulator - this.derivativeTerm;
+
+                // Difference calculation for a smoothing filter
+                torqueDiff = outputTorque - this.outputTorquePrev;
+                // and another smoothing filter, only for pitch analysis
+                // trackingDiff = outputTorque - this.outputTrackingPrev;
+
+                // Apply the smoothing filters
+                outputTorque = this.outputTorquePrev + (torqueDiff * MotorOutSmoothingFactor);
+                // DEBUG
+                // outputTracking = this.outputTrackingPrev + (trackingDiff * MotorOutSmoothingFactor);
+                // Compare the smoothed output to a target expected torque to determine effective output pitch in
+                // non-slip mode (scratch2 disabled):
+                // NOTE: assumes linear mapping between motor output and wheel velocity (is not 100% correct but it's close enough for now)
+                trackingTarget = TargetMotorOutput*engine.getValue(this.deck.group, "rate_ratio");
+                trackingError = (outputTorque - trackingTarget)/trackingTarget;
+
+                // Only apply nudge/jog if the disc has spun up to the target velocity
+                if (this.isUpToSpeed && Math.abs(trackingError) > 0.02) { //TODO: move this to a config const in header
+                    engine.setValue(this.deck.group, "jog", -trackingError*TurnTableNudgeSensitivity);
+                    // console.warn(outputTorque, outputTracking, trackingError);
+                } else if (Math.abs(trackingError) < 0.02) { //TODO: move this to a config const in header
+                    // If we've spun all the way up to speed, only then act like it's jogging time.
+                    this.isUpToSpeed = true;
+                }
+            }
+            // New torque becomes old torque
+            this.outputTorquePrev = outputTorque;
         } else {
             // In any other wheel mode, the motor only provides resistance to scrubbing/scratching
             if (TightnessFactor > 0.5) {
