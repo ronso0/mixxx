@@ -22,6 +22,7 @@ class WKey : public WLabel  {
     double m_diff_cents;
     bool m_displayCents;
     bool m_displayKey;
+    bool m_showKeyColor;
     ControlProxy m_keyNotation;
     ControlProxy m_engineKeyDistance;
     ControlProxy m_engineKey;

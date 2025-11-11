@@ -38,6 +38,7 @@ void WKey::setup(const QDomNode& node, const SkinContext& context) {
     WLabel::setup(node, context);
     m_displayCents = context.selectBool(node, "DisplayCents", false);
     m_displayKey = context.selectBool(node, "DisplayKey", true);
+    m_showKeyColor = context.selectBool(node, "ShowColors", true);
 }
 
 void WKey::setValue() {
@@ -78,7 +79,9 @@ void WKey::keyNotationChanged(double dKeyNotationValue) {
 }
 
 void WKey::paintEvent(QPaintEvent* event) {
-    if (m_key == mixxx::track::io::key::INVALID || !m_colorPaletteSettings.getKeyColorsEnabled()) {
+    if (m_key == mixxx::track::io::key::INVALID ||
+            !m_colorPaletteSettings.getKeyColorsEnabled() ||
+            !m_showKeyColor) {
         WLabel::paintEvent(event);
         return;
     }
