@@ -815,19 +815,26 @@ QString YearFilterNode::toSql() const {
 DateAddedFilterNode::DateAddedFilterNode(const QString& argument)
         : m_operatorQuery(false),
           m_operator("=") {
+    qWarning() << "     .";
+    qWarning() << "     DateAdded:" << argument;
     QDateTime date;
     QRegularExpressionMatch opMatch = kNumericOperatorRegex.match(argument);
     if (opMatch.hasMatch()) {
-        // Explicit operator
+        // User typed an explicit operator
         m_operator = opMatch.captured(1);
+        qWarning() << "       opMatch: " << m_operator;
+        qWarning() << "       arg:     " << opMatch.captured(2);
         date = parseDate(opMatch.captured(2));
     } else {
+        qWarning() << "       no opMatch, implicit = query";
         // This is an implicit 'equals' filter with ':'.
         // Try parsing the date and use default '=' operator.
         date = parseDate(argument);
     }
 
     if (!date.isValid()) {
+        qWarning() << "       ! date invalid, return";
+        qWarning() << "     .";
         return;
     }
 
@@ -837,17 +844,24 @@ DateAddedFilterNode::DateAddedFilterNode(const QString& argument)
         m_equalsQuery = true;
         m_dateStart = date;
         m_dateEnd = date.addDays(1);
+        qWarning() << "       implicit = query, start:" << dateStringIsoNoZ(m_dateStart);
+        qWarning() << "                           end:" << dateStringIsoNoZ(m_dateEnd);
+        qWarning() << "       .";
         return;
     }
 
     m_operatorQuery = true;
     if (m_operator == '>') {
+        qWarning() << "       op == > --> add 1 day, use >=";
         // "added:>25.10.2025" would include any time from 2025-10-25T00:00:00Z001
         // Add one day for >= 25.10.2026T00:00:00Z000 to exclude the whole day
         date = date.addDays(1);
         m_operator = ">=";
     }
 
+    qWarning() << "     date valid, to string:" << dateStringIsoNoZ(date);
+    qWarning() << "     -> opQuery";
+    qWarning() << "     .";
     m_opDate = date;
 
     // TODO Add literal parser, for example:
@@ -859,20 +873,26 @@ QDateTime DateAddedFilterNode::parseDate(const QString& dateStr) const {
     // Prior to Qt 6.7 QLocale::toDate() with QLocale::ShortFormat used the
     // base year 1900. With 6.7+ we can specify the century, ie. 20 for 2000.
     // Mixxx was created aftre 2000 :)
+    qWarning() << "       parseDate: app locale:" << QLocale()
+               << QLocale().dateFormat(QLocale::ShortFormat);
+    qWarning() << "               system locale:" << QLocale::system()
+               << QLocale::system().dateFormat(QLocale::ShortFormat);
 #if QT_VERSION < QT_VERSION_CHECK(6, 7, 0)
     QDate date = QLocale().toDate(dateStr, QLocale::ShortFormat);
 #else
     QDate date = QLocale().toDate(dateStr, QLocale::ShortFormat, 20);
 #endif
     if (!date.isValid()) {
+        qWarning() << "       ! date invalid !";
         return {};
     }
+    qWarning() << "       date auto:" << date;
 
     if (date.year() < 2000) {
         date = date.addYears(100);
+        qWarning() << "       date adj.:" << date;
     }
 
-    // Return local date/time, don't convert to UTC, yet
     return QDateTime(date, QTime(0, 0)).toUTC();
 }
 
@@ -911,12 +931,25 @@ bool DateAddedFilterNode::match(const TrackPointer& pTrack) const {
 
 QString DateAddedFilterNode::toSql() const {
     if (m_operatorQuery) {
+        qWarning() << "     .";
+        qWarning() << "     DateAdded toSql: op:"
+                   << QStringLiteral("datetime_added %1 '%2'")
+                              .arg(m_operator, dateStringIsoNoZ(m_opDate));
+        qWarning() << "     .";
         return QStringLiteral("datetime_added %1 '%2'")
                 .arg(m_operator, dateStringIsoNoZ(m_opDate));
     } else if (m_equalsQuery) {
+        qWarning() << "     .";
+        qWarning() << "     DateAdded toSql: equal:"
+                   << QStringLiteral("datetime_added >= '%1' AND datetime_added < '%2'")
+                              .arg(dateStringIsoNoZ(m_dateStart), dateStringIsoNoZ(m_dateEnd));
+        qWarning() << "     .";
         return QStringLiteral("datetime_added >= '%1' AND datetime_added < '%2'")
                 .arg(dateStringIsoNoZ(m_dateStart), dateStringIsoNoZ(m_dateEnd));
     }
 
+    qWarning() << "     .";
+    qWarning() << "     DateAdded toSql: ! invalid, return true";
+    qWarning() << "     .";
     return QString();
 }
