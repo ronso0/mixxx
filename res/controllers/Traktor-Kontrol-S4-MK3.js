@@ -2327,6 +2327,7 @@ class S4Mk3Deck extends Deck {
         this.cueButton = new CueButton({
             deck: this
         });
+
         // TESTING: set this `true` to set play speed to zero and ignore the motorized jogwheel (for cue-and-stop)
         // (don't forget to re-enable)
         this.motorHardStop = false;
@@ -3446,17 +3447,15 @@ class S4Mk3Deck extends Deck {
                 // Input filtering:
                 // Using a weighted average convolution filter ie., an FIR filter,
                 // apply a lowpass to the velocity which is otherwise quite noisy.
-                // EXCEPTION: if we are hard stopping the playback (for cue-and-stop), zero out the velocity & filt buffer
-                // if (this.deck.motorHardStop) {
-                //     this.vFilter.insert(0); // push/pop to the circular buffer
-                //     this.velocity = 0; // zero out the velocity
-                // } else {
-                //     this.vFilter.insert(currentVelocityNormalized); // push/pop to the circular buffer
-                //     this.velocity = this.vFilter.runFilter(); // sum of products with filter coeffs
-                // }
-
                 this.vFilter.insert(currentVelocityNormalized); // push/pop to the circular buffer
                 this.velocity = this.vFilter.runFilter(); // sum of products with filter coeffs
+
+                // EXCEPTION: if we are hard stopping the playback (for cue-and-stop), zero out the velocity input
+                //            but don't mess with the filter contents. This should snap the blayback rate to zero
+                //            without screwing with the motor controller during a hard-stop scenario.
+                if (this.deck.motorHardStop) {
+                    this.velocity = 0;
+                }
 
                 // Overwrite the previous position/time data with the current values
                 this.prevData = [inPosition, inTimestamp];
@@ -3677,6 +3676,7 @@ class S4Mk3Deck extends Deck {
         this.wheelHardStopTimerId = engine.beginTimer(MotorWindDownMilliseconds, () => {
             this.wheelHardStopTimerId = 0;
             this.motorHardStop = false;
+            console.warn("Hardstop complete");
         }, true);
     }
 
@@ -3766,6 +3766,16 @@ class S4Mk3MotorManager {
         this.nominalRatePrenudge = 1.0;
         this.isUpToSpeed = false;
         this.isStopped = false;
+        this.bypassPID = false;
+
+        // Hard stop release threshold:
+        // When the normalizedVelocity goes below this thresh, bypass the PID controller for the rest of the hard stop timer.
+        // Otherwise, the controller tends to reach a steady-state oscillation around zero, which causes the playhead to twitch
+        // when the controller "lets go". This way, we relinquish motor control to the hardware and let it brake naturally for a
+        // bit before the hardstop timer finishes.
+        // NOTE: this might be an indication that the PID controller is not perfectly tuned, as steady-state oscillation is
+        //       an expected property of such controllers which can be minimized (with tradeoffs in slew rate and overshoot).
+        this.hardStopReleaseThreshold = 0.3;
     }
     tick() {
         let outputTorque = 0;
@@ -3787,7 +3797,9 @@ class S4Mk3MotorManager {
         // determine target (relative) angular velocity based on wheel mode
         if (this.deck.wheelMode === WheelModes.motor) {
             if (engine.getValue(this.deck.group, "play")) {
-                if (this.isStopped === true) {
+                if (this.isStopped) {
+                    console.warn("playing");
+                    this.bypassPID = false;
                     this.isStopped = false;
                     engine.setValue(this.deck.group, "scratch2_enable", false);
                 }
@@ -3836,18 +3848,30 @@ class S4Mk3MotorManager {
                 // If the deck isn't playing, ensure that scratch mode is ON (for scrubbing)
                 // DELETEME: TRY WITHOUT SCRATCH ON, ONLY ENABLE SCRATCH MODE WHEN TOUCHING
                 // and reset the "isUpToSpeed" flag
-                this.isUpToSpeed = false;
-                this.isStopped = true;
+                if (!this.isStopped) {
+                    console.warn("stopped");
+                    this.isUpToSpeed = false;
+                    this.isStopped = true;
+                }
 
                 // CUE AND STOP: if you simply disable scratch mode as a rule, your cue-and-stop will work 100%
                 // engine.setValue(this.deck.group, "scratch2_enable", false);
 
                 // CUE AND STOP: but if you _also_ want the vinyl-like spindown on stop, this works, but might
                 // require different wheelHardStop / MotorWindDown timings to adapt to different hardware units
+
                 if (this.deck.motorHardStop && !this.deck.touched) {
+                    console.warn("hard stopping...", normalizedVelocity);
                     engine.setValue(this.deck.group, "scratch2_enable", false);
+                    if (normalizedVelocity <= this.hardStopReleaseThreshold) {
+                        console.warn("threshold reached");
+                        this.bypassPID = true;
+                    } else {
+                        this.bypassPID = false;
+                    }
                 } else {
                     engine.setValue(this.deck.group, "scratch2_enable", true);
+                    this.bypassPID = true;
                 }
 
                 targetRate = 0; //if stopped, we simply set the target rate to zero
@@ -3899,7 +3923,7 @@ class S4Mk3MotorManager {
                     console.warn("--- playbackError ignored");
                     outputTorque = 0;
                 }
-            } else {
+            } else if (!this.bypassPID) {
                 // If we aren't slipping, apply new motor controller.
                 // PID motor controller
                 this.proportionalTerm = playbackError * ProportionalGain;
