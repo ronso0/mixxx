@@ -941,6 +941,32 @@ bool BaseTrackPlayerImpl::isTrackCommentEditControlAvailable() {
     return true;
 }
 
+bool BaseTrackPlayerImpl::isTrackFileRemoveControlAvailable() {
+    if (m_pTrackFileRemoveControl == nullptr) {
+        // Create the control and return true so LegacySkinParser knows it should
+        // connect our signal to WTrackProperty.
+        m_pTrackFileRemoveControl = std::make_unique<ControlPushButton>(
+                ConfigKey(getGroup(), "remove_track_file"));
+        m_pTrackFileRemoveControl->connectValueChangeRequest(
+                this,
+                [this](double value) {
+                    if (value > 0) {
+                        emit trackFileRemoveRequest();
+                    }
+                });
+        return true;
+    } else if (isSignalConnected(
+                       QMetaMethod::fromSignal(&BaseTrackPlayer::trackFileRemoveRequest))) {
+        // Control exists and we're already connected.
+        // This means the request was made while creating the 2nd or later WTrackProperty.
+        return false;
+    } else {
+        // Control already exists but signal is not connected, which is the case
+        // after loading a skin. Return true so LegacySkinParser makes a new connection.
+        return true;
+    }
+}
+
 void BaseTrackPlayerImpl::slotSetAndConfirmTrackMenuControl(bool visible) {
     VERIFY_OR_DEBUG_ASSERT(m_pShowTrackMenuControl) {
         return;
