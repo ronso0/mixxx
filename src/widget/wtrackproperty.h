@@ -73,6 +73,7 @@ class WTrackProperty : public WLabel, public TrackDropTarget {
     void slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack);
     void slotShowTrackMenuChangeRequest(bool show);
     void slotEditTrackComment();
+    void slotRemoveTrackFileFromDisk();
 
   protected:
     void contextMenuEvent(QContextMenuEvent* event) override;
