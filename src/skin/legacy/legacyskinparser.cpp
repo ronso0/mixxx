@@ -1222,6 +1222,13 @@ QWidget* LegacySkinParser::parseTrackProperty(const QDomElement& node) {
                     &WTrackProperty::slotEditTrackComment,
                     Qt::DirectConnection);
         }
+        if (pPlayer->isTrackFileRemoveControlAvailable()) {
+            connect(pPlayer,
+                    &BaseTrackPlayer::trackFileRemoveRequest,
+                    pTrackProperty,
+                    &WTrackProperty::slotRemoveTrackFileFromDisk,
+                    Qt::DirectConnection);
+        }
     }
 
     // Relay for the label's WTrackMenu (which is created only on demand):
