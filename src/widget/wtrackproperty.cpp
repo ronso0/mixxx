@@ -345,6 +345,16 @@ void WTrackProperty::slotEditTrackComment() {
     }
 }
 
+void WTrackProperty::slotRemoveTrackFileFromDisk() {
+    if (m_pCurrentTrack) {
+        // Take the route via track menu (not via library) as it
+        // already has the confirm dialog
+        ensureTrackMenuIsCreated();
+        m_pTrackMenu->loadTrack(m_pCurrentTrack, m_group);
+        m_pTrackMenu->slotRemoveFromDisk();
+    }
+}
+
 void WTrackProperty::slotCommitEditorData(const QString& text) {
     if (!m_pCurrentTrack) {
         return;

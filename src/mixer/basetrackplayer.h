@@ -53,6 +53,9 @@ class BaseTrackPlayer : public BasePlayer {
     virtual bool isTrackCommentEditControlAvailable() {
         return false;
     };
+    virtual bool isTrackFileRemoveControlAvailable() {
+        return false;
+    };
 
   public slots:
 #ifdef __STEM__
@@ -113,6 +116,8 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     bool isTrackMenuControlAvailable() final;
     /// Same for the 'edit track comment' control
     bool isTrackCommentEditControlAvailable() final;
+    /// Same for the 'remove_track_file' control
+    bool isTrackFileRemoveControlAvailable() final;
     /// For testing, loads a fake track.
     TrackPointer loadFakeTrack(bool bPlay, double filebpm);
 
@@ -233,6 +238,7 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
 
     std::unique_ptr<ControlPushButton> m_pShowTrackMenuControl;
     std::unique_ptr<ControlPushButton> m_pTrackCommentEditControl;
+    std::unique_ptr<ControlPushButton> m_pTrackFileRemoveControl;
 
     std::unique_ptr<ControlPushButton> m_pStarsUp;
     std::unique_ptr<ControlPushButton> m_pStarsDown;
