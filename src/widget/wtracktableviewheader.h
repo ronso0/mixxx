@@ -111,6 +111,7 @@ class WTrackTableViewHeader : public QHeaderView {
 
   private:
     int hiddenCount();
+    void clearMenu();
     void updateMenu();
     void updateCommonHeaderActions();
     bool shouldSyncWithCommonHeaderState();

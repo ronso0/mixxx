@@ -218,9 +218,8 @@ void WTrackTableViewHeader::setModel(QAbstractItemModel* pModel) {
         saveHeaderState();
     }
 
-    // First clear all the context menu actions for the old model.
-    clearActions();
-    m_hiddenColumnSizes.clear();
+    // Clear the menu of the old model (actions, checkbox list, hidden sizes)
+    clearMenu();
 
     // Now set the header view to show the new model
     QHeaderView::setModel(pModel);
@@ -314,6 +313,7 @@ void WTrackTableViewHeader::updateMenu() {
         m_pMenu->addAction(pAction);
     }
 
+<<<<<<< HEAD
     // Only show this if the track model allows.
     // TODO Make actions members and create in ctor.
     // Then enable/disable as require here.
@@ -372,6 +372,8 @@ void WTrackTableViewHeader::updateMenu() {
 
         updateCommonHeaderActions();
     }
+
+    m_pMenu->addSeparator();
 
     // Only show the shuffle action in models that allow sorting.
     if (pTrackModel->hasCapabilities(TrackModel::Capability::Sorting)) {
@@ -546,6 +548,18 @@ bool WTrackTableViewHeader::hasPersistedHeaderState() {
     }
     const QString headerStateString = pTrackModel->getModelSetting(kHeaderStateKey);
     return !headerStateString.isNull();
+}
+
+void WTrackTableViewHeader::clearMenu() {
+    if (m_pMenu->isVisible()) {
+        m_pMenu->hide();
+    }
+    // The QActions are parented to the menu, so clearing deletes them. Since
+    // they are deleted we don't have to disconnect their signals from the
+    // mapper.
+    m_columnCheckBoxes.clear();
+    m_hiddenColumnSizes.clear();
+    m_pMenu->clear();
 }
 
 void WTrackTableViewHeader::showOrHideColumn(int column) {
