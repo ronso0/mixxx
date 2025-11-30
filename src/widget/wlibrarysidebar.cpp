@@ -51,8 +51,11 @@ void WLibrarySidebar::dragEnterEvent(QDragEnterEvent * event) {
         // drag so for now we accept all drags. Since almost every
         // LibraryFeature accepts all files in the drop and accepts playlist
         // drops we default to those flags to DragAndDropHelper.
+        // FIXME Unless the cursor is steady after entering the sidebar (which
+        // is veryhard to achieve for humans) QDragEnterEvent is followed by one
+        // or more QDragMoveEvent, so don't check here at all and rely on dragMove?
         QList<mixxx::FileInfo> fileInfos = DragAndDropHelper::supportedTracksFromUrls(
-                event->mimeData()->urls(), false, true);
+                event->mimeData()->urls(), true, true);
         if (!fileInfos.isEmpty()) {
             event->acceptProposedAction();
             return;
@@ -71,57 +74,53 @@ void WLibrarySidebar::dragMoveEvent(QDragMoveEvent * event) {
 #else
     QPoint pos = event->pos();
 #endif
-    QModelIndex index = indexAt(pos);
+    const QModelIndex index = indexAt(pos);
     if (m_hoverIndex != index) {
         m_expandTimer.stop();
         m_hoverIndex = index;
         m_expandTimer.start(expand_time, this);
     }
+    // FIXME Avoid repeated url check for every drag move:
+    // * return previous result if m_hoverIndex == index
+    // * reset m_hoverIndex in dragLeaveEvent and dropEvent
+    // * also track urls?
+
     // This has to be here instead of after, otherwise all drags will be
     // rejected -- rryan 3/2011
     QTreeView::dragMoveEvent(event);
-    if (event->mimeData()->hasUrls()) {
-        const QList<QUrl> urls = event->mimeData()->urls();
-        // Drag and drop within this widget
-        if ((event->source() == this)
-                && (event->possibleActions() & Qt::MoveAction)) {
-            // Do nothing.
-            event->ignore();
-        } else {
-            SidebarModel* sidebarModel = qobject_cast<SidebarModel*>(model());
-            bool accepted = true;
-            if (sidebarModel) {
-                accepted = false;
-                for (const QUrl& url : urls) {
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-                    QPoint pos = event->position().toPoint();
-#else
-                    QPoint pos = event->pos();
-#endif
-                    QModelIndex destIndex = indexAt(pos);
-                    if (sidebarModel->dragMoveAccept(destIndex, url)) {
-                        // We only need one URL to be valid for us
-                        // to accept the whole drag...
-                        // Consider that we might have a long list of files,
-                        // checking all will take a lot of time that stalls
-                        // Mixxx and this makes the drop feature useless.
-                        // E.g. you may have tried to drag two MP3's and an EXE,
-                        // the drop is accepted here, but the EXE is filtered
-                        // out later after dropping
-                        accepted = true;
-                        break;
-                    }
-                }
-            }
-            if (accepted) {
-                event->acceptProposedAction();
-            } else {
-                event->ignore();
-            }
-        }
-    } else {
+    if (!event->mimeData()->hasUrls()) {
         event->ignore();
+        return;
     }
+
+    const QList<QUrl> urls = event->mimeData()->urls();
+    // Drag and drop within this widget
+    if ((event->source() == this) && (event->possibleActions() & Qt::MoveAction)) {
+        // Do nothing.
+        event->ignore();
+        return;
+    }
+
+    SidebarModel* pSidebarModel = qobject_cast<SidebarModel*>(model());
+    VERIFY_OR_DEBUG_ASSERT(pSidebarModel) {
+        event->ignore();
+        return;
+    }
+    for (const QUrl& url : urls) {
+        if (pSidebarModel->dragMoveAccept(index, url)) {
+            // We only need one URL to be valid for us
+            // to accept the whole drag...
+            // Consider that we might have a long list of files,
+            // checking all will take a lot of time that stalls
+            // Mixxx and this makes the drop feature useless.
+            // E.g. you may have tried to drag two MP3's and an EXE,
+            // the drop is accepted here, but the EXE is filtered
+            // out later after dropping
+            event->acceptProposedAction();
+            return;
+        }
+    }
+    event->ignore();
 }
 
 void WLibrarySidebar::timerEvent(QTimerEvent *event) {
@@ -141,40 +140,37 @@ void WLibrarySidebar::timerEvent(QTimerEvent *event) {
 
 // Drag-and-drop "drop" event. Occurs when something is dropped onto the track sources view
 void WLibrarySidebar::dropEvent(QDropEvent * event) {
-    if (event->mimeData()->hasUrls()) {
-        // Drag and drop within this widget
-        if ((event->source() == this)
-                && (event->possibleActions() & Qt::MoveAction)) {
-            // Do nothing.
-            event->ignore();
-        } else {
-            //Reset the selected items (if you had anything highlighted, it clears it)
-            //this->selectionModel()->clear();
-            //Drag-and-drop from an external application or the track table widget
-            //eg. dragging a track from Windows Explorer onto the sidebar
-            SidebarModel* sidebarModel = qobject_cast<SidebarModel*>(model());
-            if (sidebarModel) {
+    if (!event->mimeData()->hasUrls()) {
+        event->ignore();
+        return;
+    }
+    // Drag and drop within this widget
+    if ((event->source() == this) && (event->possibleActions() & Qt::MoveAction)) {
+        // Do nothing.
+        event->ignore();
+        return;
+    }
+    // Drag-and-drop from an external application (eg. a file manager) or the
+    // track table widget onto the sidebar.
+    // Reset the selected items (if you had anything highlighted, it clears it)
+    // this->selectionModel()->clear();
+    SidebarModel* pSidebarModel = qobject_cast<SidebarModel*>(model());
+    if (pSidebarModel) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-                QPoint pos = event->position().toPoint();
+        QPoint pos = event->position().toPoint();
 #else
-                QPoint pos = event->pos();
+        QPoint pos = event->pos();
 #endif
 
-                QModelIndex destIndex = indexAt(pos);
-                // event->source() will return NULL if something is dropped from
-                // a different application
-                const QList<QUrl> urls = event->mimeData()->urls();
-                if (sidebarModel->dropAccept(destIndex, urls, event->source())) {
-                    event->acceptProposedAction();
-                } else {
-                    event->ignore();
-                }
-            }
+        const QModelIndex destIndex = indexAt(pos);
+        // event->source() will return NULL if something is dropped from
+        // a different application
+        const QList<QUrl> urls = event->mimeData()->urls();
+        if (pSidebarModel->dropAccept(destIndex, urls, event->source())) {
+            event->acceptProposedAction();
+        } else {
+            event->ignore();
         }
-        //emit trackDropped(name);
-        //repaintEverything();
-    } else {
-        event->ignore();
     }
 }
 
