@@ -106,21 +106,11 @@ void WLibrarySidebar::dragMoveEvent(QDragMoveEvent * event) {
         event->ignore();
         return;
     }
-    for (const QUrl& url : urls) {
-        if (pSidebarModel->dragMoveAccept(index, url)) {
-            // We only need one URL to be valid for us
-            // to accept the whole drag...
-            // Consider that we might have a long list of files,
-            // checking all will take a lot of time that stalls
-            // Mixxx and this makes the drop feature useless.
-            // E.g. you may have tried to drag two MP3's and an EXE,
-            // the drop is accepted here, but the EXE is filtered
-            // out later after dropping
-            event->acceptProposedAction();
-            return;
-        }
+    if (pSidebarModel->dragMoveAccept(index, urls)) {
+        event->acceptProposedAction();
+    } else {
+        event->ignore();
     }
-    event->ignore();
 }
 
 void WLibrarySidebar::timerEvent(QTimerEvent *event) {
