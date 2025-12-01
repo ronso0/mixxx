@@ -2909,6 +2909,11 @@ void WTrackMenu::slotHide() {
     if (!m_pTrackModel) {
         return;
     }
+    // FIXME Also pass the requesting TrackModel pointer to TrackCollection??
+    // That would allow to suppress this warning if the request comes from a
+    // PlaylistTableModel. Or just a bool to avoid the model include?
+    // "The selected tracks are in the following playlists: ..
+    // "Hiding them will remove them from these playlists. Continue?
     m_pTrackModel->hideTracks(getTrackIndices());
     emit restoreCurrentViewStateOrIndex();
 }
