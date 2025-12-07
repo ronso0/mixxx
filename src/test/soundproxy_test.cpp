@@ -35,6 +35,10 @@ const SINT kMaxReadFrameCount = kBufferSizes[sizeof(kBufferSizes) / sizeof(kBuff
 
 const CSAMPLE kMaxDecodingError = 0.01f;
 
+const QString kMp3TestFile = QStringLiteral("id3-test-data/artist.mp3");
+const QString kMp3PngTestFile = QStringLiteral("id3-test-data/cover-test-øé~ł€˚-png.mp3");
+const QString kMp3JpgTestFile = QStringLiteral("id3-test-data/cover-test-øé~ł€˚-jpg.mp3");
+
 } // anonymous namespace
 
 class SoundSourceProxyTest : public MixxxTest, SoundSourceProviderRegistration {
@@ -87,7 +91,7 @@ class SoundSourceProxyTest : public MixxxTest, SoundSourceProviderRegistration {
         const QStringList fileNameSuffixes = getFileNameSuffixes();
         for (const auto& fileNameSuffix : fileNameSuffixes) {
             filePaths.append(getTestDir().filePath(
-                    QStringLiteral("id3-test-data/cover-test") +
+                    QStringLiteral("id3-test-data/cover-test-øé~ł€˚") +
                     fileNameSuffix));
         }
         return filePaths;
@@ -227,7 +231,7 @@ TEST_F(SoundSourceProxyTest, openEmptyFile) {
 
 TEST_F(SoundSourceProxyTest, readArtist) {
     auto pTrack = Track::newTemporary(
-            getTestDir().filePath(QStringLiteral("id3-test-data/artist.mp3")));
+            getTestDir().filePath(kMp3TestFile));
     SoundSourceProxy proxy(pTrack);
     EXPECT_EQ(
             SoundSourceProxy::UpdateTrackFromSourceResult::MetadataImportedAndUpdated,
@@ -262,14 +266,14 @@ TEST_F(SoundSourceProxyTest, readNoTitle) {
 
     // Test a file with other metadata but no title
     auto pTrack2 = Track::newTemporary(
-            getTestDir().filePath(QStringLiteral("id3-test-data/cover-test-png.mp3")));
+            getTestDir().filePath(kMp3PngTestFile));
     SoundSourceProxy proxy2(pTrack2);
     EXPECT_EQ(
             SoundSourceProxy::UpdateTrackFromSourceResult::MetadataImportedAndUpdated,
             proxy2.updateTrackFromSource(
                     SoundSourceProxy::UpdateTrackFromSourceMode::Once,
                     SyncTrackMetadataParams{}));
-    EXPECT_EQ("cover-test-png", pTrack2->getTitle());
+    EXPECT_EQ("cover-test-øé~ł€˚-png", pTrack2->getTitle());
 
     // Test a reload also works
     pTrack2->setTitle("");
@@ -278,11 +282,11 @@ TEST_F(SoundSourceProxyTest, readNoTitle) {
             proxy2.updateTrackFromSource(
                     SoundSourceProxy::UpdateTrackFromSourceMode::Always,
                     SyncTrackMetadataParams{}));
-    EXPECT_EQ("cover-test-png", pTrack2->getTitle());
+    EXPECT_EQ("cover-test-øé~ł€˚-png", pTrack2->getTitle());
 
     // Test a file with a title
     auto pTrack3 = Track::newTemporary(
-            getTestDir().filePath(QStringLiteral("id3-test-data/cover-test-jpg.mp3")));
+            getTestDir().filePath(kMp3JpgTestFile));
     SoundSourceProxy proxy3(pTrack3);
     EXPECT_EQ(
             SoundSourceProxy::UpdateTrackFromSourceResult::MetadataImportedAndUpdated,
@@ -762,10 +766,10 @@ TEST_F(SoundSourceProxyTest, firstSoundTest) {
         SINT firstSoundSample;
     };
 
-    RefFirstSound refs[] = {{QStringLiteral("cover-test.aiff"), 1166},
-            {QStringLiteral("cover-test-alac.caf"), 1166},
-            {QStringLiteral("cover-test.flac"), 1166},
-            {QStringLiteral("cover-test-itunes-12.3.0-aac.m4a"),
+    RefFirstSound refs[] = {{QStringLiteral("cover-test-øé~ł€˚.aiff"), 1166},
+            {QStringLiteral("cover-test-øé~ł€˚-alac.caf"), 1166},
+            {QStringLiteral("cover-test-øé~ł€˚.flac"), 1166},
+            {QStringLiteral("cover-test-øé~ł€˚-itunes-12.3.0-aac.m4a"),
 #if defined(__WINDOWS__) || defined(__FAAD__)
                     1390}, // Media Foundation 10.0.17763.2989
                            // Media Foundation 10.0.20348.1
@@ -779,7 +783,7 @@ TEST_F(SoundSourceProxyTest, firstSoundTest) {
 #endif
             // 1168 FFmpeg 4.2.7-0ubuntu0.1
 
-            {QStringLiteral("cover-test-ffmpeg-aac.m4a"),
+            {QStringLiteral("cover-test-øé~ł€˚-ffmpeg-aac.m4a"),
 #if defined(__WINDOWS__)
                     3160}, // Media Foundation 10.0.17763.2989
                            // Media Foundation 10.0.20348.1
@@ -792,8 +796,8 @@ TEST_F(SoundSourceProxyTest, firstSoundTest) {
                            // Nero FAAD2 2.64
 #endif
 
-            {QStringLiteral("cover-test-itunes-12.7.0-alac.m4a"), 1166},
-            {QStringLiteral("cover-test-png.mp3"),
+            {QStringLiteral("cover-test-øé~ł€˚-itunes-12.7.0-alac.m4a"), 1166},
+            {QStringLiteral("cover-test-øé~ł€˚-png.mp3"),
 #if defined(__LINUX__)
                     1752}, // MAD: MPEG Audio Decoder 0.15.1 (beta) NDEBUG FPM_64BIT
 #elif defined(__WINDOWS__)
@@ -802,7 +806,7 @@ TEST_F(SoundSourceProxyTest, firstSoundTest) {
                                     0}, // CoreAudio Version 11.7.8 (Build 20G1351)
 #endif
 
-            {QStringLiteral("cover-test-vbr.mp3"),
+            {QStringLiteral("cover-test-øé~ł€˚-vbr.mp3"),
 #if defined(__LINUX__) || defined(__WINDOWS__)
                     3376}, // MAD: MPEG Audio Decoder 0.15.1 (beta) NDEBUG FPM_64BIT
 #else
@@ -813,11 +817,11 @@ TEST_F(SoundSourceProxyTest, firstSoundTest) {
             // https://github.com/mixxxdj/mixxx/issues/11888
             // 1166 FFmpeg
 
-            {QStringLiteral("cover-test.ogg"), 1166},
-            {QStringLiteral("cover-test.opus"), 1268},
-            {QStringLiteral("cover-test.wav"), 1166},
-            {QStringLiteral("cover-test.wav"), 1166},
-            {QStringLiteral("cover-test.wv"), 1166}};
+            {QStringLiteral("cover-test-øé~ł€˚.ogg"), 1166},
+            {QStringLiteral("cover-test-øé~ł€˚.opus"), 1268},
+            {QStringLiteral("cover-test-øé~ł€˚.wav"), 1166},
+            {QStringLiteral("cover-test-øé~ł€˚.wav"), 1166},
+            {QStringLiteral("cover-test-øé~ł€˚.wv"), 1166}};
 
     for (const auto& ref : refs) {
         QString filePath = getTestDir().filePath(
@@ -945,7 +949,7 @@ TEST_F(SoundSourceProxyTest, getTypeFromAiffFile) {
     ASSERT_TRUE(SoundSourceProxy::isFileSuffixSupported(QStringLiteral("aiff")));
 
     const QString aiffFilePath =
-            getTestDir().filePath(QStringLiteral("id3-test-data/cover-test.aiff"));
+            getTestDir().filePath(QStringLiteral("id3-test-data/cover-test-øé~ł€˚.aiff"));
 
     ASSERT_TRUE(QFileInfo::exists(aiffFilePath));
     ASSERT_STREQ(qPrintable("aiff"),
@@ -953,7 +957,7 @@ TEST_F(SoundSourceProxyTest, getTypeFromAiffFile) {
                     QFileInfo(aiffFilePath))));
 
     const QString aiffFilePathWithShortenedSuffix =
-            tempDir.filePath(QStringLiteral("cover-test.aif"));
+            tempDir.filePath(QStringLiteral("cover-test-øé~ł€˚.aif"));
     mixxxtest::copyFile(aiffFilePath, aiffFilePathWithShortenedSuffix);
     ASSERT_TRUE(QFileInfo::exists(aiffFilePathWithShortenedSuffix));
 
@@ -989,9 +993,9 @@ TEST_F(SoundSourceProxyTest, handleWrongFileSuffix) {
     const QString wrongFileType = QStringLiteral("aiff");
 
     const QString contentFileTypePath =
-            getTestDir().filePath(QStringLiteral("id3-test-data/cover-test-png.mp3"));
+            getTestDir().filePath(kMp3PngTestFile);
     const QString wrongFileTypePath =
-            tempDir.filePath(QStringLiteral("cover-test.aiff"));
+            tempDir.filePath(QStringLiteral("cover-test-øé~ł€˚.aiff"));
     mixxxtest::copyFile(contentFileTypePath, wrongFileTypePath);
 
     auto pTrack = Track::newTemporary(wrongFileTypePath);

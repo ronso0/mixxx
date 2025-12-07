@@ -9,8 +9,8 @@
 
 namespace {
 
-const QString kTestFile = QStringLiteral("id3-test-data/cover-test.flac");
-const QString kTestFile2 = QStringLiteral("id3-test-data/cover-test.ogg");
+const QString kTestFile = QStringLiteral("id3-test-data/cover-test-øé~ł€˚.flac");
+const QString kTestFile2 = QStringLiteral("id3-test-data/cover-test-øé~ł€˚.ogg");
 
 class TrackTitleThread: public QThread {
   public:

@@ -36,68 +36,72 @@ TEST_F(CoverArtUtilTest, extractEmbeddedCover) {
     QImage referenceJPGImage = QImage(getTestDir().filePath(kReferenceJPGLocationTest));
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("aiff"))) {
-        extractEmbeddedCover(getTestDir().filePath(QStringLiteral("id3-test-data/cover-test.aiff")),
+        extractEmbeddedCover(
+                getTestDir().filePath(QStringLiteral(
+                        "id3-test-data/cover-test-øé~ł€˚.aiff")),
                 referencePNGImage);
     }
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("flac"))) {
-        extractEmbeddedCover(getTestDir().filePath(QStringLiteral("id3-test-data/cover-test.flac")),
+        extractEmbeddedCover(getTestDir().filePath(QStringLiteral(
+                                     "id3-test-data/cover-test-øé~ł€˚.flac")),
                 referencePNGImage);
     }
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("m4a"))) {
         extractEmbeddedCover(
                 getTestDir().filePath(QStringLiteral(
-                        "id3-test-data/cover-test-itunes-12.3.0-aac.m4a")),
+                        "id3-test-data/cover-test-øé~ł€˚-itunes-12.3.0-aac.m4a")),
                 referencePNGImage);
         extractEmbeddedCover(
                 getTestDir().filePath(QStringLiteral(
-                        "id3-test-data/cover-test-itunes-12.7.0-aac.m4a")),
+                        "id3-test-data/cover-test-øé~ł€˚-itunes-12.7.0-aac.m4a")),
                 referencePNGImage);
         extractEmbeddedCover(
                 getTestDir().filePath(QStringLiteral(
-                        "id3-test-data/cover-test-itunes-12.7.0-alac.m4a")),
+                        "id3-test-data/cover-test-øé~ł€˚-itunes-12.7.0-alac.m4a")),
                 referencePNGImage);
     }
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("m4v"))) {
         extractEmbeddedCover(getTestDir().filePath(QStringLiteral(
-                                     "id3-test-data/cover-test.m4v")),
+                                     "id3-test-data/cover-test-øé~ł€˚.m4v")),
                 referencePNGImage);
     }
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("mp3"))) {
         // PNG
         extractEmbeddedCover(getTestDir().filePath(QStringLiteral(
-                                     "id3-test-data/cover-test-png.mp3")),
+                                     "id3-test-data/cover-test-øé~ł€˚-png.mp3")),
                 referencePNGImage);
         // JPEG
         extractEmbeddedCover(getTestDir().filePath(QStringLiteral(
-                                     "id3-test-data/cover-test-jpg.mp3")),
+                                     "id3-test-data/cover-test-øé~ł€˚-jpg.mp3")),
                 referenceJPGImage);
     }
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("ogg"))) {
         extractEmbeddedCover(getTestDir().filePath(QStringLiteral(
-                                     "id3-test-data/cover-test.ogg")),
+                                     "id3-test-data/cover-test-øé~ł€˚.ogg")),
                 referencePNGImage);
     }
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("opus"))) {
         // opus
-        extractEmbeddedCover(getTestDir().filePath(QStringLiteral("id3-test-data/cover-test.opus")),
+        extractEmbeddedCover(getTestDir().filePath(QStringLiteral(
+                                     "id3-test-data/cover-test-øé~ł€˚.opus")),
                 referencePNGImage);
     }
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("wav"))) {
         extractEmbeddedCover(getTestDir().filePath(QStringLiteral(
-                                     "id3-test-data/cover-test.wav")),
+                                     "id3-test-data/cover-test-øé~ł€˚.wav")),
                 referencePNGImage);
     }
 
     if (SoundSourceProxy::isFileSuffixSupported(QStringLiteral("wv"))) {
         extractEmbeddedCover(getTestDir().filePath(QStringLiteral(
-                                     "id3-test-data/cover-test.wv")),
+                                     "id3-test-data/cover-test-øé~ł€˚.wv")),
                 referencePNGImage);
     }
 }
@@ -109,7 +113,7 @@ TEST_F(CoverArtUtilTest, searchImage) {
     QString trackdir = QString(tempTrackDir.path());
 
     const QString kTrackLocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-png.mp3")));
+            QStringLiteral("id3-test-data/cover-test-øé~ł€˚-png.mp3")));
 
     TrackPointer pTrack(Track::newTemporary(kTrackLocationTest));
     QList<QFileInfo> covers;
