@@ -5,17 +5,25 @@
 #include <QtDebug>
 
 #include "library/library_prefs.h"
+#include "library/sidebaritemdelegate.h"
 #include "library/sidebarmodel.h"
 #include "moc_wlibrarysidebar.cpp"
 #include "util/defs.h"
 #include "util/dnd.h"
+
+namespace {
+
+// color for the 'watched path' indicator (cyan)
+const QColor kDefaultWatchedPathColor = QColor("#00ffff"); // clazy:exclude=qcolor-from-literal
+
+} // anonymous namespace
 
 WLibrarySidebar::WLibrarySidebar(QWidget* parent)
         : QTreeView(parent),
           WBaseWidget(this),
           m_pSidebarModel(nullptr),
           m_hoverExpandDelay(mixxx::library::prefs::kSidebarHoverExpandDelayDefault),
-          m_lastDragMoveAccepted(false) {
+          m_watchedPathColor(kDefaultWatchedPathColor) {
     qRegisterMetaType<FocusWidget>("FocusWidget");
     //Set some properties
     setHeaderHidden(true);
@@ -37,6 +45,18 @@ void WLibrarySidebar::setModel(QAbstractItemModel* pModel) {
     DEBUG_ASSERT(pSidebarModel);
     m_pSidebarModel = pSidebarModel;
     QTreeView::setModel(pSidebarModel);
+    // Create the delegate for painting the bookmark and watched path indicators
+    DEBUG_ASSERT(m_pItemDelegate == nullptr);
+    m_pItemDelegate = new SidebarItemDelegate(this, pSidebarModel);
+    setItemDelegateForColumn(0, m_pItemDelegate);
+    m_pItemDelegate->setWatchedPathColor(m_watchedPathColor);
+
+    // Color can be set in qss via qproperty-watchedPathColor which happens
+    // when the stylesheet is applied. Push it to delegate.
+    connect(this,
+            &WLibrarySidebar::watchedPathColorChanged,
+            m_pItemDelegate,
+            &SidebarItemDelegate::setWatchedPathColor);
 }
 
 void WLibrarySidebar::contextMenuEvent(QContextMenuEvent* pEvent) {

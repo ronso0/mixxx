@@ -3136,9 +3136,6 @@ WLibrarySidebar {
   /* background of Color delegate in selected row */
   selection-background-color: #2c454f;
 }
-WLibrarySidebar {
-  outline: none;
-}
 /* Selected rows in Tree and Tracks table */
 WLibrarySidebar::item:selected,
 WTrackTableView::item:selected,
@@ -3202,6 +3199,33 @@ WTrackTableView {
   qproperty-trackMissingColor: #f856e7; /* pink */
   /* Color for the track drop indicator line, ie. target position in playlist */
   qproperty-dropIndicatorColor: #984015; /* orange like fader highlight */
+}
+
+WLibrarySidebar::item {
+  /* add a dummy border so item text is not shifted when item is focused */
+  border-left: 1px solid transparent;
+  /* add right border so text is not elided when focus border is added */
+  border-right: 1px solid transparent;
+  }
+  /* subtle highlight if item is selected */
+  WLibrarySidebar::item:focus {
+    outline: none;
+    border: 1px solid #999;
+  }
+WLibrarySidebar::item:selected:focus {
+  outline: none;
+}
+WLibrarySidebar::item:!selected:focus,
+/* This, in conjunction with the c++ counterpart, styles only items hovered while dragging */
+WLibrarySidebar[dragHover="true"]::item:hover {
+  outline: none;
+  border: 1px solid white;
+}
+
+WTrackTableView:focus,
+WLibrarySidebar:focus,
+WLibraryTextBrowser:focus {
+  border: 1px solid #257b82;
 }
 
 /* Table cell in edit mode */
@@ -3515,7 +3539,9 @@ QLabel#labelSelectionInfo /* AutoDJ track selection info */ {
 }
 
 WLibrarySidebar {
+  outline: none;
   show-decoration-selected: 0;
+  qproperty-watchedPathColor: #00ffff;
 }
 /* triangle for closed/opened branches in treeview */
 /* closed */

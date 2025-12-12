@@ -9,12 +9,18 @@
 
 class LibraryFeature;
 class SidebarModel;
+class SidebarItemDelegate;
 class QPoint;
 
 class WLibrarySidebar : public QTreeView, public WBaseWidget {
     Q_OBJECT
   public:
     explicit WLibrarySidebar(QWidget* parent = nullptr);
+
+    Q_PROPERTY(QColor watchedPathColor
+                    MEMBER m_watchedPathColor
+                            NOTIFY watchedPathColorChanged
+                                    DESIGNABLE true);
 
     void setModel(QAbstractItemModel* pModel) override;
 
@@ -46,6 +52,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void togglePrepPlaylist();
     FocusWidget setLibraryFocus(FocusWidget newFocus,
             Qt::FocusReason focusReason = Qt::OtherFocusReason);
+    void watchedPathColorChanged(QColor m_watchedPathColor);
 
   protected:
     bool event(QEvent* pEvent) override;
@@ -58,8 +65,10 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void resetHoverIndexAndDragMoveResult();
 
     SidebarModel* m_pSidebarModel;
+    SidebarItemDelegate* m_pItemDelegate;
     QBasicTimer m_expandTimer;
     int m_hoverExpandDelay;
     QModelIndex m_hoverIndex;
     bool m_lastDragMoveAccepted;
+    QColor m_watchedPathColor;
 };

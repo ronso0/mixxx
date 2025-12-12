@@ -35,7 +35,8 @@ TreeItem::TreeItem(
       m_pParent(nullptr),
       m_label(std::move(label)),
       m_data(std::move(data)),
-      m_bold(false) {
+      m_bold(false),
+      m_isWatched(false) {
 }
 
 TreeItem::~TreeItem() {
@@ -80,6 +81,14 @@ void TreeItem::initFeatureRecursively(LibraryFeature* pFeature) {
     m_pFeature = pFeature;
     for (auto* pChild : std::as_const(m_children)) {
         pChild->initFeatureRecursively(pFeature);
+    }
+}
+
+void TreeItem::updateIsWatchedLibraryPathRecursively(bool watched) {
+    setIsWatchedLibraryPath(watched);
+    for (auto* pChild : std::as_const(m_children)) {
+        pChild->setIsWatchedLibraryPath(watched);
+        pChild->updateIsWatchedLibraryPathRecursively(watched);
     }
 }
 
