@@ -81,8 +81,15 @@ class Beats : private std::enable_shared_from_this<Beats> {
                   m_beatOffset(beatOffset) {
             updateValue();
         }
+        ConstIterator() {
+        }
 
-        mixxx::audio::FrameDiff_t beatLengthFrames() const;
+        bool isValid() const {
+            return m_beats != nullptr && m_value != mixxx::audio::kInvalidFramePos;
+        };
+
+        mixxx::audio::FrameDiff_t
+        beatLengthFrames() const;
 
         // Iterator methods
 
