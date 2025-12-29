@@ -424,6 +424,9 @@ bool WTrackPropertyEditor::eventFilter(QObject* pObj, QEvent* pEvent) {
         switch (key) {
         case Qt::Key_Escape:
             hide();
+            // Without this focus would be moved to the Searchbar.
+            // Explicitly refocus like when committing data.
+            ControlObject::set(ConfigKey("[Library]", "refocus_prev_widget"), 1);
             return true;
         case Qt::Key_Return:
         case Qt::Key_Enter:
