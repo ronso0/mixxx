@@ -1326,7 +1326,9 @@ void LibraryControl::slotGoToItem(double v) {
         // Note that Tracks and AutoDJ always return 'false':
         // expanding those root items via controllers is considered dispensable
         // because the subfeatures' actions can't be accessed by controllers anyway.
-        if (m_pSidebarWidget->isLeafNodeSelected()) {
+        if (m_pSidebarWidget->selectFocusedIndex()) {
+            return;
+        } else if (m_pSidebarWidget->isLeafNodeSelected()) {
             setLibraryFocus(FocusWidget::TracksTable);
         } else {
             // Otherwise toggle the sidebar item expanded state
