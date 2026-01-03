@@ -36,7 +36,7 @@
             <PathBack>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_deck_level_bg_<Variable name="VuColor"/>.png</PathBack>
             <PathVu>skins:LateNight/<Variable name="StyleScheme"/>/style/vu_deck_level_active.png</PathVu>
             <Horizontal>false</Horizontal>
-            <PeakHoldSize>5</PeakHoldSize>
+            <PeakHoldSize>4</PeakHoldSize>
             <PeakHoldTime>500</PeakHoldTime>
             <PeakFallTime>50</PeakFallTime>
             <PeakFallStep>2</PeakFallStep>
