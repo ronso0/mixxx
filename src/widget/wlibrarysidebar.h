@@ -44,6 +44,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     QModelIndex selectedIndex() const;
     bool isChildIndexSelected(const QModelIndex& index);
     bool isFeatureRootIndexSelected(LibraryFeature* pFeature);
+    bool selectFocusedIndex();
 
     void setBookmarkColor(const QColor& color);
 
@@ -69,7 +70,6 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
 
   private:
     bool focusSelectedIndex();
-    bool selectFocusedIndex();
 
     void toggleDragHoverPropertyAndUpdateStyle(bool enabled);
     void resetHoverIndexAndDragMoveResult();
