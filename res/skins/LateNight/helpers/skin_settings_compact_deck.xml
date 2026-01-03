@@ -73,6 +73,12 @@ Description:
         <SetVariable name="Setting">[Skin],show_vumeters_compact</SetVariable>
       </Template>
 
+      <Template src="skins:LateNight/helpers/skin_settings_button_2state.xml">
+        <!-- <SetVariable name="TooltipId">show_vinylcontrol</SetVariable> -->
+        <SetVariable name="Text">Cue Button</SetVariable>
+        <SetVariable name="Setting">[Skin],show_cue_button</SetVariable>
+      </Template>
+
       <WidgetGroup><Size>0me,5f</Size></WidgetGroup>
 
       <!-- Spinny -->
