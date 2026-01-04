@@ -462,10 +462,14 @@ QModelIndex PlaylistFeature::constructChildModel(int selectedId) {
 }
 
 void PlaylistFeature::decorateChild(TreeItem* item, int playlistId) {
-    if (m_playlistDao.isPlaylistLocked(playlistId)) {
+    if (m_playlistDao.getPrepPlaylistId() == playlistId) {
+        if (m_playlistDao.isPlaylistLocked(playlistId)) {
+            item->setIcon(QIcon(":/images/library/ic_heart_cyan_locked.svg"));
+        } else {
+            item->setIcon(QIcon(":/images/library/ic_heart_cyan.svg"));
+        }
+    } else if (m_playlistDao.isPlaylistLocked(playlistId)) {
         item->setIcon(QIcon(":/images/library/ic_library_locked_tracklist.svg"));
-    } else if (m_playlistDao.getPrepPlaylistId() == playlistId) {
-        item->setIcon(QIcon(":/images/library/ic_heart_cyan.svg"));
     } else {
         item->setIcon(QIcon());
     }

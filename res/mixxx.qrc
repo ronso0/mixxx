@@ -15,6 +15,7 @@
         <file>images/library/ic_heart_disabled.svg</file>
         <!-- heart for Prep playlist, sidebar -->
         <file>images/library/ic_heart_cyan.svg</file>
+        <file>images/library/ic_heart_cyan_locked.svg</file>
         <!-- Hearts for splashscreen -->
         <!-- Use PNG, SVG won't show black, blurred background filter -->
         <file>images/library/ic_heart_cyan_xxl.png</file>

@@ -28,7 +28,7 @@ QPushButton#LibraryBPMButton:checked {
 }
 
 QPushButton#LibraryBPMButton:!checked {
-  image: url(:/images/library/ic_library_unlocked.svg);
+  icon: url(:/images/library/ic_library_unlocked.svg);
 }
 
 
