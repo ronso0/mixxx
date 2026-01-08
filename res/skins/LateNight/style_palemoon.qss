@@ -164,6 +164,7 @@ QAbstractScrollArea::corner {
 #OverviewBox,
 #OverviewBoxMini,
 #KeyText,
+WBeatSpinBox,
 WCueMenuPopup #CueLabelEdit {
   border-top: 1px solid #0d0d0d;
   border-left: 1px solid #121212;
@@ -799,9 +800,11 @@ WBeatSpinBox,
   }
 WBeatSpinBox {
   margin: 1px 0px 1px 1px;
-  padding: 0px -17px 2px 1px;
-  border-width: 3px 19px 2px 3px;
-  border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_spinbox.svg) 3 19 2 3;
+  /* Buttons are disabled in xml (-> c++) so we don't need the offset
+  padding: 0px 0px 1px 2px;
+  /*padding: 0px -17px 2px 1px;*/
+  /*border-width: 3px 19px 2px 3px;*/
+  /*border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_spinbox.svg) 3 19 2 3;*/
 }
 #spinBoxTransition {
   width: 24px;
@@ -811,9 +814,11 @@ WBeatSpinBox {
   border-width: 3px 19px 2px 3px;
   border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_spinbox_autodj.svg) 3 19 2 3;
   }
-  WBeatSpinBox:focus,
   #spinBoxTransition:focus {
     border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_spinbox_focus_blue.svg) 3 19 2 3;
+  }
+  WBeatSpinBox:focus {
+    border: 2px solid #257b82;
   }
 
 WBeatSpinBox::up-button,
