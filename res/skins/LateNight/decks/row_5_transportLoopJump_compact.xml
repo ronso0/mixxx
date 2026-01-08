@@ -137,6 +137,7 @@
                 <MinimumSize>46,26</MinimumSize>
                 <MaximumSize>72,26</MaximumSize>
                 <Alignment>center</Alignment>
+                <ShowButtons>no</ShowButtons>
                 <Value><Variable name="Group"/>,beatjump_size</Value>
               </BeatSpinBox>
             </Children>
@@ -174,6 +175,7 @@
                 <MinimumSize>46,26</MinimumSize>
                 <MaximumSize>72,26</MaximumSize>
                 <Alignment>center</Alignment>
+                <ShowButtons>no</ShowButtons>
                 <Value><Variable name="Group"/>,beatloop_size</Value>
                 <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
                 <Connection>
