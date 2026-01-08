@@ -9,7 +9,7 @@ Description:
     <Layout>vertical</Layout>
     <Children>
 
-      <WidgetGroup><Size>0me,18f</Size></WidgetGroup>
+      <!-- <WidgetGroup><Size>0me,18f</Size></WidgetGroup> -->
 
       <!-- Loop Controls in compact decks -->
       <Template src="skins:LateNight/helpers/skin_settings_button_2state.xml">
