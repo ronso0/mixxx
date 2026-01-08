@@ -10,20 +10,6 @@
         <Size>me,min</Size>
         <Children>
 
-          <Template src="skins:LateNight/controls/button_2state.xml">
-            <SetVariable name="TooltipId">maximize_library</SetVariable>
-            <SetVariable name="ObjectName">GuiToggleButton</SetVariable>
-            <SetVariable name="Size">80f,20f</SetVariable>
-            <SetVariable name="state_0_text">BIG LIBRARY</SetVariable>
-            <SetVariable name="state_1_text">BIG LIBRARY</SetVariable>
-            <SetVariable name="ConfigKey">[Skin],show_maximized_library</SetVariable>
-          </Template>
-
-          <WidgetGroup>
-            <ObjectName>ToolbarSeparator</ObjectName>
-            <Size>12f,9min</Size>
-          </WidgetGroup>
-
           <WidgetGroup><!-- GUI toggles with regular library -->
             <ObjectName>ToolBarSection</ObjectName>
             <SizePolicy>min,min</SizePolicy>
