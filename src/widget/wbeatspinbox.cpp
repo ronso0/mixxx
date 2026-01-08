@@ -64,6 +64,12 @@ void WBeatSpinBox::setup(const QDomNode& node, const SkinContext& context) {
         }
     }
 
+    // Allow to hide up/down buttons
+    const QString showButtonsStr = context.selectString(node, "ShowButtons");
+    if (showButtonsStr == "false" || showButtonsStr == "no") {
+        setButtonSymbols(QAbstractSpinBox::NoButtons);
+    }
+
     m_scaleFactor = context.getScaleFactor();
     qobject_cast<WBeatLineEdit*>(lineEdit())->setScaleFactor(m_scaleFactor);
 }
