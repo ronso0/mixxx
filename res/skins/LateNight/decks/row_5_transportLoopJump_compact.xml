@@ -136,14 +136,8 @@
                 <SizePolicy>me,min</SizePolicy>
                 <MinimumSize>46,26</MinimumSize>
                 <MaximumSize>72,26</MaximumSize>
-                <Align>center</Align>
                 <Alignment>center</Alignment>
                 <Value><Variable name="Group"/>,beatjump_size</Value>
-                <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
-                <Connection>
-                  <ConfigKey><Variable name="Group"/>,track_loaded</ConfigKey>
-                  <BindProperty>highlight</BindProperty>
-                </Connection> -->
               </BeatSpinBox>
             </Children>
             <Connection>
@@ -179,6 +173,7 @@
                 <SizePolicy>me,min</SizePolicy>
                 <MinimumSize>46,26</MinimumSize>
                 <MaximumSize>72,26</MaximumSize>
+                <Alignment>center</Alignment>
                 <Value><Variable name="Group"/>,beatloop_size</Value>
                 <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
                 <Connection>

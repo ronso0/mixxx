@@ -44,6 +44,26 @@ WBeatSpinBox::WBeatSpinBox(QWidget* parent,
 
 void WBeatSpinBox::setup(const QDomNode& node, const SkinContext& context) {
     Q_UNUSED(node);
+
+    // Alignment
+    QString alignment;
+    if (context.hasNodeSelectString(node, "Alignment", &alignment)) {
+        alignment = alignment.toLower();
+        if (alignment == "right") {
+            setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            lineEdit()->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        } else if (alignment == "center") {
+            setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+            lineEdit()->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+        } else if (alignment == "left") {
+            setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            lineEdit()->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        } else {
+            qDebug() << "WLabel::setup(): Alignment =" << alignment
+                     << " unknown, use right, center or left";
+        }
+    }
+
     m_scaleFactor = context.getScaleFactor();
     qobject_cast<WBeatLineEdit*>(lineEdit())->setScaleFactor(m_scaleFactor);
 }
