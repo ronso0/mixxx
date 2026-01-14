@@ -839,24 +839,40 @@ void LibraryControl::appendTrackToPrepPlaylist(TrackId id) {
         pixmap = QPixmap(":/images/library/ic_heart_broken_xxl.png");
     }
 
+    // Use start timer for both cases, set interval to 300 ms if the screen is visible
+    int timeout = 5;
     if (m_prepSplashScreen->isVisible()) {
         m_prepSplashScreen->close();
         m_prepSplashScreenTimer->stop();
-        QTimer::singleShot(300,
-                Qt::CoarseTimer,
-                this,
-                [this, pixmap]() {
-                    m_prepSplashScreen->setPixmap(pixmap);
-                    m_prepSplashScreen->show();
-                    m_prepSplashScreen->raise();
-                    m_prepSplashScreenTimer->start();
-                });
-    } else {
-        m_prepSplashScreen->setPixmap(pixmap);
-        m_prepSplashScreen->show();
-        m_prepSplashScreen->raise();
-        m_prepSplashScreenTimer->start();
+        timeout = 300;
     }
+    QTimer::singleShot(timeout,
+            Qt::CoarseTimer,
+            this,
+            [this, group, pixmap]() {
+                m_prepSplashScreen->setPixmap(pixmap);
+                // TODO also show track artist + title
+                // requires a v-boxlayout with
+                //         [image]
+                //      prep playlist name
+                //           +/-
+                //          title
+                //          artist
+
+                m_prepSplashScreen->show();
+                m_prepSplashScreen->raise();
+                m_prepSplashScreenTimer->start();
+
+                // move SplashScreen to related deck / library
+                // decks: 1/4 or 3/4 of window width, 1/4 of height
+                // library: h-center, 3/4 of height
+                int deckNum = -1;
+                if (group.isEmpty() && PlayerManager::isDeckGroup(group, &deckNum) && deckNum > 0) {
+                    // m_prepSplashScreen->move()
+                } else {
+                    // m_prepSplashScreen->move()
+                }
+            });
 }
 
 void LibraryControl::slotSelectNextTrack(double v) {
