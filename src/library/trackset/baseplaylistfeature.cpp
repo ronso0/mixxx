@@ -825,8 +825,8 @@ QString BasePlaylistFeature::fetchPlaylistLabel(int playlistId) {
 }
 
 void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
-    // qDebug() << "BasePlaylistFeature::updateChildModel() for"
-    //          << playlistIds.count() << "playlist(s)";
+    qWarning() << "BasePlaylistFeature::updateChildModel() for"
+               << playlistIds.count() << "playlist(s)";
     if (playlistIds.isEmpty()) {
         return;
     }
@@ -844,6 +844,7 @@ void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
                 id = pChild->getData().toInt(&ok);
                 if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
                     label = fetchPlaylistLabel(id);
+                    qWarning() << "--> update playlist" << label;
                     pChild->setLabel(label);
                     decorateChild(pChild, id);
                     markTreeItem(pChild);
@@ -853,6 +854,7 @@ void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
             id = pTreeItem->getData().toInt(&ok);
             if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
                 label = fetchPlaylistLabel(id);
+                qWarning() << "--> update playlist" << label;
                 pTreeItem->setLabel(label);
                 decorateChild(pTreeItem, id);
                 markTreeItem(pTreeItem);
