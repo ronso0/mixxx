@@ -360,7 +360,7 @@ void SetlogFeature::decorateChild(TreeItem* item, int playlistId) {
 
 /// Invoked on startup to create new current playlist and by "Finish current and start new"
 void SetlogFeature::slotGetNewPlaylist() {
-    // qDebug() << "slotGetNewPlaylist() successfully triggered !";
+    qWarning() << "SetlogFeature::slotGetNewPlaylist() successfully triggered !";
 
     // create a new playlist for today
     QString set_log_name = QDate::currentDate().toString(Qt::ISODate);
@@ -372,15 +372,15 @@ void SetlogFeature::slotGetNewPlaylist() {
         set_log_name = set_log_name_format.arg(++i);
     }
 
-    // qDebug() << "Creating session history playlist name:" << set_log_name;
+    qWarning() << "--> Creating session history playlist name:" << set_log_name;
     int previousPlaylistid = m_currentPlaylistId;
     m_currentPlaylistId = m_playlistDao.createPlaylist(
             set_log_name, PlaylistDAO::PLHT_SET_LOG);
 
     if (m_currentPlaylistId == kInvalidPlaylistId) {
-        qDebug() << "Setlog playlist Creation Failed";
-        qDebug() << "An unknown error occurred while creating playlist: "
-                 << set_log_name;
+        qWarning() << "--> playlist Creation Failed";
+        qWarning() << "--> An unknown error occurred while creating playlist: "
+                   << set_log_name;
     } else {
         m_recentTracks.clear();
         m_playlistDao.setCurrentHistoryPlaylistId(m_currentPlaylistId);
@@ -727,8 +727,8 @@ void SetlogFeature::slotPlaylistTableChanged(int playlistId, PlaylistDAO::Hidden
 }
 
 void SetlogFeature::slotPlaylistContentOrLockChanged(const QSet<int>& playlistIds) {
-    // qDebug() << "SetlogFeature::slotPlaylistContentOrLockChanged() for"
-    //          << playlistIds.count() << "playlist(s)";
+    qWarning() << "SetlogFeature::slotPlaylistContentOrLockChanged() for"
+               << playlistIds.count() << "playlist(s)";
     QSet<int> idsToBeUpdated;
     for (const auto playlistId : std::as_const(playlistIds)) {
         if (m_playlistDao.getHiddenType(playlistId) == PlaylistDAO::PLHT_SET_LOG) {
