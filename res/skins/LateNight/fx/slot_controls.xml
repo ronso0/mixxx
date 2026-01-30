@@ -29,21 +29,24 @@
         <!-- <MaximumSize>230,</MaximumSize> -->
         <Children>
 
-
-          <WidgetGroup>
+          <!-- ronso0: No need for this with the S4mk3 mapping
+                      Let's just center the Enable button in the available space -->
+          <!-- <WidgetGroup>
             <ObjectName>FxFocusButtonBox</ObjectName>
             <Layout>vertical</Layout>
             <SizePolicy>f,f</SizePolicy>
             <Children>
-              <Template src="skins:LateNight/fx/focus_button.xml"/>
+              <Template src="skins:LateNight/fx/focus_button.xml"/> -->
               <!-- Focus button placeholder to v-align slot controls in units 1/2 (3/4)
                    if show_focus differs for the two -->
-              <WidgetGroup>
+              <!-- <WidgetGroup>
                 <Layout>horizontal</Layout>
                 <Size>16f,0f</Size>
               </WidgetGroup>
             </Children>
-          </WidgetGroup>
+          </WidgetGroup> -->
+
+          <WidgetGroup><SizePolicy>me,me</SizePolicy></WidgetGroup>
 
           <Template src="skins:LateNight/controls/button_2state.xml">
             <SetVariable name="TooltipId">EffectSlot_enabled</SetVariable>
@@ -52,6 +55,8 @@
             <SetVariable name="Size">26f,26f</SetVariable>
             <SetVariable name="ConfigKey">[<Variable name="FxRack_FxUnit_FxNum"/>],enabled</SetVariable>
           </Template>
+
+          <WidgetGroup><SizePolicy>me,me</SizePolicy></WidgetGroup>
 
           <Template src="skins:LateNight/fx/meta_knob.xml"/>
 
