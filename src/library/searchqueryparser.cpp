@@ -133,10 +133,16 @@ void SearchQueryParser::setSearchColumns(QStringList searchColumns) {
     // we need to create a filtered columns list that are handled differently
     for (int i = 0; i < m_queryColumns.size(); ++i) {
         if (m_queryColumns[i] == "crate") {
-            m_searchCrates = true;
+            qWarning() << "     .";
+            qWarning() << "     .setSearchColumns, m_searchCrates = false";
+            qWarning() << "     .";
+            //            m_searchCrates = true;
             m_queryColumns.removeAt(i);
             break;
         }
+        // if (m_queryColumns[i] == "grouping") {
+        //     m_queryColumns.removeAt(i);
+        // }
     }
 }
 
@@ -265,6 +271,8 @@ void SearchQueryParser::parseTokens(QStringList tokens,
                 }
             }
         } else {
+            qWarning() << "     .";
+            qWarning() << "     .no filterRegEx match. negate?" << negate;
             // If no advanced search feature matched, treat it as a search term.
             if (negate) {
                 token = token.mid(1);
@@ -290,10 +298,12 @@ void SearchQueryParser::parseTokens(QStringList tokens,
         }
         if (pNode) {
             if (negate) {
+                qWarning() << "     -> negate, create NotNode";
                 pNode = std::make_unique<NotNode>(std::move(pNode));
             }
             pQuery->addNode(std::move(pNode));
         }
+        qWarning() << "     .";
     }
 }
 

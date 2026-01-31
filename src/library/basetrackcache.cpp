@@ -492,13 +492,73 @@ void BaseTrackCache::filterAndSort(const QSet<TrackId>& trackIds,
     if (!filter.isEmpty()) {
         filter.prepend("WHERE ");
     }
+    qWarning() << "--- ";
+    qWarning() << this << "filterAndSort()";
+    qWarning() << "--- ";
+    qWarning() << "-- dirty tracks:" << dirtyTracks.size();
+    qWarning() << "--- ";
+    qWarning() << "-- searchQuery:  " << searchQuery;
+    qWarning() << "-- searchQuery:  " << searchQuery;
+    qWarning() << "-- extraFilter:  " << extraFilter;
+    qWarning() << "-- --- ";
+    qWarning() << "-- parsed filter:" << filter;
+    qWarning() << "--- ";
 
-    QString queryString = QString("SELECT %1 FROM %2 %3 %4")
-            .arg(m_idColumn, m_tableName, filter, orderByClause);
+    QSqlQuery countQuery(m_database); // 'db' is your QSqlDatabase
+                                      //    const QString countQueryStr =
+                                      //            QString("SELECT COUNT(*)
+                                      //            FROM %1").arg(m_tableName);
+    const QString countQueryStr =
+            QString("SELECT COUNT(DISTINCT id) FROM %1").arg(m_tableName);
+    countQuery.exec(countQueryStr);
+    countQuery.next();
+    qWarning() << "--- rows in" << m_tableName;
+    qWarning() << "--- " << countQuery.value(0).toInt();
+    qWarning() << "--- ";
+
+    QString queryString;
+    if (searchQuery == "-xxxy") {
+        queryString = QString(
+                "SELECT id FROM library_cache_view "
+                "WHERE NOT ("
+                "instr(COALESCE(LOWER(artist), ''), LOWER('lhglsdfifc8796xxyÜ')) > 0 OR "
+                "instr(COALESCE(LOWER(album), ''), LOWER('lhglsdfifc8796xxyÜ')) > 0 OR "
+                "instr(COALESCE(LOWER(album_artist), ''), LOWER('lhglsdfifc8796xxyÜ')) > 0 OR "
+                "instr(COALESCE(LOWER(location), ''), LOWER('lhglsdfifc8796xxyÜ')) > 0 OR "
+                "instr(COALESCE(LOWER(grouping), ''), LOWER('lhglsdfifc8796xxyÜ')) > 0 OR "
+                "instr(COALESCE(LOWER(comment), ''), LOWER('lhglsdfifc8796xxyÜ')) > 0 OR "
+                "instr(COALESCE(LOWER(title), ''), LOWER('lhglsdfifc8796xxyÜ')) > 0 OR "
+                "instr(COALESCE(LOWER(genre), ''), LOWER('lhglsdfifc8796xxyÜ')) > 0"
+                ")");
+        ////                "SELECT %1 FROM %2 WHERE "
+        ////                "((artist NOT LIKE '%xxxy%') AND "
+        ////                "(album NOT LIKE '%xxxy%') AND "
+        ////                "(album_artist NOT LIKE '%xxxy%') AND "
+        ////                "(location NOT LIKE '%xxxy%') AND "
+        ////                "(grouping NOT LIKE '%xxxy%') AND "
+        ////                "(comment NOT LIKE '%xxxy%') AND "
+        ////                "(title NOT LIKE '%xxxy%') AND "
+        ////                "(genre NOT LIKE '%xxxy%')) "
+        ////                "%3").arg(m_idColumn, m_tableName, orderByClause);
+        //                "SELECT %1 FROM %2 WHERE "
+        //                "artist NOT LIKE '%xxxy%' AND "
+        //                "album NOT LIKE '%xxxy%' AND "
+        //                "album_artist NOT LIKE '%xxxy%' AND "
+        //                "location NOT LIKE '%xxxy%' AND "
+        //                "comment NOT LIKE '%xxxy%' AND "
+        //                "title NOT LIKE '%xxxy%' "
+        ////                "%3").arg(m_idColumn, m_tableName, orderByClause);
+        //                ).arg(m_idColumn, m_tableName);
+    } else {
+        queryString = QString("SELECT %1 FROM %2 %3 %4")
+                              .arg(m_idColumn, m_tableName, filter, orderByClause);
+    }
 
     if (sDebug) {
-        qDebug() << this << "select() executing:" << queryString;
+        qWarning() << "-- executing:" << queryString;
     }
+    qWarning() << "-- executing:";
+    qWarning() << "   " << queryString;
 
     QSqlQuery query(m_database);
     // This causes a memory savings since QSqlCachedResult (what QtSQLite uses)
@@ -516,6 +576,7 @@ void BaseTrackCache::filterAndSort(const QSet<TrackId>& trackIds,
     if (sDebug) {
         qDebug() << "Rows returned:" << rows;
     }
+    qWarning() << "-- Rows returned:" << rows;
 
     m_trackOrder.resize(0); // keeps allocated memory
     trackToIndex->clear();

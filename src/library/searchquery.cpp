@@ -164,6 +164,10 @@ QString NotNode::toSql() const {
         // The component term needs to be wrapped into parentheses,
         // but the whole expression does not. The composite node is
         // always responsible for proper wrapping into parentheses!
+        qWarning() << "     .";
+        qWarning() << "     NotNode to Sql";
+        qWarning() << "     " << QString("NOT (" % sql % ")");
+        qWarning() << "     .";
         return "NOT (" % sql % ")";
     }
 }
@@ -367,6 +371,10 @@ bool NumericFilterNode::match(const TrackPointer& pTrack) const {
         }
 
         double dValue = value.toDouble();
+        if (sqlColumn == "rating") {
+            qWarning() << "num query: match rating" << m_dOperatorArgument
+                       << "| value:" << dValue;
+        }
         if (m_bOperatorQuery) {
             if ((m_operator == "=" && dValue == m_dOperatorArgument) ||
                     (m_operator == "<" && dValue < m_dOperatorArgument) ||
