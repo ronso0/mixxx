@@ -6,11 +6,11 @@
 #include <QScopedPointer>
 
 #include "control/controlproxy.h"
+#include "controllers/keyboard/keyboardeventfilter.h"
 #include "preferences/configobject.h"
 #include "preferences/usersettings.h"
 
 class QAction;
-class KeyboardEventFilter;
 
 class VisibilityControlConnection : public QObject {
     Q_OBJECT
@@ -37,7 +37,7 @@ class WMainMenuBar : public QMenuBar {
   public:
     WMainMenuBar(QWidget* pParent,
             UserSettingsPointer pConfig,
-            std::shared_ptr<KeyboardEventFilter> pKbd);
+            KeyboardEventFilterPointer pKbd);
 #ifndef __APPLE__
     void hideMenuBar();
     void showMenuBar();
@@ -115,7 +115,7 @@ class WMainMenuBar : public QMenuBar {
     UserSettingsPointer m_pConfig;
     QAction* m_pViewKeywheel;
     // TODO KeyboardEventFilterPointer ??
-    std::shared_ptr<KeyboardEventFilter> m_pKeyboard;
+    KeyboardEventFilterPointer m_pKeyboard;
     QList<QAction*> m_loadToDeckActions;
     QList<QAction*> m_vinylControlEnabledActions;
 };

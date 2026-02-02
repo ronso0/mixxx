@@ -2,12 +2,12 @@
 
 #include <memory>
 
+#include "controllers/keyboard/keyboardeventfilter.h"
 #include "preferences/settingsmanager.h"
 #include "util/timer.h"
 
 class QApplication;
 class CmdlineArgs;
-class KeyboardEventFilter;
 class EffectsManager;
 class EngineMixer;
 class SoundManager;
@@ -40,7 +40,7 @@ class CoreServices : public QObject {
     /// The secondary long run which should be called after displaying the start up screen
     void initialize(QApplication* pApp);
 
-    std::shared_ptr<KeyboardEventFilter> getKeyboardEventFilter() const {
+    KeyboardEventFilterPointer getKeyboardEventFilter() const {
         return m_pKeyboardEventFilter;
     }
 
@@ -137,7 +137,7 @@ class CoreServices : public QObject {
     std::shared_ptr<TrackCollectionManager> m_pTrackCollectionManager;
     std::shared_ptr<Library> m_pLibrary;
 
-    std::shared_ptr<KeyboardEventFilter> m_pKeyboardEventFilter;
+    KeyboardEventFilterPointer m_pKeyboardEventFilter;
 
     std::shared_ptr<mixxx::ScreensaverManager> m_pScreensaverManager;
 

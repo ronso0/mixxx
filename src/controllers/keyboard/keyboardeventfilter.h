@@ -121,3 +121,5 @@ class KeyboardEventFilter : public QObject {
     // Multi-hash of key sequence to
     QMultiHash<ConfigValueKbd, ConfigKey> m_keySequenceToControlHash;
 };
+
+typedef std::shared_ptr<KeyboardEventFilter> KeyboardEventFilterPointer;

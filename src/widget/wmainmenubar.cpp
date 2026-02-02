@@ -80,7 +80,7 @@ QUrl documentationUrl(
 
 WMainMenuBar::WMainMenuBar(QWidget* pParent,
         UserSettingsPointer pConfig,
-        std::shared_ptr<KeyboardEventFilter> pKbd)
+        KeyboardEventFilterPointer pKbd)
         : QMenuBar(pParent),
           m_pConfig(pConfig),
           m_pKeyboard(std::move(pKbd)) {
