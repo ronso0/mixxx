@@ -122,12 +122,33 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
           m_pHeadSplitEnabled(std::make_unique<ControlPushButton>(
                   ConfigKey(group, "headSplit"), true, 0.0)),
 
-          m_pKeylockEngine(std::make_unique<ControlObject>(
-                  ConfigKey(kAppGroup, QStringLiteral("keylock_engine")),
+          m_pKeylockEngine1(std::make_unique<ControlObject>(
+                  ConfigKey(QStringLiteral("[Channel1]"), QStringLiteral("keylock_engine")),
                   false,
                   false,
                   static_cast<double>(pConfig->getValue(
-                          ConfigKey(group, "keylock_engine"),
+                          ConfigKey(QStringLiteral("[Channel1]"), "keylock_engine"),
+                          EngineBuffer::defaultKeylockEngine())))),
+          m_pKeylockEngine2(std::make_unique<ControlObject>(
+                  ConfigKey(QStringLiteral("[Channel2]"), QStringLiteral("keylock_engine")),
+                  false,
+                  false,
+                  static_cast<double>(pConfig->getValue(
+                          ConfigKey(QStringLiteral("[Channel2]"), "keylock_engine"),
+                          EngineBuffer::defaultKeylockEngine())))),
+          m_pKeylockEngine3(std::make_unique<ControlObject>(
+                  ConfigKey(QStringLiteral("[Channel3]"), QStringLiteral("keylock_engine")),
+                  false,
+                  false,
+                  static_cast<double>(pConfig->getValue(
+                          ConfigKey(QStringLiteral("[Channel3]"), "keylock_engine"),
+                          EngineBuffer::defaultKeylockEngine())))),
+          m_pKeylockEngine4(std::make_unique<ControlObject>(
+                  ConfigKey(QStringLiteral("[Channel4]"), QStringLiteral("keylock_engine")),
+                  false,
+                  false,
+                  static_cast<double>(pConfig->getValue(
+                          ConfigKey(QStringLiteral("[Channel4]"), "keylock_engine"),
                           EngineBuffer::defaultKeylockEngine())))),
           m_mainGainOld(0.0),
           m_boothGainOld(0.0),
