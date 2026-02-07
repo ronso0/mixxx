@@ -353,6 +353,16 @@ bool WSearchLineEdit::eventFilter(QObject* obj, QEvent* event) {
 
 void WSearchLineEdit::keyPressEvent(QKeyEvent* keyEvent) {
     int currentTextIndex = 0;
+    // Alt combos that are not global combos (eg. Alt+Tab) don't have any effect
+    // here, so we can safely ignore and forward to the parent so it gets pickd
+    // up by KeyboardEventFilter.
+    // Specific purpose: make Alt+1/2 work while searchbar is focused
+    if (keyEvent->modifiers().testFlag(Qt::AltModifier)) {
+        if (parent()) {
+            parent()->event(keyEvent);
+            return;
+        }
+    }
     switch (keyEvent->key()) {
     // Ctrl + F is handled in slotSetShortcutFocus()
     case Qt::Key_Backspace:
