@@ -97,7 +97,7 @@
                   </TrackProperty>
                   <TrackProperty>
                     <ObjectName>CommentText</ObjectName>
-                    <Size>0me,24f</Size>
+                    <Size>10me,24f</Size>
                     <TooltipId>track_comment</TooltipId>
                     <Property>comment</Property>
                     <Alignment>center</Alignment>
