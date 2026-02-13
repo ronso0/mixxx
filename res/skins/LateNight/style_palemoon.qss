@@ -745,6 +745,12 @@ WTrackProperty[selected="true"],
 #DeckRow_2_3_ArtistTitleTime {
   margin: 0px 0px 2px 0px;
   }
+  #ArtistRow {
+    qproperty-layoutSpacing: 15px;
+  }
+  #DurationGutter {
+    margin-left: 15px;
+  }
   #ArtistText,
   #TitleText {
     /* for some reason the padding/margin is doubled in the skin... */
