@@ -32,10 +32,6 @@ Variables:
         <ObjectName>FxFlowHeader</ObjectName>
       </Label>
 
-      <Label>
-        <ObjectName>FxFlowHeader</ObjectName>
-      </Label>
-
     </Children>
   </WidgetGroup>
 </Template>
