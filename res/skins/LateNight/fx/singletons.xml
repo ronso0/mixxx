@@ -52,42 +52,53 @@
               <WidgetGroup>
                 <ObjectName>FxUnitHeader</ObjectName>
                 <SizePolicy>me,min</SizePolicy>
-                <Layout>horizontal</Layout>
+                <Layout>vertical</Layout>
                 <Children>
                   <WidgetGroup>
-                    <SizePolicy>me,min</SizePolicy>
-                    <MinimumSize>3,0</MinimumSize>
-                  </WidgetGroup>
-                  <Label>
-                    <ObjectName>FxUnitLabel</ObjectName>
+                    <Layout>horizontal</Layout>
                     <SizePolicy>min,me</SizePolicy>
-                    <MinimunSize>30,20</MinimunSize>
-                    <MaximumSize>38,</MaximumSize>
-                    <Text>FX&#8202;<Variable name="FxUnit"/></Text>
-                    <Connection>
-                      <ConfigKey>[<Variable name="FxRack_FxUnit"/>],controller_input_active</ConfigKey>
-                      <BindProperty>highlight</BindProperty>
-                    </Connection>
-                  </Label>
-                  <WidgetGroup>
-                    <SizePolicy>me,min</SizePolicy>
-                    <MinimumSize>1,0</MinimumSize>
+                    <MinimunSize>16,33</MinimunSize>
+                    <MaximumSize>,33</MaximumSize>
+                    <Children>
+                      <WidgetGroup>
+                        <SizePolicy>me,min</SizePolicy>
+                        <MinimumSize>3,0</MinimumSize>
+                      </WidgetGroup>
+                      <Label>
+                        <ObjectName>FxUnitLabel</ObjectName>
+                        <SizePolicy>min,me</SizePolicy>
+                        <MinimunSize>30,20</MinimunSize>
+                        <MaximumSize>38,33</MaximumSize>
+                        <Text>FX&#8202;<Variable name="FxUnit"/></Text>
+                        <Connection>
+                          <ConfigKey>[<Variable name="FxRack_FxUnit"/>],controller_input_active</ConfigKey>
+                          <BindProperty>highlight</BindProperty>
+                        </Connection>
+                      </Label>
+                      <WidgetGroup>
+                        <SizePolicy>me,min</SizePolicy>
+                        <MinimumSize>1,0</MinimumSize>
+                      </WidgetGroup>
+                      <PushButton>
+                        <ObjectName>FxExpand</ObjectName>
+                        <Size>16f,18me</Size>
+                        <NumberStates>2</NumberStates>
+                        <State>
+                          <Number>0</Number>
+                        </State>
+                        <State>
+                          <Number>1</Number>
+                        </State>
+                        <Connection>
+                          <ConfigKey>[<Variable name="FxRack_FxUnit"/>],show_parameters</ConfigKey>
+                          <ButtonState>LeftButton</ButtonState>
+                        </Connection>
+                      </PushButton>
+                    </Children>
                   </WidgetGroup>
-                  <PushButton>
-                    <ObjectName>FxExpand</ObjectName>
-                    <Size>16f,18me</Size>
-                    <NumberStates>2</NumberStates>
-                    <State>
-                      <Number>0</Number>
-                    </State>
-                    <State>
-                      <Number>1</Number>
-                    </State>
-                    <Connection>
-                      <ConfigKey>[<Variable name="FxRack_FxUnit"/>],show_parameters</ConfigKey>
-                      <ButtonState>LeftButton</ButtonState>
-                    </Connection>
-                  </PushButton>
+                  <WidgetGroup>
+                    <SizePolicy>me,i</SizePolicy>
+                  </WidgetGroup>
                 </Children>
                 <Connection>
                   <ConfigKey>[<Variable name="FxRack_FxUnit"/>],controller_input_active</ConfigKey>
@@ -107,7 +118,7 @@
     <Children>
       <WidgetGroup>
         <ObjectName>MixmodePflContainer</ObjectName>
-        <SizePolicy>max,min</SizePolicy>
+        <SizePolicy>min,min</SizePolicy>
         <Layout>horizontal</Layout>
         <Children>
           <PushButton>
