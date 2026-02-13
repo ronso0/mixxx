@@ -84,7 +84,6 @@
 #VuMeterDeck3_Compact,
 #VuMeterDeck4_Compact,
 #VuMeterMain_Compact,
-#FxUnitHeaderCollapsed,
 #FxUnitHeaderExpanded,
 #SamplerExpandBox,
 #SearchLineBox,
@@ -396,14 +395,18 @@ WSearchLineEdit {
 #FxUnit2 #FxUnitLabel {
   color: #028392;
   }
-  #FxUnit1 #FxUnitControlsCollapsed,
-  #FxUnit2 #FxUnitControlsCollapsed,
   #FxUnit1 #FxSlotControls[highlight="1"],
   #FxUnit2 #FxSlotControls[highlight="1"],
   #FxUnit1 #FxParamsToHeaderSpacer,
   #FxUnit2 #FxParamsToHeaderSpacer {
     background-color: #023d4a;
     }
+  /* darker blue for header */
+  #FxUnit1 #FxUnitControlsCollapsed,
+  #FxUnit2 #FxUnitControlsCollapsed {
+    /* use same color for style/fx_flow_h_12_header.svg */
+    background-color: #00262e;
+  }
   #FxUnit1 #FxUnitControlsCollapsed,
   #FxUnit2 #FxUnitControlsCollapsed {
     border-top: 2px solid transparent;
@@ -414,7 +417,15 @@ WSearchLineEdit {
     }
   #FxUnit1 #FxUnitHeader[highlight="1"],
   #FxUnit2 #FxUnitHeader[highlight="1"] {
-    border: 1px solid #028392;
+    border-right: 1px solid #028392;
+    border-top: 1px solid qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+      stop: 0 #00262e,
+      stop: 0.6 #028392,
+      stop: 1 #028392);
+    border-bottom: 1px solid qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+      stop: 0 #00262e,
+      stop: 0.6 #028392,
+      stop: 1 #028392);
     border-left: 0px;
   }
 #FxUnit3 #FxUnitLabel,
@@ -422,14 +433,17 @@ WSearchLineEdit {
   color: #b802c5;
   }
   /* Dark purple for effect ON highlight Fx34 */
-  #FxUnit3 #FxUnitControlsCollapsed,
-  #FxUnit4 #FxUnitControlsCollapsed,
   #FxUnit3 #FxSlotControls[highlight="1"],
   #FxUnit4 #FxSlotControls[highlight="1"],
   #FxUnit3 #FxParamsToHeaderSpacer,
   #FxUnit4 #FxParamsToHeaderSpacer {
     background-color: #500857;
     }
+  /* even darker purple for the header */
+  #FxUnit3 #FxUnitControlsCollapsed,
+  #FxUnit4 #FxUnitControlsCollapsed {
+    background-color: #3c0640;
+  }
     #FxUnit3 #FxUnitControlsCollapsed,
     #FxUnit4 #FxUnitControlsCollapsed {
       border-top: 2px solid transparent;
@@ -440,13 +454,16 @@ WSearchLineEdit {
     }
   #FxUnit3 #FxUnitHeader[highlight="1"],
   #FxUnit4 #FxUnitHeader[highlight="1"] {
-    border: 1px solid #b802c5;
-    }
-    #FxUnit3 #FxUnitHeader[highlight="1"] {
-      border-left: 0px;
-    }
-    #FxUnit4 #FxUnitHeader[highlight="1"] {
-      border-right: 0px;
+    border-right: 1px solid #b802c5;
+    border-top: 1px solid qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+      stop: 0 #3c0640,
+      stop: 0.6 #b802c5,
+      stop: 1 #b802c5);
+    border-bottom: 1px solid qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+      stop: 0 #3c0640,
+      stop: 0.6 #b802c5,
+      stop: 1 #b802c5);
+    border-left: 0px;
     }
 
   #DeckRateSeparator,
