@@ -486,7 +486,13 @@ void DlgPrefLibrary::slotAddDir() {
             this,
             tr("Choose a music directory"),
             QStandardPaths::writableLocation(QStandardPaths::MusicLocation),
-            QFileDialog::ShowDirsOnly);
+            // ronso0: native xfce 4.14 file picker shows all files
+            // which makes fiding the desired dir a straining voyage de scroll.
+            // This is no matter what QFileDialog options are set, what gtk
+            // stylesheets hacks are applied, if xdgportal is set explicitly.etc.
+            //
+            // Just use the Qt dialog
+            QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog);
     if (!fd.isEmpty()) {
         if (m_pLibrary->requestAddDir(fd)) {
             populateDirList();
