@@ -4017,7 +4017,8 @@ DlgPreferences QTabBar::tab,
 #Skin QDialog QTextBrowser, /* Contributor list in DlgAbout */
 #Skin QDialog QTextEdit, /* Log view in DlgDeveloperTols */
 #Skin QListWidget, /* File list in 'Move to trash' dialog' ? */
-DlgPreferences QTreeWidget,
+DlgPreferences QTreeWidget, /* Pref sidebar */
+DlgPreferences QTreeView, /* List view in QFileDialog used by Pref Library -> Add dir */
 DlgPreferences QListView,
 DlgPreferences QTableView,
 /* we need to set this bg otherwise DlgPrefBroadcast
@@ -4037,7 +4038,8 @@ DlgPreferences QTreeWidget::branch:open:!has-children:has-siblings:selected {
   border-image: none;
   background-color: #202022;
 }
-DlgPreferences QTreeWidget {
+DlgPreferences QTreeWidget,
+DlgPreferences QTreeView {
   show-decoration-selected: 0;
 }
 DlgPreferences QTreeWidget::indicator,
@@ -4066,6 +4068,7 @@ DlgPreferences QTabBar::tab,
 #Skin QDialog QHeaderView,
 #Skin QListWidget,
 DlgPreferences QTreeWidget,
+DlgPreferences QTreeView,
 DlgPreferences QListView,
 DlgPreferences QTableView,
 /* we need to set this otherwise DlgPrefBroadcast
@@ -4134,6 +4137,7 @@ DlgTagFetcher QCheckBox:disabled,
 DlgPreferences QTableView::item:selected,
 DlgPreferences QListView::item:selected,
 DlgPreferences QTreeWidget::item:selected,
+DlgPreferences QTreeView::item:selected,
 DlgTagFetcher QTreeWidget::item:selected {
   color: white;
   background-color: #666669;
