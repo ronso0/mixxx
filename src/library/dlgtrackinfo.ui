@@ -303,9 +303,9 @@
           </item>
 
           <item row="5" column="2">
-           <widget class="QLabel" name="lblKey">
+           <widget class="QLabel" name="lblTrackNumber">
             <property name="text">
-             <string>Key</string>
+             <string>Track #</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -313,7 +313,7 @@
            </widget>
           </item>
           <item row="5" column="3">
-           <widget class="QLineEdit" name="txtKey">
+           <widget class="QLineEdit" name="txtTrackNumber">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -330,9 +330,9 @@
           </item>
 
           <item row="6" column="0">
-           <widget class="QLabel" name="lblTuning">
+           <widget class="QLabel" name="lblGrouping">
             <property name="text">
-             <string>Tuning</string>
+             <string>Grouping</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -340,40 +340,98 @@
            </widget>
           </item>
           <item row="6" column="1">
-           <widget class="QDoubleSpinBox" name="spinTuning">
+           <widget class="QLineEdit" name="txtGrouping">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
-            <property name="toolTip">
-             <string>A4 tuning frequency in Hz. Standard tuning is 440 Hz.</string>
-            </property>
-            <property name="suffix">
-             <string> Hz</string>
-            </property>
-            <property name="decimals">
-             <number>1</number>
-            </property>
-            <property name="minimum">
-             <double>400.000000000000000</double>
-            </property>
-            <property name="maximum">
-             <double>480.000000000000000</double>
-            </property>
-            <property name="singleStep">
-             <double>0.100000000000000</double>
-            </property>
-            <property name="value">
-             <double>400.000000000000000</double>
-            </property>
-            <property name="specialValueText">
-             <string/>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>0</height>
+             </size>
             </property>
            </widget>
           </item>
-          <item row="6" column="2">
+
+          <item row="7" column="0">
+           <widget class="QLabel" name="lblKey">
+            <property name="text">
+             <string>Key</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QWidget">
+            <layout class="QHBoxLayout" name="key_layout">
+
+             <item>
+              <widget class="QLineEdit" name="txtKey">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+              </widget>
+             </item>
+
+             <item>
+              <widget class="QLabel" name="lblTuning">
+               <property name="text">
+                <string>Tuning</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+
+             <item row="7" column="3">
+              <widget class="QDoubleSpinBox" name="spinTuning">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="toolTip">
+                <string>A4 tuning frequency in Hz. Standard tuning is 440 Hz.</string>
+               </property>
+               <property name="suffix">
+                <string> Hz</string>
+               </property>
+               <property name="decimals">
+                <number>1</number>
+               </property>
+               <property name="minimum">
+                <double>400.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>480.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>0.100000000000000</double>
+               </property>
+               <property name="value">
+                <double>400.000000000000000</double>
+               </property>
+               <property name="specialValueText">
+                <string/>
+               </property>
+              </widget>
+             </item>
+
+            </layout>
+           </widget>
+          </item>
+
+          <item row="7" column="2">
            <widget class="QLabel" name="lblTuningCents">
             <property name="text">
              <string>Offset:</string>
@@ -383,7 +441,7 @@
             </property>
            </widget>
           </item>
-          <item row="6" column="3">
+          <item row="7" column="3">
            <widget class="QLabel" name="txtTuningCents">
             <property name="font">
              <font>
@@ -400,58 +458,6 @@
            </widget>
           </item>
 
-          <item row="7" column="0">
-           <widget class="QLabel" name="lblGrouping">
-            <property name="text">
-             <string>Grouping</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="1">
-           <widget class="QLineEdit" name="txtGrouping">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="2">
-           <widget class="QLabel" name="lblTrackNumber">
-            <property name="text">
-             <string>Track #</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="3">
-           <widget class="QLineEdit" name="txtTrackNumber">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="minimumSize">
-             <size>
-              <width>0</width>
-              <height>0</height>
-             </size>
-            </property>
-           </widget>
-          </item>
 
           <item row="8" column="0">
            <widget class="QLabel" name="lblTrackComment">
