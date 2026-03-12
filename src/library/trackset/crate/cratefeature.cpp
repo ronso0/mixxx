@@ -812,9 +812,8 @@ void CrateFeature::slotExportPlaylist() {
     // register a security bookmark.
 
     // check config if relative paths are desired
-    bool useRelativePath =
-            m_pConfig->getValue<bool>(
-                    kUseRelativePathOnExportConfigKey);
+    PlaylistExportFilePathMode filePathMode = m_pConfig->getValue<PlaylistExportFilePathMode>(
+            kUseRelativePathOnExportConfigKey);
 
     // Create list of files of the crate
     // Create a new table model since the main one might have an active search.
@@ -824,7 +823,7 @@ void CrateFeature::slotExportPlaylist() {
     pCrateTableModel->select();
 
     if (fileLocation.endsWith(".csv", Qt::CaseInsensitive)) {
-        ParserCsv::writeCSVFile(fileLocation, pCrateTableModel.get(), useRelativePath);
+        ParserCsv::writeCSVFile(fileLocation, pCrateTableModel.get(), filePathMode);
     } else if (fileLocation.endsWith(".txt", Qt::CaseInsensitive)) {
         ParserCsv::writeReadableTextFile(fileLocation, pCrateTableModel.get(), false);
     } else {
@@ -838,7 +837,7 @@ void CrateFeature::slotExportPlaylist() {
         exportPlaylistItemsIntoFile(
                 fileLocation,
                 playlistItems,
-                useRelativePath);
+                filePathMode);
     }
 }
 
