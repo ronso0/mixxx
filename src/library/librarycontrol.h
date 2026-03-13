@@ -119,6 +119,8 @@ class LibraryControl : public QObject {
 
     void slotTrackRatingChangeRequestRelative(int change);
 
+    void slotRemoveTrackFiles(double value);
+
     // Deprecated navigation slots
     void slotSelectNextTrack(double v);
     void slotSelectPrevTrack(double v);
@@ -209,6 +211,9 @@ class LibraryControl : public QObject {
 
     // Control to show/hide the track menu
     std::unique_ptr<ControlPushButton> m_pShowTrackMenu;
+
+    // Remove selected track files from disk / to Trash
+    std::unique_ptr<ControlPushButton> m_pRemoveTrackFilesFromDisk;
 
     // Controls to navigate search history
     std::unique_ptr<ControlPushButton> m_pSelectHistoryNext;
