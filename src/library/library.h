@@ -181,6 +181,8 @@ class Library: public QObject {
 
     void trackDirectoriesUpdated();
 
+    void showRecordingSettings();
+
   private slots:
       void onPlayerManagerTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);
       void onPlayerManagerTrackAnalyzerIdle();
