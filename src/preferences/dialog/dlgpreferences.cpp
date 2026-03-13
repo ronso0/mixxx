@@ -223,11 +223,17 @@ DlgPreferences::DlgPreferences(
             "ic_preferences_broadcast.svg"));
 #endif // __BROADCAST__
 
-    addPageWidget(PreferencesPage(
-            new DlgPrefRecord(this, m_pConfig),
+    m_pRecordingDlg = std::make_unique<DlgPrefRecord>(this, m_pConfig);
+    m_recordingPage = PreferencesPage(
+            m_pRecordingDlg.get(),
             new QTreeWidgetItem(contentsTreeWidget),
             tr("Recording"),
-            "ic_preferences_recording.svg"));
+            "ic_preferences_recording.svg");
+    addPageWidget(m_recordingPage);
+    connect(pLibrary.get(),
+            &Library::showRecordingSettings,
+            this,
+            &DlgPreferences::showRecordingPage);
 
     addPageWidget(PreferencesPage(
             new DlgPrefBeats(this, m_pConfig),
@@ -329,6 +335,16 @@ void DlgPreferences::showSoundHardwarePage(
 
 void DlgPreferences::showSoundHardwareInputPage() {
     showSoundHardwarePage(mixxx::preferences::SoundHardwareTab::Input);
+}
+
+void DlgPreferences::showRecordingPage() {
+    switchToPage(m_recordingPage.pTreeItem->text(0), m_recordingPage.pDlg);
+    contentsTreeWidget->setCurrentItem(m_recordingPage.pTreeItem);
+    // Unlike showSoundHardwarePage() this is called via signal and we can't
+    // call m_pDlgPref->show() or alike, so show() explicitly here
+    if (!isVisible()) {
+        show();
+    }
 }
 
 bool DlgPreferences::eventFilter(QObject* o, QEvent* e) {
