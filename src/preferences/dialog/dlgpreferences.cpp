@@ -215,11 +215,17 @@ DlgPreferences::DlgPreferences(
             "ic_preferences_broadcast.svg"));
 #endif // __BROADCAST__
 
-    addPageWidget(PreferencesPage(
-            new DlgPrefRecord(this, m_pConfig),
+    m_pRecordingDlg = std::make_unique<DlgPrefRecord>(this, m_pConfig);
+    m_recordingPage = PreferencesPage(
+            m_pRecordingDlg.get(),
             new QTreeWidgetItem(contentsTreeWidget),
             tr("Recording"),
-            "ic_preferences_recording.svg"));
+            "ic_preferences_recording.svg");
+    addPageWidget(m_recordingPage);
+    connect(pLibrary.get(),
+            &Library::showRecordingSettings,
+            this,
+            &DlgPreferences::showRecordingPage);
 
     addPageWidget(PreferencesPage(
             new DlgPrefBeats(this, m_pConfig),
@@ -317,6 +323,17 @@ void DlgPreferences::showSoundHardwarePage(
     contentsTreeWidget->setCurrentItem(m_soundPage.pTreeItem);
     if (tab.has_value()) {
         m_pSoundDlg->selectIOTab(*tab);
+    }
+    if (!isVisible()) {
+        show();
+    }
+}
+
+void DlgPreferences::showRecordingPage() {
+    switchToPage(m_recordingPage.pTreeItem->text(0), m_recordingPage.pDlg);
+    contentsTreeWidget->setCurrentItem(m_recordingPage.pTreeItem);
+    if (!isVisible()) {
+        show();
     }
 }
 
@@ -638,19 +655,19 @@ void DlgPreferences::fixSliderStyle() {
     if (darkAppearance()) {
         setStyleSheet(R"--(
 QSlider::handle:horizontal {
-    background-color: #8f8c8b; 
+    background-color: #8f8c8b;
     border-radius: 4px;
     width: 8px;
     margin: -8px;
-} 
+}
 QSlider::handle:horizontal::pressed {
     background-color: #a9a7a7;
 }
 QSlider::groove:horizontal {
-    background: #1e1e1e; 
+    background: #1e1e1e;
     height: 4px;
     border-radius: 2px;
-    margin-left: 8px; 
+    margin-left: 8px;
     margin-right: 8px;
 }
 )--");
