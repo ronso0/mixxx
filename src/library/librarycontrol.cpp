@@ -509,6 +509,13 @@ LibraryControl::LibraryControl(Library* pLibrary)
                 emit showHideTrackMenu(show);
             });
 
+    m_pRemoveTrackFilesFromDisk = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "remove_track files"));
+    m_pRemoveTrackFilesFromDisk->setStates(2);
+    m_pRemoveTrackFilesFromDisk->connectValueChangeRequest(
+            this,
+            &LibraryControl::slotRemoveTrackFiles);
+
     // Deprecated controls
     m_pSelectNextTrack = std::make_unique<ControlPushButton>(ConfigKey("[Playlist]", "SelectNextTrack"));
     connect(m_pSelectNextTrack.get(),
@@ -1425,4 +1432,21 @@ void LibraryControl::slotTrackRatingChangeRequestRelative(int change) {
     if (pTrackTableView) {
         pTrackTableView->trackRatingChangeRequestRelative(change);
     }
+}
+
+void LibraryControl::slotRemoveTrackFiles(double value) {
+    if (value <= 0) {
+        return;
+    }
+
+    if (m_pLibraryWidget == nullptr) {
+        return;
+    }
+    auto* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+    // FIXME also check if it has focus?
+    // Control may also be used to do stuff in sidebar?
+    if (pTrackTableView == nullptr) {
+        return;
+    }
+    pTrackTableView->slotDeleteTracksFromDisk();
 }
