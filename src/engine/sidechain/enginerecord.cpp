@@ -1,7 +1,5 @@
 #include "engine/sidechain/enginerecord.h"
 
-#include <chrono>
-
 #include "control/controlproxy.h"
 #include "encoder/encoder.h"
 #include "mixer/playerinfo.h"
@@ -27,14 +25,7 @@ EngineRecord::EngineRecord(UserSettingsPointer pConfig)
                   false) { // defaulting to stereo but not picking from config
                            // in case config is not yet loaded
     m_pRecReady = new ControlProxy(RECORDING_PREF_KEY, "status", this);
-    m_pRecReady->connectValueChanged(this, [this](double value) {
-        const auto recordingStatus = static_cast<int>(value);
-        // If the recording is starting, we make sure the tracklist record setting is in sync.
-        if (recordingStatus == RECORD_ON) {
-            m_bTracklistAsCommentEnabled = m_pConfig->getValue(
-                    ConfigKey(RECORDING_PREF_KEY, "tracklist_as_comment"), true);
-        }
-    });
+    m_sampleRate = mixxx::audio::SampleRate::fromDouble(m_sampleRateControl.get());
 }
 
 EngineRecord::~EngineRecord() {
@@ -49,8 +40,6 @@ int EngineRecord::updateFromPreferences() {
     m_baAuthor = m_pConfig->getValueString(ConfigKey(RECORDING_PREF_KEY, "Author"));
     m_baAlbum = m_pConfig->getValueString(ConfigKey(RECORDING_PREF_KEY, "Album"));
     m_cueFileName = m_pConfig->getValueString(ConfigKey(RECORDING_PREF_KEY, "CuePath"));
-    m_bTracklistAsCommentEnabled = m_pConfig->getValue(
-            ConfigKey(RECORDING_PREF_KEY, "tracklist_as_comment"), true);
 
     m_bCueIsEnabled = m_pConfig->getValue<bool>(
             ConfigKey(RECORDING_PREF_KEY, QStringLiteral("CueEnabled")));
@@ -240,21 +229,12 @@ void EngineRecord::process(const CSAMPLE* pBuffer, const std::size_t bufferSize)
         // write a file stream and emit bytesRecorded.
         m_pEncoder->encodeBuffer(bufferToEncode, encoderBufferSize);
 
-        if (metaDataHasChanged()) {
-            // Writing cueLine before updating the time counter since we prefer to be ahead
-            // rather than late.
-            if (m_bCueIsEnabled) {
-                m_cueTrack++;
-                writeCueLine();
-                m_cueFile.flush();
-            }
-
-            if (m_pCurrentTrack && m_bTracklistAsCommentEnabled) {
-                m_pEncoder->updateMetaData(m_pCurrentTrack->getArtist(),
-                        m_pCurrentTrack->getTitle(),
-                        m_pCurrentTrack->getAlbum(),
-                        std::chrono::seconds(m_recordedDuration));
-            }
+        //Writing cueLine before updating the time counter since we prefer to be ahead
+        //rather than late.
+        if (m_bCueIsEnabled && metaDataHasChanged()) {
+            m_cueTrack++;
+            writeCueLine();
+            m_cueFile.flush();
         }
 
         // update frames counting and recorded duration (seconds)

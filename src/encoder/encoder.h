@@ -1,6 +1,5 @@
 #pragma once
 
-#include <chrono>
 #include <memory>
 
 #include "encoder/encoderrecordingsettings.h"
@@ -34,25 +33,11 @@ class Encoder {
     virtual void encodeBuffer(const CSAMPLE* samples, const std::size_t bufferSize) = 0;
     // Adds metadata to the encoded audio, i.e., the ID3 tag. Currently only used
     // by EngineRecord, ShoutConnection does something different.
-    virtual void updateMetaData(const QString& artist,
-            const QString& title,
-            const QString& album,
-            std::chrono::seconds timestamp = {}) = 0;
+    virtual void updateMetaData(const QString& artist, const QString& title, const QString& album) = 0;
     // called at the end when encoding is finished
     virtual void flush() = 0;
     // Setup the encoder with the specific settings
     virtual void setEncoderSettings(const EncoderSettings& settings) = 0;
-
-  protected:
-    void addToTracklist(const QString& artist,
-            const QString& title,
-            std::chrono::seconds timestamp);
-    const QStringList& getTrackList() const {
-        return m_trackList;
-    }
-
-  private:
-    QStringList m_trackList;
 };
 
 typedef std::shared_ptr<Encoder> EncoderPointer;

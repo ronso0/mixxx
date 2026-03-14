@@ -184,10 +184,17 @@ void EncoderFfmpegCore::encodeBuffer(const CSAMPLE* samples, const std::size_t b
     free(l_fNormalizedSamples);
 }
 
-void EncoderFfmpegCore::updateMetaData(const QString&,
-        const QString&,
-        const QString&,
-        std::chrono::seconds) {
+// Originally called from enginebroadcast.cpp to update metadata information
+// when streaming, however, this causes pops
+//
+// Currently this method is used before init() once to save artist, title and album
+//
+void EncoderFfmpegCore::updateMetaData(const QString& artist, const QString& title, const QString& album) {
+    qDebug() << "ffmpegencodercore: UpdateMetadata: !" << artist << " - " << title <<
+             " - " << album;
+    m_strMetaDataTitle = title;
+    m_strMetaDataArtist = artist;
+    m_strMetaDataAlbum = album;
 }
 
 int EncoderFfmpegCore::initEncoder(

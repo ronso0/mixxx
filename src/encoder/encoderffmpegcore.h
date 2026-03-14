@@ -19,7 +19,6 @@ extern "C" {
 
 #include <QBuffer>
 #include <QByteArray>
-#include <QFile>
 #include <QLibrary>
 
 #include "encoder/encoder.h"
@@ -45,10 +44,7 @@ public:
     ~EncoderFfmpegCore();
     int initEncoder(mixxx::audio::SampleRate sampleRate, QString* pUserErrorMessage) override;
     void encodeBuffer(const CSAMPLE* samples, const std::size_t bufferSize) override;
-    void updateMetaData(const QString& artist,
-            const QString& title,
-            const QString& album,
-            std::chrono::seconds timecode = {}) override;
+    void updateMetaData(const QString& artist, const QString& title, const QString& album) override;
     void flush() override;
     void setEncoderSettings(const EncoderSettings& settings) override;
 protected:
@@ -74,6 +70,9 @@ private:
     EncoderCallback* m_pCallback;
     TrackPointer m_pMetaData;
 
+    QString m_strMetaDataTitle;
+    QString m_strMetaDataArtist;
+    QString m_strMetaDataAlbum;
     QFile m_pFile;
 
     QByteArray m_strReadByteArray;

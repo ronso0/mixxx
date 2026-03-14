@@ -440,10 +440,9 @@ void EncoderFdkAac::processFIFO() {
     }
 }
 
-void EncoderFdkAac::updateMetaData(const QString&,
-        const QString&,
-        const QString&,
-        std::chrono::seconds) {
+void EncoderFdkAac::updateMetaData(
+        const QString& artist, const QString& title, const QString& album) {
+    (void)artist, (void)title, (void)album;
 }
 
 void EncoderFdkAac::flush() {
