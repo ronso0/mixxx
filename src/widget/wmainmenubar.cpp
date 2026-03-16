@@ -378,6 +378,13 @@ void WMainMenuBar::initialize() {
             pViewMaximizeLibrary,
             ConfigKey(kKbdShortcutsGroup, QStringLiteral("ViewMenu_MaximizeLibrary")),
             QStringLiteral("Space"));
+    // Works around issue with Space (via [Library],GoToItem) where
+    // it would not send Space to the focused widget (QPushButton) in
+    // QDialog like DlgTrackInfo --> but forward it to MixxxMainWindow
+    // which would trigger the default shortcut mapped to [Skin],show_maximized_library
+    // TODO test again, previously this broke the maximize shortcut when
+    // the main window had focus (tracks table)
+    pViewMaximizeLibrary->setShortcutContext(Qt::WindowShortcut);
     pViewMaximizeLibrary->setStatusTip(maximizeLibraryText);
     pViewMaximizeLibrary->setWhatsThis(buildWhatsThis(maximizeLibraryTitle, maximizeLibraryText));
     createVisibilityControl(pViewMaximizeLibrary,

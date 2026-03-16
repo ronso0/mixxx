@@ -1357,6 +1357,9 @@ void LibraryControl::slotGoToItem(double v) {
         QKeyEvent pressSpace = QKeyEvent{QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier};
         QKeyEvent releaseSpace = QKeyEvent{QEvent::KeyRelease, Qt::Key_Space, Qt::NoModifier};
         auto* pWindow = QApplication::focusWindow();
+        auto* pWid = QApplication::focusWidget();
+        qWarning() << "LibCon slotGoToItem, focWin:" << pWindow->title();
+        qWarning() << "LibCon slotGoToItem, focWid:" << pWid;
         if (pWindow) {
             QApplication::sendEvent(pWindow, &pressSpace);
             QApplication::sendEvent(pWindow, &releaseSpace);
