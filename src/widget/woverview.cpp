@@ -894,6 +894,7 @@ void WOverview::drawMinuteMarkers(QPainter* pPainter) {
 
     // Faster than track->getDuration() and already has playback speed ratio compensated for
     const double trackSeconds = samplePositionToSeconds(getTrackSamples());
+    bool longerThanFifteenMinutes = (trackSeconds / 60) >= 15;
 
     QLineF line;
     pPainter->setPen(QPen(m_axesColor, m_scaleFactor));
@@ -901,12 +902,24 @@ void WOverview::drawMinuteMarkers(QPainter* pPainter) {
 
     const double overviewHeight = m_orientation == Qt::Horizontal ? height() : width();
     const double markerHeight = overviewHeight * 0.03;
-    const double lowerMarkerYPos = overviewHeight * 0.92;
+    const double lowerMarkerYPos = overviewHeight * 0.97; // 1.0 - 0.03
     double currentMarkerXPos;
     const int iWidth = m_orientation == Qt::Horizontal ? width() : height();
+    int i = 0;
     for (double currentMarkerSeconds = 60; currentMarkerSeconds < trackSeconds;
             currentMarkerSeconds += 60) {
         currentMarkerXPos = currentMarkerSeconds / trackSeconds * iWidth;
+
+        // for tracks longer that 15 min we paint all markers dim,
+        // except multiples of 10. Ie. every tenth marker is bright.
+        // Maybe also make strokes shorter??
+        if (longerThanFifteenMinutes) {
+            if (i % 10 == 0) {
+                pPainter->setOpacity(1.0);
+            } else {
+                pPainter->setOpacity(0.3);
+            }
+        }
 
         if (m_orientation == Qt::Horizontal) {
             line.setLine(currentMarkerXPos, 0.0, currentMarkerXPos, markerHeight);
@@ -927,6 +940,7 @@ void WOverview::drawMinuteMarkers(QPainter* pPainter) {
                 pPainter->drawLine(line);
             }
         }
+        i++;
     }
 }
 
