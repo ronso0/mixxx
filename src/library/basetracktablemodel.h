@@ -132,6 +132,8 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
     static constexpr bool kApplyPlayedTrackColorDefault = true;
     static void setApplyPlayedTrackColor(bool apply);
 
+    static void setDimColumns(const QList<ColumnCache::Column>& columns);
+
   protected:
     // Build a map from the column names to their indices
     // used by fieldIndex().
@@ -309,4 +311,5 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
     static std::optional<ColorPalette> s_keyColorPalette;
 
     static bool s_bApplyPlayedTrackColor;
+    static QList<ColumnCache::Column> s_dimColumns;
 };
