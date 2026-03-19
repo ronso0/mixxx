@@ -348,6 +348,16 @@
        </widget>
       </item>
 
+      <item row="11" column="0" colspan="3">
+       <widget class="QGroupBox" name="groupBox_dimColumns">
+        <property name="title">
+         <string>Always use 'Played' color for these columns:</string>
+        </property>
+        <layout class="QGridLayout" name="layout_dimColumns">
+        </layout>
+       </widget>
+      </item>
+
      </layout>
     </widget>
    </item><!-- Track Table View -->
@@ -744,6 +754,7 @@
   <tabstop>radioButton_dbclick_top</tabstop>
   <tabstop>radioButton_dbclick_ignore</tabstop>
   <tabstop>spinBox_row_height</tabstop>
+  <tabstop>lineEdit_library_font</tabstop>
   <tabstop>btn_library_font</tabstop>
   <tabstop>spinbox_bpm_precision</tabstop>
   <tabstop>checkbox_played_track_color</tabstop>
