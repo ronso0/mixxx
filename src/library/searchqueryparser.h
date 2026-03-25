@@ -28,6 +28,7 @@ class SearchQueryParser {
     /// called for the original query and, if available, isolated parts in parenthesis
     QStringList splitTopLevelOr(const QString& query) const;
     /// checks if the changed search query is less specific then the original term
+    // TODO(ronso0) test if this still works with new multi-level OR split
     static bool queryIsLessSpecific(const QString& original, const QString& changed);
 
   private:
