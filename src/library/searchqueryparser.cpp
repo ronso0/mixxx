@@ -205,6 +205,7 @@ SearchQueryParser::TextArgumentResult SearchQueryParser::getTextArgument(QString
 
 void SearchQueryParser::parseTokens(QStringList tokens,
                                     AndNode* pQuery) const {
+    qWarning() << "-> parseTokens";
     // This lambda avoids duplication in the branches for
     // 1) nested OR (invalid query or literal '(||)') and
     // 2) plain text/crate queries.
@@ -234,6 +235,7 @@ void SearchQueryParser::parseTokens(QStringList tokens,
         const QRegularExpressionMatch numericFilterMatch = m_numericFilterMatcher.match(token);
         const QRegularExpressionMatch specialFilterMatch = m_specialFilterMatcher.match(token);
         if (textFilterMatch.hasMatch()) {
+            qWarning() << "  >text filter" << token;
             QString field = textFilterMatch.captured(1);
             auto [argument, matchMode] = getTextArgument(textFilterMatch.captured(2), &tokens);
 
@@ -261,6 +263,7 @@ void SearchQueryParser::parseTokens(QStringList tokens,
                 }
             }
         } else if (numericFilterMatch.hasMatch()) {
+            qWarning() << "  >num filter" << token;
             QString field = numericFilterMatch.captured(1);
             QString argument = getTextArgument(numericFilterMatch.captured(2), &tokens).argument;
 
@@ -274,6 +277,7 @@ void SearchQueryParser::parseTokens(QStringList tokens,
                 }
             }
         } else if (specialFilterMatch.hasMatch()) {
+            qWarning() << "  >special filter:" << token;
             bool fuzzy = token.startsWith(kFuzzyPrefix);
             bool negate = token.startsWith(kNegatePrefix);
             QString field = specialFilterMatch.captured(1);
@@ -320,6 +324,7 @@ void SearchQueryParser::parseTokens(QStringList tokens,
                 }
             }
         } else if (token.startsWith("(") && hasClosingParenthesis(token, tokens)) {
+            qWarning() << "  >(...) query" << token;
             QString nestedQuery = token.mid(1);
 
             // We found an opening ( and a closing ) somewhere.
@@ -330,10 +335,13 @@ void SearchQueryParser::parseTokens(QStringList tokens,
 
             // If there is text AFTER the ')', put it back in the tokens list
             int closingIdx = nestedQuery.lastIndexOf(")");
+            qWarning() << "   > closing idx:" << closingIdx;
             DEBUG_ASSERT(closingIdx != -1);
             qWarning() << "   > isolate parenthesis content";
             if (closingIdx < nestedQuery.length()) {
+                qWarning() << "   >> text after closingIdx";
                 const QString trailing = nestedQuery.mid(closingIdx + 1).trimmed();
+                qWarning() << "   >> trailing:" << trailing;
                 if (!trailing.isEmpty()) {
                     tokens.prepend(trailing);
                 }
@@ -346,11 +354,14 @@ void SearchQueryParser::parseTokens(QStringList tokens,
                     trimmedNested == QStringLiteral("|")) {
                 // Safeguard: If the parenthesis is empty or just an operator,
                 // we call our lambda to treat the whole thing as a literal term.
+                qWarning() << "   > ! nested query is empty or operator, "
+                              "falling back to literal";
                 pNode = createUntaggedNode("(" + nestedQuery + ")");
             } else {
                 pNode = parseOrNode(nestedQuery);
             }
         } else {
+            qWarning() << "  >else/untagged" << token;
             // If no advanced search feature matched, treat it as a search term.
             if (negate) {
                 token = token.mid(1);
@@ -380,6 +391,7 @@ std::unique_ptr<AndNode> SearchQueryParser::parseAndNode(const QString& query) c
 }
 
 std::unique_ptr<OrNode> SearchQueryParser::parseOrNode(const QString& query) const {
+    qWarning() << "---> parseOrNode (Manual Split):" << query;
     auto pQuery = std::make_unique<OrNode>();
 
     const QStringList rawAndNodes = splitTopLevelOr(query);
@@ -399,7 +411,10 @@ std::unique_ptr<QueryNode> SearchQueryParser::parseQuery(
     auto pQuery(std::make_unique<AndNode>());
 
     if (!extraFilter.isEmpty()) {
+        qWarning() << "> parseQuery" << query << "| extra:" << extraFilter;
         pQuery->addNode(std::make_unique<SqlNode>(extraFilter));
+    } else {
+        qWarning() << "> parseQuery" << query << "| extra:" << extraFilter;
     }
 
     if (!query.isEmpty()) {
@@ -420,6 +435,7 @@ QStringList SearchQueryParser::splitQueryIntoWords(const QString& query) {
 }
 
 QStringList SearchQueryParser::splitTopLevelOr(const QString& query) const {
+    qWarning() << "     splitTopLevelOr:" << query;
     QStringList parts;
     int lastSplitPos = 0;  // start of the current segment
     int scanPos = 0;       // count of chars we've checked for quotes/parenthesis
@@ -431,6 +447,7 @@ QStringList SearchQueryParser::splitTopLevelOr(const QString& query) const {
     while (it.hasNext()) {
         // Nth occurrence of OR/|
         QRegularExpressionMatch match = it.next();
+        qWarning() << "     -> it next:" << match.captured(0);
         // position of 'O'/'|'
         int matchPos = match.capturedStart();
 
@@ -453,6 +470,9 @@ QStringList SearchQueryParser::splitTopLevelOr(const QString& query) const {
 
         // split if we are at the top level AND not in quotes
         if (!inQuotes && parenthLevel == 0) {
+            qWarning() << "        found"
+                       << query.mid(lastSplitPos, matchPos - lastSplitPos)
+                                  .trimmed();
             parts << query.mid(lastSplitPos, matchPos - lastSplitPos).trimmed();
             lastSplitPos = match.capturedEnd();
         }
@@ -465,9 +485,14 @@ QStringList SearchQueryParser::splitTopLevelOr(const QString& query) const {
     // capture the final segment
     const QString finalPart = query.mid(lastSplitPos).trimmed();
     if (!finalPart.isEmpty()) {
+        qWarning() << "     -> finalPart:" << finalPart;
         parts << finalPart;
     }
 
+    qWarning() << "     -> parts: (" << parts.size() << ")";
+    for (const QString& part : std::as_const(parts)) {
+        qWarning() << "        " << part;
+    }
     return parts;
 }
 
