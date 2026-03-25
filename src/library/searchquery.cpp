@@ -884,12 +884,17 @@ DateAddedFilterNode::DateAddedFilterNode(QString& argument)
         : m_operatorQuery(false),
           m_equalsQuery(false),
           m_operator("=") {
+    qWarning() << "dateadded arg:" << argument;
     if (argument.endsWith('+')) {
         argument.chop(1);
         argument.prepend(QStringLiteral(">="));
+        qWarning() << "-> + match";
+        qWarning() << "----> new arg:" << argument;
     } else if (argument.endsWith('-')) {
         argument.chop(1);
         argument.prepend(QStringLiteral("<="));
+        qWarning() << "-> - match";
+        qWarning() << "----> new arg:" << argument;
     }
     QDateTime date;
     QRegularExpressionMatch opMatch = kNumericOperatorRegex.match(argument);
@@ -897,9 +902,11 @@ DateAddedFilterNode::DateAddedFilterNode(QString& argument)
         // Explicit operator
         m_operator = opMatch.captured(1);
         date = parseDate(opMatch.captured(2));
+        qWarning() << "-> opMatch:" << m_operator << "| date:" << date;
     } else {
         // This is an implicit 'equals' filter with ':'.
         // Try parsing the date and use default '=' operator.
+        qWarning() << "-> no op, strict search| date:" << date;
         date = parseDate(argument);
     }
 
@@ -974,7 +981,7 @@ QDateTime DateAddedFilterNode::parseDate(const QString& dateStr) const {
 #endif
     }
     if (!date.isValid()) {
-        qWarning() << "--> invalid, return";
+        qWarning() << "--> invalid date, return";
         return {};
     }
     qWarning() << "--> valid date:" << date;
