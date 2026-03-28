@@ -1589,6 +1589,8 @@ void WTrackTableView::setSelectedTracks(const QList<TrackId>& trackIds) {
 }
 
 bool WTrackTableView::setCurrentTrackId(const TrackId& trackId, int column, bool scrollToTrack) {
+    qWarning() << "--- setCurrentTrackId id:" << trackId
+               << "| col:" << column << "| scrollTo:" << scrollToTrack;
     if (!trackId.isValid()) {
         return false;
     }
@@ -1611,10 +1613,20 @@ bool WTrackTableView::setCurrentTrackId(const TrackId& trackId, int column, bool
     }
 
     QModelIndex idx = model()->index(trackRows[0], column);
+    qWarning() << "--- -> model()->index(trackRows[0], column) =" << idx;
+    // DEBUG_ASSERT(idx.isValid());
+    if (!idx.isValid()) {
+        return false;
+    }
     // In case the column is not visible pick the left-most one
     if (isIndexHidden(idx)) {
         idx = model()->index(idx.row(), columnAt(0));
+        qWarning() << "--- -> index is hidden, pick column 0. idx:" << idx;
+        if (!idx.isValid()) {
+            return false;
+        }
     }
+    // DEBUG_ASSERT(idx.isValid());
     selectRow(idx.row());
     pSelectionModel->setCurrentIndex(idx,
             QItemSelectionModel::SelectCurrent | QItemSelectionModel::Select);
