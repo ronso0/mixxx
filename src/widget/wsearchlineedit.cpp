@@ -331,13 +331,18 @@ bool WSearchLineEdit::eventFilter(QObject* obj, QEvent* event) {
         // KeyboardEventFilter::getKeySeq(keyEvent); // logs keypress
         const int key = keyEvent->key();
         // Esc has already closed the popup by now and we don't want to process it.
-        // We don't need to handle Up/Down in the popup either.
+        // We don't need to handle nav keys Up/Down/PageUp/PageDown/End/Home
+        // in the popup either.
         // Any other keypress is forwarded.
         if (key != Qt::Key_Escape &&
                 key != Qt::Key_Down &&
                 key != Qt::Key_Up &&
                 key != Qt::Key_Return &&
-                key != Qt::Key_Enter) {
+                key != Qt::Key_Enter &&
+                key != Qt::Key_PageUp &&
+                key != Qt::Key_PageDown &&
+                key != Qt::Key_Home &&
+                key == Qt::Key_End) {
             keyPressEvent(keyEvent);
             return true;
         }
