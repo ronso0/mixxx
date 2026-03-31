@@ -84,7 +84,7 @@ void appendBpmPreviewtoBpmAction(QAction* pAction, const double bpm) {
         if (scaledBpm.back() == '.') {
             scaledBpm.chop(1);
         }
-        text.append(QStringLiteral(" | %1 BPM").arg(scaledBpm));
+        text.append(QStringLiteral("%1").arg(scaledBpm));
         pAction->setText(text);
     }
 }
@@ -511,21 +511,21 @@ void WTrackMenu::createActions() {
         connect(m_pBpmUnlockAction, &QAction::triggered, this, &WTrackMenu::slotUnlockBpm);
 
         //BPM edit actions
-        m_pBpmHalveAction = make_parented<QAction>(tr("Halve BPM"), m_pBPMMenu);
+        m_pBpmHalveAction = make_parented<QAction>(tr("Halve   "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmHalveAction, 0.5);
-        m_pBpmTwoThirdsAction = make_parented<QAction>(tr("2/3 BPM"), m_pBPMMenu);
+        m_pBpmTwoThirdsAction = make_parented<QAction>(tr("2/3      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmTwoThirdsAction, 2.0 / 3.0);
-        m_pBpmThreeFourthsAction = make_parented<QAction>(tr("3/4 BPM"), m_pBPMMenu);
+        m_pBpmThreeFourthsAction = make_parented<QAction>(tr("3/4      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmThreeFourthsAction, 3.0 / 4.0);
-        m_pBpmFourFifthsAction = make_parented<QAction>(tr("4/5 BPM"), m_pBPMMenu);
+        m_pBpmFourFifthsAction = make_parented<QAction>(tr("4/5      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmFourFifthsAction, 4.0 / 5.0);
-        m_pBpmFiveFourthsAction = make_parented<QAction>(tr("5/4 BPM"), m_pBPMMenu);
+        m_pBpmFiveFourthsAction = make_parented<QAction>(tr("5/4      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmFiveFourthsAction, 5.0 / 4.0);
-        m_pBpmFourThirdsAction = make_parented<QAction>(tr("4/3 BPM"), m_pBPMMenu);
+        m_pBpmFourThirdsAction = make_parented<QAction>(tr("4/3      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmFourThirdsAction, 4.0 / 3.0);
-        m_pBpmThreeHalvesAction = make_parented<QAction>(tr("3/2 BPM"), m_pBPMMenu);
+        m_pBpmThreeHalvesAction = make_parented<QAction>(tr("3/2      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmThreeHalvesAction, 3.0 / 2.0);
-        m_pBpmDoubleAction = make_parented<QAction>(tr("Double BPM"), m_pBPMMenu);
+        m_pBpmDoubleAction = make_parented<QAction>(tr("Double   "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmDoubleAction, 2.0);
 
         connect(m_pBpmHalveAction, &QAction::triggered, this, [this] {
