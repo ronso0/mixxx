@@ -163,7 +163,7 @@ QAbstractScrollArea::corner {
 #OverviewBox,
 #OverviewBoxMini,
 #KeyText,
-WBeatSpinBox,
+WBeatSpinBox[valueChangedHighlight="false"],
 WCueMenuPopup #CueLabelEdit {
   border-top: 1px solid #0d0d0d;
   border-left: 1px solid #121212;
@@ -843,6 +843,10 @@ WBeatSpinBox {
   WBeatSpinBox:focus {
     border: 2px solid #257b82;
   }
+
+WBeatSpinBox[valueChangedHighlight="true"] {
+  border: 1px solid #bb5500;
+}
 
 WBeatSpinBox::up-button,
 WBeatSpinBox::down-button,
