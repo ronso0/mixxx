@@ -130,4 +130,6 @@ class LibraryScanner : public QThread {
     QList<mixxx::FileInfo> m_libraryRootDirs;
 
     bool m_manualScan;
+
+    bool m_canceled;
 };
