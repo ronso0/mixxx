@@ -6,6 +6,7 @@
 #include "library/library_decl.h"
 #include "library/library_prefs.h"
 #include "library/scanner/libraryscanner.h"
+#include "library/scanner/libraryscannerdlg.h"
 #include "library/trackcollection.h"
 #include "moc_trackcollectionmanager.cpp"
 #include "sources/soundsourceproxy.h"
@@ -13,6 +14,7 @@
 #include "util/assert.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/logger.h"
+#include "util/widgethelper.h"
 
 namespace {
 
@@ -72,6 +74,7 @@ TrackCollectionManager::TrackCollectionManager(
         // Exclude the library scanner from tests
         kLogger.info() << "Library scanner is disabled in test mode";
     } else {
+        // Note: scanner is created/moved to its own thread
         m_pScanner = std::make_unique<LibraryScanner>(pDbConnectionPool, pConfig);
 
         // Forward signals
@@ -131,6 +134,14 @@ TrackCollectionManager::TrackCollectionManager(
 
         kLogger.info() << "Starting library scanner thread";
         m_pScanner->start();
+
+        // Delay creation of scanner progress dialog until it is actually needed.
+        // Benefit, on manual scan when GUI is ready / the skin widget has been built:
+        // skin widget can be used as parent which makes the dlg inherit its stylesheet.
+        connect(m_pScanner.get(),
+                &LibraryScanner::startScan,
+                this,
+                &TrackCollectionManager::createAndConnectScannerDlg);
     }
 }
 
@@ -170,6 +181,61 @@ TrackCollectionManager::~TrackCollectionManager() {
     m_pInternalCollection->disconnectDatabase();
 
     GlobalTrackCache::destroyInstance();
+}
+
+void TrackCollectionManager::createAndConnectScannerDlg() {
+    m_pScannerProgressDlg =
+            std::make_unique<LibraryScannerDlg>(mixxx::widgethelper::getSkinWidget());
+
+    // Delete dialog when it's not needed anymore.
+    // Else Mixxx will crash during shutdown -- probably parent conflict because
+    // CoreService::finalize is called after MixxxMainWindow has been closed /
+    // skin widget ahs been deleted.
+    connect(m_pScannerProgressDlg.get(),
+            &QDialog::finished,
+            this,
+            [this]() {
+                // FIXME what does this line do / prevent ??
+                if (m_pScannerProgressDlg.get() == sender()) {
+                    m_pScannerProgressDlg.release()->deleteLater();
+                }
+            });
+
+    connect(m_pScanner.get(),
+            &LibraryScanner::addQueuedTasks,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::addQueuedTasks);
+    connect(m_pScanner.get(),
+            &LibraryScanner::progressLoading,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotUpdate);
+    connect(m_pScanner.get(),
+            &LibraryScanner::progressHashing,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotUpdate);
+    connect(m_pScanner.get(),
+            &LibraryScanner::scanStarted,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotScanStarted);
+    connect(m_pScanner.get(),
+            &LibraryScanner::scanFinished,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotScanFinished);
+    connect(m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::scanCancelled,
+            m_pScanner.get(),
+            &LibraryScanner::slotCancel,
+            Qt::DirectConnection);
+
+    TrackDAO* pTrackDAO = &(m_pInternalCollection->getTrackDAO());
+    connect(pTrackDAO,
+            &TrackDAO::progressVerifyTracksOutside,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotUpdate);
+    connect(pTrackDAO,
+            &TrackDAO::progressCoverArt,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotUpdateCover);
 }
 
 void TrackCollectionManager::startLibraryAutoScan() {

@@ -1280,7 +1280,7 @@ void MixxxMainWindow::slotLibraryScanSummaryDlg(const LibraryScanResultSummary& 
         return;
     }
 
-    QMessageBox* pMsg = new QMessageBox();
+    QMessageBox* pMsg = new QMessageBox(m_pCentralWidget);
     pMsg->setTextFormat(Qt::RichText); // required to get bold text with <b> tags
     pMsg->setWindowTitle(tr("Library scan finished"));
 

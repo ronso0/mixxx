@@ -12,11 +12,12 @@
 #include "util/parented_ptr.h"
 #include "util/thread_affinity.h"
 
-class LibraryScanner;
-class TrackCollection;
 class ExternalTrackCollection;
-class RelocatedTrack;
+class LibraryScanner;
+class LibraryScannerDlg;
 struct LibraryScanResultSummary;
+class RelocatedTrack;
+class TrackCollection;
 
 // Manages Mixxx's internal database of tracks as well as external track collections.
 //
@@ -98,6 +99,8 @@ class TrackCollectionManager: public QObject,
     // Same as startLibraryScan() but don't emit the scan summary.
     void startLibraryAutoScan();
 
+    void createAndConnectScannerDlg();
+
   signals:
     void libraryScanStarted();
     void libraryScanFinished();
@@ -135,4 +138,5 @@ class TrackCollectionManager: public QObject,
 
     // TODO: Extract and decouple LibraryScanner from TrackCollectionManager
     std::unique_ptr<LibraryScanner> m_pScanner;
+    std::unique_ptr<LibraryScannerDlg> m_pScannerProgressDlg;
 };

@@ -19,7 +19,6 @@
 #include "util/db/dbconnectionpool.h"
 
 class ScannerTask;
-class LibraryScannerDlg;
 class QString;
 struct LibraryScanResultSummary;
 
@@ -53,6 +52,8 @@ class LibraryScanner : public QThread {
     void trackAdded(TrackPointer pTrack);
     void tracksChanged(const QSet<TrackId>& changedTrackIds);
     void tracksRelocated(const QList<RelocatedTrack>& relocatedTracks);
+    // signal for progress dialog
+    void addQueuedTasks(int numFiles);
 
     // Emitted by scan() to invoke slotStartScan in the scanner thread's event
     // loop.
@@ -127,7 +128,6 @@ class LibraryScanner : public QThread {
     int m_numRelocatedTracks;
 
     QList<mixxx::FileInfo> m_libraryRootDirs;
-    std::unique_ptr<LibraryScannerDlg> m_pProgressDlg;
 
     bool m_manualScan;
 };
