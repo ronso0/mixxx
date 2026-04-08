@@ -4,7 +4,6 @@
 #include "library/library_decl.h"
 #include "library/queryutil.h"
 #include "library/scanner/importfilestask.h"
-#include "library/scanner/libraryscannerdlg.h"
 #include "library/scanner/recursivescandirectorytask.h"
 #include "library/scanner/scannertask.h"
 #include "library/scanner/scannerutil.h"
@@ -105,7 +104,6 @@ LibraryScanner::LibraryScanner(
           m_stateSema(1), // only one transaction is possible at a time
           m_state(IDLE),
           m_numRelocatedTracks(0),
-          m_pProgressDlg(std::make_unique<LibraryScannerDlg>()),
           m_canceled(false),
           m_manualScan(true) {
     // Move LibraryScanner to its own thread so that our signals/slots will
@@ -121,36 +119,6 @@ LibraryScanner::LibraryScanner(
     // Listen to signals from our public methods (invoked by other threads) and
     // connect them to our slots to run the command on the scanner thread.
     connect(this, &LibraryScanner::startScan, this, &LibraryScanner::slotStartScan);
-
-    connect(this,
-            &LibraryScanner::progressLoading,
-            m_pProgressDlg.get(),
-            &LibraryScannerDlg::slotUpdate);
-    connect(this,
-            &LibraryScanner::progressHashing,
-            m_pProgressDlg.get(),
-            &LibraryScannerDlg::slotUpdate);
-    connect(this,
-            &LibraryScanner::scanStarted,
-            m_pProgressDlg.get(),
-            &LibraryScannerDlg::slotScanStarted);
-    connect(this,
-            &LibraryScanner::scanFinished,
-            m_pProgressDlg.get(),
-            &LibraryScannerDlg::slotScanFinished);
-    connect(m_pProgressDlg.get(),
-            &LibraryScannerDlg::scanCancelled,
-            this,
-            &LibraryScanner::slotCancel,
-            Qt::DirectConnection);
-    connect(&m_trackDao,
-            &TrackDAO::progressVerifyTracksOutside,
-            m_pProgressDlg.get(),
-            &LibraryScannerDlg::slotUpdate);
-    connect(&m_trackDao,
-            &TrackDAO::progressCoverArt,
-            m_pProgressDlg.get(),
-            &LibraryScannerDlg::slotUpdateCover);
 }
 
 LibraryScanner::~LibraryScanner() {
@@ -576,10 +544,10 @@ void LibraryScanner::queueTask(ScannerTask* pTask) {
     if (pFileTask) {
         // Track and cover files
         int numFiles = pFileTask->numFilesToImport();
-        m_pProgressDlg->addQueuedTasks(numFiles);
+        emit addQueuedTasks(numFiles);
     } else {
         // RecursiveScanDirectoryTask, queues exactly one directory
-        m_pProgressDlg->addQueuedTasks(1);
+        emit addQueuedTasks(1);
     }
 
     m_scannerGlobal->getTaskWatcher().watchTask();

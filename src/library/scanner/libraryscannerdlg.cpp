@@ -6,6 +6,11 @@
 #include "defs_urls.h"
 #include "moc_libraryscannerdlg.cpp"
 
+namespace {
+// Duration to wait before showing the dialog after the scan has been started
+const mixxx::Duration kWaitBeforeShowDuration = mixxx::Duration::fromMillis(500);
+} // anonymous namespace
+
 LibraryScannerDlg::LibraryScannerDlg(QWidget* pParent)
         : QDialog(pParent),
           m_pLabelCurrent(make_parented<QLabel>(this)),
@@ -108,8 +113,8 @@ void LibraryScannerDlg::updateProgressBar() {
 void LibraryScannerDlg::slotUpdate(const QString& path) {
     // qDebug() << "LibraryScannerDlg slotUpdate" <<
     // m_timer.elapsed().formatMillisWithUnit() << path;
-    if (!m_bCancelled && m_timer.elapsed() > mixxx::Duration::fromSeconds(2)) {
-       setVisible(true);
+    if (!m_bCancelled && m_timer.elapsed() > kWaitBeforeShowDuration) {
+        setVisible(true);
     }
 
     m_tasksDone++;
@@ -122,8 +127,8 @@ void LibraryScannerDlg::slotUpdate(const QString& path) {
 
 void LibraryScannerDlg::slotUpdateCover(const QString& path) {
     // qDebug() << "LibraryScannerDlg slotUpdate" << m_timer.elapsed() << path;
-    if (!m_bCancelled && m_timer.elapsed() > mixxx::Duration::fromSeconds(2)) {
-       setVisible(true);
+    if (!m_bCancelled && m_timer.elapsed() > kWaitBeforeShowDuration) {
+        setVisible(true);
     }
 
     m_tasksDone++;
