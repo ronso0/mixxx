@@ -236,7 +236,8 @@ jobs:
         with:
           # This should always match the minimum required version in
           # our CMakeLists.txt
-          cmake-version: "3.21.x"
+          # cmake-version: "3.30.x
+          cmake-version: "3.24.x"
 
       - name: "[Windows] Set up cmake"
         uses: jwlawson/actions-setup-cmake@v2.2
@@ -244,9 +245,12 @@ jobs:
         # On windows-11-arm this action installs the x64 version which has unwanted side effects
         if: matrix.os == 'windows-2022'
         with:
+          ### mixxx/main
           # This version of CMake is needed for Wix Toolset >= v4 support,
           # see: https://cmake.org/cmake/help/latest/cpack_gen/wix.html#variable:CPACK_WIX_VERSION
-          cmake-version: "3.30.x"
+          # cmake-version: "3.30.x"
+          ### rop321 # previously raised from 3.21.-> 3.24 for SignalSmith
+          cmake-version: "3.24.x"
 
       - name: "[Windows] Set up MSVC Developer Command Prompt"
         if: runner.os == 'Windows'
