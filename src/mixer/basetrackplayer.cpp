@@ -1144,6 +1144,17 @@ void BaseTrackPlayerImpl::slotShiftCuesMillis(double milliseconds) {
         return;
     }
     m_pLoadedTrack->shiftCuePositionsMillis(milliseconds);
+
+    // Also shift playpos if paused
+    if (!m_pPlay->toBool()) {
+        double frames = m_pLoadedTrack->getRecord()
+                                .getStreamInfoFromSource()
+                                ->getSignalInfo()
+                                .millis2frames(milliseconds);
+        mixxx::audio::FramePos newPlayPos =
+                m_pChannel->getEngineBuffer()->getPlayPos() + frames;
+        m_pChannel->getEngineBuffer()->queueNewPlaypos(newPlayPos, EngineBuffer::SEEK_EXACT);
+    }
 }
 
 void BaseTrackPlayerImpl::slotShiftCuesMillisButton(double value, double milliseconds) {
