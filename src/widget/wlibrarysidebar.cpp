@@ -4,6 +4,8 @@
 #include <QUrl>
 #include <QtDebug>
 
+// for debugging key events
+#include "controllers/keyboard/keyboardeventfilter.h"
 #include "library/library_prefs.h"
 #include "library/sidebaritemdelegate.h"
 #include "library/sidebarmodel.h"
@@ -32,7 +34,11 @@ WLibrarySidebar::WLibrarySidebar(QWidget* parent)
     qRegisterMetaType<FocusWidget>("FocusWidget");
     //Set some properties
     setHeaderHidden(true);
-    setSelectionMode(QAbstractItemView::SingleSelection);
+    // To allow moving the item focus with Ctrl+Up/Down independently from the
+    // selection we need to enable MultiSelection or ExtendedSelection.
+    // Though, since we don't want actual multi-/extended selection, we have to
+    // prevent that in keyPressEvent() and mousePressEvent().
+    setSelectionMode(QAbstractItemView::ExtendedSelection);
     //Drag and drop setup
     setDragEnabled(false);
     setDragDropMode(QAbstractItemView::DragDrop);
@@ -401,6 +407,7 @@ void WLibrarySidebar::keyPressEvent(QKeyEvent* pEvent) {
 
     switch (pEvent->key()) {
     case Qt::Key_Return:
+    case Qt::Key_Space:
         // If the selection is not focused, focus it and scroll to it first.
         // Happens when going to bookmark with activating it.
         if (selectFocusedIndex()) {
@@ -414,41 +421,50 @@ void WLibrarySidebar::keyPressEvent(QKeyEvent* pEvent) {
     case Qt::Key_PageUp:
     case Qt::Key_End:
     case Qt::Key_Home: {
+        qWarning() << "Sidebar keypress";
+        KeyboardEventFilter::getKeySeq(pEvent);
         // If the selection is not focused, focus it and scroll to it first.
         // Happens when going to bookmark without activating it.
-        if (focusSelectedIndex()) {
-            return;
+        // Disabled for now to not interfere/reset the inetntional focus move
+        // if (focusSelectedIndex()) {
+        //     qWarning() << "-> focusSelectedIndex(), return";
+        //     return;
+        // }
+
+        // Set Ctrl modifier for all events (saves us from modifying the
+        // [Library],MoveUp/Down handlers
+        if (!pEvent->modifiers().testFlag(Qt::ControlModifier)) {
+            pEvent->setModifiers(Qt::ControlModifier);
         }
         // Let the tree view move up and down for us.
         QTreeView::keyPressEvent(pEvent);
         // After the selection changed force-activate (click) the newly selected
         // item to save us from having to push "Enter".
-        QModelIndex selIndex = selectedIndex();
-        if (!selIndex.isValid()) {
+        QModelIndex currIdx = selectionModel()->currentIndex();
+        if (!currIdx.isValid()) {
             return;
         }
         // Ensure the new selection is visible even if it was already selected/
         // focused, like when the topmost item was selected but out of sight and
         // we pressed Up, Home or PageUp.
-        scrollTo(selIndex);
-        emit pressed(selIndex);
+        scrollTo(currIdx);
         return;
     }
     case Qt::Key_Right: {
         if (pEvent->modifiers() & Qt::ControlModifier) {
             emit setLibraryFocus(FocusWidget::TracksTable);
         } else {
-            if (focusSelectedIndex()) {
-                return;
-            }
+            // if (focusSelectedIndex()) {
+            //     return;
+            // }
             QTreeView::keyPressEvent(pEvent);
         }
         return;
     }
     case Qt::Key_Left: {
-        if (focusSelectedIndex()) {
-            return;
-        }
+        // if (focusSelectedIndex()) {
+        //     return;
+        // }
         // If an expanded item is selected let QTreeView collapse it
         QModelIndex selIndex = selectedIndex();
         if (!selIndex.isValid()) {
@@ -503,7 +519,11 @@ void WLibrarySidebar::mousePressEvent(QMouseEvent* pEvent) {
 void WLibrarySidebar::focusInEvent(QFocusEvent* pEvent) {
     // Clear the current index, i.e. remove the focus indicator
     // selectionModel()->clearCurrentIndex();
-    focusSelectedIndex();
+
+    // disabled for now to not reset the focuses item to selection
+    // after closing the menu or rename/export dialogs
+    // focusSelectedIndex();
+
     QTreeView::focusInEvent(pEvent);
 }
 
@@ -570,11 +590,13 @@ QModelIndex WLibrarySidebar::selectedIndex() const {
 
 /// Refocus the selected item after right-click
 bool WLibrarySidebar::focusSelectedIndex() {
+    qWarning() << "Sidebar focusSelectedIndex()";
     // After the context menu was activated (and closed, with or without clicking
     // an action), the currentIndex is the right-clicked item.
     // If if the currentIndex is not selected, make the selection the currentIndex
     const QModelIndex selIndex = selectedIndex();
     if (selIndex.isValid() && selIndex != selectionModel()->currentIndex()) {
+        qWarning() << "-> setCurrIdx" << selIndex;
         setCurrentIndex(selIndex);
         return true;
     }
