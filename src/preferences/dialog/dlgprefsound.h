@@ -100,6 +100,10 @@ class DlgPrefSound : public DlgPreferencePage, public Ui::DlgPrefSoundDlg  {
     PollingControlProxy m_pBoothDelay;
     PollingControlProxy m_pMicMonitorMode;
     PollingControlProxy m_pKeylockEngine;
+    PollingControlProxy m_pKeylockEngineDeck1;
+    PollingControlProxy m_pKeylockEngineDeck2;
+    PollingControlProxy m_pKeylockEngineDeck3;
+    PollingControlProxy m_pKeylockEngineDeck4;
 
     parented_ptr<ControlProxy> m_pAudioLatencyOverloadCount;
     parented_ptr<ControlProxy> m_pOutputLatencyMs;

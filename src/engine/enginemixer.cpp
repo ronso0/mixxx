@@ -127,7 +127,36 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
                   false,
                   false,
                   static_cast<double>(pConfig->getValue(
-                          ConfigKey(group, "keylock_engine"),
+                          ConfigKey(kAppGroup, "keylock_engine"),
+                          EngineBuffer::defaultKeylockEngine())))),
+          // Keylock COs for main decks
+          m_pKeylockEngineDeck1(std::make_unique<ControlObject>(
+                  ConfigKey(QStringLiteral("[Channel1]"), QStringLiteral("keylock_engine")),
+                  false,
+                  false,
+                  static_cast<double>(pConfig->getValue(
+                          ConfigKey(QStringLiteral("[Channel1]"), "keylock_engine"),
+                          EngineBuffer::defaultKeylockEngine())))),
+          m_pKeylockEngineDeck2(std::make_unique<ControlObject>(
+                  ConfigKey(QStringLiteral("[Channel2]"), QStringLiteral("keylock_engine")),
+                  false,
+                  false,
+                  static_cast<double>(pConfig->getValue(
+                          ConfigKey(QStringLiteral("[Channel2]"), "keylock_engine"),
+                          EngineBuffer::defaultKeylockEngine())))),
+          m_pKeylockEngineDeck3(std::make_unique<ControlObject>(
+                  ConfigKey(QStringLiteral("[Channel3]"), QStringLiteral("keylock_engine")),
+                  false,
+                  false,
+                  static_cast<double>(pConfig->getValue(
+                          ConfigKey(QStringLiteral("[Channel3]"), "keylock_engine"),
+                          EngineBuffer::defaultKeylockEngine())))),
+          m_pKeylockEngineDeck4(std::make_unique<ControlObject>(
+                  ConfigKey(QStringLiteral("[Channel4]"), QStringLiteral("keylock_engine")),
+                  false,
+                  false,
+                  static_cast<double>(pConfig->getValue(
+                          ConfigKey(QStringLiteral("[Channel4]"), "keylock_engine"),
                           EngineBuffer::defaultKeylockEngine())))),
           m_mainGainOld(0.0),
           m_boothGainOld(0.0),

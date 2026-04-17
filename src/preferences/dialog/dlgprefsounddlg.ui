@@ -88,9 +88,45 @@
         <string>Keylock/Pitch-Bending Engine</string>
        </property>
        <property name="buddy">
-        <cstring>keylockComboBox</cstring>
+        <cstring>keylockComboBox1</cstring>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
        </property>
       </widget>
+     </item>
+     <item row="5" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <layout class="QVBoxLayout" name="keylockEngineLayout">
+         <item>
+          <widget class="QComboBox" name="keylockComboBox1"/>
+         </item>
+         <item>
+          <widget class="QComboBox" name="keylockComboBox2"/>
+         </item>
+         <item>
+          <widget class="QComboBox" name="keylockComboBox3"/>
+         </item>
+         <item>
+          <widget class="QComboBox" name="keylockComboBox4"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="keylockDualthreadedCheckBox">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>Dual-threaded Stereo</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item row="6" column="0">
       <widget class="QLabel" name="masteMixLabel">
@@ -226,26 +262,6 @@
         <string notr="true">warning goes here</string>
        </property>
       </widget>
-     </item>
-     <item row="5" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QComboBox" name="keylockComboBox"/>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="keylockDualthreadedCheckBox">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Dual-threaded Stereo</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
      </item>
     </layout>
    </item>
@@ -451,6 +467,7 @@
   <tabstop>audioBufferComboBox</tabstop>
   <tabstop>deviceSyncComboBox</tabstop>
   <tabstop>engineClockComboBox</tabstop>
+  <tabstop>keylockComboBox1</tabstop>
   <tabstop>mainMixComboBox</tabstop>
   <tabstop>mainOutputModeComboBox</tabstop>
   <tabstop>micMonitorModeComboBox</tabstop>
