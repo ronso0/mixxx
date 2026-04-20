@@ -45,6 +45,10 @@ void WaveformRenderBeat::onSetTrack() {
                 &Track::beatsUpdated,
                 this,
                 &WaveformRenderBeat::slotBeatsUpdated);
+        disconnect(m_pLoadedTrack.get(),
+                &Track::cuesUpdated,
+                this,
+                &WaveformRenderBeat::slotCuesUpdated);
     }
 
     slotBeatsUpdated();
@@ -58,12 +62,28 @@ void WaveformRenderBeat::onSetTrack() {
             &Track::beatsUpdated,
             this,
             &WaveformRenderBeat::slotBeatsUpdated);
+    connect(pTrack.get(),
+            &Track::cuesUpdated,
+            this,
+            &WaveformRenderBeat::slotCuesUpdated);
 
     m_pLoadedTrack = pTrack;
     slotBeatsUpdated();
 }
 
 void WaveformRenderBeat::slotBeatsUpdated() {
+    if (!m_pLoadedTrack) {
+        m_pTrackBeats.reset();
+        m_introCuePos = mixxx::audio::kInvalidFramePos;
+    } else {
+        m_pTrackBeats = m_pLoadedTrack->getBeats();
+        m_introCuePos = mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
+                m_introStartPosCO.get());
+    }
+    setIntroCueBeatPosMaybeInvalid();
+}
+
+void WaveformRenderBeat::slotCuesUpdated() {
     if (!m_pLoadedTrack) {
         m_pTrackBeats.reset();
         m_introCuePos = mixxx::audio::kInvalidFramePos;
@@ -171,12 +191,6 @@ bool WaveformRenderBeat::preprocessInner() {
     bool downbeatsEnabled = pWaveformWidgetFactory->getDownbeatsEnabled();
     int downbeatLength = pWaveformWidgetFactory->getDownbeatLength();
     if (downbeatsEnabled) {
-        auto currIntroStartPos = mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
-                m_introStartPosCO.get());
-        if (m_introCuePos != currIntroStartPos) {
-            m_introCuePos = currIntroStartPos;
-            setIntroCueBeatPosMaybeInvalid();
-        }
         if (m_introCueBeatPos.isValid()) {
             firstDownbeat = m_pTrackBeats->iteratorFrom(m_introCueBeatPos);
         }

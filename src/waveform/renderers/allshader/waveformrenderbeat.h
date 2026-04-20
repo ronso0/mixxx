@@ -45,6 +45,7 @@ class allshader::WaveformRenderBeat final
         m_downbeatColor = color;
     }
     void slotBeatsUpdated();
+    void slotCuesUpdated();
 
   private:
     void setIntroCueBeatPosMaybeInvalid();
