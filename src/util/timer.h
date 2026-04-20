@@ -55,9 +55,6 @@ class ScopedTimer {
                 "_s or QStringLiteral() "
                 "to avoid runtime UTF-16 conversion.");
         // we can now assume that T is a QString.
-        if (!CmdlineArgs::Instance().getDeveloper()) {
-            return; // leave timer in cancelled state
-        }
         DEBUG_ASSERT(key.capacity() == 0);
         m_maybeTimer = std::make_optional<Timer>(([&]() {
             // only try to call QString::arg when we've been given parameters

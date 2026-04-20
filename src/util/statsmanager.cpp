@@ -42,35 +42,35 @@ StatsManager::~StatsManager() {
     m_quit = 1;
     m_statsPipeCondition.wakeAll();
     wait();
-    qDebug() << "StatsManager shutdown report:";
-    qDebug() << "=====================================";
-    qDebug() << "ALL STATS";
-    qDebug() << "=====================================";
+    qWarning() << "StatsManager shutdown report:";
+    qWarning() << "=====================================";
+    qWarning() << "ALL STATS";
+    qWarning() << "=====================================";
     for (auto it = m_stats.constBegin();
          it != m_stats.constEnd(); ++it) {
-        qDebug() << it.value();
+        qWarning() << it.value();
     }
 
     if (!m_baseStats.isEmpty()) {
-        qDebug() << "=====================================";
-        qDebug() << "BASE STATS";
-        qDebug() << "=====================================";
+        qWarning() << "=====================================";
+        qWarning() << "BASE STATS";
+        qWarning() << "=====================================";
         for (auto it = m_baseStats.constBegin();
              it != m_baseStats.constEnd(); ++it) {
-            qDebug() << it.value();
+            qWarning() << it.value();
         }
     }
 
     if (!m_experimentStats.isEmpty()) {
-        qDebug() << "=====================================";
-        qDebug() << "EXPERIMENT STATS";
-        qDebug() << "=====================================";
+        qWarning() << "=====================================";
+        qWarning() << "EXPERIMENT STATS";
+        qWarning() << "=====================================";
         for (auto it = m_experimentStats.constBegin();
              it != m_experimentStats.constEnd(); ++it) {
-            qDebug() << it.value();
+            qWarning() << it.value();
         }
     }
-    qDebug() << "=====================================";
+    qWarning() << "=====================================";
 
     if (CmdlineArgs::Instance().getTimelineEnabled()) {
         writeTimeline(CmdlineArgs::Instance().getTimelinePath());

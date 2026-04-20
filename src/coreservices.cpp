@@ -366,10 +366,7 @@ CoreServices::CoreServices(const CmdlineArgs& args, QApplication* pApp)
     // called after the GUI is initialized
     initializeSettings();
     initializeLogging();
-    // Only record stats in developer mode.
-    if (m_cmdlineArgs.getDeveloper()) {
-        StatsManager::createInstance();
-    }
+    StatsManager::createInstance();
     mixxx::Translations::initializeTranslations(
             m_pSettingsManager->settings(), pApp, m_cmdlineArgs.getLocale());
     initializeKeyboard();
@@ -385,9 +382,7 @@ CoreServices::~CoreServices() {
     CLEAR_AND_CHECK_DELETED(m_pKbdConfig);
     CLEAR_AND_CHECK_DELETED(m_pKbdConfigEmpty);
 
-    if (m_cmdlineArgs.getDeveloper()) {
-        StatsManager::destroy();
-    }
+    StatsManager::destroy();
 
     // HACK: Save config again. We saved it once before doing some dangerous
     // stuff. We only really want to save it here, but the first one was just

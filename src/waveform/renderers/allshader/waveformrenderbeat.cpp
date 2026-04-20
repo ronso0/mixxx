@@ -12,6 +12,7 @@
 #include "rendergraph/vertexupdaters/vertexupdater.h"
 #include "skin/legacy/skincontext.h"
 #include "track/track.h"
+#include "util/timer.h"
 #include "waveform/renderers/waveformwidgetrenderer.h"
 #include "waveform/waveformwidgetfactory.h"
 #include "widget/wskincolor.h"
@@ -128,6 +129,8 @@ bool WaveformRenderBeat::preprocessInner() {
     if (trackSamples <= 0.0) {
         return false;
     }
+
+    ScopedTimer t(QStringLiteral("WaveformRenderBeat::preprocessInner"));
 
 #ifndef __SCENEGRAPH__
     int alpha = m_waveformRenderer->getBeatGridAlpha();
