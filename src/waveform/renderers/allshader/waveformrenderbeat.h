@@ -48,7 +48,7 @@ class allshader::WaveformRenderBeat final
     void slotCuesUpdated();
 
   private:
-    void setIntroCueBeatPosMaybeInvalid();
+    void setFirstDownbeatMaybeInvalid();
 
     QColor m_color;
     QColor m_downbeatColor;
@@ -57,7 +57,7 @@ class allshader::WaveformRenderBeat final
     // members for setting/caching the downbeat at intro_start_position
     PollingControlProxy m_introStartPosCO;
     mixxx::audio::FramePos m_introCuePos;
-    mixxx::audio::FramePos m_introCueBeatPos;
+    mixxx::Beats::ConstIterator m_firstDownBeat;
 
     TrackPointer m_pLoadedTrack;
 

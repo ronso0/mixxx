@@ -80,7 +80,7 @@ void WaveformRenderBeat::slotBeatsUpdated() {
         m_introCuePos = mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
                 m_introStartPosCO.get());
     }
-    setIntroCueBeatPosMaybeInvalid();
+    setFirstDownbeatMaybeInvalid();
 }
 
 void WaveformRenderBeat::slotCuesUpdated() {
@@ -92,14 +92,16 @@ void WaveformRenderBeat::slotCuesUpdated() {
         m_introCuePos = mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
                 m_introStartPosCO.get());
     }
-    setIntroCueBeatPosMaybeInvalid();
+    setFirstDownbeatMaybeInvalid();
 }
 
-void WaveformRenderBeat::setIntroCueBeatPosMaybeInvalid() {
-    if (m_pTrackBeats && m_introCuePos.isValid()) {
-        m_introCueBeatPos = m_pTrackBeats->findClosestBeat(m_introCuePos);
+void WaveformRenderBeat::setFirstDownbeatMaybeInvalid() {
+    auto introCueBeatPos = m_introCuePos;
+    if (m_pTrackBeats && introCueBeatPos.isValid()) {
+        introCueBeatPos = m_pTrackBeats->findClosestBeat(introCueBeatPos);
+        m_firstDownBeat = m_pTrackBeats->iteratorFrom(introCueBeatPos);
     } else {
-        m_introCueBeatPos = mixxx::audio::kInvalidFramePos;
+        m_firstDownBeat = mixxx::Beats::ConstIterator();
     }
 }
 
@@ -190,10 +192,8 @@ bool WaveformRenderBeat::preprocessInner() {
     auto* pWaveformWidgetFactory = WaveformWidgetFactory::instance();
     bool downbeatsEnabled = pWaveformWidgetFactory->getDownbeatsEnabled();
     int downbeatLength = pWaveformWidgetFactory->getDownbeatLength();
-    if (downbeatsEnabled) {
-        if (m_introCueBeatPos.isValid()) {
-            firstDownbeat = m_pTrackBeats->iteratorFrom(m_introCueBeatPos);
-        }
+    if (downbeatsEnabled && m_firstDownBeat.isValid()) {
+        firstDownbeat = m_firstDownBeat;
     }
 
     for (auto it = m_pTrackBeats->iteratorFrom(startPosition);
