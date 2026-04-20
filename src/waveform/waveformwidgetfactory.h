@@ -218,10 +218,27 @@ class WaveformWidgetFactory : public QObject,
     void setDisplayBeatGridAlpha(int alpha);
     int getBeatGridAlpha() const { return m_beatGridAlpha; }
 
+    void setDownbeatsEnabled(bool enabled);
+    bool getDownbeatsEnabled() const {
+        return m_downbeatsEnabled;
+    }
+    static bool downbeatsEnabledDefault() {
+        return false;
+    };
+
     void setDownbeatLength(int downbeatLength);
     int getDownbeatLength() const {
         return m_downbeatLength;
     }
+    static int downbeatLengthMin() {
+        return 2;
+    };
+    static int downbeatLengthMax() {
+        return 32;
+    };
+    static int downbeatLengthDefault() {
+        return 4;
+    };
 
     void setVisualGain(BandIndex index, double gain);
     double getVisualGain(BandIndex index) const;
@@ -337,6 +354,7 @@ class WaveformWidgetFactory : public QObject,
     QString m_openGLVersion;
     bool m_openGLShaderAvailable;
     int m_beatGridAlpha;
+    bool m_downbeatsEnabled;
     int m_downbeatLength;
 
     VSyncThread* m_vsyncThread;
