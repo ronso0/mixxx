@@ -7,17 +7,21 @@ class BeatsTranslateTest : public MockedEngineBackendTest {
 };
 
 TEST_F(BeatsTranslateTest, SimpleTranslateMatch) {
+    qWarning() << "BeatsTranslateTest, SimpleTranslateMatch";
+    qWarning() << "-> disable quantize on both decks";
     ControlObject::set(ConfigKey(m_sGroup1, QStringLiteral("quantize")), 0);
     ControlObject::set(ConfigKey(m_sGroup2, QStringLiteral("quantize")), 0);
     // Set up BeatGrids for decks 1 and 2.
     const auto bpm = mixxx::Bpm(60.0);
     constexpr auto firstBeat = mixxx::audio::kStartFramePos;
+    qWarning() << "-> track1->trySetBeats";
     auto grid1 = mixxx::Beats::fromConstTempo(
             m_pTrack1->getSampleRate(), firstBeat, bpm);
     m_pTrack1->trySetBeats(grid1);
     ASSERT_DOUBLE_EQ(firstBeat.value(),
             grid1->findClosestBeat(mixxx::audio::kStartFramePos).value());
 
+    qWarning() << "-> track2->trySetBeats";
     auto grid2 = mixxx::Beats::fromConstTempo(
             m_pTrack2->getSampleRate(), firstBeat, bpm);
     m_pTrack2->trySetBeats(grid2);
@@ -25,17 +29,20 @@ TEST_F(BeatsTranslateTest, SimpleTranslateMatch) {
             grid2->findClosestBeat(mixxx::audio::kStartFramePos).value());
 
     // Seek deck 1 forward a bit.
+    qWarning() << "-> Seek deck 1 forward a bit";
     const auto seekPosition = mixxx::audio::FramePos{1111.0};
     m_pChannel1->getEngineBuffer()->seekAbs(seekPosition);
     ProcessBuffer();
     EXPECT_TRUE(m_pChannel1->getEngineBuffer()->getVisualPlayPos() > 0);
 
     // Make both decks playing.
+    qWarning() << "-> Make both decks playing";
     ControlObject::getControl(m_sGroup1, "play")->set(1.0);
     ControlObject::getControl(m_sGroup2, "play")->set(1.0);
     ProcessBuffer();
     // Manually set the "bpm" control... I would like to figure out why this
     // doesn't get set naturally, but this will do for now.
+    qWarning() << "-> set 60 BPM on both tracks";
     auto pBpm1 = std::make_unique<ControlProxy>(m_sGroup1, "bpm");
     auto pBpm2 = std::make_unique<ControlProxy>(m_sGroup1, "bpm");
     pBpm1->set(bpm.value());
@@ -43,6 +50,7 @@ TEST_F(BeatsTranslateTest, SimpleTranslateMatch) {
     ProcessBuffer();
 
     // Push the button on deck 2.
+    qWarning() << "-> Push 'beats_translate_match_alignment' button on deck 2";
     auto pTranslateMatchAlignment = std::make_unique<ControlProxy>(
         m_sGroup2, "beats_translate_match_alignment");
     pTranslateMatchAlignment->set(1.0);
