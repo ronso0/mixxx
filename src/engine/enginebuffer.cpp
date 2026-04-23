@@ -836,6 +836,16 @@ void EngineBuffer::verifyPlay() {
 
 void EngineBuffer::slotControlPlayRequest(double v) {
     bool oldPlay = m_playButton->toBool();
+    const QueuedSeek queuedSeek = m_queuedSeek.getValue();
+    // Seek to start when pressing play at track end
+    if (!oldPlay && v > 0.0 &&
+            !m_reverse_old &&
+            m_playPos >= getTrackEndPosition() &&
+            queuedSeek.seekType == SEEK_NONE) {
+        queueNewPlaypos(mixxx::audio::kStartFramePos, SEEK_STANDARD);
+        v = 0.0;
+    }
+
     bool verifiedPlay = updateIndicatorsAndModifyPlay(v > 0.0, oldPlay);
 
     if (!oldPlay && verifiedPlay) {
