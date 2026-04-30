@@ -138,6 +138,7 @@ class TreeItem final {
     bool isWatchedLibraryPath() {
         return m_isWatched;
     }
+    void updateIsWatchedLibraryPathRecursively(bool watched);
 
   private:
     explicit TreeItem(
