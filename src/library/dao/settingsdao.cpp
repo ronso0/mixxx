@@ -57,6 +57,13 @@ bool SettingsDAO::setValue(const QString& name, const QVariant& value) const {
         return false;
     }
 
+    // Avoid no-ops, especially writing sort columns to db when loading playlist
+    // during startup
+    const QString currentValueStr = getValue(name);
+    if (currentValueStr == value.toString()) {
+        return true;
+    }
+
     const QString statement =
             QStringLiteral("REPLACE INTO ") +
             kTable +
