@@ -248,30 +248,13 @@
             <MaximumSize>20,</MaximumSize>
           </WidgetGroup>
 
-          <Template src="skins:LateNight/decks/vinyl_controls.xml"/>
-
           <WidgetGroup>
             <SizePolicy>me,min</SizePolicy>
             <MinimumSize>2,</MinimumSize>
             <MaximumSize>20,</MaximumSize>
-          </WidgetGroup>
+          </WidgetGroup><!-- flex spacer -->
 
-          <WidgetGroup>
-            <SizePolicy>me,min</SizePolicy>
-            <MaximumSize>111,</MaximumSize>
-            <Layout>vertical</Layout>
-            <Children>
-              <SingletonContainer>
-                <ObjectName>KeyControls<Variable name="ChanNum"/></ObjectName>
-              </SingletonContainer>
-            </Children>
-            <Connection>
-              <ConfigKey persist="true">[Skin],show_key_controls_compact</ConfigKey>
-              <BindProperty>visible</BindProperty>
-            </Connection>
-          </WidgetGroup>
-
-          <WidgetGroup><Size>20f,0min</Size></WidgetGroup>
+          <WidgetGroup><Size>10f,0min</Size></WidgetGroup>
 
           <Template src="skins:LateNight/fx/assign_buttons_big.xml"/>
 
