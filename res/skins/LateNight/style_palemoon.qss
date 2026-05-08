@@ -1629,6 +1629,7 @@ WEffectChainPresetSelector QAbstractScrollArea,
 #RecDuration[highlight="0"],
 #BroadcastButton[displayValue="0"],
 #SkinSettingsToggle[displayValue="0"],
+#PreferencesToggle,
 #LibraryFeatureControls QLabel {
   color: #777;
 }
@@ -1708,7 +1709,8 @@ QPushButton#pushButtonRecording:checked {
   (except leftmost button in each grid > overwritten in the block below) */
 #VinylModeButton,
 #VinylCueButton[displayValue="0"],
-/*#PassthroughButton[displayValue="0"],*/
+#KeyReset[displayValue="0"], #KeyReset[pressed="true"],
+#KeylockButton[displayValue="1"],
 #SyncLeader[value="0"],
 #FxAssignButtons WPushButton[displayValue="0"],
 #FxAssignButtonsBig WPushButton[displayValue="0"] {
@@ -1719,7 +1721,8 @@ QPushButton#pushButtonRecording:checked {
   /* Active */
   #VinylCueButton[displayValue="1"],
   #VinylCueButton[displayValue="2"],
-/*  #PassthroughButton[displayValue="1"],*/
+  #KeyReset[displayValue="1"],
+  #KeylockButton[displayValue="0"], #KeylockButton[pressed="true"],
   #SyncLeader[value="1"],
   #SyncLeader[value="2"],
   #FxAssignButtons WPushButton[displayValue="1"],
@@ -1732,11 +1735,10 @@ QPushButton#pushButtonRecording:checked {
 #GuiToggleButton[displayValue="0"],
 #RecFeedback[displayValue="0"],
 #BroadcastButton[displayValue="0"],
-#SkinSettingsToggle[displayValue="0"],
-#KeyMatch[displayValue="0"],
-#KeyReset[displayValue="0"],
+#PreferencesToggle,
 WPushButton#VinylStatus[displayValue="0"],
 #PassthroughButton[displayValue="0"],
+#KeyMatch[displayValue="0"], #KeyMatch[pressed="true"],
 #SyncDeck[displayValue="0"],
 WPushButton#FxAssignButton1[displayValue="0"],
 #fadeModeCombobox:!editable,
@@ -1755,18 +1757,13 @@ WPushButton#FxAssignButton1[displayValue="0"],
     /* TODO find a cleaner way to eliminate the default styles */
     border-image: url(skins:LateNight/palemoon/buttons/btn_.svg) 1 1 1 1;
   }
-  #KeyMatch[displayValue="0"],
-  #KeyMatch[displayValue="1"] {
-    border-right: 0px;
-  }
   WPushButton#VinylStatus[displayValue="1"],
   WPushButton#VinylStatus[displayValue="2"],
   WPushButton#VinylStatus[displayValue="3"],
   #PassthroughButton[displayValue="1"],
+  #KeyMatch[displayValue="1"],
   #SyncDeck[displayValue="1"],
   WPushButton#FxAssignButton1[displayValue="1"],
-  #KeyMatch[pressed="true"],
-  #KeyReset[pressed="true"],
   #GuiToggleButton[displayValue="1"],
   #RecFeedback[displayValue="1"],
   #RecFeedback[displayValue="2"],
@@ -1962,6 +1959,7 @@ WPushButton#Reverse[pressed="true"],
 #MicTalk[value="1"], #AuxPlay[value="1"],
 #MicDucking[value="1"],
 #MicDucking[value="2"],
+WPushButton#KeylockButton[displayValue="0"],
 WPushButton#StemMuteButton,
 #PassthroughButton[displayValue="1"],
 #BroadcastButton[displayValue="4"], /* warning */
@@ -2605,6 +2603,13 @@ WPushButton#PlayDeck[value="0"] {
   }
 
 /* Key buttons */
+#KeylockButton[displayValue="0"] {
+    image: url(skins:LateNight/palemoon/buttons/btn__bpm_unlocked_dark.svg) no-repeat center center;
+  }
+  #KeylockButton[displayValue="1"] {
+    image: url(skins:LateNight/palemoon/buttons/btn__bpm_locked_blue.svg) no-repeat center center;
+  }
+
 #KeyMatch {
   image: url(skins:LateNight/palemoon/buttons/btn__key_match.svg) no-repeat center center;
   }
@@ -2838,16 +2843,6 @@ WPushButton#PlayDeck[value="0"] {
       image: url(skins:LateNight/palemoon/buttons/btn__slip_active_34.svg) no-repeat center center;
     }
 
-  #KeylockButton12[displayValue="0"], #KeylockButton34[displayValue="0"] {
-      image: url(skins:LateNight/palemoon/buttons/btn__keylock.svg) no-repeat center center;
-    }
-    #KeylockButton12[displayValue="1"] {
-      image: url(skins:LateNight/palemoon/buttons/btn__keylock_active_12.svg) no-repeat center center;
-    }
-    #KeylockButton34[displayValue="1"] {
-      image: url(skins:LateNight/palemoon/buttons/btn__keylock_active_34.svg) no-repeat center center;
-    }
-
 #StemControlsToggle[displayValue="0"] {
   image: url(skins:LateNight/palemoon/buttons/btn__stem_controls_expand.svg) no-repeat center center;
   }
@@ -2980,6 +2975,9 @@ WPushButton#PlayDeck[value="0"] {
   #SkinSettingsToggle[displayValue="1"] {
     image: url(skins:LateNight/palemoon/buttons/btn__settings_on.svg) no-repeat left top;
   }
+#PreferencesToggle {
+  image: url(skins:LateNight/palemoon/buttons/btn__pref.svg) no-repeat left top;
+}
 
 #ToolbarLogo {
   image: url(skins:LateNight/palemoon/style/mixxx_logo_small.svg) no-repeat center center;

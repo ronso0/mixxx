@@ -2,13 +2,14 @@
   <WidgetGroup>
     <Layout>horizontal</Layout>
     <SizePolicy>p,min</SizePolicy>
-    <MaximumSize>137,</MaximumSize>
+    <!-- max width is also set in rw_2-3_TitleArtistTime[_compact].xml -->
+    <MaximumSize>152,</MaximumSize>
     <Children>
       <WidgetGroup>
         <ObjectName>KeyControls</ObjectName>
         <Layout>horizontal</Layout>
         <SizePolicy>me,min</SizePolicy>
-        <MaximumSize>137,</MaximumSize>
+        <MaximumSize>152,</MaximumSize>
         <Children>
           <Template src="skins:LateNight/controls/button_1state.xml">
             <SetVariable name="TooltipId">sync_reset_key</SetVariable>
@@ -24,12 +25,19 @@
             <SetVariable name="ConfigKey"><Variable name="Group"/>,reset_key</SetVariable>
           </Template>
 
+          <Template src="skins:LateNight/controls/button_2state.xml">
+            <SetVariable name="TooltipId">keylock</SetVariable>
+            <SetVariable name="ObjectName">KeylockButton</SetVariable>
+            <SetVariable name="Size">26f,20f</SetVariable>
+            <SetVariable name="ConfigKey"><Variable name="Group"/>,keylock</SetVariable>
+          </Template>
+
           <Key>
             <ObjectName>KeyText</ObjectName>
             <TooltipId>track_key</TooltipId>
             <Group><Variable name="Group"/></Group>
-            <MinimumSize>30,20</MinimumSize>
-            <MaximumSize>65,20</MaximumSize>
+            <MinimumSize>50,20</MinimumSize>
+            <MaximumSize>75,20</MaximumSize>
             <SizePolicy>me,f</SizePolicy>
             <Elide>right</Elide>
             <ShowColors>false</ShowColors>

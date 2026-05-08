@@ -52,6 +52,7 @@ WPushButton#GuiToggleButton,
 WLabel#RecFeedback, WLabel#RecDuration,
 WPushButton#BroadcastButton,
 WPushButton#SkinSettingsToggle,
+WPushButton#PreferencesToggle,
 #LibraryFeatureControls QPushButton,
 /* Passthrough label on overview waveform */
 WPushButton#EQKillButton,
