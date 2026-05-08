@@ -58,6 +58,27 @@
                 </Connection>
               </WidgetGroup>
 
+              <WidgetGroup>
+                <SizePolicy>me,min</SizePolicy>
+                <MinimumSize>2,</MinimumSize>
+                <MaximumSize>10,</MaximumSize>
+              </WidgetGroup><!-- flex spacer -->
+
+              <WidgetGroup>
+                <SizePolicy>me,min</SizePolicy>
+                <MaximumSize>152,</MaximumSize>
+                <Layout>vertical</Layout>
+                <Children>
+                  <SingletonContainer>
+                    <ObjectName>KeyControls<Variable name="ChanNum"/></ObjectName>
+                  </SingletonContainer>
+                </Children>
+                <Connection>
+                  <ConfigKey persist="true">[Skin],show_key_controls_compact</ConfigKey>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
+              </WidgetGroup><!-- Key controls -->
+
             </Children>
           </WidgetGroup><!-- TitleRow -->
 
@@ -127,6 +148,10 @@
                   </TrackProperty>
                 </Children>
               </WidgetGroup>
+
+              <WidgetGroup><Size>10f,0f</Size></WidgetGroup>
+
+              <Template src="skins:LateNight/decks/vinyl_controls.xml"/>
 
             </Children>
           </WidgetGroup><!-- ArtistRow -->
