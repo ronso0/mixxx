@@ -2660,6 +2660,22 @@ void WTrackMenu::slotRemoveFromDisk() {
     const TrackPointerList tracks = getTrackPointers();
     const QStringList groups = PlayerInfo::instance().getPlayerGroupsWithTracksLoaded(tracks);
     for (const QString& group : groups) {
+        // can cause trouble
+        // scenario:
+        // AutoDJ is running
+        // current track sucks
+        // click Fade Now
+        // before current deck is stopped, open track menu
+        // select Purge and move track file to Trash
+        //
+        // last step may lead to
+        // * deck playing
+        // * play_latched = 0
+        // * no 'play' indicator like when previewing from Cue or hotcue
+        //
+        // But this sequence here looks safe..
+        //
+        // Maybe load/eject conflicts with track load options??
         ControlObject::set(ConfigKey(group, "stop"), 1.0);
         ControlObject::set(ConfigKey(group, "eject"), 1.0);
         ControlObject::set(ConfigKey(group, "eject"), 0.0);
