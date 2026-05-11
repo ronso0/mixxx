@@ -804,43 +804,100 @@ void DlgTrackInfoMulti::saveTracks() {
 
     // Even though we may have skipped the property selected for Find/Replace,
     // we can find/replace only if we have a Find string.
-    QString findStr = txtFind->text();
-    if (findReplacePropId != TrackProperty::Invalid && !findStr.isEmpty()) {
+    if (findReplacePropId != TrackProperty::Invalid) {
+        QString findStr = txtFind->text();
         // Since we allow editing the multi-line Comments property, we also care
         // about linebreaks. We accept \n for find and replace, but we need to
         // handle those explicitly.
         // Find: QRegularExpression takes \n as linebreak natively, BUT source
         // data may also contain CRLF \r\n or just \r. Let's make the find string
-        // agnostic by replacing \n with a match-all regex.
-        // The later QString::replace() will then consume all \r occurrences.
-        findStr.replace("\\n", "(\\r\\n|\\r|\\n)");
-        QRegularExpression findRegEx(findStr);
+        // agnostic by replacing \n with \R which matches all sorts of commonly
+        // used linebreaks as well as esoteric variants like \u2028.
+        // The later QString::replace() will then consume or replace all
+        // linebreak occurrences.
+        findStr.replace("\\n", "\\R");
+        // Make find case-insensitive like the library searchbar
+        QRegularExpression findRegEx(findStr, QRegularExpression::CaseInsensitiveOption);
         // Replace: \n is seen as two separate chars (\ + n), replace all
         // occurrences with linefeed char \n.
         QString replaceStr = txtReplace->text();
         replaceStr.replace("\\n", "\n");
 
-        // DEBUG -- REMOVE
-        qWarning() << "    -> find/replace for property" << comboFindReplace->currentText();
+        // regex for splitting at first linebreak in Insert mode
+        static const QRegularExpression kLinebreakRegEx("\\R");
+        static const QRegularExpression kExtraSpacesRegEx("\\s+");
+        QRegularExpression insertFindWordRegEx;
+
+        bool doFindReplace = !findStr.isEmpty();
+        bool doInsert = findStr.isEmpty() && !replaceStr.isEmpty();
+        if (doInsert) {
+            // The Insert mode is special: purpose is to look up a tag (word),
+            // and if it's not present, insert it at the start.
+            // Since tag is a word we need to warp the replace term in \b (word boundary)
+            insertFindWordRegEx = QRegularExpression(
+                    QStringLiteral("\\b%1\\b").arg(QRegularExpression::escape(replaceStr)),
+                    QRegularExpression::CaseInsensitiveOption |
+                            // This is supposed to make the word boundary check smarter
+                            // in order to cover all sorts of non-latin strings
+                            QRegularExpression::UseUnicodePropertiesOption);
+        }
+
+        qWarning() << "    -> find/replace/insert for property" << comboFindReplace->currentText();
         DEBUG_ASSERT(kPropAccessorMap.contains(findReplacePropId));
         const auto& propAccessor = kPropAccessorMap[findReplacePropId];
 
         for (auto& rec : m_trackRecords) {
             auto& metadata = rec.refMetadata();
             QString propertyStr = propAccessor.getter(metadata);
-            QRegularExpressionMatch regexMatch = findRegEx.match(propertyStr);
-            qWarning() << "    find" << findStr << "in" << propertyStr;
-            if (!regexMatch.hasMatch()) {
-                qWarning() << "    no match";
-                continue;
+            if (doFindReplace) {
+                QRegularExpressionMatch regexMatch = findRegEx.match(propertyStr);
+                qWarning() << "    -> find/replace" << findStr << "in" << propertyStr;
+                if (!regexMatch.hasMatch()) {
+                    qWarning() << "    no match";
+                    continue;
+                }
+                qWarning() << "       has match, replace";
+                qWarning() << "       " << findStr << "with";
+                qWarning() << "       " << replaceStr;
+                propertyStr.replace(findRegEx, replaceStr);
+                qWarning() << "       write newPropStr:" << propertyStr;
+                propAccessor.setter(metadata, propertyStr);
+                qWarning() << "       check:           " << propAccessor.getter(metadata);
+            } else if (doInsert) {
+                qWarning() << "    -> insert";
+                // Property string may contain linebreaks.
+                // Edit only first line, like in WTrackProperty editor:
+                // Split comment into first line and rest, edit first line
+                // and do some cleanup.
+                // Then join with rest and apply.
+                auto match(kLinebreakRegEx.match(propertyStr));
+                int splitPos = match.hasMatch()
+                        ? match.capturedStart()
+                        : propertyStr.length();
+                qWarning() << "       split at" << splitPos;
+                QString firstLine = propertyStr.left(splitPos);
+                // Skip if we have a match
+                if (firstLine.contains(insertFindWordRegEx)) {
+                    qWarning() << "       already contains" << findStr << ", skip";
+                    continue;
+                }
+
+                qWarning() << "       insert" << replaceStr;
+                QString remainder = propertyStr.mid(splitPos);
+                if (firstLine.isEmpty()) {
+                    firstLine = replaceStr;
+                } else {
+                    firstLine.prepend(replaceStr + " ");
+                }
+                // remove consecutive whitespaces
+                // NOTE don't use simplified() to keep linebreaks we just inserted
+                firstLine.trimmed().replace(kExtraSpacesRegEx, " ");
+                qWarning() << "       new first line:" << firstLine;
+                // Join modified first line with remainder
+                firstLine.append(remainder);
+                qWarning() << "       write propstr: " << firstLine;
+                propAccessor.setter(metadata, firstLine);
             }
-            qWarning() << "    has match, replace";
-            qWarning() << "    " << findStr << "with";
-            qWarning() << "    " << replaceStr;
-            propertyStr.replace(findRegEx, replaceStr);
-            qWarning() << "    write newPropStr:" << propertyStr;
-            propAccessor.setter(metadata, propertyStr);
-            qWarning() << "    check:           " << propAccessor.getter(metadata);
         }
     }
 
