@@ -114,6 +114,38 @@ void setCommonValueOrVariousStringAndFormatFont(QLabel* pLabel,
     }
 }
 
+/// This allows to map track properties to their respective get and set functions
+/// which allows concise Find/Replace logic in saveTracks().
+/// Works for both TrackInfo and AlbumInfo members.
+struct PropAccessor {
+    std::function<QString(const mixxx::TrackMetadata&)> getter;
+    std::function<void(mixxx::TrackMetadata&, const QString&)> setter;
+};
+static const QMap<DlgTrackInfoMulti::TrackProperty, PropAccessor> kPropAccessorMap = {
+        {DlgTrackInfoMulti::TrackProperty::Title, {
+                [](const auto& m) { return m.getTrackInfo().getArtist(); },
+                [](auto& m, const auto& str) { m.refTrackInfo().setTitle(str); }}},
+        {DlgTrackInfoMulti::TrackProperty::Artist, {
+                [](const auto& m) { return m.getTrackInfo().getArtist(); },
+                [](auto& m, const auto& str) { m.refTrackInfo().setArtist(str); }}},
+        {DlgTrackInfoMulti::TrackProperty::Genre, {
+                [](const auto& m) { return m.getTrackInfo().getGenre(); },
+                [](auto& m, const auto& str) { m.refTrackInfo().setGenre(str); }}},
+        {DlgTrackInfoMulti::TrackProperty::Grouping, {
+                [](const auto& m) { return m.getTrackInfo().getGrouping(); },
+                [](auto& m, const auto& str) { m.refTrackInfo().setGrouping(str); }}},
+        {DlgTrackInfoMulti::TrackProperty::Composer, {
+                [](const auto& m) { return m.getTrackInfo().getComposer(); },
+                [](auto& m, const auto& str) { m.refTrackInfo().setComposer(str); }}},
+        {DlgTrackInfoMulti::TrackProperty::Comment, {
+                [](const auto& m) { return m.getTrackInfo().getComment(); },
+                [](auto& m, const auto& str) { m.refTrackInfo().setComment(str); }}},
+        {DlgTrackInfoMulti::TrackProperty::Album, {
+                [](const auto& m) { return m.getAlbumInfo().getTitle(); },
+                [](auto& m, const auto& str) { m.refAlbumInfo().setTitle(str); }}},
+        {DlgTrackInfoMulti::TrackProperty::AlbumArtist, {
+                [](const auto& m) { return m.getAlbumInfo().getArtist(); },
+                [](auto& m, const auto& str) { m.refAlbumInfo().setArtist(str); }}} };
 } // namespace
 
 DlgTrackInfoMulti::DlgTrackInfoMulti(
@@ -187,6 +219,30 @@ void DlgTrackInfoMulti::init() {
             &QPushButton::clicked,
             this,
             &DlgTrackInfoMulti::slotOpenInFileBrowser);
+
+    // Add find/replace-capable property items in the order they are in the GUI
+    comboFindReplace->addItem(lblTitle->text(), QVariant::fromValue(TrackProperty::Title));
+    comboFindReplace->addItem(lblArtist->text(), QVariant::fromValue(TrackProperty::Artist));
+    comboFindReplace->addItem(lblAlbum->text(), QVariant::fromValue(TrackProperty::Album));
+    comboFindReplace->addItem(lblAlbumArtist->text(),
+            QVariant::fromValue(TrackProperty::AlbumArtist));
+    comboFindReplace->addItem(lblComposer->text(), QVariant::fromValue(TrackProperty::Composer));
+    comboFindReplace->addItem(lblGenre->text(), QVariant::fromValue(TrackProperty::Genre));
+    comboFindReplace->addItem(lblGrouping->text(), QVariant::fromValue(TrackProperty::Grouping));
+    comboFindReplace->addItem(lblTrackComment->text(), QVariant::fromValue(TrackProperty::Comment));
+    // ronso0: preselect Comments since that is what I use it for the most
+    comboFindReplace->setCurrentIndex(comboFindReplace->count() - 1);
+    checkboxReplace->setChecked(false);
+    connect(comboFindReplace,
+            &QComboBox::currentIndexChanged,
+            this,
+            &DlgTrackInfoMulti::slotUpdateFindReplaceGUI);
+    connect(checkboxReplace,
+            &QCheckBox::toggled,
+            this,
+            &DlgTrackInfoMulti::slotUpdateFindReplaceGUI);
+    // Update Find/Replace widgets
+    slotUpdateFindReplaceGUI();
 
     QList<QComboBox*> valueComboBoxes;
     valueComboBoxes.append(txtArtist);
@@ -694,26 +750,34 @@ void DlgTrackInfoMulti::saveTracks() {
     const QString num = validEditText(txtTrackNumber);
     const QString comment = validCommentText(txtCommentBox, txtComment);
 
+    // Check and prepare Find/Replace
+    TrackProperty findReplacePropId = getSelectedFindReplacePropMaybeInvalid();
+    // This returns true for exactly one property when the Replace checkbox is ticked
+    auto doFindReplaceProperty = [&](TrackProperty propId) {
+        return findReplacePropId == propId;
+    };
+    // We apply the regularly edited properties one by one, then maybe run
+    // the Find/Replace routine for the selected property
     for (auto& rec : m_trackRecords) {
-        if (!title.isNull()) {
+        if (!title.isNull() && !doFindReplaceProperty(TrackProperty::Title)) {
             rec.refMetadata().refTrackInfo().setTitle(title);
         }
-        if (!artist.isNull()) {
+        if (!artist.isNull() && !doFindReplaceProperty(TrackProperty::Artist)) {
             rec.refMetadata().refTrackInfo().setArtist(artist);
         }
-        if (!album.isNull()) {
+        if (!album.isNull() && !doFindReplaceProperty(TrackProperty::Album)) {
             rec.refMetadata().refAlbumInfo().setTitle(album);
         }
-        if (!albumArtist.isNull()) {
+        if (!albumArtist.isNull() && !doFindReplaceProperty(TrackProperty::AlbumArtist)) {
             rec.refMetadata().refAlbumInfo().setArtist(albumArtist);
         }
-        if (!genre.isNull()) {
+        if (!genre.isNull() && !doFindReplaceProperty(TrackProperty::Genre)) {
             rec.refMetadata().refTrackInfo().setGenre(genre);
         }
-        if (!composer.isNull()) {
+        if (!composer.isNull() && !doFindReplaceProperty(TrackProperty::Composer)) {
             rec.refMetadata().refTrackInfo().setComposer(composer);
         }
-        if (!grouping.isNull()) {
+        if (!grouping.isNull() && !doFindReplaceProperty(TrackProperty::Grouping)) {
             rec.refMetadata().refTrackInfo().setGrouping(grouping);
         }
         if (!year.isNull()) {
@@ -727,7 +791,7 @@ void DlgTrackInfoMulti::saveTracks() {
         if (!num.isNull()) {
             rec.refMetadata().refTrackInfo().setTrackNumber(num);
         }
-        if (!comment.isNull()) {
+        if (!comment.isNull() && !doFindReplaceProperty(TrackProperty::Comment)) {
             rec.refMetadata().refTrackInfo().setComment(comment);
         }
         if (m_colorChanged) {
@@ -735,6 +799,48 @@ void DlgTrackInfoMulti::saveTracks() {
         }
         if (m_starRatingModified) {
             rec.setRating(m_newRating);
+        }
+    }
+
+    // Even though we may have skipped the property selected for Find/Replace,
+    // we can find/replace only if we have a Find string.
+    QString findStr = txtFind->text();
+    if (findReplacePropId != TrackProperty::Invalid && !findStr.isEmpty()) {
+        // Since we allow editing the multi-line Comments property, we also care
+        // about linebreaks. We accept \n for find and replace, but we need to
+        // handle those explicitly.
+        // Find: QRegularExpression takes \n as linebreak natively, BUT source
+        // data may also contain CRLF \r\n or just \r. Let's make the find string
+        // agnostic by replacing \n with a match-all regex.
+        // The later QString::replace() will then consume all \r occurrences.
+        findStr.replace("\\n", "(\\r\\n|\\r|\\n)");
+        QRegularExpression findRegEx(findStr);
+        // Replace: \n is seen as two separate chars (\ + n), replace all
+        // occurrences with linefeed char \n.
+        QString replaceStr = txtReplace->text();
+        replaceStr.replace("\\n", "\n");
+
+        // DEBUG -- REMOVE
+        qWarning() << "    -> find/replace for property" << comboFindReplace->currentText();
+        DEBUG_ASSERT(kPropAccessorMap.contains(findReplacePropId));
+        const auto& propAccessor = kPropAccessorMap[findReplacePropId];
+
+        for (auto& rec : m_trackRecords) {
+            auto& metadata = rec.refMetadata();
+            QString propertyStr = propAccessor.getter(metadata);
+            QRegularExpressionMatch regexMatch = findRegEx.match(propertyStr);
+            qWarning() << "    find" << findStr << "in" << propertyStr;
+            if (!regexMatch.hasMatch()) {
+                qWarning() << "    no match";
+                continue;
+            }
+            qWarning() << "    has match, replace";
+            qWarning() << "    " << findStr << "with";
+            qWarning() << "    " << replaceStr;
+            propertyStr.replace(findRegEx, replaceStr);
+            qWarning() << "    write newPropStr:" << propertyStr;
+            propAccessor.setter(metadata, propertyStr);
+            qWarning() << "    check:           " << propAccessor.getter(metadata);
         }
     }
 
@@ -1125,4 +1231,40 @@ void DlgTrackInfoMulti::slotReloadCoverArt() {
         rec.setCoverInfo(cover);
     }
     updateCoverArtFromTracks();
+}
+
+/// Enable/disable Find/Replace widgets and the respective property QLineEdit
+/// when find/replace mode is toggled and when a property is selected
+void DlgTrackInfoMulti::slotUpdateFindReplaceGUI() {
+    bool checked = checkboxReplace->isChecked();
+    auto findReplacePropId = getSelectedFindReplacePropMaybeInvalid();
+
+    txtTitle->setEnabled(!checked || findReplacePropId != TrackProperty::Title);
+    txtArtist->setEnabled(!checked || findReplacePropId != TrackProperty::Artist);
+    txtAlbum->setEnabled(!checked || findReplacePropId != TrackProperty::Album);
+    txtAlbumArtist->setEnabled(!checked || findReplacePropId != TrackProperty::AlbumArtist);
+    txtComposer->setEnabled(!checked || findReplacePropId != TrackProperty::Composer);
+    txtGenre->setEnabled(!checked || findReplacePropId != TrackProperty::Genre);
+    txtGrouping->setEnabled(!checked || findReplacePropId != TrackProperty::Grouping);
+    txtComment->setEnabled(!checked || findReplacePropId != TrackProperty::Comment);
+    txtCommentBox->setEnabled(!checked || findReplacePropId != TrackProperty::Comment);
+
+    comboFindReplace->setEnabled(checked);
+    lblFind->setEnabled(checked);
+    txtFind->setEnabled(checked);
+    lblReplace->setEnabled(checked);
+    txtReplace->setEnabled(checked);
+}
+
+DlgTrackInfoMulti::TrackProperty DlgTrackInfoMulti::getSelectedFindReplacePropMaybeInvalid() const {
+    qWarning() << "-- getSelReplaceProp";
+    if (!checkboxReplace->isChecked()) {
+        qWarning() << "  not checked, return Invalid"
+                   << int(DlgTrackInfoMulti::TrackProperty::Invalid);
+        return TrackProperty::Invalid;
+    }
+    auto doFindReplaceProperty = comboFindReplace->currentData();
+    // This returns enum item 0 (TrackProperty::Invalid) in case it can't convert
+    qWarning() << "  checked, return" << int(doFindReplaceProperty.value<TrackProperty>());
+    return doFindReplaceProperty.value<TrackProperty>();
 }
