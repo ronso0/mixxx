@@ -31,6 +31,8 @@ class KeyControl : public EngineControl {
 
     double getKey();
 
+    void trackLoaded(TrackPointer pNewTrack) override;
+
   private slots:
     void slotSetEngineKey(double);
     void slotSetEngineKeyDistance(double);
@@ -74,4 +76,5 @@ class KeyControl : public EngineControl {
     QAtomicInt m_updatePitchRequest;
     QAtomicInt m_updatePitchAdjustRequest;
     QAtomicInt m_updateRateRequest;
+    QAtomicInt m_ignoreAfterTrackload;
 };

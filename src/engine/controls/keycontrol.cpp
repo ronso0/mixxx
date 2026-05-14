@@ -138,6 +138,10 @@ KeyControl::PitchTempoRatio KeyControl::getPitchTempoRatio() {
     return m_pitchRateInfo;
 }
 
+void KeyControl::trackLoaded(TrackPointer) {
+    m_ignoreAfterTrackload.fetchAndStoreAcquire(1);
+}
+
 double KeyControl::getKey() {
     return m_pEngineKey->get();
 }
@@ -288,7 +292,7 @@ void KeyControl::updateRate() {
         // recalculating doesn't make sense here, the rounding offset will
         // occur again after updatePitch request from enginebuffer
         if constexpr (kEnableDebugOutput) {
-            qDebug() << "   0.0 < pitchRatioDiffTo1 < 0.000000001";
+            qDebug() << "   0.0 < pitchRatioDiffTo1 <" << pitchRatioDiffTo1;
             qDebug() << "   reset pitchRatio to 1.0";
             qDebug() << "   .";
         }
@@ -393,6 +397,15 @@ void KeyControl::updatePitch() {
 
 void KeyControl::slotPitchAdjustChanged(double pitchAdjust) {
     Q_UNUSED(pitchAdjust);
+    // In order to prevent automatic key offset (m_pPitch) on track load with
+    // kLockCurrentKey we have to avoid calling updatePitchAdjust() the first time
+    // after track load
+    if (m_ignoreAfterTrackload.fetchAndStoreAcquire(0)) {
+        if (m_pKeylock->toBool() && m_keylockMode->get() == kLockCurrentKey) {
+            return;
+        }
+    }
+    // Q_UNUSED(pitchAdjust);
     m_updatePitchAdjustRequest = 1;
     updatePitchAdjust();
 }
@@ -425,7 +438,8 @@ void KeyControl::updatePitchAdjust() {
         qDebug() << "   --after KeyControl::updatePitchAdjust";
         qDebug() << "   | pitchRatio      " << m_pitchRateInfo.pitchRatio;
         qDebug() << "   | pitchTweakRatio " << m_pitchRateInfo.pitchTweakRatio;
-        qDebug() << "   | m_pPitch          " << m_pPitch->get();
+        qDebug() << "   | m_pPitchAdjust  " << m_pPitchAdjust->get();
+        qDebug() << "   | m_pPitch        " << m_pPitch->get();
         qDebug() << "   .";
     }
 }
