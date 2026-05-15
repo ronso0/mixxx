@@ -64,8 +64,8 @@ TEST_F(EngineBufferTest, DisableKeylockKeepsPitch) {
 
 TEST_F(EngineBufferTest, TrackLoadResetsPitch) {
     // When a new track is loaded, the pitch value should be reset.
-    config()->set(ConfigKey("[Controls]","SpeedAutoReset"),
-                  ConfigValue(BaseTrackPlayer::RESET_PITCH));
+    config()->set(ConfigKey("[Controls]", "SpeedAutoReset"),
+            ConfigValue(BaseTrackPlayer::RESET_PITCH));
     ControlObject::set(ConfigKey(m_sGroup1, "file_bpm"), 128.0);
     ControlObject::set(ConfigKey(m_sGroup1, "pitch_adjust"), 0.5);
     ProcessBuffer();
@@ -73,6 +73,45 @@ TEST_F(EngineBufferTest, TrackLoadResetsPitch) {
 
     m_pMixerDeck1->loadFakeTrack(false, 0.0);
     ASSERT_NEAR(0.0, ControlObject::get(ConfigKey(m_sGroup1, "pitch_adjust")), 1e-10);
+}
+
+TEST_F(EngineBufferTest, TrackLoadKeepsPitch) {
+    // The pitch and pitch_adjust values should NOT be reset when a new track is
+    // loaded while keylock is ON and keylock mode is KeylockMode::LockCurrentKey
+    config()->set(ConfigKey("[Controls]", "SpeedAutoReset"),
+            ConfigValue(BaseTrackPlayer::RESET_NONE));
+    ControlObject::set(ConfigKey(m_sGroup1, "keylockMode"),
+            1.0); // KeylockMode::LockCurrentKey
+    ControlObject::set(ConfigKey(m_sGroup1, "keylock"), 1.0);
+    ControlObject::set(ConfigKey(m_sGroup1, "rate"), 0.5);
+    ProcessBuffer();
+    // pitch is reset, as well as pitch_adjust
+    // speed must not change, pitch and pitch_adjust must be 0
+    ASSERT_DOUBLE_EQ(0.5, ControlObject::get(ConfigKey(m_sGroup1, "rate")));
+    ASSERT_DOUBLE_EQ(0.0, ControlObject::get(ConfigKey(m_sGroup1, "pitch")));
+    ASSERT_DOUBLE_EQ(0.0, ControlObject::get(ConfigKey(m_sGroup1, "pitch_adjust")));
+    m_pMixerDeck1->slotEjectTrack(1.0);
+    ProcessBuffer();
+
+    m_pMixerDeck1->loadFakeTrack(false, 0.0);
+    ProcessBuffer();
+    ASSERT_DOUBLE_EQ(0.0, ControlObject::get(ConfigKey(m_sGroup1, "pitch")));
+    ASSERT_NEAR(0.0, ControlObject::get(ConfigKey(m_sGroup1, "pitch_adjust")), 1e-10);
+    ControlObject::set(ConfigKey(m_sGroup1, "eject"), 1.0);
+
+    m_pMixerDeck1->slotEjectTrack(1.0);
+    ProcessBuffer();
+    m_pMixerDeck1->loadFakeTrack(false, 0.0);
+    ProcessBuffer();
+    ControlObject::set(ConfigKey(m_sGroup1, "pitch_adjust"), 0.5);
+    ASSERT_NEAR(0.0, ControlObject::get(ConfigKey(m_sGroup1, "pitch_adjust")), 1e-10);
+    double pitch = ControlObject::get(ConfigKey(m_sGroup1, "pitch"));
+    m_pMixerDeck1->slotEjectTrack(1.0);
+    ProcessBuffer();
+
+    m_pMixerDeck1->loadFakeTrack(false, 0.0);
+    ASSERT_NEAR(0.5, ControlObject::get(ConfigKey(m_sGroup1, "pitch_adjust")), 1e-10);
+    ASSERT_NEAR(pitch, ControlObject::get(ConfigKey(m_sGroup1, "pitch")), 1e-10);
 }
 
 TEST_F(EngineBufferTest, PitchRoundtrip) {
