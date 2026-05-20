@@ -3261,6 +3261,8 @@ WLibraryTextBrowser:focus {
 WLibrary QLineEdit,
 WLibrary QPlainTextEdit,
 #LibraryBPMSpinBox,
+DlgDeveloperTools QLineEdit,
+DlgDeveloperTools QSpinBox,
 /* Track label inline editor in decks and samplers */
 WTrackPropertyEditor {
   color: #ddd;
@@ -4096,6 +4098,7 @@ DlgPreferences QTimeEdit,
 DlgPreferences QPushButton,
 DlgPreferences QToolButton, /* Library font selector '...' txt */
 DlgPreferences QComboBox,
+DlgDeveloperTools QSpinBox,
 /* Usually the list QAbstractItemView inherits the color of QComboBox,
    however this is apparently not the case for the palette comboboxes
    where we set use QPixmaps as item icons.
@@ -4191,6 +4194,8 @@ DlgPreferences QTimeEdit,
   DlgPreferences QTimeEdit:focus,
   DlgPreferences QCheckBox:focus,
   DlgTagFetcher QCheckBox:focus,
+  DlgDeveloperTools QLineEdit:focus,
+  DlgDeveloperTools QSpinBox:focus,
   #DlgTrackInfo QLineEdit:focus,
   #DlgTrackInfo QCheckBox:focus,
   #DlgTrackInfo QPlainTextEdit:focus,
