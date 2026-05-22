@@ -57,6 +57,8 @@ jobs:
               -DMODPLUG=ON
               -DWAVPACK=ON
               -DINSTALL_USER_UDEV_RULES=OFF
+              -DTARGET_ARCH=core2
+              -DCMAKE_BUILD_TYPE=RelWithDebInfo
             ctest_args: []
             compiler_cache: ccache
             compiler_cache_path: /home/runner/.cache/ccache

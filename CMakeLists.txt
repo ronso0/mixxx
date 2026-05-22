@@ -463,6 +463,14 @@ set(
   "Mixxx is Free DJ software that gives you everything you need to perform live mixes."
 )
 
+# ronso0: prep for optimization for Thinkpad X200T
+set(
+  TARGET_ARCH
+  "generic"
+  CACHE STRING
+  "Target CPU architecture (generic, native, penryn, etc.)"
+)
+
 # Used for force control of color output
 set(BUILD_COLORS "auto" CACHE STRING "Try to use colors auto/always/no")
 
@@ -2297,6 +2305,20 @@ else()
     fatal_error_missing_env()
   endif()
   add_executable(mixxx WIN32 src/main.cpp)
+endif()
+
+# ronso0: optimize for Thinkpad X200T
+# set`penryn` via
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  if(TARGET_ARCH STREQUAL "generic")
+    message(STATUS "Building a portable binary (default baseline architecture)")
+  else()
+    message(
+      STATUS
+      "Optimizing specifically for microarchitecture: ${TARGET_ARCH}"
+    )
+    target_compile_options(mixxx-lib PRIVATE -march=${TARGET_ARCH})
+  endif()
 endif()
 
 set_target_properties(mixxx-lib PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY}")
