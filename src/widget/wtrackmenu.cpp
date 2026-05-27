@@ -2746,7 +2746,7 @@ void WTrackMenu::slotRemoveFromDisk() {
     emit restoreCurrentViewStateOrIndex();
 }
 
-void WTrackMenu::slotShowDlgTrackInfo() {
+void WTrackMenu::slotShowDlgTrackInfo(bool findReplaceMode) {
     if (isEmpty()) {
         return;
     }
@@ -2777,7 +2777,11 @@ void WTrackMenu::slotShowDlgTrackInfo() {
         }
         m_pDlgTrackInfoMulti->loadTracks(tracks);
         m_pDlgTrackInfoMulti->show();
-        m_pDlgTrackInfoMulti->focusField(m_trackProperty);
+        if (findReplaceMode) {
+            m_pDlgTrackInfoMulti->prepareFindReplace(m_trackProperty);
+        } else {
+            m_pDlgTrackInfoMulti->focusField(m_trackProperty);
+        }
     } else {
         // Use the single-track editor with Next/Prev buttons and DlgTagFetcher.
         // Create a fresh dialog on invocation.
