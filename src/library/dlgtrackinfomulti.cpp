@@ -243,6 +243,15 @@ void DlgTrackInfoMulti::init() {
             &DlgTrackInfoMulti::slotUpdateFindReplaceGUI);
     // Update Find/Replace widgets
     slotUpdateFindReplaceGUI();
+    // Also map column names to TrackProperties
+    m_columnNamesToTrackProperty.insert("artist", TrackProperty::Artist);
+    m_columnNamesToTrackProperty.insert("title", TrackProperty::Title);
+    m_columnNamesToTrackProperty.insert("album", TrackProperty::Album);
+    m_columnNamesToTrackProperty.insert("album_artist", TrackProperty::AlbumArtist);
+    m_columnNamesToTrackProperty.insert("composer", TrackProperty::Composer);
+    m_columnNamesToTrackProperty.insert("genre", TrackProperty::Genre);
+    m_columnNamesToTrackProperty.insert("grouping", TrackProperty::Grouping);
+    m_columnNamesToTrackProperty.insert("comment", TrackProperty::Comment);
 
     QList<QComboBox*> valueComboBoxes;
     valueComboBoxes.append(txtArtist);
@@ -407,6 +416,26 @@ void DlgTrackInfoMulti::focusField(const QString& property) {
     if (it != m_propertyWidgets.constEnd()) {
         it.value()->setFocus();
     }
+}
+
+void DlgTrackInfoMulti::prepareFindReplace(const QString& propertyStr) {
+    if (propertyStr.isEmpty()) {
+        return;
+    }
+    auto propIt = m_columnNamesToTrackProperty.constFind(propertyStr);
+    if (propIt == m_columnNamesToTrackProperty.constEnd()) {
+        return;
+    }
+
+    const TrackProperty propId = propIt.value();
+    int propIdx = comboFindReplace->findData(QVariant::fromValue(propId));
+    if (propIdx < 0) {
+        return;
+    }
+
+    checkboxReplace->setChecked(true);
+    comboFindReplace->setCurrentIndex(propIdx);
+    txtFind->setFocus();
 }
 
 void DlgTrackInfoMulti::updateFromTracks() {

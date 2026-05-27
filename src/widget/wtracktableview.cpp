@@ -1252,6 +1252,7 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         if (event->modifiers().testFlag(Qt::NoModifier)) {
             slotMouseDoubleClicked(currentIndex());
         } else if ((event->modifiers() & kPropertiesShortcutModifier)) {
+            bool findReplaceMode = event->modifiers() & Qt::ShiftModifier;
             TrackModel* pTrackModel = getTrackModel();
             if (!pTrackModel ||
                     !pTrackModel->hasCapabilities(
@@ -1270,7 +1271,7 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             // desired column.
             const QString columnName = columnNameOfIndex(currentIndex());
             m_pTrackMenu->setTrackPropertyName(columnName);
-            m_pTrackMenu->slotShowDlgTrackInfo();
+            m_pTrackMenu->slotShowDlgTrackInfo(findReplaceMode);
         } else if (event->modifiers() & kTrackMenuModifier) {
             const QPoint evPos = QPoint(10, 10);
             // might as well use QCursor::pos(), but keeping the menu within the

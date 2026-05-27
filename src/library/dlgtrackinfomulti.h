@@ -42,6 +42,7 @@ class DlgTrackInfoMulti : public QDialog, public Ui::DlgTrackInfoMulti {
 
     void loadTracks(const QList<TrackPointer>& pTracks);
     void focusField(const QString& property);
+    void prepareFindReplace(const QString& property);
 
   protected:
     /// We need this to set the max width of the comment QComboBox which has
@@ -125,6 +126,7 @@ class DlgTrackInfoMulti : public QDialog, public Ui::DlgTrackInfoMulti {
     QList<mixxx::TrackRecord> m_trackRecords;
 
     QHash<QString, QWidget*> m_propertyWidgets;
+    QHash<QString, TrackProperty> m_columnNamesToTrackProperty;
 
     parented_ptr<WCoverArtMenu> m_pWCoverArtMenu;
     parented_ptr<WCoverArtLabel> m_pWCoverArtLabel;
