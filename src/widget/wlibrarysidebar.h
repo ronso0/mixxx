@@ -8,6 +8,7 @@
 #include "widget/wbasewidget.h"
 
 class LibraryFeature;
+class SidebarItemDelegate;
 class SidebarModel;
 class QPoint;
 
@@ -55,6 +56,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void resetHoverIndexAndDragMoveResult();
 
     SidebarModel* m_pSidebarModel;
+    SidebarItemDelegate* m_pItemDelegate;
     QBasicTimer m_expandTimer;
     QModelIndex m_hoverIndex;
     bool m_lastDragMoveAccepted;

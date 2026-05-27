@@ -125,6 +125,12 @@ class TreeItem final {
     bool isBold() const {
         return m_bold;
     }
+    void setNeedsUpdate(bool needsUpdate) {
+        m_needsUpdate = needsUpdate;
+    }
+    bool needsUpdate() {
+        return m_needsUpdate;
+    }
 
   private:
     explicit TreeItem(
@@ -148,4 +154,5 @@ class TreeItem final {
     QVariant m_data;
     QIcon m_icon;
     bool m_bold;
+    bool m_needsUpdate;
 };
