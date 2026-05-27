@@ -4,6 +4,7 @@
 #include <QUrl>
 #include <QtDebug>
 
+#include "library/sidebaritemdelegate.h"
 #include "library/sidebarmodel.h"
 #include "moc_wlibrarysidebar.cpp"
 #include "util/defs.h"
@@ -15,6 +16,7 @@ WLibrarySidebar::WLibrarySidebar(QWidget* parent)
         : QTreeView(parent),
           WBaseWidget(this),
           m_pSidebarModel(nullptr),
+          m_pItemDelegate(nullptr),
           m_lastDragMoveAccepted(false) {
     qRegisterMetaType<FocusWidget>("FocusWidget");
     //Set some properties
@@ -37,6 +39,10 @@ void WLibrarySidebar::setModel(QAbstractItemModel* pModel) {
     DEBUG_ASSERT(pSidebarModel);
     m_pSidebarModel = pSidebarModel;
     QTreeView::setModel(pSidebarModel);
+    // Create the delegate that handles clicks on Refresh icon
+    DEBUG_ASSERT(m_pItemDelegate == nullptr);
+    m_pItemDelegate = new SidebarItemDelegate(this, pSidebarModel);
+    setItemDelegateForColumn(0, m_pItemDelegate);
 }
 
 void WLibrarySidebar::contextMenuEvent(QContextMenuEvent* pEvent) {

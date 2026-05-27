@@ -430,6 +430,7 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
     // b) creating a QPersistentModelIndex from index which has the extra benefit
     //    (not needed here) that "the model will ensure that references to items
     //    will continue to be valid as long as they can be accessed by the model"
+    qWarning() << "BrowseFeature::onLazyChildExpandation" << index;
     QPersistentModelIndex idx(index);
     if (!idx.isValid()) {
         qWarning() << "BrowseFeature::onLazyChildExpandation -> index invalid, abort" << index;
@@ -464,8 +465,9 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
     // always show the real state for child items that (still) exist.
     m_pSidebarModel->removeChildDirsFromCache(QStringList{path});
 
-    // Build the child tree only when there are currently no folders displayed,
-    // eg. on initial expand, or when user click the "Refresh directory tree" action.
+    // Build the child tree only if there are currently no folders displayed,
+    // eg. on initial expand, if user clicked the "Refresh directory tree" action
+    // or left-clicked the Refresh icon.
     // If we detect changed child directories, eg. when users un/mounted devices
     // or renamed, added or removed directories outside Mixxx, we show an icon
     // on the changed parent item and users can refresh with the menu action.
@@ -503,14 +505,20 @@ void BrowseFeature::onLazyChildExpandation(const QModelIndex& index, bool enforc
 
         if (needsUpdate) {
             // Show a warning icon on the parent item. Users may then use the context
-            // menu -> "Refresh directory tree". Or click the icon??
+            // menu -> "Refresh directory tree".
+            // Or click the Refresh icon. This is handled by SidebarItemDelegate
             pItem->setIcon(QIcon(QStringLiteral(":/images/library/ic_library_refresh.svg")));
+            pItem->setNeedsUpdate(true);
+            qWarning() << "-> set needsUpdate on" << path << ", return";
             return;
         }
     }
 
+    // Reset `needsUpdate` state
     pItem->setIcon(QIcon());
+    pItem->setNeedsUpdate(false);
 
+    qWarning() << "-> populate tree";
     // Before we populate the subtree, we need to delete old subtrees
     if (childRows > 0) {
         m_pSidebarModel->removeRows(0, childRows, idx);

@@ -1408,6 +1408,7 @@ add_library(
   src/library/serato/seratofeature.cpp
   src/library/serato/seratoplaylistmodel.cpp
   src/library/sidebarmodel.cpp
+  src/library/sidebaritemdelegate.cpp
   src/library/starrating.cpp
   src/library/tabledelegates/bpmdelegate.cpp
   src/library/tabledelegates/checkboxdelegate.cpp

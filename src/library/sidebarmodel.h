@@ -17,6 +17,7 @@ class SidebarModel : public QAbstractItemModel {
 
     enum Roles {
         IconNameRole = Qt::UserRole + 1,
+        NeedsUpdateRole = Qt::UserRole + 2,
         DataRole,
     };
     Q_ENUM(Roles);
@@ -49,6 +50,9 @@ class SidebarModel : public QAbstractItemModel {
 
     void clear(const QModelIndex& index);
     void paste(const QModelIndex& index);
+
+    void updateItem(const QModelIndex& index);
+
   public slots:
     void pressed(const QModelIndex& index);
     void clicked(const QModelIndex& index);
