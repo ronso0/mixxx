@@ -315,6 +315,9 @@ void DlgTrackInfoMulti::init() {
     // There is no editingFinished() signal for QPlaintextEdit that would allow
     // catching text changes. Listen for focusOut event instead.
     txtComment->installEventFilter(this);
+    // Make Alt+C hotkey work in Find and Replace fields
+    txtFind->installEventFilter(this);
+    txtReplace->installEventFilter(this);
 
     // Set up key validation, i.e. check manually entered key texts
     // Note: this is also triggered if the popup is opened.
@@ -1098,10 +1101,10 @@ bool DlgTrackInfoMulti::eventFilter(QObject* pObj, QEvent* pEvent) {
     // empty and <various> (original values)
     // The Clear and Reset items are enabled/disabled accordingly
     QComboBox* pBox = nullptr;
-    if (pEvent->type() == QEvent::KeyPress &&
-            (pObj == txtComment || (pBox = qobject_cast<QComboBox*>(pObj)))) {
+    if (pEvent->type() == QEvent::KeyPress) {
         QKeyEvent* ke = static_cast<QKeyEvent*>(pEvent);
-        if (ke->key() == Qt::Key_Backspace || ke->key() == Qt::Key_Delete) {
+        if ((pObj == txtComment || (pBox = qobject_cast<QComboBox*>(pObj))) &&
+                (ke->key() == Qt::Key_Backspace || ke->key() == Qt::Key_Delete)) {
             // We don't care about modifiers since we act only if the box is empty
             // TODO move item operations to separate function.
             // Also update items when text changes:
@@ -1112,6 +1115,13 @@ bool DlgTrackInfoMulti::eventFilter(QObject* pObj, QEvent* pEvent) {
                 txtCommentBox->setCurrentIndex(-1);
                 updateCommentPlaceholder(!txtComment->placeholderText().isEmpty());
             }
+        } else if (ke->key() == Qt::Key_C && ke->modifiers().testFlag(Qt::AltModifier)) {
+            // Focus Comment field, unset Find/Replace first
+            checkboxReplace->setChecked(false);
+            txtComment->setFocus();
+        } else if (ke->key() == Qt::Key_R && ke->modifiers().testFlag(Qt::AltModifier)) {
+            // Unset Find/Replace mode
+            checkboxReplace->setChecked(false);
         }
     } else if (pEvent->type() == QEvent::FocusOut && pObj == txtComment) {
         commentTextChanged();
