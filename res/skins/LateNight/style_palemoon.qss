@@ -4131,7 +4131,10 @@ DlgPreferences QHeaderView:disabled,
 DlgPreferences QHeaderView::item:disabled,
 DlgTagFetcher QCheckBox:disabled,
 #DlgTrackInfo QDoubleSpinBox:disabled,
-#DlgTrackInfo QCheckBox:disabled {
+#DlgTrackInfo QCheckBox:disabled,
+#DlgTrackInfoMulti QLineEdit:disabled,
+#DlgTrackInfoMulti QComboBox:disabled,
+#DlgTrackInfoMulti QPlainTextEdit:disabled {
   color: #666;
 }
 DlgPreferences QTableView::item:selected,
@@ -4198,7 +4201,10 @@ DlgPreferences QTimeEdit,
   DlgPreferences QSpinBox:disabled,
   DlgPreferences QDoubleSpinBox:disabled,
   DlgPreferences QTimeEdit:disabled,
-  #DlgTrackInfo QDoubleSpinBox:disabled {
+  #DlgTrackInfo QDoubleSpinBox:disabled,
+  #DlgTrackInfoMulti QLineEdit:disabled,
+  #DlgTrackInfoMulti QComboBox:disabled,
+  #DlgTrackInfoMulti QPlainTextEdit:disabled {
     background-color: #232324;
   }
   #DlgTrackInfo QCheckBox:disabled {
