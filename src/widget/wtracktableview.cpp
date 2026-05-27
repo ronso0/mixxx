@@ -1285,9 +1285,10 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             // desired column.
             const QString columnName = columnNameOfIndex(currentIndex());
             m_pTrackMenu->setTrackPropertyName(columnName);
-            m_pTrackMenu->slotShowDlgTrackInfo();
+            m_pTrackMenu->slotShowDlgTrackInfo(true /* findReplaceMode */);
+            return;
         }
-        return;
+        break;
     }
     case kHideRemoveShortcutKey: {
         if (event->modifiers() == kHideRemoveShortcutModifier) {

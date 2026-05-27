@@ -40,6 +40,7 @@ class DlgTrackInfoMulti : public QDialog, public Ui::DlgTrackInfoMulti {
 
     void loadTracks(const QList<TrackPointer>& pTracks);
     void focusField(const QString& property);
+    void prepareFindReplace(const QString& property);
 
   protected:
     /// These two call adjustWidgetSizes() in order to fix some layout
@@ -126,6 +127,7 @@ class DlgTrackInfoMulti : public QDialog, public Ui::DlgTrackInfoMulti {
     QList<mixxx::TrackRecord> m_trackRecords;
 
     QHash<QString, QWidget*> m_propertyWidgets;
+    QHash<QString, TrackProperty> m_columnNamesToTrackProperty;
 
     parented_ptr<WCoverArtMenu> m_pWCoverArtMenu;
     parented_ptr<WCoverArtLabel> m_pWCoverArtLabel;
