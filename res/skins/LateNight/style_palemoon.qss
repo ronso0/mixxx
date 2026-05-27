@@ -699,7 +699,7 @@ WTrackProperty[selected="true"],
   }
 #SpinnyCoverContainer_Big{
   min-width: 118px;
-  max-width: 118x;
+  max-width: 118px;
   min-height: 118px;
   max-height: 118px;
   margin: 1px 2px 0px 0px;
@@ -1621,7 +1621,7 @@ QPushButton#pushButtonRecording:checked {
   (except leftmost button in each grid > overwritten in the block below) */
 #VinylModeButton,
 #VinylCueButton[displayValue="0"],
-#PassthroughButton[displayValue="0"],++
+#PassthroughButton[displayValue="0"],
 #KeyReset[displayValue="0"], #KeyReset[pressed="true"],
 #KeylockButton[displayValue="1"],
 #SyncLeader[value="0"],
@@ -1634,7 +1634,7 @@ QPushButton#pushButtonRecording:checked {
   /* Active */
   #VinylCueButton[displayValue="1"],
   #VinylCueButton[displayValue="2"],
-  #PassthroughButton[displayValue="1"],++
+  #PassthroughButton[displayValue="1"],
   #KeyReset[displayValue="1"],
   #KeylockButton[displayValue="0"], #KeylockButton[pressed="true"],
   #SyncLeader[value="1"],
@@ -2836,7 +2836,6 @@ WTrackTableView::item:selected,
   background-color: #2c454f;
     /* For outline to be applied, background-color must be set, too ...
        Use a value between #0f0f0f and #0a0a0a (alternate-background-color) */
-    background-color: #0c0c0c;
     outline: 1px solid #fff;
     color: #fff;
 }
