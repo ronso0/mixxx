@@ -51,6 +51,7 @@ class SidebarModel : public QAbstractItemModel {
     void clear(const QModelIndex& index);
     void paste(const QModelIndex& index);
 
+    bool indexNeedsUpdate(const QModelIndex& index) const;
     void updateItem(const QModelIndex& index);
 
   public slots:
