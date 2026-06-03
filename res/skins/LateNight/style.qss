@@ -269,6 +269,7 @@ WBeatSpinBox,
 #PlayPositionText,
 #BpmText,
 #BpmTextSmall,
+#StemLabelShort,
 #FxUnitLabel,
 #SamplerTitle,
 WTrackPropertyEditor,
@@ -775,6 +776,15 @@ WEffectChainPresetButton::menu-indicator {
 
 /************** Samplers *****************************************************/
 
+/************** Stems ******************************************************/
+#StemRow {
+  qproperty-layoutAlignment: 'AlignTop';
+}
+#StemExpandBox {
+  qproperty-layoutAlignment: 'AlignVCenter | AlignHCenter';
+}
+
+/************** Stems *****************************************************/
 
 
 /************** Mic Aux *******************************************************/
