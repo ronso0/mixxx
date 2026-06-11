@@ -9,6 +9,7 @@
 #include "engine/engine.h"
 #endif
 #include "track/trackid.h"
+#include "track/track_decl.h"
 
 class ControlEncoder;
 class ControlObject;
@@ -53,6 +54,20 @@ class LoadToGroupController : public QObject {
 #endif
 };
 
+class PinLoadedTrackController : public QObject {
+    Q_OBJECT
+  public:
+    PinLoadedTrackController(LibraryControl* pParent, const QString& group);
+
+    void reset();
+
+  signals:
+    void pinLoadedTrack(const QString& group, double v);
+
+  private:
+    std::unique_ptr<ControlPushButton> m_pPinLoadedTrackControl;
+};
+
 class LibraryControl : public QObject {
     Q_OBJECT
   public:
@@ -66,6 +81,10 @@ class LibraryControl : public QObject {
     void setLibraryFocus(FocusWidget newFocusWidget,
             Qt::FocusReason focusReason = Qt::OtherFocusReason);
     FocusWidget getFocusedWidget();
+    bool hasPinnedTrack() const {
+        return m_pinnedTrackId.isValid();
+    }
+    void selectedPinnedTrack();
 
   signals:
     void clearSearchIfClearButtonHasFocus();
@@ -83,6 +102,9 @@ class LibraryControl : public QObject {
 
     void slotAppendDeckTrackToPrepPlaylist(double v, const QString& group);
     void slotAppendSelectedTrackToPrepPlaylist(double v);
+
+    void slotPinSelectedTrack(double v);
+    void slotPinLoadedTrack(const QString& group, double v);
 
     void slotUpdateTrackMenuControl(bool visible);
 
@@ -154,6 +176,9 @@ class LibraryControl : public QObject {
 
     // Simulate pressing a key on the keyboard
     void emitKeyEvent(QKeyEvent&& event);
+
+    void pinTrack(const TrackId& id);
+    void pinTrack(TrackPointer pTrack);
 
     // Controls to navigate vertically within currently focused widget (up/down buttons)
     std::unique_ptr<ControlPushButton> m_pMoveUp;
@@ -236,6 +261,7 @@ class LibraryControl : public QObject {
     std::unique_ptr<ControlObject> m_pSelectNextSidebarItem;
     std::unique_ptr<ControlObject> m_pToggleSidebarItem;
     std::unique_ptr<ControlObject> m_pLoadSelectedIntoFirstStopped;
+    std::unique_ptr<ControlPushButton> m_pPinSelectedTrack;
 
     std::unique_ptr<ControlPushButton> m_pBookmarkNext;
     std::unique_ptr<ControlPushButton> m_pBookmarkPrev;
@@ -251,10 +277,12 @@ class LibraryControl : public QObject {
     std::unique_ptr<QSplashScreen> m_prepSplashScreen;
     std::unique_ptr<QTimer> m_prepSplashScreenTimer;
     TrackId m_lastPrepTrack;
+    TrackId m_pinnedTrackId;
 
     // Other variables
     ControlProxy m_numDecks;
     ControlProxy m_numSamplers;
     ControlProxy m_numPreviewDecks;
     std::map<QString, std::unique_ptr<LoadToGroupController>> m_loadToGroupControllers;
+    std::map<QString, std::unique_ptr<PinLoadedTrackController>> m_pinLoadedTrackControllers;
 };
