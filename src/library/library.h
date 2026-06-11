@@ -135,6 +135,9 @@ class Library: public QObject {
     void slotLoadTrackToPlayer(TrackPointer pTrack, const QString& group, bool play);
 #endif
     void slotLoadLocationToPlayer(const QString& location, const QString& group, bool play);
+
+    void slotPinnedTrackIdChanged(const TrackId& id);
+
     void slotRefreshLibraryModels();
     void slotCreatePlaylist();
     void slotCreateCrate();
@@ -186,6 +189,8 @@ class Library: public QObject {
     void trackDirectoriesUpdated();
 
     void showRecordingSettings();
+
+    void pinnedTrackChanged(TrackPointer pTrack);
 
   private slots:
       void onPlayerManagerTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);

@@ -659,6 +659,9 @@ LibraryControl::LibraryControl(Library* pLibrary)
             this,
             &LibraryControl::slotPinSelectedTrack);
 
+    m_pHasPinnedTrack = std::make_unique<ControlObject>(ConfigKey("[Library]", "has_pinned_track"));
+    m_pHasPinnedTrack->setReadOnly();
+
 #ifdef MIXXX_USE_QML
     if (!CmdlineArgs::Instance().isQml())
 #endif
@@ -838,6 +841,8 @@ void LibraryControl::slotPinSelectedTrack(double v) {
     }
 
     m_pinnedTrackId = newId;
+    updateHasPinnedTrackControl();
+    emit pinnedTrackIdChanged(newId);
 }
 
 /// Pin or unpin a track (unpin with invalid id)
@@ -868,7 +873,13 @@ void LibraryControl::slotPinLoadedTrack(const QString& group, double v) {
         controller->reset();
     }
     m_pinnedTrackId = newId;
+    updateHasPinnedTrackControl();
+    emit pinnedTrackChanged(pNewTrack);
 }
+
+void LibraryControl::updateHasPinnedTrackControl() {
+    m_pHasPinnedTrack->setAndConfirm(m_pinnedTrackId.isValid() ? 1 : 0);
+};
 
 void LibraryControl::selectedPinnedTrack() {
     if (!m_pLibraryWidget) {
