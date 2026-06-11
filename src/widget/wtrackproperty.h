@@ -71,6 +71,7 @@ class WTrackProperty : public WLabel, public TrackDropTarget {
   public slots:
     void slotTrackLoaded(TrackPointer pTrack);
     void slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack);
+    void slotPinnedTrackChanged(TrackPointer pTrack);
     void slotShowTrackMenuChangeRequest(bool show);
     void slotEditTrackComment();
     void slotRemoveTrackFileFromDisk();

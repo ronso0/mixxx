@@ -99,6 +99,7 @@
 #SidebarCoverSplitter:handle,
 #LibrarySplitter::handle,
 #LibraryFeatureControls,
+#PinnedTrackControls,
 QAbstractScrollArea::corner {
   border-top: 1px solid #212123;
   border-right: 1px solid #111;
@@ -161,7 +162,8 @@ QAbstractScrollArea::corner {
         max-height: 3px;
       }
   /* Controls row in AutoDJ, Recording and other library features */
-  #LibraryFeatureControls {
+  #LibraryFeatureControls,
+  #PinnedTrackControls {
     border-width: 1px 0px 0px 0px;
     border-radius: 0px;
     margin-top: 1px;
@@ -1483,6 +1485,7 @@ WEffectChainPresetSelector,
   #DeckMini2 #ArtistTextSmall,
   #DeckMini2 #BpmTextSmall,
   #DeckMini2 #KeyTextSmall[highlight="0"],
+#PinnedTrackControls WTrackProperty,
 #MicAuxLabel,
 #SamplerTitle,
 #MainMenu QMenu,
@@ -1496,6 +1499,8 @@ WTrackTableView,
 #LibraryPlayedCheckbox::item,
 WLibraryTextBrowser,
 WLibrarySidebar,
+#PinnedTrackControls WPushButton,
+WPushButton#PinnedTrackToggle,
 #LibraryFeatureControls QLabel,
 #LibraryFeatureControls QPushButton,
 #LibraryFeatureControls QRadioButton,
@@ -1686,6 +1691,7 @@ WPushButton#VinylStatus[displayValue="3"], /* needle skip detected (pink bg) */
 #RecDuration[highlight="1"],  /* initializing */
 #RecDuration[highlight="2"],  /* recording */
 #SkinSettingsToggle[displayValue="1"],
+WPushButton#PinnedTrackToggle[displayValue="1"],
 QPushButton#pushButtonAutoDJ:checked,
 QPushButton#pushButtonRepeatPlaylist:checked,
 QPushButton#pushButtonAnalyze:checked,
@@ -1755,7 +1761,9 @@ WPushButton#VinylStatus[displayValue="0"],
 WPushButton#FxAssignButton1[displayValue="0"],
 #fadeModeCombobox:!editable,
 #LibraryFeatureControls QPushButton:enabled,
-WCueMenuPopup QPushButton {
+WCueMenuPopup QPushButton,
+#PinnedTrackControls WPushButton,
+WPushButton#PinnedTrackToggle {
   outline: none;
   border-width: 2px;
   border-image: url(skins:LateNight/palemoon/buttons/btn_embedded_library.svg) 2 2 2 2;
@@ -1783,6 +1791,7 @@ WCueMenuPopup QPushButton {
   #BroadcastButton[displayValue="4"],
   #SkinSettingsToggle[displayValue="1"],
   #LibraryFeatureControls QPushButton:pressed
+  WPushButton#PinnedTrackToggle[displayValue="1"],
   QPushButton#pushButtonAutoDJ:checked,
   QPushButton#pushButtonRepeatPlaylist:checked,
   QPushButton#pushButtonAnalyze:checked,
@@ -1938,6 +1947,8 @@ WBpmEditor QDoubleSpinBox {
   #spinBoxRecentDays::up-button,
   #spinBoxRecentDays::down-button,
   QPushButton#pushButtonAutoDJ:enabled:!checked,
+  #PinnedTrackControls WPushButton,
+  WPushButton#PinnedTrackToggle,
   #LibraryFeatureControls QPushButton:enabled {
     background-color: #222;
   }
@@ -1967,6 +1978,7 @@ WPushButton#StemMuteButton,
 #CueStandardButton:pressed, #CueStandardButton:checked,
 #CueSavedLoopButton:pressed, #CueSavedLoopButton:checked,
 #CueSavedJumpButton:pressed, #CueSavedJumpButton:checked,
+WPushButton#PinnedTrackToggle[displayValue="1"],
 QPushButton#pushButtonAutoDJ:checked,
 QPushButton#pushButtonAnalyze:checked {
   background-color: #b24c12;
