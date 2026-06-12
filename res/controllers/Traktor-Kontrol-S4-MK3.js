@@ -392,7 +392,7 @@ const SlipmatErrorThresh = 0.05; // 5% velocity tolerance for slipping
 // causes no detrimental effects as long as the error threshold is large enough. If the
 // threshold is too small (below 0.2 in my testing) the integrator loses its power
 // and the turntable won't be able to reach the target angular velocity.
-const SuppressIntegrator = false
+const SuppressIntegrator = false;
 const IntegratorSuppressionErrorThresh = 0.3;
 
 // TESTING ONLY. These are configuration values for a motor test routine that I used to collect
@@ -3850,6 +3850,7 @@ class S4Mk3MotorManager {
                         engine.getValue(this.deck.group, "reverse")) {
                     targetRate = -targetRate;
                 }
+
             } else { // engine.getValue(this.deck.group, "play") === 0)
                 // If the deck isn't playing, ensure that scratch mode is ON (for scrubbing)
                 // DELETEME: TRY WITHOUT SCRATCH ON, ONLY ENABLE SCRATCH MODE WHEN TOUCHING
@@ -3857,6 +3858,8 @@ class S4Mk3MotorManager {
                 if (!this.isStopped) {
                     console.warn("stopped");
                     this.isUpToSpeed = false;
+                    this.outputTrackingPrev = 0;
+                    this.outputTorquePrev = 0;
                     this.isStopped = true;
                 }
 
@@ -3951,10 +3954,13 @@ class S4Mk3MotorManager {
                 // NOTE: assumes linear mapping between motor output and wheel velocity (is not 100% correct but it's close enough for now)
                 trackingTarget = TargetMotorOutput*engine.getValue(this.deck.group, "rate_ratio");
                 trackingError = (outputTorque - trackingTarget)/trackingTarget;
+                trackingError = this.outputTrackingPrev + ((trackingError - this.outputTrackingPrev)/40);
+                this.outputTrackingPrev = trackingError;
 
                 // Only apply nudge/jog if the disc has spun up to the target velocity
-                if (this.isUpToSpeed && Math.abs(trackingError) > 0.02) { //TODO: move this to a config const in header
+                if (this.isUpToSpeed && Math.abs(trackingError) > 0.03) { //TODO: move this to a config const in header
                     engine.setValue(this.deck.group, "jog", -trackingError*TurnTableNudgeSensitivity);
+                    console.warn("jog");
                     // console.warn(outputTorque, outputTracking, trackingError);
                 } else if (Math.abs(trackingError) < 0.02) { //TODO: move this to a config const in header
                     // If we've spun all the way up to speed, only then act like it's jogging time.
@@ -4064,6 +4070,27 @@ class S4Mk3MotorManager {
         // to closely match the behaviour of Traktor. The tuned parameters are not yet linked
         // to physical dynamics per se, as the first step is to recreate the commercial system
         // before breaking down the control parameters into physical constants.
+
+        // // TESTING: display motor output visually on the console
+        if (engine.getValue(this.deck.group, "play")) {
+            let motorOutputRatio = (outputTorque / this.motorBuffMgr.maxOutput)*50;
+            let motorOutputString = "";
+            let motorOutputChar = "+";
+            if (motorOutputRatio < 0) {
+                motorOutputChar = "-";
+                motorOutputRatio = -motorOutputRatio;
+            }
+            for (let i = 0; i <= 50; i++) {
+                if (motorOutputRatio > i) {
+                    motorOutputString += motorOutputChar;
+                } else {
+                    motorOutputString += ".";
+                }
+            }
+            motorOutputString += "|    ";
+            motorOutputString += trackingError.toFixed(2);
+            console.warn(motorOutputString);
+        }
 
         // Write the calculated value to the motor output buffer
         this.motorBuffMgr.setMotorOutput(this.deckMotorID, outputTorque);
