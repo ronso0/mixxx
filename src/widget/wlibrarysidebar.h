@@ -17,6 +17,11 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
   public:
     explicit WLibrarySidebar(QWidget* parent = nullptr);
 
+    Q_PROPERTY(QColor watchedPathColor
+                    MEMBER m_watchedPathColor
+                            NOTIFY watchedPathColorChanged
+                                    DESIGNABLE true);
+
     void setModel(QAbstractItemModel* pModel) override;
 
     void contextMenuEvent(QContextMenuEvent* pEvent) override;
@@ -31,6 +36,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void toggleSelectedItem();
     void renameSelectedItem();
     bool isLeafNodeSelected();
+    QModelIndex selectedIndex() const;
     bool isChildIndexSelected(const QModelIndex& index);
     bool isFeatureRootIndexSelected(LibraryFeature* pFeature);
 
@@ -44,13 +50,13 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void renameItem(const QModelIndex&);
     void deleteItem(const QModelIndex&);
     FocusWidget setLibraryFocus(FocusWidget newFocus);
+    void watchedPathColorChanged(QColor m_watchedPathColor);
 
   protected:
     bool event(QEvent* pEvent) override;
 
   private:
     void focusSelectedIndex();
-    QModelIndex selectedIndex();
 
     void toggleDragHoverPropertyAndUpdateStyle(bool enabled);
     void resetHoverIndexAndDragMoveResult();
@@ -60,4 +66,5 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     QBasicTimer m_expandTimer;
     QModelIndex m_hoverIndex;
     bool m_lastDragMoveAccepted;
+    QColor m_watchedPathColor;
 };
