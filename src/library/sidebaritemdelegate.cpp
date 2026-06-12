@@ -17,12 +17,25 @@ SidebarItemDelegate::SidebarItemDelegate(
     DEBUG_ASSERT(m_pSidebarModel);
 }
 
-// Used to paint SidebarBookmarks
+// Used to paint 'is watched dir' indicator in Browsefeatures
 void SidebarItemDelegate::paint(
         QPainter* pPainter,
         const QStyleOptionViewItem& option,
         const QModelIndex& index) const {
     QStyledItemDelegate::paint(pPainter, option, index);
+
+    // If the (path) item is a watched path, draw an indicator on top of the qss style.
+    // The bounding rect of the dot is half the x-height of the current font.
+    int wh = option.fontMetrics.xHeight() / 2;
+    if (m_pSidebarModel->indexIsWatchedPathItem(index)) {
+        pPainter->setRenderHint(QPainter::Antialiasing);
+        pPainter->setBrush(QBrush(m_watchedPathColor));
+        pPainter->drawEllipse( // x, y, w, h
+                option.rect.x(),
+                option.rect.y() + 1,
+                wh,
+                wh);
+    }
 }
 
 // Used to catch clicks on TreeItem icons. Implemented only for BrowseFeature
