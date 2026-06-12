@@ -303,9 +303,9 @@ const MotorWindUpMilliseconds = 0;
 const MotorWindDownMilliseconds = 200;
 
 // Motor PID controller coefficients
-const ProportionalGain = 80000;
+const ProportionalGain = 180000;
 const IntegrativeGain = 1000;
-const DerivativeGain = 50000;
+const DerivativeGain = 100000;
 
 //----------------
 // Input filtering of wheel velocity signal
@@ -392,6 +392,7 @@ const SlipmatErrorThresh = 0.05; // 5% velocity tolerance for slipping
 // causes no detrimental effects as long as the error threshold is large enough. If the
 // threshold is too small (below 0.2 in my testing) the integrator loses its power
 // and the turntable won't be able to reach the target angular velocity.
+const SuppressIntegrator = false
 const IntegratorSuppressionErrorThresh = 0.3;
 
 // TESTING ONLY. These are configuration values for a motor test routine that I used to collect
@@ -3901,7 +3902,7 @@ class S4Mk3MotorManager {
                 console.warn("---> unset slipping + scratching");
                 this.deck.isSlipping = false;
                 engine.setValue(this.deck.group, "scratch2_enable", false);
-            } else if (Math.abs(playbackError) > IntegratorSuppressionErrorThresh) {
+            } else if (SuppressIntegrator && (Math.abs(playbackError) > IntegratorSuppressionErrorThresh)) {
                 // If we are beyond a certain error threshold, suppress
                 // error integrator --- to help with gracefully restoring rotation
                 // speed without overshoot when adjusting with the crown.
