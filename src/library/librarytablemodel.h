@@ -15,5 +15,5 @@ class LibraryTableModel : public BaseSqlTableModel {
     // Takes a list of locations and add the tracks to the library. Returns the
     // number of successful additions.
     int addTracks(const QModelIndex& index, const QList<QString>& locations) override;
-    TrackModel::Capabilities getCapabilities() const final;
+    TrackModel::Capabilities getCapabilities() const override;
 };

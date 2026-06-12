@@ -131,6 +131,13 @@ class TreeItem final {
     bool needsUpdate() {
         return m_needsUpdate;
     }
+    // This is set/used only by BrowseFeature
+    void setIsWatchedLibraryPath(bool watched) {
+        m_isWatched = watched;
+    }
+    bool isWatchedLibraryPath() {
+        return m_isWatched;
+    }
 
   private:
     explicit TreeItem(
@@ -155,4 +162,5 @@ class TreeItem final {
     QIcon m_icon;
     bool m_bold;
     bool m_needsUpdate;
+    bool m_isWatched;
 };

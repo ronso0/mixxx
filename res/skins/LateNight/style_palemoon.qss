@@ -2821,6 +2821,7 @@ WLibrarySidebar {
 }
 WLibrarySidebar {
   outline: none;
+  qproperty-watchedPathColor: #00ffff;
 }
 /* Selected rows in Tree and Tracks table */
 WLibrarySidebar::item:selected,
