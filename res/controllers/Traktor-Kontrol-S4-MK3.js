@@ -604,6 +604,11 @@ class MotorOutputBuffMgr {
             }
         }
 
+        // Clamp the motor output value to the max allowable
+        if (outputInt > this.maxOutput) {
+            outputInt = this.maxOutput;
+        }
+
         // Finally, write the output data into the output buffer.
         // It is little endian, so write the 2 bytes thusly
         this.outputBuffer[offset + 3] = outputInt & 0xff;
