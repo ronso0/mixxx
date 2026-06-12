@@ -15,6 +15,9 @@ namespace {
 
 const QColor kDefaultBookmarkColor = QColor(Qt::red);
 
+// color for the 'watched path' indicator (cyan)
+const QColor kDefaultWatchedPathColor = QColor("#00ffff"); // clazy:exclude=qcolor-from-literal
+
 } // anonymous namespace
 
 WLibrarySidebar::WLibrarySidebar(QWidget* parent)
@@ -24,7 +27,8 @@ WLibrarySidebar::WLibrarySidebar(QWidget* parent)
           m_pItemDelegate(nullptr),
           m_hoverExpandDelay(mixxx::library::prefs::kSidebarHoverExpandDelayDefault),
           m_lastDragMoveAccepted(false),
-          m_bookmarkColor(kDefaultBookmarkColor) {
+          m_bookmarkColor(kDefaultBookmarkColor),
+          m_watchedPathColor(kDefaultWatchedPathColor) {
     qRegisterMetaType<FocusWidget>("FocusWidget");
     //Set some properties
     setHeaderHidden(true);
@@ -57,6 +61,14 @@ void WLibrarySidebar::setModel(QAbstractItemModel* pModel) {
             &WLibrarySidebar::bookmarkColorChanged,
             m_pItemDelegate,
             &SidebarItemDelegate::setBookmarkColor);
+
+    m_pItemDelegate->setWatchedPathColor(m_watchedPathColor);
+    // Color can be set in qss via qproperty-watchedPathColor which happens
+    // when the stylesheet is applied. Push it to delegate.
+    connect(this,
+            &WLibrarySidebar::watchedPathColorChanged,
+            m_pItemDelegate,
+            &SidebarItemDelegate::setWatchedPathColor);
 }
 
 void WLibrarySidebar::contextMenuEvent(QContextMenuEvent* pEvent) {
@@ -188,6 +200,11 @@ void WLibrarySidebar::dropEvent(QDropEvent* pEvent) {
     // track table widget onto the sidebar.
     // Reset the selected items (if you had anything highlighted, it clears it)
     // this->selectionModel()->clear();
+    SidebarModel* pSidebarModel = qobject_cast<SidebarModel*>(model());
+    VERIFY_OR_DEBUG_ASSERT(pSidebarModel) {
+        pEvent->ignore();
+        return;
+    }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QPoint pos = pEvent->position().toPoint();
 #else
@@ -540,7 +557,7 @@ void WLibrarySidebar::selectChildIndex(const QModelIndex& index, bool selectItem
     scrollTo(translated);
 }
 
-QModelIndex WLibrarySidebar::selectedIndex() {
+QModelIndex WLibrarySidebar::selectedIndex() const {
     QModelIndexList selectedIndices = selectionModel()->selectedRows();
     if (selectedIndices.isEmpty()) {
         return QModelIndex();
@@ -555,7 +572,7 @@ bool WLibrarySidebar::focusSelectedIndex() {
     // After the context menu was activated (and closed, with or without clicking
     // an action), the currentIndex is the right-clicked item.
     // If if the currentIndex is not selected, make the selection the currentIndex
-    QModelIndex selIndex = selectedIndex();
+    const QModelIndex selIndex = selectedIndex();
     if (selIndex.isValid() && selIndex != selectionModel()->currentIndex()) {
         setCurrentIndex(selIndex);
         return true;

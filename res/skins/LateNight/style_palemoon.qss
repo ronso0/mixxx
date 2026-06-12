@@ -3144,6 +3144,7 @@ WLibrarySidebar {
 WLibrarySidebar {
   outline: none;
   qproperty-bookmarkColor: #ff0000;
+  qproperty-watchedPathColor: #00ffff;
 }
 /* Selected rows in Tree and Tracks table */
 WLibrarySidebar::item:selected,

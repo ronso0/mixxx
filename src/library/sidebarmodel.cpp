@@ -1099,3 +1099,16 @@ void SidebarModel::loadBookmarksFromConfig(UserSettingsPointer pConfig) {
     return;
 }
 
+bool SidebarModel::indexIsWatchedPathItem(const QModelIndex& index) const {
+    if (!index.isValid()) {
+        return false;
+    }
+    if (index.internalPointer() == this) {
+        return false;
+    }
+    TreeItem* pTreeItem = static_cast<TreeItem*>(index.internalPointer());
+    if (!pTreeItem) {
+        return false;
+    }
+    return pTreeItem->isWatchedLibraryPath();
+}
