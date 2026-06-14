@@ -25,6 +25,7 @@ typedef struct Hint {
         HotCue,           // prio 10
         LoopEndEnabled,   // prio 10
         LoopStart,        // prio 10
+        Beatjump,
         FirstSound,
         IntroStart,
         IntroEnd,

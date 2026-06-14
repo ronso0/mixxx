@@ -596,6 +596,32 @@ void LoopingControl::hintReader(gsl::not_null<HintVector*> pHintList) {
                         .value());
         loop_hint.frameCount = Hint::kFrameCountForward;
     }
+
+    // Append possible Beatjump positions (current position +- beatjumpsize)
+    const mixxx::BeatsPointer pBeats = m_pBeats;
+    if (!pBeats) {
+        return;
+    }
+
+    const auto currentPosition = m_currentPosition.getValue();
+    double beats = m_pCOBeatJumpSize->get();
+    VERIFY_OR_DEBUG_ASSERT(beats > 0) {
+        return;
+    }
+    // Forward
+    const auto jumpFwdPos = pBeats->findNBeatsFromPosition(currentPosition, beats);
+    loop_hint.type = Hint::Type::Beatjump;
+    loop_hint.frame = static_cast<SINT>(
+            jumpFwdPos.toLowerFrameBoundary().value());
+    loop_hint.frameCount = Hint::kFrameCountForward;
+    pHintList->append(loop_hint);
+    // Backward
+    const auto jumpBackPos = pBeats->findNBeatsFromPosition(currentPosition, -beats);
+    loop_hint.type = Hint::Type::Beatjump;
+    loop_hint.frame = static_cast<SINT>(
+            jumpBackPos.toLowerFrameBoundary().value());
+    loop_hint.frameCount = Hint::kFrameCountBackward;
+    pHintList->append(loop_hint);
 }
 
 mixxx::audio::FramePos LoopingControl::getSyncPositionInsideLoop(
