@@ -417,6 +417,18 @@ void DlgTrackInfoMulti::loadTracks(const QList<TrackPointer>& pTracks) {
     connectTracksChanged();
 }
 
+QList<TrackPointer> DlgTrackInfoMulti::getTracksClearLoadedTracksHash() {
+    // Extract all TrackPointers into a flat list
+    QList<TrackPointer> tracksToRelease = m_pLoadedTracks.values();
+
+    // Clear the hash. When the dialog is deleted it drops its
+    // TrackPointer ownership, but the local 'tracksToRelease'
+    // list in the caller keeps them alive.
+    m_pLoadedTracks.clear();
+
+    return tracksToRelease;
+}
+
 void DlgTrackInfoMulti::focusField(const QString& property) {
     if (property.isEmpty()) {
         return;
@@ -1042,6 +1054,11 @@ void DlgTrackInfoMulti::saveTracks() {
         DEBUG_ASSERT(kPropAccessorMap.contains(findReplacePropId));
         const auto& propAccessor = kPropAccessorMap[findReplacePropId];
 
+        if (doInsert) {
+            // for tag purpose, separate the new tag with a whitespace
+            replaceStr.append(' ');
+        }
+
         for (auto& rec : m_trackRecords) {
             auto& metadata = rec.refMetadata();
             QString propertyStr = propAccessor.getter(metadata);
@@ -1074,8 +1091,6 @@ void DlgTrackInfoMulti::saveTracks() {
                     }
                 }
                 qWarning() << "    no match, insert" << replaceStr;
-                // for tag purpose, separate the new tag with a whitespace
-                replaceStr.append(' ');
                 propertyStr.insert(0, replaceStr);
                 qWarning() << "    write newPropStr:" << propertyStr;
                 propAccessor.setter(metadata, propertyStr);
