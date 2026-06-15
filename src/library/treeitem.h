@@ -125,6 +125,20 @@ class TreeItem final {
     bool isBold() const {
         return m_bold;
     }
+    void setNeedsUpdate(bool needsUpdate) {
+        m_needsUpdate = needsUpdate;
+    }
+    bool needsUpdate() {
+        return m_needsUpdate;
+    }
+    // This is set/used only by BrowseFeature
+    void setIsWatchedLibraryPath(bool watched) {
+        m_isWatched = watched;
+    }
+    bool isWatchedLibraryPath() {
+        return m_isWatched;
+    }
+    void updateIsWatchedLibraryPathRecursively(bool watched);
 
   private:
     explicit TreeItem(
@@ -135,8 +149,9 @@ class TreeItem final {
     void initFeatureRecursively(LibraryFeature* pFeature);
 
     // The library feature is inherited from the parent.
-    // For all child items this is just a shortcut to the
-    // library feature of the root item!
+    // For all child items this is done via
+    // insertChildren() -> initFeatureRecursively() and is just
+    // a shortcut to the library feature of the root item!
     LibraryFeature* m_pFeature;
 
     TreeItem* m_pParent;
@@ -147,4 +162,6 @@ class TreeItem final {
     QVariant m_data;
     QIcon m_icon;
     bool m_bold;
+    bool m_needsUpdate;
+    bool m_isWatched;
 };

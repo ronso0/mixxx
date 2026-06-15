@@ -83,7 +83,7 @@ void appendBpmPreviewtoBpmAction(QAction* pAction, const double bpm) {
         if (scaledBpm.back() == '.') {
             scaledBpm.chop(1);
         }
-        text.append(QStringLiteral(" | %1 BPM").arg(scaledBpm));
+        text.append(QStringLiteral("%1").arg(scaledBpm));
         pAction->setText(text);
     }
 }
@@ -246,6 +246,7 @@ void WTrackMenu::createMenus() {
                     // Clear in closeEvent() only? And create actions on aboutToShow
                     // only if it's empty?
                     m_pSearchRelatedMenu->clear();
+                    m_pSearchRelatedMenu->setDeckGroup(m_deckGroup);
                     const auto pTrack = getFirstTrackPointer();
                     if (pTrack) {
                         // Ensure it's enabled, else we can't add actions.
@@ -440,6 +441,9 @@ void WTrackMenu::createActions() {
         m_pClearBeatsAction = make_parented<QAction>(tr("BPM and Beatgrid"), m_pClearMetadataMenu);
         connect(m_pClearBeatsAction, &QAction::triggered, this, &WTrackMenu::slotClearBeats);
 
+        m_pClearPlayedAction = make_parented<QAction>(tr("Played"), m_pClearMetadataMenu);
+        connect(m_pClearPlayedAction, &QAction::triggered, this, &WTrackMenu::slotResetPlayedState);
+
         m_pClearPlayCountAction = make_parented<QAction>(tr("Play Count"), m_pClearMetadataMenu);
         connect(m_pClearPlayCountAction, &QAction::triggered, this, &WTrackMenu::slotClearPlayCount);
 
@@ -501,17 +505,17 @@ void WTrackMenu::createActions() {
         connect(m_pBpmUnlockAction, &QAction::triggered, this, &WTrackMenu::slotUnlockBpm);
 
         //BPM edit actions
-        m_pBpmDoubleAction = make_parented<QAction>(tr("Double BPM"), m_pBPMMenu);
+        m_pBpmDoubleAction = make_parented<QAction>(tr("Double"), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmDoubleAction, 2.0);
-        m_pBpmHalveAction = make_parented<QAction>(tr("Halve BPM"), m_pBPMMenu);
+        m_pBpmHalveAction = make_parented<QAction>(tr("Halve"), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmHalveAction, 0.5);
-        m_pBpmTwoThirdsAction = make_parented<QAction>(tr("2/3 BPM"), m_pBPMMenu);
+        m_pBpmTwoThirdsAction = make_parented<QAction>(tr("2/3      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmTwoThirdsAction, 2.0 / 3.0);
-        m_pBpmThreeFourthsAction = make_parented<QAction>(tr("3/4 BPM"), m_pBPMMenu);
+        m_pBpmThreeFourthsAction = make_parented<QAction>(tr("3/4      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmThreeFourthsAction, 3.0 / 4.0);
-        m_pBpmFourThirdsAction = make_parented<QAction>(tr("4/3 BPM"), m_pBPMMenu);
+        m_pBpmFourThirdsAction = make_parented<QAction>(tr("4/3      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmFourThirdsAction, 4.0 / 3.0);
-        m_pBpmThreeHalvesAction = make_parented<QAction>(tr("3/2 BPM"), m_pBPMMenu);
+        m_pBpmThreeHalvesAction = make_parented<QAction>(tr("3/2      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmThreeHalvesAction, 3.0 / 2.0);
 
         connect(m_pBpmDoubleAction, &QAction::triggered, this, [this] {
@@ -722,6 +726,7 @@ void WTrackMenu::setupActions() {
 
     if (featureIsEnabled(Feature::Reset)) {
         m_pClearMetadataMenu->addAction(m_pClearBeatsAction);
+        m_pClearMetadataMenu->addAction(m_pClearPlayedAction);
         m_pClearMetadataMenu->addAction(m_pClearPlayCountAction);
         m_pClearMetadataMenu->addAction(m_pClearRatingAction);
         m_pClearMetadataMenu->addAction(m_pClearCommentAction);
@@ -2023,6 +2028,28 @@ void WTrackMenu::loadSelectionToGroup(const QString& group,
 
 namespace {
 
+class ResetPlayedStateTrackPointerOperation : public mixxx::TrackPointerOperation {
+  private:
+    void doApply(const TrackPointer& pTrack) const override {
+        pTrack->updatePlayedStatusKeepPlayCount(false);
+    }
+};
+
+} // anonymous namespace
+
+// slot for reset played, sets played to 0 and keeps played count
+void WTrackMenu::slotResetPlayedState() {
+    const auto progressLabelText =
+            tr("Resetting played state of %n track(s)", "", getTrackCount());
+    const auto trackOperator =
+            ResetPlayedStateTrackPointerOperation();
+    applyTrackPointerOperation(
+            progressLabelText,
+            &trackOperator);
+}
+
+namespace {
+
 class ResetPlayCounterTrackPointerOperation : public mixxx::TrackPointerOperation {
   private:
     void doApply(
@@ -2719,7 +2746,7 @@ void WTrackMenu::slotRemoveFromDisk() {
     emit restoreCurrentViewStateOrIndex();
 }
 
-void WTrackMenu::slotShowDlgTrackInfo() {
+void WTrackMenu::slotShowDlgTrackInfo(bool findReplaceMode) {
     if (isEmpty()) {
         return;
     }
@@ -2729,14 +2756,54 @@ void WTrackMenu::slotShowDlgTrackInfo() {
         // Create a fresh dialog on invocation.
         m_pDlgTrackInfoMulti = std::make_unique<DlgTrackInfoMulti>(
                 m_pConfig);
+        // NOTE As soon as DlgTrackInfo is deleted the TrackPointers are dropped
+        // which causes metadata synchronization (export to track files if enabled)
+        // which in turn causes a GUI lag since the export is apparently run in
+        // the main thread.
+        // Trying to lint the symptoms by showing a progress dialog.
+        // FIXME Use the same delay mechanism as LibraryScannerDlg which shows the
+        // dialog only after 2 sec of activity.
         connect(m_pDlgTrackInfoMulti.get(),
                 &QDialog::finished,
                 this,
                 [this]() {
                     if (m_pDlgTrackInfoMulti.get() == sender()) {
+                        // Steal the tracks safely before the dialog goes away
+                        QList<TrackPointer> tracksToRelease =
+                                m_pDlgTrackInfoMulti
+                                        ->getTracksClearLoadedTracksHash();
+
                         m_pDlgTrackInfoMulti.release()->deleteLater();
                         // clear the track property name
                         m_trackProperty.clear();
+
+                        // Set up the progress dialog
+                        QProgressDialog progress(
+                                tr("Saving track metadata of %1 tracks")
+                                        .arg(QString::number(
+                                                tracksToRelease.size())),
+                                QString(), // No cancel button
+                                0,
+                                tracksToRelease.size(),
+                                this);
+                        progress.setWindowModality(Qt::WindowModal);
+                        progress.setMinimumDuration(0); // Force it to show instantly
+                        progress.show();
+
+                        // Drop the pointers one by one
+                        int total = tracksToRelease.size();
+                        for (int i = 0; i < total; ++i) {
+                            progress.setValue(i);
+
+                            // Pop the first item. If it's the last reference, Mixxx
+                            // triggers the synchronous file write and database save!
+                            tracksToRelease.pop_front();
+
+                            // Let the GUI paint the progress bar update
+                            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+                        }
+
+                        progress.setValue(total);
                     }
                 });
         QList<TrackPointer> tracks;
@@ -2750,7 +2817,11 @@ void WTrackMenu::slotShowDlgTrackInfo() {
         }
         m_pDlgTrackInfoMulti->loadTracks(tracks);
         m_pDlgTrackInfoMulti->show();
-        m_pDlgTrackInfoMulti->focusField(m_trackProperty);
+        if (findReplaceMode) {
+            m_pDlgTrackInfoMulti->prepareFindReplace(m_trackProperty);
+        } else {
+            m_pDlgTrackInfoMulti->focusField(m_trackProperty);
+        }
     } else {
         // Use the single-track editor with Next/Prev buttons and DlgTagFetcher.
         // Create a fresh dialog on invocation.

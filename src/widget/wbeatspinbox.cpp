@@ -2,6 +2,7 @@
 
 #include <QKeyEvent>
 #include <QRegularExpression>
+#include <QStyle>
 
 #include "control/controlobject.h"
 #include "control/controlproxy.h"
@@ -21,7 +22,8 @@ WBeatSpinBox::WBeatSpinBox(QWidget* parent,
         : QDoubleSpinBox(parent),
           WBaseWidget(this),
           m_valueControl(configKey, this, ControlFlag::NoAssertIfMissing),
-          m_scaleFactor(1.0) {
+          m_scaleFactor(1.0),
+          m_valueChangedHighlight(false) {
     // replace the original QLineEdit by one that supports font scaling.
     setLineEdit(new WBeatLineEdit(this));
     setDecimals(decimals);
@@ -40,10 +42,41 @@ WBeatSpinBox::WBeatSpinBox(QWidget* parent,
             this,
             &WBeatSpinBox::slotSpinboxValueChanged);
     m_valueControl.connectValueChanged(this, &WBeatSpinBox::slotControlValueChanged);
+
+    // A timer that resets the 'value changed' property
+    m_valueChangedResetTimer.setSingleShot(true);
+    m_valueChangedResetTimer.setInterval(1000);
+    m_valueChangedResetTimer.callOnTimeout(this, [this]() { slotSetValueChangedHighlight(false); });
 }
 
 void WBeatSpinBox::setup(const QDomNode& node, const SkinContext& context) {
     Q_UNUSED(node);
+
+    // Alignment
+    QString alignment;
+    if (context.hasNodeSelectString(node, "Alignment", &alignment)) {
+        alignment = alignment.toLower();
+        if (alignment == "right") {
+            setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            lineEdit()->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        } else if (alignment == "center") {
+            setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+            lineEdit()->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+        } else if (alignment == "left") {
+            setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+            lineEdit()->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        } else {
+            qDebug() << "WLabel::setup(): Alignment =" << alignment
+                     << " unknown, use right, center or left";
+        }
+    }
+
+    // Allow to hide up/down buttons
+    const QString showButtonsStr = context.selectString(node, "ShowButtons");
+    if (showButtonsStr == "false" || showButtonsStr == "no") {
+        setButtonSymbols(QAbstractSpinBox::NoButtons);
+    }
+
     m_scaleFactor = context.getScaleFactor();
     qobject_cast<WBeatLineEdit*>(lineEdit())->setScaleFactor(m_scaleFactor);
 }
@@ -72,9 +105,22 @@ void WBeatSpinBox::slotSpinboxValueChanged(double newValue) {
 }
 
 void WBeatSpinBox::slotControlValueChanged(double newValue) {
-    if (value() != newValue) {
-        setValue(newValue);
+    if (value() == newValue) {
+        return;
     }
+    setValue(newValue);
+    slotSetValueChangedHighlight(true);
+    m_valueChangedResetTimer.start();
+}
+
+void WBeatSpinBox::slotSetValueChangedHighlight(bool highlight) {
+    if (highlight == m_valueChangedHighlight) {
+        return;
+    }
+    m_valueChangedHighlight = highlight;
+    style()->polish(this);
+    update();
+    emit valueChangedHighlightChanged(m_valueChangedHighlight);
 }
 
 QString WBeatSpinBox::fractionString(int numerator, int denominator) const {

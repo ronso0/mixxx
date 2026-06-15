@@ -3,15 +3,12 @@
 #include <QDialog>
 #include <QHash>
 #include <QModelIndex>
-#include <memory>
 
 #include "library/ui_dlgtrackinfomulti.h"
 #include "preferences/usersettings.h"
-#include "track/beats.h"
 #include "track/track_decl.h"
 #include "track/trackrecord.h"
 #include "util/parented_ptr.h"
-#include "util/tapfilter.h"
 #include "widget/wcolorpickeraction.h"
 
 class WColorPickerAction;
@@ -28,8 +25,23 @@ class DlgTrackInfoMulti : public QDialog, public Ui::DlgTrackInfoMulti {
     explicit DlgTrackInfoMulti(UserSettingsPointer pUserSettings);
     ~DlgTrackInfoMulti() override = default;
 
+    /// enum for editable QString track properties
+    enum class TrackProperty {
+        Invalid = 0,
+        Artist,
+        Title,
+        Album,
+        AlbumArtist,
+        Genre,
+        Grouping,
+        Composer,
+        Comment
+    };
+
     void loadTracks(const QList<TrackPointer>& pTracks);
+    QList<TrackPointer> getTracksClearLoadedTracksHash();
     void focusField(const QString& property);
+    void prepareFindReplace(const QString& property);
 
   protected:
     /// We need this to set the max width of the comment QComboBox which has
@@ -67,11 +79,12 @@ class DlgTrackInfoMulti : public QDialog, public Ui::DlgTrackInfoMulti {
     void slotCoverInfoSelected(const CoverInfoRelative& coverInfo);
     void slotReloadCoverArt();
 
+    void slotUpdateFindReplaceGUI();
+
     void slotOpenInFileBrowser();
 
   private:
     void init();
-    void loadTracksInternal(const QList<TrackPointer>& pTracks);
     void saveTracks();
 
     void connectTracksChanged();
@@ -103,12 +116,15 @@ class DlgTrackInfoMulti : public QDialog, public Ui::DlgTrackInfoMulti {
         return trackIt.value();
     }
 
+    TrackProperty getSelectedFindReplacePropMaybeInvalid() const;
+
     const UserSettingsPointer m_pUserSettings;
 
     QHash<TrackId, TrackPointer> m_pLoadedTracks;
     QList<mixxx::TrackRecord> m_trackRecords;
 
     QHash<QString, QWidget*> m_propertyWidgets;
+    QHash<QString, TrackProperty> m_columnNamesToTrackProperty;
 
     parented_ptr<WCoverArtMenu> m_pWCoverArtMenu;
     parented_ptr<WCoverArtLabel> m_pWCoverArtLabel;

@@ -39,6 +39,12 @@ const ConfigKey kVScrollBarPosConfigKey{
         QStringLiteral("[Library]"),
         QStringLiteral("VScrollBarPos")};
 
+// Delay after track selection changed before loading un-cached covers and
+// updating the sidebar labels. Default is 100.
+// Longer delays will decrease CPU/memory load when scrolling the library with
+// Up/Down keys (or [Library],MoveUp/Down.
+constexpr int kTrackSelectDelayMillis = 500;
+
 } // anonymous namespace
 
 WTrackTableView::WTrackTableView(QWidget* pParent,
@@ -150,10 +156,10 @@ void WTrackTableView::slotGuiTick50ms(double /*unused*/) {
         return;
     }
 
-    // if the user is stopped in the same row for more than 0.1 s,
-    // we load un-cached cover arts as well.
+    // if the user is stopped in the same row for more than N millis, we load
+    // un-cached cover arts as well and emit a signal to update the sidebar labels.
     mixxx::Duration timeDelta = mixxx::Time::elapsed() - m_lastUserAction;
-    if (m_loadCachedOnly && timeDelta > mixxx::Duration::fromMillis(100)) {
+    if (m_loadCachedOnly && timeDelta > mixxx::Duration::fromMillis(kTrackSelectDelayMillis)) {
         // Show the currently selected track in the large cover art view and
         // highlights crate and playlists. Doing this in selectionChanged
         // slows down scrolling performance so we wait until the user has
@@ -1242,15 +1248,87 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             // desired column.
             const QString columnName = columnNameOfIndex(currentIndex());
             m_pTrackMenu->setTrackPropertyName(columnName);
-            m_pTrackMenu->slotShowDlgTrackInfo();
+            m_pTrackMenu->slotShowDlgTrackInfo(true /* findReplaceMode */);
+            return;
         }
-        return;
+        break;
     }
     case kHideRemoveShortcutKey: {
         if (event->modifiers() == kHideRemoveShortcutModifier) {
             hideOrRemoveSelectedTracks();
         }
         return;
+    }
+    case Qt::Key_C: {
+        // Alt + C edits track comment -> open Track Info, focus comment
+        // Alt + Shift + C clears comment of selected tracks
+        if (event->modifiers().testFlag(Qt::AltModifier)) {
+            VERIFY_OR_DEBUG_ASSERT(m_pTrackMenu.get()) {
+                initTrackMenu();
+            }
+            const QModelIndexList indices = getSelectedRows();
+            if (indices.isEmpty()) {
+                return;
+            }
+            m_pTrackMenu->loadTrackModelIndices(indices);
+            if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+                // Clear comment
+                m_pTrackMenu->clearComments();
+                return;
+            }
+
+            // Edit comment
+            // If only one track is selected -> open inline editor
+            // multiple tracks -> use Track Info dialog, focus comment field
+            if (indices.size() == 1) {
+                int commColIndex = -1;
+                for (int i = 0; i < model()->columnCount(); ++i) {
+                    if (isColumnHidden(i)) {
+                        continue;
+                    }
+                    const QString colName = model()->headerData(
+                                                           i,
+                                                           Qt::Horizontal,
+                                                           TrackModel::kHeaderNameRole)
+                                                    .toString();
+                    if (colName == QStringLiteral("comment")) {
+                        commColIndex = i;
+                        break;
+                    }
+                }
+                if (commColIndex != -1) {
+                    const QModelIndex commIndex =
+                            model()->index(indices.first().row(), commColIndex);
+                    edit(commIndex, EditKeyPressed, nullptr);
+                }
+            } else {
+                m_pTrackMenu->setTrackPropertyName(QStringLiteral("comment"));
+                m_pTrackMenu->slotShowDlgTrackInfo();
+            }
+            return;
+        }
+        break;
+    }
+    case Qt::Key_Space: {
+        // if (event->modifiers() & Qt::AltModifier) {
+        if (event->modifiers() & Qt::ShiftModifier) {
+            // Sort by focused column
+            TrackModel::SortColumnId sortColumnId = getColumnIdFromCurrentIndex();
+            if (sortColumnId == TrackModel::SortColumnId::Invalid) {
+                return;
+            }
+
+            if (static_cast<int>(sortColumnId) != static_cast<int>(m_pSortColumn->get())) {
+                m_pSortColumn->set(static_cast<int>(sortColumnId));
+            } else {
+                // Already sorted by this column, invert sort order
+                m_pSortOrder->set((m_pSortOrder->get() == 0) ? 1.0 : 0.0);
+            }
+
+            applySortingIfVisible();
+            return;
+        }
+        break;
     }
     default:
         break;

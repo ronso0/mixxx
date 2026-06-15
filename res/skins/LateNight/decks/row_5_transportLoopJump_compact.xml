@@ -10,8 +10,8 @@
       <WidgetGroup><!-- Play, Cue, Loop, Jump, Fx1-4, VinylControls -->
         <ObjectName>DeckRow_5_LoopCuesTransportCompact</ObjectName>
         <Layout>horizontal</Layout>
-        <SizePolicy>p,max</SizePolicy>
-        <MaximumSize>360,</MaximumSize>
+        <SizePolicy>me,max</SizePolicy>
+        <!-- <MaximumSize>360,</MaximumSize> -->
         <Children>
 
           <WidgetGroup><!-- Play + PlayBlink + default dark background -->
@@ -44,6 +44,10 @@
                 </Connection>
               </PushButton>
             </Children>
+            <Connection>
+              <ConfigKey>[Skin],show_cue_button</ConfigKey>
+              <BindProperty>visible</BindProperty>
+            </Connection>
           </WidgetGroup><!-- Play + PlayBlink + default dark background -->
 
           <CueButton>
@@ -80,7 +84,86 @@
               <ConfigKey><Variable name="Group"/>,cue_indicator</ConfigKey>
               <ConnectValueFromWidget>false</ConnectValueFromWidget>
             </Connection>
+            <Connection>
+              <ConfigKey>[Skin],show_cue_button</ConfigKey>
+              <BindProperty>visible</BindProperty>
+            </Connection>
           </CueButton>
+
+          <!-- wide Play button, Cue button hidden -->
+          <WidgetGroup>
+            <Layout>stacked</Layout>
+            <Size>116f,26f</Size>
+            <Children>
+              <Template src="skins:LateNight/controls/button_2state_right_display.xml">
+                <SetVariable name="TooltipId">play_cue_set</SetVariable>
+                <SetVariable name="ObjectName">PlayDeck</SetVariable>
+                <SetVariable name="Size">116f,26f</SetVariable>
+                <SetVariable name="BtnSize">play_wide</SetVariable>
+                <SetVariable name="ConfigKey"><Variable name="Group"/>,play</SetVariable>
+                <SetVariable name="ConfigKeyRight"><Variable name="Group"/>,cue_set</SetVariable>
+                <SetVariable name="ConfigKeyDisp"><Variable name="Group"/>,play_latched</SetVariable>
+              </Template>
+              <PushButton>
+                <ObjectName>PreviewIndicator</ObjectName>
+                <Size>116f,26f</Size>
+                <NumberStates>2</NumberStates>
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,play</ConfigKey>
+                </Connection>
+              </PushButton>
+              <PushButton>
+                <ObjectName>PlayIndicator</ObjectName>
+                <Size>116f,26f</Size>
+                <NumberStates>2</NumberStates>
+                <Connection>
+                  <ConfigKey><Variable name="Group"/>,play_indicator</ConfigKey>
+                </Connection>
+              </PushButton>
+            </Children>
+            <Connection>
+              <ConfigKey>[Skin],show_cue_button</ConfigKey>
+              <Transform><Not/></Transform>
+              <BindProperty>visible</BindProperty>
+            </Connection>
+          </WidgetGroup><!-- Play + PlayBlink + default dark background -->
+
+          <WidgetGroup>
+            <SizePolicy>me,min</SizePolicy>
+            <MinimumSize>4,</MinimumSize>
+            <MaximumSize>4,</MaximumSize>
+          </WidgetGroup>
+
+          <WidgetGroup><!-- HotCues 1 - 8 -->
+            <Layout>horizontal</Layout>
+            <SizePolicy>me,min</SizePolicy>
+            <Children>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">1</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">2</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">3</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">4</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">5</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">6</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">7</SetVariable>
+              </Template>
+              <Template src="skins:LateNight/controls/button_hotcue.xml">
+                <SetVariable name="number">8</SetVariable>
+              </Template>
+            </Children>
+          </WidgetGroup>
 
           <WidgetGroup>
             <SizePolicy>me,min</SizePolicy>
@@ -91,7 +174,7 @@
           <WidgetGroup>
             <ObjectName>LoopControls</ObjectName>
             <Layout>horizontal</Layout>
-            <SizePolicy>me,min</SizePolicy>
+            <SizePolicy>min,min</SizePolicy>
             <Children>
               <Template src="skins:LateNight/controls/button_2state_right_display.xml">
                 <SetVariable name="TooltipId">beatloop_activate</SetVariable>
@@ -109,6 +192,8 @@
                 <SizePolicy>me,min</SizePolicy>
                 <MinimumSize>46,26</MinimumSize>
                 <MaximumSize>72,26</MaximumSize>
+                <Alignment>center</Alignment>
+                <ShowButtons>no</ShowButtons>
                 <Value><Variable name="Group"/>,beatloop_size</Value>
                 <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
                 <Connection>
@@ -132,7 +217,7 @@
           <WidgetGroup>
             <ObjectName>BeatjumpControls</ObjectName>
             <Layout>horizontal</Layout>
-            <SizePolicy>me,min</SizePolicy>
+            <SizePolicy>min,min</SizePolicy>
             <Children>
               <BeatSpinBox>
                 <TooltipId>beatjump_size</TooltipId>
@@ -142,6 +227,7 @@
                 <MaximumSize>72,26</MaximumSize>
                 <Align>center</Align>
                 <Alignment>center</Alignment>
+                <ShowButtons>no</ShowButtons>
                 <Value><Variable name="Group"/>,beatjump_size</Value>
                 <!-- disabled until 'highlight' property has been added to WBeatSpinBox / wbasewidget.
                 <Connection>
@@ -155,43 +241,25 @@
               <BindProperty>visible</BindProperty>
             </Connection>
           </WidgetGroup>
+
+          <WidgetGroup>
+            <SizePolicy>me,min</SizePolicy>
+            <MinimumSize>2,</MinimumSize>
+            <MaximumSize>20,</MaximumSize>
+          </WidgetGroup>
+
+          <WidgetGroup>
+            <SizePolicy>me,min</SizePolicy>
+            <MinimumSize>2,</MinimumSize>
+            <MaximumSize>20,</MaximumSize>
+          </WidgetGroup><!-- flex spacer -->
+
+          <WidgetGroup><Size>10f,0min</Size></WidgetGroup>
+
+          <Template src="skins:LateNight/fx/assign_buttons_big.xml"/>
+
         </Children>
       </WidgetGroup><!-- DeckRow_5_LoopCuesTransportCompact -->
-
-      <WidgetGroup><Size>1f,0min</Size></WidgetGroup>
-      <WidgetGroup><SizePolicy>min,min</SizePolicy></WidgetGroup>
-      <WidgetGroup><Size>1f,0min</Size></WidgetGroup>
-
-      <Template src="skins:LateNight/decks/vinyl_controls.xml"/>
-
-      <WidgetGroup>
-        <SizePolicy>me,min</SizePolicy>
-        <MinimumSize>2,</MinimumSize>
-        <MaximumSize>40,</MaximumSize>
-      </WidgetGroup>
-
-      <Template src="skins:LateNight/fx/assign_buttons.xml"/>
-
-      <WidgetGroup>
-        <SizePolicy>me,min</SizePolicy>
-        <MinimumSize>2,</MinimumSize>
-        <MaximumSize>40,</MaximumSize>
-      </WidgetGroup>
-
-      <WidgetGroup>
-        <SizePolicy>me,min</SizePolicy>
-        <MaximumSize>111,</MaximumSize>
-        <Layout>vertical</Layout>
-        <Children>
-          <SingletonContainer>
-            <ObjectName>KeyControls<Variable name="ChanNum"/></ObjectName>
-          </SingletonContainer>
-        </Children>
-        <Connection>
-          <ConfigKey persist="true">[Skin],show_key_controls_compact</ConfigKey>
-          <BindProperty>visible</BindProperty>
-        </Connection>
-      </WidgetGroup>
 
       <WidgetGroup><Size>2f,0min</Size></WidgetGroup>
       <WidgetGroup>

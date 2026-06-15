@@ -17,6 +17,7 @@ class SidebarModel : public QAbstractItemModel {
 
     enum Roles {
         IconNameRole = Qt::UserRole + 1,
+        NeedsUpdateRole = Qt::UserRole + 2,
         DataRole,
     };
     Q_ENUM(Roles);
@@ -49,6 +50,12 @@ class SidebarModel : public QAbstractItemModel {
 
     void clear(const QModelIndex& index);
     void paste(const QModelIndex& index);
+
+    bool indexNeedsUpdate(const QModelIndex& index) const;
+    void updateItem(const QModelIndex& index);
+
+    bool indexIsWatchedPathItem(const QModelIndex& index) const;
+
   public slots:
     void pressed(const QModelIndex& index);
     void clicked(const QModelIndex& index);
@@ -64,10 +71,9 @@ class SidebarModel : public QAbstractItemModel {
     // void slotColumnsInserted(const QModelIndex& parent, int start, int end);
     // void slotColumnsRemoved(const QModelIndex& parent, int start, int end);
     void slotDataChanged(const QModelIndex& topLeft, const QModelIndex & bottomRight);
-    //void slotHeaderDataChanged(Qt::Orientation orientation, int first, int last);
+    // void slotHeaderDataChanged(Qt::Orientation orientation, int first, int last);
     // void slotLayoutAboutToBeChanged();
     // void slotLayoutChanged();
-    // void slotModelAboutToBeReset();
     // void slotModelReset();
     void slotRowsAboutToBeInserted(const QModelIndex& parent, int start, int end);
     void slotRowsAboutToBeRemoved(const QModelIndex& parent, int start, int end);

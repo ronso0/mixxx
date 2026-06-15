@@ -455,12 +455,20 @@ endif()
 
 project(mixxx VERSION 2.6.0 LANGUAGES C CXX)
 # Work around missing version suffixes support https://gitlab.kitware.com/cmake/cmake/-/issues/16716
-set(MIXXX_VERSION_PRERELEASE "beta") # set to "alpha" "beta" or ""
+set(MIXXX_VERSION_PRERELEASE "") # set to "alpha" "beta" or ""
 
 set(CMAKE_PROJECT_HOMEPAGE_URL "https://www.mixxx.org")
 set(
   CMAKE_PROJECT_DESCRIPTION
   "Mixxx is Free DJ software that gives you everything you need to perform live mixes."
+)
+
+# ronso0: prep for optimization for Thinkpad X200T
+set(
+  TARGET_ARCH
+  "generic"
+  CACHE STRING
+  "Target CPU architecture (generic, native, penryn, etc.)"
 )
 
 # Used for force control of color output
@@ -1328,6 +1336,7 @@ add_library(
   src/library/basetrackcache.cpp
   src/library/basetracktablemodel.cpp
   src/library/browse/browsefeature.cpp
+  src/library/browse/browselibrarytablemodel.cpp
   src/library/browse/browsetablemodel.cpp
   src/library/browse/browsethread.cpp
   src/library/browse/foldertreemodel.cpp
@@ -1399,7 +1408,9 @@ add_library(
   src/library/searchqueryparser.cpp
   src/library/serato/seratofeature.cpp
   src/library/serato/seratoplaylistmodel.cpp
+  src/library/sidebaritemdelegate.cpp
   src/library/sidebarmodel.cpp
+  src/library/sidebaritemdelegate.cpp
   src/library/starrating.cpp
   src/library/tabledelegates/bpmdelegate.cpp
   src/library/tabledelegates/checkboxdelegate.cpp
@@ -2297,6 +2308,20 @@ else()
     fatal_error_missing_env()
   endif()
   add_executable(mixxx WIN32 src/main.cpp)
+endif()
+
+# ronso0: optimize for Thinkpad X200T
+# set`penryn` via
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  if(TARGET_ARCH STREQUAL "generic")
+    message(STATUS "Building a portable binary (default baseline architecture)")
+  else()
+    message(
+      STATUS
+      "Optimizing specifically for microarchitecture: ${TARGET_ARCH}"
+    )
+    target_compile_options(mixxx-lib PRIVATE -march=${TARGET_ARCH})
+  endif()
 endif()
 
 set_target_properties(mixxx-lib PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY}")
