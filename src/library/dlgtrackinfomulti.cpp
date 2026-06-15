@@ -380,10 +380,14 @@ void DlgTrackInfoMulti::init() {
 
 void DlgTrackInfoMulti::slotApply() {
     saveTracks();
+    // saveTracks() calls disconnectTracksChanged() just before writing the
+    // TrackRecords, so reconnect now, repopulate the dialog and update the GUI
+    connectTracksChanged();
+    updateFromTracks();
 }
 
 void DlgTrackInfoMulti::slotOk() {
-    slotApply();
+    saveTracks();
     accept();
 }
 
@@ -1094,10 +1098,7 @@ void DlgTrackInfoMulti::saveTracks() {
         pTrack->replaceRecord(rec);
     }
 
-    connectTracksChanged();
-
-    // Repopulate the dialog and update the UI
-    updateFromTracks();
+    // If we still need the tracks slotApply() will reconnect and update the GUI
 }
 
 void DlgTrackInfoMulti::connectTracksChanged() {
