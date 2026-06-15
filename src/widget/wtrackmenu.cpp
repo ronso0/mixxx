@@ -2756,14 +2756,54 @@ void WTrackMenu::slotShowDlgTrackInfo(bool findReplaceMode) {
         // Create a fresh dialog on invocation.
         m_pDlgTrackInfoMulti = std::make_unique<DlgTrackInfoMulti>(
                 m_pConfig);
+        // NOTE As soon as DlgTrackInfo is deleted the TrackPointers are dropped
+        // which causes metadata synchronization (export to track files if enabled)
+        // which in turn causes a GUI lag since the export is apparently run in
+        // the main thread.
+        // Trying to lint the symptoms by showing a progress dialog.
+        // FIXME Use the same delay mechanism as LibraryScannerDlg which shows the
+        // dialog only after 2 sec of activity.
         connect(m_pDlgTrackInfoMulti.get(),
                 &QDialog::finished,
                 this,
                 [this]() {
                     if (m_pDlgTrackInfoMulti.get() == sender()) {
+                        // Steal the tracks safely before the dialog goes away
+                        QList<TrackPointer> tracksToRelease =
+                                m_pDlgTrackInfoMulti
+                                        ->getTracksClearLoadedTracksHash();
+
                         m_pDlgTrackInfoMulti.release()->deleteLater();
                         // clear the track property name
                         m_trackProperty.clear();
+
+                        // Set up the progress dialog
+                        QProgressDialog progress(
+                                tr("Saving track metadata of %1 tracks")
+                                        .arg(QString::number(
+                                                tracksToRelease.size())),
+                                QString(), // No cancel button
+                                0,
+                                tracksToRelease.size(),
+                                this);
+                        progress.setWindowModality(Qt::WindowModal);
+                        progress.setMinimumDuration(0); // Force it to show instantly
+                        progress.show();
+
+                        // Drop the pointers one by one
+                        int total = tracksToRelease.size();
+                        for (int i = 0; i < total; ++i) {
+                            progress.setValue(i);
+
+                            // Pop the first item. If it's the last reference, Mixxx
+                            // triggers the synchronous file write and database save!
+                            tracksToRelease.pop_front();
+
+                            // Let the GUI paint the progress bar update
+                            QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+                        }
+
+                        progress.setValue(total);
                     }
                 });
         QList<TrackPointer> tracks;
