@@ -2,6 +2,7 @@
 
 #include <QtDebug>
 
+#include "mixer/playermanager.h"
 #include "moc_cachingreader.cpp"
 #include "util/assert.h"
 #include "util/compatibility/qatomic.h"
@@ -33,7 +34,16 @@ constexpr SINT kDefaultHintFrames = 1024;
 // (kNumberOfCachedChunksInMemory = 1, 2, 3, ...) for testing purposes
 // to verify that the MRU/LRU cache works as expected. Even though
 // massive drop outs are expected to occur Mixxx should run reliably!
+// ronso0: use much more for the main decks, as an attempt to eliminate
+// any xruns when beatjumping forward
 constexpr SINT kNumberOfCachedChunksInMemory = 80;
+constexpr SINT kNumberOfCachedChunksInMemoryMainDeck = 1000;
+
+SINT CachedChunksInMemory(const QString& group) {
+    return PlayerManager::isDeckGroup(group)
+            ? kNumberOfCachedChunksInMemoryMainDeck
+            : kNumberOfCachedChunksInMemory;
+}
 
 } // anonymous namespace
 
@@ -50,25 +60,25 @@ CachingReader::CachingReader(const QString& group,
           // buffer, where new requests replace old requests when full. Those
           // old requests need to be returned immediately to the CachingReader
           // that must take ownership and free them!!!
-          m_chunkReadRequestFIFO(kNumberOfCachedChunksInMemory / 4),
+          m_chunkReadRequestFIFO(CachedChunksInMemory(group) / 4),
           // The capacity of the back channel must be equal to the number of
           // allocated chunks, because the worker use writeBlocking(). Otherwise
           // the worker could get stuck in a hot loop!!!
-          m_readerStatusUpdateFIFO(kNumberOfCachedChunksInMemory),
+          m_readerStatusUpdateFIFO(CachedChunksInMemory(group)),
           m_state(STATE_IDLE),
           m_mruCachingReaderChunk(nullptr),
           m_lruCachingReaderChunk(nullptr),
           m_sampleBuffer(CachingReaderChunk::kFrames * maxSupportedChannel *
-                  kNumberOfCachedChunksInMemory),
+                  CachedChunksInMemory(group)),
           m_worker(group,
                   &m_chunkReadRequestFIFO,
                   &m_readerStatusUpdateFIFO,
                   maxSupportedChannel) {
-    m_allocatedCachingReaderChunks.reserve(kNumberOfCachedChunksInMemory);
+    m_allocatedCachingReaderChunks.reserve(CachedChunksInMemory(group));
     // Divide up the allocated raw memory buffer into total_chunks
     // chunks. Initialize each chunk to hold nothing and add it to the free
     // list.
-    for (SINT i = 0; i < kNumberOfCachedChunksInMemory; ++i) {
+    for (SINT i = 0; i < CachedChunksInMemory(group); ++i) {
         CachingReaderChunkForOwner* c =
                 new CachingReaderChunkForOwner(
                         mixxx::SampleBuffer::WritableSlice(
