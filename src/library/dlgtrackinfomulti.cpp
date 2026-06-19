@@ -804,30 +804,41 @@ void DlgTrackInfoMulti::saveTracks() {
 
     // Even though we may have skipped the property selected for Find/Replace,
     // we can find/replace only if we have a Find string.
+    // 1) allow shrink whitespaces, ie. replace "  " with " " ??
     QString findStr = txtFind->text();
-    if (findReplacePropId != TrackProperty::Invalid && !findStr.isEmpty()) {
+    if (findReplacePropId != TrackProperty::Invalid) {
         // Since we allow editing the multi-line Comments property, we also care
         // about linebreaks. We accept \n for find and replace, but we need to
         // handle those explicitly.
-        // Find: QRegularExpression takes \n as linebreak natively, BUT source
-        // data may also contain CRLF \r\n or just \r. Let's make the find string
-        // agnostic by replacing \n with \R which matches all sorts of commonly
-        // used linebreaks as well as esoteric variants like \u2028.
-        // The later QString::replace() will then consume or replace all
-        // linebreak occurrences.
-        // We must also escape special regex characters (like parentheses) so
-        // they are treated as literal text (while preserving the \n -> \R).
-        QStringList findParts = findStr.split(QStringLiteral("\\n"));
-        for (QString& part : findParts) {
-            part = QRegularExpression::escape(part);
+        QRegularExpression findRegEx;
+        bool doFindReplace = false;
+        bool doInsert = false;
+        if (!findStr.isEmpty()) {
+            // Find: QRegularExpression takes \n as linebreak natively, BUT source
+            // data may also contain CRLF \r\n or just \r. Let's make the find string
+            // agnostic by replacing \n with \R which matches all sorts of commonly
+            // used linebreaks as well as esoteric variants like \u2028.
+            // The later QString::replace() will then consume or replace all
+            // linebreak occurrences.
+            // We must also escape special regex characters (like parentheses) so
+            // they are treated as literal text (while preserving the \n -> \R).
+            QStringList findParts = findStr.split(QStringLiteral("\\n"));
+            for (QString& part : findParts) {
+                part = QRegularExpression::escape(part);
+            }
+            findStr = findParts.join(QStringLiteral("\\R"));
+            findRegEx = QRegularExpression(findStr, QRegularExpression::CaseInsensitiveOption);
+            doFindReplace = true;
         }
-        findStr = findParts.join(QStringLiteral("\\R"));
-        QRegularExpression findRegEx(findStr, QRegularExpression::CaseInsensitiveOption);
 
         // Replace: \n is seen as two separate chars (\ + n), replace all
         // occurrences with linefeed char \n.
         QString replaceStr = txtReplace->text();
         replaceStr.replace("\\n", "\n");
+        if (findStr.isEmpty() && !replaceStr.isEmpty()) {
+            findRegEx = QRegularExpression(replaceStr, QRegularExpression::CaseInsensitiveOption);
+            doInsert = true;
+        }
 
         // DEBUG -- REMOVE
         qWarning() << "    -> find/replace for property" << comboFindReplace->currentText();
@@ -837,19 +848,42 @@ void DlgTrackInfoMulti::saveTracks() {
         for (auto& rec : m_trackRecords) {
             auto& metadata = rec.refMetadata();
             QString propertyStr = propAccessor.getter(metadata);
-            QRegularExpressionMatch regexMatch = findRegEx.match(propertyStr);
-            qWarning() << "    find" << findStr << "in" << propertyStr;
-            if (!regexMatch.hasMatch()) {
-                qWarning() << "    no match";
-                continue;
+            if (doFindReplace) {
+                QRegularExpressionMatch regexMatch = findRegEx.match(propertyStr);
+                qWarning() << "    find" << findStr << "in" << propertyStr;
+                if (!regexMatch.hasMatch()) {
+                    qWarning() << "    no match";
+                    continue;
+                }
+                qWarning() << "    has match, replace";
+                qWarning() << "    " << findStr << "with";
+                qWarning() << "    " << replaceStr;
+                propertyStr.replace(findRegEx, replaceStr);
+                qWarning() << "    write newPropStr:" << propertyStr;
+                propAccessor.setter(metadata, propertyStr);
+                qWarning() << "    check:           " << propAccessor.getter(metadata);
+            } else if (doInsert) {
+                // "Insert" is to make sure all tracks' [property] contains the
+                // replaceStr on the first line (tag).
+                // Split into lines, check if prop string contains replaceStr
+                const QStringList splitLines = propertyStr.split("\n", Qt::SkipEmptyParts);
+                if (!splitLines.isEmpty()) {
+                    const QString firstLine = splitLines.first();
+                    // qWarning() << "    find" << replaceStr << "in" << firstLine;
+                    QRegularExpressionMatch regexMatch = findRegEx.match(firstLine);
+                    if (regexMatch.hasMatch()) {
+                        qWarning() << "    1st line" << firstLine << "has match, skip";
+                        continue;
+                    }
+                }
+                qWarning() << "    no match, insert" << replaceStr;
+                // for tag purpose, separate the new tag with a whitespace
+                replaceStr.append(' ');
+                propertyStr.insert(0, replaceStr);
+                qWarning() << "    write newPropStr:" << propertyStr;
+                propAccessor.setter(metadata, propertyStr);
+                qWarning() << "    check:           " << propAccessor.getter(metadata);
             }
-            qWarning() << "    has match, replace";
-            qWarning() << "    " << findStr << "with";
-            qWarning() << "    " << replaceStr;
-            propertyStr.replace(findRegEx, replaceStr);
-            qWarning() << "    write newPropStr:" << propertyStr;
-            propAccessor.setter(metadata, propertyStr);
-            qWarning() << "    check:           " << propAccessor.getter(metadata);
         }
     }
 
