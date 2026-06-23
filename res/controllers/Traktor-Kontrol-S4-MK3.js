@@ -3791,9 +3791,11 @@ class S4Mk3MotorManager {
                 // If we are touching the disc AND the playbackError goes beyond
                 // the slipping threshold, apply the slip force only
                 if (this.deck.wheelTouch.touched && Math.abs(playbackError) > SlipmatErrorThresh) {
+                    console.warn("---> set slipping + scratching");
                     this.deck.isSlipping = true;
                     engine.setValue(this.deck.group, "scratch2_enable", true);
                 } else if (!this.deck.wheelTouch.touched && this.deck.isSlipping && Math.abs(playbackError) < SlipmatErrorThresh) {
+                    console.warn("---> unset slipping + scratching");
                     this.deck.isSlipping = false;
                     engine.setValue(this.deck.group, "scratch2_enable", false);
                 } else if (Math.abs(playbackError) > IntegratorSuppressionErrorThresh) {
@@ -3813,11 +3815,14 @@ class S4Mk3MotorManager {
                     }
                     // Use the slipmat error threshold as a 'dead zone' to avoid chattering
                     // when hand-spinning close to the nominal rotation velocity
-                    if (playbackError > SlipmatErrorThresh) {
+                    if (playbackError > SlipmatErrorThresh) { // slipping forward?
+                        console.warn("--- slipping FWD, playbackError", playbackError.toFixed(2), " > SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
                         outputTorque = SlipFrictionForce;
-                    } else if (playbackError < -SlipmatErrorThresh) {
+                    } else if (playbackError < -SlipmatErrorThresh) { // slipping backward?
+                        console.warn("--- slipping REV, playbackError", playbackError.toFixed(2), " < SlipmatErrorThresh", SlipmatErrorThresh.toFixed(2));
                         outputTorque = -SlipFrictionForce;
                     } else {
+                        console.warn("--- playbackError ignored");
                         outputTorque = 0;
                     }
                 } else {
