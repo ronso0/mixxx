@@ -47,11 +47,21 @@ const TARGET_RPM = 33 + 1/3;
 const VELOCITY_TO_SCRATCH = JOGWHEEL_CLOCK_HZ / (TICKS_PER_REV * TARGET_RPM / 60);
 const VELOCITY_TO_JOG = VELOCITY_TO_SCRATCH * JOG_SENSITIVITY;
 
+const HotcueMode = 0;
+const LooprollMode = 1;
+const SamplerMode = 2;
+
 var TraktorS2MK3 = new function() {
     this.controller = new HIDController();
     this.shiftPressed = {"[Channel1]": false, "[Channel2]": false};
     this.fxButtonState = {1: false, 2: false, 3: false, 4: false};
-    this.padModeState = {"[Channel1]": 0, "[Channel2]": 0}; // 0 = Hotcues Mode, 1 = Samples Mode
+    // 0 = Hotcues mode
+    // 1 = Beatlooproll mode
+    // 2 = Samples mode
+    this.padModeState = {
+        "[Channel1]": HotcueMode,
+        "[Channel2]": HotcueMode
+    };
 
     // Knob encoder states (hold values between 0x0 and 0xF)
     // Rotate to the right is +1 and to the left is means -1
@@ -83,6 +93,7 @@ var TraktorS2MK3 = new function() {
     // Sampler callbacks
     this.samplerCount = 16;
     this.samplerCallbacks = [];
+    this.loopRollCallbacks = [];
     this.samplerHotcuesRelation = {
         "[Channel1]": {
             1: 1, 2: 2, 3: 3, 4: 4, 5: 9, 6: 10, 7: 11, 8: 12
@@ -90,6 +101,18 @@ var TraktorS2MK3 = new function() {
             1: 5, 2: 6, 3: 7, 4: 8, 5: 13, 6: 14, 7: 15, 8: 16
         }
     };
+
+    // Looproll control -> pad num map
+    this.loopRollKeysAndPadnums = {
+        "beatlooproll_0.125_activate": [1],
+        "beatlooproll_0.25_activate": [2],
+        "beatlooproll_0.5_activate": [3],
+        "beatlooproll_1_activate": [4],
+        "beatlooproll_2_activate": [6],
+        "beatlooproll_4_activate": [7],
+        "beatloop_activate": [5, 8],
+    };
+    this.loopRoolCallbacks = [];
 };
 
 TraktorS2MK3.init = function(_id) {
@@ -123,8 +146,8 @@ TraktorS2MK3.registerInputPackets = function() {
     this.registerInputButton(messageShort, "[Channel1]", "!hotcues", 0x01, 0x40, this.padModeHandler);
     this.registerInputButton(messageShort, "[Channel2]", "!hotcues", 0x05, 0x01, this.padModeHandler);
 
-    this.registerInputButton(messageShort, "[Channel1]", "!samples", 0x01, 0x80, this.padModeHandler);
-    this.registerInputButton(messageShort, "[Channel2]", "!samples", 0x05, 0x02, this.padModeHandler);
+    this.registerInputButton(messageShort, "[Channel1]", "!looprollsOrSamples", 0x01, 0x80, this.padModeHandler);
+    this.registerInputButton(messageShort, "[Channel2]", "!looprollsOrSamples", 0x05, 0x02, this.padModeHandler);
 
     // Number pad buttons (Hotcues or Samplers depending on current mode)
     this.registerInputButton(messageShort, "[Channel1]", "!pad_1", 0x02, 0x10, this.numberButtonHandler);
@@ -357,25 +380,44 @@ TraktorS2MK3.padModeHandler = function(field) {
         return;
     }
 
-    if (TraktorS2MK3.padModeState[field.group] === 0 && field.name === "!samples") {
-        // If we are in hotcues mode and samples mode is activated
-        engine.setValue("[Samplers]", "show_samplers", 1);
-        TraktorS2MK3.padModeState[field.group] = 1;
-        TraktorS2MK3.outputHandler(0, field.group, "hotcues");
-        TraktorS2MK3.outputHandler(1, field.group, "samples");
+    // Hotcues: hotcues
+    // Samples unshifted: looprolls
+    //           shifted: samples
 
-        // Light LEDs for all slots with loaded samplers
-        for (const key in TraktorS2MK3.samplerHotcuesRelation[field.group]) {
-            if (Object.hasOwnProperty.call(TraktorS2MK3.samplerHotcuesRelation[field.group], key)) {
-                const loaded = engine.getValue("[Sampler" + TraktorS2MK3.samplerHotcuesRelation[field.group][key] + "]", "track_loaded");
-                TraktorS2MK3.outputHandler(loaded, field.group, "pad_" + key);
+    if (field.name === "!looprollsOrSamples") {
+        // If we are in hotcues mode and looprolls mode is activated
+        // engine.setValue("[Samplers]", "show_samplers", 1);
+
+        // Set padmode LEDs
+        TraktorS2MK3.outputHandler(0, field.group, "hotcues");
+        TraktorS2MK3.outputHandler(1, field.group, "looprollsOrSamples");
+
+        if (TraktorS2MK3.shiftPressed[field.group]) {
+            // If we are in hotcues mode and samples mode is activated
+            engine.setValue("[Samplers]", "show_samplers", 1);
+            TraktorS2MK3.padModeState[field.group] = SamplerMode;
+
+            // Light LEDs for all slots with loaded samplers
+            for (const key in TraktorS2MK3.samplerHotcuesRelation[field.group]) {
+                if (Object.hasOwnProperty.call(TraktorS2MK3.samplerHotcuesRelation[field.group], key)) {
+                    const loaded = engine.getValue(`[Sampler${  TraktorS2MK3.samplerHotcuesRelation[field.group][key]  }]`, "track_loaded");
+                    TraktorS2MK3.outputHandler(loaded, field.group, `pad_${  key}`);
+                }
+            }
+        } else {
+            TraktorS2MK3.padModeState[field.group] = LooprollMode;
+
+            // Light up LEDs
+            for (const control in TraktorS2MK3.loopRollKeysAndPadnums) {
+                const enabled = engine.getValue(field.group, control);
+                TraktorS2MK3.loopRollOutputHandler(enabled, field.group, control);
             }
         }
     } else if (field.name === "!hotcues") {
-        // If we are in samples mode and hotcues mode is activated
-        TraktorS2MK3.padModeState[field.group] = 0;
+        // If we are in looprolls/samples mode and hotcues mode is activated
+        TraktorS2MK3.padModeState[field.group] = HotcueMode;
         TraktorS2MK3.outputHandler(1, field.group, "hotcues");
-        TraktorS2MK3.outputHandler(0, field.group, "samples");
+        TraktorS2MK3.outputHandler(0, field.group, "looprollsOrSamples");
 
         // Light LEDs for all enabled hotcues
         for (let i = 1; i <= 8; ++i) {
@@ -403,19 +445,19 @@ TraktorS2MK3.PadColorMap = new ColorMapper({
     0xFE354F: 0x07,
     0xB8332D: 0x08,
     0xD1322C: 0x09,
-    0xFD5921: 0x0A,
+    0xFD5921: 0x0A, // orange
     0xF95364: 0x0B,
     0xA53A2E: 0x0C,
     0xB03E2B: 0x0D,
     0xFD7BAB: 0x0E,
-    0xFB8553: 0x0F,
-    0xBE712F: 0x10,
+    0xFB8553: 0x0F, // orange
+    0xBE712F: 0x10, // orange
     0xC57831: 0x11,
-    0xF8AB36: 0x12,
-    0xF6AA80: 0x13,
+    0xF8AB36: 0x12, // orange
+    0xF6AA80: 0x13, // sonnengelb
     0x9C7132: 0x14,
-    0xB07B31: 0x15,
-    0xE9BA3D: 0x16,
+    0xB07B31: 0x15, // ocker
+    0xE9BA3D: 0x16, // gelb
     0xECBC92: 0x17,
     0x626341: 0x18,
     0x6D6C43: 0x19,
@@ -423,10 +465,10 @@ TraktorS2MK3.PadColorMap = new ColorMapper({
     0xA9BB91: 0x1B,
     0x2E5C45: 0x1C,
     0x2B7446: 0x1D,
-    0x2CCF68: 0x1E,
+    0x2CCF68: 0x1E, // hellgrün
     0x92C7B0: 0x1F,
     0x409654: 0x20,
-    0x39A97F: 0x21,
+    0x39A97F: 0x21, // green
     0x3FD2B0: 0x22,
     0xB0C6C9: 0x23,
     0x2C8FE4: 0x24,
@@ -477,15 +519,32 @@ TraktorS2MK3.PadColorMap = new ColorMapper({
 
 TraktorS2MK3.numberButtonHandler = function(field) {
     const padNumber = parseInt(field.id[field.id.length - 1]);
-    if (TraktorS2MK3.padModeState[field.group] === 0) {
-        // Hotcues mode
+    const padMode = TraktorS2MK3.padModeState[field.group];
+    if (padMode === HotcueMode) {
         if (TraktorS2MK3.shiftPressed[field.group]) {
             engine.setValue(field.group, "hotcue_" + padNumber + "_clear", field.value);
         } else {
             engine.setValue(field.group, "hotcue_" + padNumber + "_activate", field.value);
         }
-    } else {
-        // Samples mode
+    } else if (padMode === LooprollMode) {
+        // Only act when not shifted
+        if (TraktorS2MK3.shiftPressed[field.group]) {
+            return;
+        }
+        // Pads 5 and 8 do `loop_activate` to adopt rolling loop
+        // other pads trigger beatlooprolls
+        for (const key in TraktorS2MK3.loopRollKeysAndPadnums) {
+            if (Object.prototype.hasOwnProperty.call(TraktorS2MK3.loopRollKeysAndPadnums, key)) {
+                const padNumbers = TraktorS2MK3.loopRollKeysAndPadnums[key];
+                // Check if our target padNumber is in this array
+                // FIXME maybe use this if QJSEngine doesn't provide `includes()`
+                // if (padNumber.indexOf(padNumber) !== -1) {
+                if (padNumbers.includes(padNumber)) {
+                    engine.setValue(field.group, key, field.value);
+                }
+            }
+        }
+    } else { // SamplerMode
         const sampler = TraktorS2MK3.samplerHotcuesRelation[field.group][padNumber];
         if (TraktorS2MK3.shiftPressed[field.group]) {
             const playing = engine.getValue("[Sampler" + sampler + "]", "play");
@@ -922,8 +981,8 @@ TraktorS2MK3.registerOutputPackets = function() {
     output.addOutput("[Channel1]", "hotcues", 0x07, "B");
     output.addOutput("[Channel2]", "hotcues", 0x2E, "B");
 
-    output.addOutput("[Channel1]", "samples", 0x08, "B");
-    output.addOutput("[Channel2]", "samples", 0x2F, "B");
+    output.addOutput("[Channel1]", "looprollsOrSamples", 0x08, "B");
+    output.addOutput("[Channel2]", "looprollsOrSamples", 0x2F, "B");
 
     output.addOutput("[Channel1]", "sync_enabled", 0x09, "B");
     output.addOutput("[Channel2]", "sync_enabled", 0x30, "B");
@@ -1024,6 +1083,12 @@ TraktorS2MK3.registerOutputPackets = function() {
     this.clipLeftConnection = engine.makeConnection("[Channel1]", "peak_indicator", this.peakOutputHandler.bind(this));
     this.clipRightConnection = engine.makeConnection("[Channel2]", "peak_indicator", this.peakOutputHandler.bind(this));
 
+    // Looproll callbacks
+    for (const key in TraktorS2MK3.loopRollKeysAndPadnums) {
+        this.loopRollCallbacks.push(engine.makeConnection("[Channel1]", key, this.loopRollOutputHandler.bind(this)));
+        this.loopRollCallbacks.push(engine.makeConnection("[Channel2]", key, this.loopRollOutputHandler.bind(this)));
+    }
+
     // Sampler callbacks
     for (let i = 1; i <= TraktorS2MK3.samplerCount; ++i) {
         this.samplerCallbacks.push(engine.makeConnection("[Sampler" + i + "]", "track_loaded", this.samplesOutputHandler.bind(this)));
@@ -1087,27 +1152,32 @@ TraktorS2MK3.colorOutputHandler = function(value, group, key) {
 
 TraktorS2MK3.hotcueOutputHandler = function(value, group, key) {
     // Light button LED only when we are in hotcue mode
-    if (TraktorS2MK3.padModeState[group] === 0) {
-        const colorKey = key.replace("_enabled", "_color");
-        const color = engine.getValue(group, colorKey);
-        const padNum = key[7];
-        if (value > 0) {
-            TraktorS2MK3.colorOutputHandler(color, group, `pad_${  padNum}`);
-        } else {
-            TraktorS2MK3.outputHandler(0, group, `pad_${  padNum}`);
-        }
+    if (TraktorS2MK3.padModeState[group] !== HotcueMode) {
+        return;
+    }
+
+    const colorKey = key.replace("_enabled", "_color");
+    const color = engine.getValue(group, colorKey);
+    const padNum = key[7];
+    if (value > 0) {
+        TraktorS2MK3.colorOutputHandler(color, group, `pad_${  padNum}`);
+    } else {
+        TraktorS2MK3.outputHandler(0, group, `pad_${  padNum}`);
     }
 };
 
 TraktorS2MK3.hotcueColorHandler = function(value, group, key) {
     // Light button LED only when we are in hotcue mode
     const padNum = key[7];
-    if (TraktorS2MK3.padModeState[group] === 0) {
+    if (TraktorS2MK3.padModeState[group] === HotcueMode) {
         TraktorS2MK3.colorOutputHandler(value, group, `pad_${  padNum}`);
     }
 };
 
 TraktorS2MK3.samplesOutputHandler = function(value, group, key) {
+    if (TraktorS2MK3.padModeState[deck] !== SamplerMode) {
+        return;
+    }
     // Sampler 1-4, 9-12 -> Channel1
     // Samples 5-8, 13-16 -> Channel2
     const sampler = TraktorS2MK3.resolveSampler(group);
@@ -1125,18 +1195,38 @@ TraktorS2MK3.samplesOutputHandler = function(value, group, key) {
         num = sampler - 8;
     }
 
-    // If we are in samples modes light corresponding LED
-    if (TraktorS2MK3.padModeState[deck] === 1) {
-        if (key === "play" && engine.getValue(group, "track_loaded")) {
-            if (value) {
-                // Green light on play
-                TraktorS2MK3.outputHandler(0x9E, deck, "pad_" + num);
+    // Light corresponding LED
+    if (key === "play" && engine.getValue(group, "track_loaded")) {
+        if (value) {
+            // Green light on play
+            TraktorS2MK3.outputHandler(0x9E, deck, `pad_${  num}`);
+        } else {
+            // Reset LED to full white light
+            TraktorS2MK3.outputHandler(1, deck, `pad_${  num}`);
+        }
+    } else if (key === "track_loaded") {
+        TraktorS2MK3.outputHandler(value, deck, `pad_${  num}`);
+    }
+};
+
+TraktorS2MK3.loopRollOutputHandler = function(value, deck, control) {
+    if (TraktorS2MK3.padModeState[deck] !== LooprollMode) {
+        return;
+    }
+
+    // If we are in looprolls modes light corresponding LED
+    // Find control in map, extract the pad numbers, light/dim the LED
+    const padNumbers = TraktorS2MK3.loopRollKeysAndPadnums[control];
+    if (padNumbers) {
+        for (let i = 0; i < padNumbers.length; i++) {
+            const num = padNumbers[i];
+            if (control === "beatloop_activate") {
+                // On: green, Off: white
+                TraktorS2MK3.outputHandler(value ? 0x1E : 1, deck, `pad_${  num}`);
             } else {
-                // Reset LED to full white light
-                TraktorS2MK3.outputHandler(1, deck, "pad_" + num);
+                // On: red, Off: ocker
+                TraktorS2MK3.outputHandler(value ? 0x04 : 0x15, deck, `pad_${  num}`);
             }
-        } else if (key === "track_loaded") {
-            TraktorS2MK3.outputHandler(value, deck, "pad_" + num);
         }
     }
 };
@@ -1186,8 +1276,8 @@ TraktorS2MK3.lightDeck = function(switchOff) {
     TraktorS2MK3.controller.setOutput("[Channel1]", "hotcues", fullLight, false);
     TraktorS2MK3.controller.setOutput("[Channel2]", "hotcues", fullLight, false);
 
-    TraktorS2MK3.controller.setOutput("[Channel1]", "samples", softLight, false);
-    TraktorS2MK3.controller.setOutput("[Channel2]", "samples", softLight, false);
+    TraktorS2MK3.controller.setOutput("[Channel1]", "looprollsOrSamples", softLight, false);
+    TraktorS2MK3.controller.setOutput("[Channel2]", "looprollsOrSamples", softLight, false);
 
     current = (engine.getValue("[Channel1]", "keylock")) ? fullLight : softLight;
     TraktorS2MK3.controller.setOutput("[Channel1]", "keylock", current, false);
