@@ -83,6 +83,24 @@ var TraktorS2MK3 = new function() {
     this.jogStopTimerId = [null, null];
     this.jogDecayTimerId = [null, null];
 
+    // Pitch fader center snap range
+    // Transform user value (mm) into upper/lower values
+    const TempoCenterRangeMm = engine.getSetting("tempoCenterRangeMm") || 1.0;
+    // In theory we have an 80 mm fader. Though, the usable range appears to be only ~77 mm.
+    // Value range is 0..4096, but we only get 510 steps with 8/9 ticks resolution
+    // and therefore need to make sure the center zone can actually be reached.
+    // A diff of 15 should be safe, this corresponds to .3 mm.
+    const TempoFaderTicksPerMm = 4096 / 77; // 53.1948..
+    const TempoCenterRangeTicks = TempoFaderTicksPerMm * TempoCenterRangeMm;
+    // Value center may be off the labeled center.
+    // Use this setting to compensate per device.
+    const TempoCenterValueOffsetLeft = (engine.getSetting("tempoCenterOffsetMmLeft") || 0.0) * TempoFaderTicksPerMm;
+    const TempoCenterValueOffsetRright = (engine.getSetting("tempoCenterOffsetMmRight") || 0.0) * TempoFaderTicksPerMm;
+    this.TempoCenterUpperLeft = (4096 / 2) + (TempoCenterRangeTicks / 2) + TempoCenterValueOffsetLeft;
+    this.TempoCenterLowerLeft = (4096 / 2) - (TempoCenterRangeTicks / 2) + TempoCenterValueOffsetLeft;
+    this.TempoCenterUpperRight = (4096 / 2) + (TempoCenterRangeTicks / 2) + TempoCenterValueOffsetRright;
+    this.TempoCenterLowerRight = (4096 / 2) - (TempoCenterRangeTicks / 2) + TempoCenterValueOffsetRright;
+
     // VuMeter
     this.vuLeftConnection = {};
     this.vuRightConnection = {};
@@ -225,8 +243,8 @@ TraktorS2MK3.registerInputPackets = function() {
 
     this.controller.registerInputPacket(messageShort);
 
-    this.registerInputScaler(messageLong, "[Channel1]", "rate", 0x01, 0xFFFF, this.parameterHandler);
-    this.registerInputScaler(messageLong, "[Channel2]", "rate", 0x09, 0xFFFF, this.parameterHandler);
+    this.registerInputScaler(messageLong, "[Channel1]", "rate", 0x01, 0xFFFF, this.pitchHandler);
+    this.registerInputScaler(messageLong, "[Channel2]", "rate", 0x09, 0xFFFF, this.pitchHandler);
 
     this.registerInputScaler(messageLong, "[Channel1]", "volume", 0x03, 0xFFFF, this.parameterHandler);
     this.registerInputScaler(messageLong, "[Channel2]", "volume", 0x07, 0xFFFF, this.parameterHandler);
@@ -330,6 +348,21 @@ TraktorS2MK3.shiftHandler = function(field) {
     TraktorS2MK3.shiftPressed[field.group] = field.value;
     engine.setValue("[Controls]", "touch_shift", field.value);
     TraktorS2MK3.outputHandler(field.value, field.group, "shift");
+};
+
+TraktorS2MK3.pitchHandler = function(field) {
+    let value = field.value;
+    if (value < TraktorS2MK3.tempoCenterLower) {
+        // scale input for lower range
+        value = script.absoluteLin(value, -1, 0, 0, TraktorS2MK3.tempoCenterLower);
+    } else if (value > TraktorS2MK3.tempoCenterUpper) {
+        // scale input for upper range
+        value = script.absoluteLin(value, 0, 1, TraktorS2MK3.tempoCenterUpper, 4095);
+    } else {
+        // reset rate in center region
+        value = 0;
+    }
+    engine.setParameter(field.group, field.name, value);
 };
 
 TraktorS2MK3.keylockHandler = function(field) {
