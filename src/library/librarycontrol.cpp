@@ -1519,6 +1519,7 @@ void LibraryControl::slotSortColumn(double v) {
 }
 
 void LibraryControl::slotSortColumnToggle(double v) {
+    qWarning() << "slotSortColumnToggle" << v;
     int sortColumnId = static_cast<int>(v);
     if (sortColumnId == static_cast<int>(TrackModel::SortColumnId::CurrentIndex)) {
         if (!m_pLibraryWidget) {
@@ -1528,11 +1529,14 @@ void LibraryControl::slotSortColumnToggle(double v) {
         sortColumnId =
                 static_cast<int>(m_pLibraryWidget->getActiveView()
                                          ->getColumnIdFromCurrentIndex());
+        qWarning() << "-> SortColumnId::CurrentIndex, id =" << sortColumnId;
     }
 
     if (static_cast<int>(m_pSortColumn->get()) == sortColumnId) {
+        qWarning() << "-> sortcol id is already" << sortColumnId << "-> toggle order";
         m_pSortOrder->set((m_pSortOrder->get() == 0) ? 1.0 : 0.0);
     } else {
+        qWarning() << "-> set sortcol id to" << sortColumnId << "-> set order to 0";
         m_pSortColumn->set(sortColumnId);
         m_pSortOrder->set(0.0);
     }
