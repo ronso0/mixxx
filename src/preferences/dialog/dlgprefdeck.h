@@ -78,6 +78,8 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
 
     void setRateRangeForAllDecks(int rangePercent);
     void setRateDirectionForAllDecks(bool inverted);
+    void maybeToggleUltraSpeedForAllDecks();
+    void updateUltraSpeedCheckBox();
 
     const UserSettingsPointer m_pConfig;
 
@@ -90,6 +92,7 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
     QList<ControlProxy*> m_cueControls;
     QList<ControlProxy*> m_rateDirectionControls;
     QList<ControlProxy*> m_rateRangeControls;
+    QList<ControlProxy*> m_rateUtraEnabledControls;
     QList<ControlProxy*> m_keylockModeControls;
     QList<ControlProxy*> m_keyunlockModeControls;
 

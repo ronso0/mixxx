@@ -15,6 +15,7 @@
 
 namespace {
 constexpr int kDefaultRateRangePercent = 8;
+constexpr bool kDefaultUltraSpeedEnabled = false;
 constexpr double kRateDirectionInverted = -1;
 constexpr bool kDefaultRateDirectionInverted = true;
 constexpr RateControl::RampMode kDefaultRampingMode = RateControl::RampMode::Stepping;
@@ -434,6 +435,7 @@ DlgPrefDeck::~DlgPrefDeck() {
     qDeleteAll(m_rateDirectionControls);
     qDeleteAll(m_cueControls);
     qDeleteAll(m_rateRangeControls);
+    qDeleteAll(m_rateUtraEnabledControls);
     qDeleteAll(m_keylockModeControls);
     qDeleteAll(m_keyunlockModeControls);
 }
@@ -451,6 +453,8 @@ void DlgPrefDeck::slotUpdate() {
     checkboxBeatjumpLoopmove->setChecked(m_pConfig->getValue(
             ConfigKey(kControlsGroup, QStringLiteral("BeatjumpDoesLoopmove")),
             kDefaultBeatjumpDoesLoopmove));
+
+    updateUltraSpeedCheckBox();
 
     double rateRange = m_rateRangeControls[0]->get();
     int index = ComboBoxRateRange->findData(static_cast<int>(rateRange * 100.0));
@@ -555,6 +559,9 @@ void DlgPrefDeck::slotResetToDefaults() {
     // 8% Rate Range
     ComboBoxRateRange->setCurrentIndex(ComboBoxRateRange->findData(kDefaultRateRangePercent));
 
+    // Disable Ultra Speed slider (rate_ultra)
+    CheckBoxUltraSpeed->setChecked(kDefaultUltraSpeedEnabled);
+
     // Clone decks by double-tapping Load button.
     checkBoxCloneDeckOnLoadDoubleTap->setChecked(kDefaultCloneDeckOnLoad);
 
@@ -601,6 +608,37 @@ void DlgPrefDeck::slotRateRangeComboBox(int index) {
 void DlgPrefDeck::setRateRangeForAllDecks(int rangePercent) {
     for (ControlProxy* pControl : std::as_const(m_rateRangeControls)) {
         pControl->set(rangePercent / 100.0);
+    }
+}
+
+void DlgPrefDeck::maybeToggleUltraSpeedForAllDecks() {
+    Qt::CheckState rateUltraCheckState = CheckBoxUltraSpeed->checkState();
+    if (rateUltraCheckState == Qt::CheckState::PartiallyChecked) {
+        // Don't override the user-set mixed state
+        return;
+    }
+
+    int enabled = rateUltraCheckState == Qt::CheckState::Checked ? 1.0 : 0.0;
+    for (ControlProxy* pControl : std::as_const(m_rateUtraEnabledControls)) {
+        pControl->set(enabled);
+    }
+}
+
+void DlgPrefDeck::updateUltraSpeedCheckBox() {
+    // Ultra speed (rate_ultra_enabled) can be set per deck and it's persistent,
+    // so read all controls and check it fully or partially
+    int numEnabled = 0;
+    for (ControlProxy* pControl : std::as_const(m_rateUtraEnabledControls)) {
+        if (pControl->toBool()) {
+            numEnabled++;
+        }
+    }
+    if (numEnabled == 0) {
+        CheckBoxUltraSpeed->setCheckState(Qt::CheckState::Unchecked);
+    } else if (numEnabled < m_rateUtraEnabledControls.size()) {
+        CheckBoxUltraSpeed->setCheckState(Qt::CheckState::PartiallyChecked);
+    } else {
+        CheckBoxUltraSpeed->setCheckState(Qt::CheckState::Checked);
     }
 }
 
@@ -750,6 +788,8 @@ void DlgPrefDeck::slotApply() {
             m_iRateRangePercent);
     setRateRangeForAllDecks(m_iRateRangePercent);
 
+    maybeToggleUltraSpeedForAllDecks();
+
     m_pConfig->setValue(ConfigKey(kControlsGroup, QStringLiteral("RateDir")),
             m_bRateDownIncreasesSpeed);
     setRateDirectionForAllDecks(m_bRateDownIncreasesSpeed);
@@ -827,6 +867,8 @@ void DlgPrefDeck::slotNumDecksChanged(double new_count, bool initializing) {
         QString group = PlayerManager::groupForDeck(i);
         m_rateRangeControls.push_back(new ControlProxy(
                 group, "rateRange"));
+        m_rateUtraEnabledControls.push_back(new ControlProxy(
+                group, "rate_ultra_enabled"));
         m_rateDirectionControls.push_back(new ControlProxy(
                 group, "rate_dir"));
         m_cueControls.push_back(new ControlProxy(
@@ -846,6 +888,8 @@ void DlgPrefDeck::slotNumDecksChanged(double new_count, bool initializing) {
         setRateDirectionForAllDecks(m_rateDirectionControls[0]->get() == kRateDirectionInverted);
         setRateRangeForAllDecks(static_cast<int>(m_rateRangeControls[0]->get() * 100.0));
     }
+
+    updateUltraSpeedCheckBox();
 }
 
 void DlgPrefDeck::slotNumSamplersChanged(double new_count, bool initializing) {
