@@ -319,6 +319,11 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
     // Create text color manual links
     updateColoredLinkTexts();
 
+    connect(CheckBoxUltraSpeed,
+            &QCheckBox::toggled,
+            this,
+            &DlgPrefDeck::slotUltraSpeedCheckboxToggled);
+
     // Speed / Pitch reset configuration
     // Update "reset speed" and "reset pitch" check boxes
     // TODO: All defaults should only be set in slotResetToDefaults.
@@ -327,15 +332,24 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
             BaseTrackPlayer::TrackLoadReset::RESET_PITCH);
 
     m_speedAutoReset = (configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_SPEED ||
-            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED);
+            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED ||
+            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED);
     m_pitchAutoReset = (configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH ||
-            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED);
+            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED ||
+            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED);
+    m_ultraspeedAutoReset = (configSPAutoReset ==
+            BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED);
 
     checkBoxResetSpeed->setChecked(m_speedAutoReset);
     checkBoxResetPitch->setChecked(m_pitchAutoReset);
+    checkBoxResetUltraspeed->setChecked(m_ultraspeedAutoReset);
 
     connect(checkBoxResetSpeed, &QCheckBox::toggled, this, &DlgPrefDeck::slotUpdateSpeedAutoReset);
     connect(checkBoxResetPitch, &QCheckBox::toggled, this, &DlgPrefDeck::slotUpdatePitchAutoReset);
+    connect(checkBoxResetUltraspeed,
+            &QCheckBox::toggled,
+            this,
+            &DlgPrefDeck::slotUpdateUltraspeedAutoReset);
 
     //
     // Ramping Temporary Rate Change configuration
@@ -497,20 +511,33 @@ void DlgPrefDeck::slotUpdate() {
         radioButtonResetUnlockedKey->setChecked(true);
     }
 
+    // TODO use some kind of flag for this ??
     auto reset = m_pConfig->getValue(ConfigKey(kControlsGroup, QStringLiteral("SpeedAutoReset")),
             BaseTrackPlayer::TrackLoadReset::RESET_PITCH);
     if (reset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH) {
         checkBoxResetPitch->setChecked(true);
         checkBoxResetSpeed->setChecked(false);
+        checkBoxResetUltraspeed->setChecked(false);
     } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_SPEED) {
         checkBoxResetPitch->setChecked(false);
         checkBoxResetSpeed->setChecked(true);
+        checkBoxResetUltraspeed->setChecked(true);
     } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED) {
         checkBoxResetPitch->setChecked(true);
         checkBoxResetSpeed->setChecked(true);
+        checkBoxResetUltraspeed->setChecked(true);
+    } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED) {
+        checkBoxResetPitch->setChecked(true);
+        checkBoxResetSpeed->setChecked(false);
+        checkBoxResetUltraspeed->setChecked(true);
+    } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_ULTRASPEED) {
+        checkBoxResetPitch->setChecked(false);
+        checkBoxResetSpeed->setChecked(false);
+        checkBoxResetUltraspeed->setChecked(true);
     } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_NONE) {
         checkBoxResetPitch->setChecked(false);
         checkBoxResetSpeed->setChecked(false);
+        checkBoxResetUltraspeed->setChecked(false);
     }
 
     if (m_bRateRamping == RateControl::RampMode::Linear) {
@@ -590,6 +617,7 @@ void DlgPrefDeck::slotResetToDefaults() {
 
     checkBoxResetSpeed->setChecked(false);
     checkBoxResetPitch->setChecked(true);
+    checkBoxResetUltraspeed->setChecked(false);
 
     radioButtonSoftLeader->setChecked(true);
 
@@ -796,12 +824,21 @@ void DlgPrefDeck::slotApply() {
 
     BaseTrackPlayer::TrackLoadReset configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_NONE;
 
-    if (m_speedAutoReset && m_pitchAutoReset) {
-        configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED;
-    } else if (m_speedAutoReset) {
-        configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_SPEED;
-    } else if (m_pitchAutoReset) {
-        configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_PITCH;
+    // When ultraspeed auto-reset is requested, use RESET_PITCH_AND_SPEED or
+    // RESET_SPEED depending on the pitch checkbox state. These enum values
+    // already reset the ultra speed slider in the engine.
+    if (m_pitchAutoReset) {
+        if (m_speedAutoReset) {
+            configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED;
+        } else if (m_ultraspeedAutoReset) {
+            configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED;
+        }
+    } else {
+        if (m_speedAutoReset) {
+            configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_SPEED;
+        } else if (m_ultraspeedAutoReset) {
+            configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_ULTRASPEED;
+        }
     }
 
     m_pConfig->setValue(ConfigKey(kControlsGroup, QStringLiteral("SpeedAutoReset")),
@@ -925,10 +962,23 @@ void DlgPrefDeck::slotNumSamplersChanged(double new_count, bool initializing) {
 
 void DlgPrefDeck::slotUpdateSpeedAutoReset(bool b) {
     m_speedAutoReset = b;
+    // Ultra speed auto-reset follows speed auto-reset. When speed is checked,
+    // also check ultraspeed. The user can uncheck ultraspeed independently.
+    if (b) {
+        checkBoxResetUltraspeed->setChecked(true);
+    }
 }
 
 void DlgPrefDeck::slotUpdatePitchAutoReset(bool b) {
     m_pitchAutoReset = b;
+}
+
+void DlgPrefDeck::slotUpdateUltraspeedAutoReset(bool b) {
+    m_ultraspeedAutoReset = b;
+}
+
+void DlgPrefDeck::slotUltraSpeedCheckboxToggled(bool checked) {
+    checkBoxResetUltraspeed->setEnabled(checked);
 }
 
 int DlgPrefDeck::cueDefaultIndexByData(int userData) const {
