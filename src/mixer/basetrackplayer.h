@@ -220,15 +220,15 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     std::unique_ptr<ControlPushButton> m_pWaveformZoomDown;
     std::unique_ptr<ControlPushButton> m_pWaveformZoomSetDefault;
 
-    parented_ptr<ControlProxy> m_pLoopInPoint;
-    parented_ptr<ControlProxy> m_pLoopOutPoint;
+    PollingControlProxy m_loopInPoint;
+    PollingControlProxy m_loopOutPoint;
     std::unique_ptr<ControlObject> m_pDuration;
 
     // TODO() these COs are reconnected during runtime
     // This may lock the engine
     std::unique_ptr<ControlObject> m_pFileBPM;
     std::unique_ptr<ControlObject> m_pVisualBpm;
-    parented_ptr<ControlProxy> m_pKey;
+    PollingControlProxy m_key;
     std::unique_ptr<ControlObject> m_pVisualKey;
 
     std::unique_ptr<ControlObject> m_pTimeElapsed;
@@ -248,7 +248,7 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     std::unique_ptr<ControlObject> m_pShiftFocusedHotcue;
 
     PollingControlProxy m_focusedHotcueIndexCO;
-    PollingControlProxy m_pQuantizeEnabled;
+    PollingControlProxy m_quantizeEnabled;
 
     std::unique_ptr<ControlPushButton> m_pShowTrackMenuControl;
     std::unique_ptr<ControlPushButton> m_pTrackCommentEditControl;
@@ -265,18 +265,18 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
 
     std::unique_ptr<ControlObject> m_pUpdateReplayGainFromPregain;
 
-    parented_ptr<ControlProxy> m_pReplayGain;
     parented_ptr<ControlProxy> m_pPlay;
-    parented_ptr<ControlProxy> m_pLowFilter;
-    parented_ptr<ControlProxy> m_pMidFilter;
-    parented_ptr<ControlProxy> m_pHighFilter;
-    parented_ptr<ControlProxy> m_pLowFilterKill;
-    parented_ptr<ControlProxy> m_pMidFilterKill;
-    parented_ptr<ControlProxy> m_pHighFilterKill;
-    parented_ptr<ControlProxy> m_pPreGain;
-    parented_ptr<ControlProxy> m_pRateRatio;
-    parented_ptr<ControlProxy> m_pPitch;
-    parented_ptr<ControlProxy> m_pPitchAdjust;
-    parented_ptr<ControlProxy> m_pKeylock;
-    parented_ptr<ControlProxy> m_pKeylockMode;
+    PollingControlProxy m_replayGain;
+    PollingControlProxy m_lowFilter;
+    PollingControlProxy m_midFilter;
+    PollingControlProxy m_highFilter;
+    PollingControlProxy m_lowFilterKill;
+    PollingControlProxy m_midFilterKill;
+    PollingControlProxy m_highFilterKill;
+    PollingControlProxy m_preGain;
+    PollingControlProxy m_rateRatio;
+    PollingControlProxy m_pitch;
+    PollingControlProxy m_pitchAdjust;
+    PollingControlProxy m_keylock;
+    PollingControlProxy m_keylockMode;
 };

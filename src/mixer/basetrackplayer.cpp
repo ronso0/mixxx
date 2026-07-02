@@ -53,8 +53,24 @@ BaseTrackPlayerImpl::BaseTrackPlayerImpl(
           m_pPrevFailedTrackId(),
           m_replaygainPending(false),
           m_pChannelToCloneFrom(nullptr),
+          m_loopInPoint(ControlFlag::AllowMissingOrInvalid),
+          m_loopOutPoint(ControlFlag::AllowMissingOrInvalid),
+          m_key(ControlFlag::AllowMissingOrInvalid),
           m_focusedHotcueIndexCO(ControlFlag::AllowMissingOrInvalid),
-          m_pQuantizeEnabled(ControlFlag::AllowMissingOrInvalid) {
+          m_quantizeEnabled(ControlFlag::AllowMissingOrInvalid),
+          m_replayGain(ControlFlag::AllowMissingOrInvalid),
+          m_lowFilter(ControlFlag::AllowMissingOrInvalid),
+          m_midFilter(ControlFlag::AllowMissingOrInvalid),
+          m_highFilter(ControlFlag::AllowMissingOrInvalid),
+          m_lowFilterKill(ControlFlag::AllowMissingOrInvalid),
+          m_midFilterKill(ControlFlag::AllowMissingOrInvalid),
+          m_highFilterKill(ControlFlag::AllowMissingOrInvalid),
+          m_preGain(ControlFlag::AllowMissingOrInvalid),
+          m_rateRatio(ControlFlag::AllowMissingOrInvalid),
+          m_pitch(ControlFlag::AllowMissingOrInvalid),
+          m_pitchAdjust(ControlFlag::AllowMissingOrInvalid),
+          m_keylock(ControlFlag::AllowMissingOrInvalid),
+          m_keylockMode(ControlFlag::AllowMissingOrInvalid) {
     auto channel = std::make_unique<EngineDeck>(handleGroup,
             pConfig,
             pMixingEngine,
@@ -84,22 +100,26 @@ BaseTrackPlayerImpl::BaseTrackPlayerImpl(
             // signal-to-signal
             &BaseTrackPlayerImpl::noVinylControlInputConfigured);
 
-    // PollingControlProxy would be preferred, but CO is not available at init
-    // since it's created by CueControl which is created by EngineBuffer
+    // Update some PollingControlProxy where CO are only available after EngineBuffer
+    // which creates various EngineControls
     m_focusedHotcueIndexCO = PollingControlProxy(getGroup(), "hotcue_focus");
-    m_pQuantizeEnabled = PollingControlProxy(getGroup(), QStringLiteral("quantize"));
+    m_quantizeEnabled = PollingControlProxy(getGroup(), QStringLiteral("quantize"));
+    m_loopInPoint = PollingControlProxy(getGroup(), QStringLiteral("loop_start_position"));
+    m_loopOutPoint = PollingControlProxy(getGroup(), QStringLiteral("loop_end_position"));
+    m_preGain = PollingControlProxy(getGroup(), "pregain");
+    m_key = PollingControlProxy(getGroup(), "file_key");
+    m_replayGain = PollingControlProxy(getGroup(), "replaygain");
+    m_rateRatio = PollingControlProxy(getGroup(), "rate_ratio");
+    m_pitch = PollingControlProxy(getGroup(), "pitch");
+    m_pitchAdjust = PollingControlProxy(getGroup(), "pitch_adjust");
+    m_keylock = PollingControlProxy(getGroup(), "keylock");
+    m_keylockMode = PollingControlProxy(getGroup(), "keylockMode");
 
     m_pEject = std::make_unique<ControlPushButton>(ConfigKey(getGroup(), "eject"));
     connect(m_pEject.get(),
             &ControlObject::valueChanged,
             this,
             &BaseTrackPlayerImpl::slotEjectTrack);
-
-    // Get loop point control objects
-    m_pLoopInPoint = make_parented<ControlProxy>(
-            getGroup(), "loop_start_position", this);
-    m_pLoopOutPoint = make_parented<ControlProxy>(
-            getGroup(), "loop_end_position", this);
 
     // Duration of the current song, we create this one because nothing else does.
     m_pDuration = std::make_unique<ControlObject>(
@@ -282,8 +302,6 @@ BaseTrackPlayerImpl::BaseTrackPlayerImpl(
             this,
             &BaseTrackPlayerImpl::slotWaveformZoomSetDefault);
 
-    m_pPreGain = make_parented<ControlProxy>(getGroup(), "pregain", this);
-
     m_pShiftCuesEarlier = std::make_unique<ControlPushButton>(
             ConfigKey(getGroup(), "shift_cues_earlier"));
     connect(m_pShiftCuesEarlier.get(),
@@ -367,23 +385,14 @@ BaseTrackPlayerImpl::BaseTrackPlayerImpl(
     // BPM and key of the current song
     m_pFileBPM = std::make_unique<ControlObject>(ConfigKey(getGroup(), "file_bpm"));
     m_pVisualBpm = std::make_unique<ControlObject>(ConfigKey(getGroup(), "visual_bpm"));
-    m_pKey = make_parented<ControlProxy>(getGroup(), "file_key", this);
     m_pVisualKey = std::make_unique<ControlObject>(ConfigKey(getGroup(), "visual_key"));
 
     m_pTimeElapsed = std::make_unique<ControlObject>(ConfigKey(getGroup(), "time_elapsed"));
     m_pTimeRemaining = std::make_unique<ControlObject>(ConfigKey(getGroup(), "time_remaining"));
     m_pEndOfTrack = std::make_unique<ControlObject>(ConfigKey(getGroup(), "end_of_track"));
 
-    // TODO use PollingControlProxy
-    m_pReplayGain = make_parented<ControlProxy>(getGroup(), "replaygain", this);
     m_pPlay = make_parented<ControlProxy>(getGroup(), "play", this);
     m_pPlay->connectValueChanged(this, &BaseTrackPlayerImpl::slotPlayToggled);
-
-    m_pRateRatio = make_parented<ControlProxy>(getGroup(), "rate_ratio", this);
-    m_pPitch = make_parented<ControlProxy>(getGroup(), "pitch", this);
-    m_pPitchAdjust = make_parented<ControlProxy>(getGroup(), "pitch_adjust", this);
-    m_pKeylock = make_parented<ControlProxy>(getGroup(), "keylock", this);
-    m_pKeylockMode = make_parented<ControlProxy>(getGroup(), "keylockMode", this);
 
     m_pUpdateReplayGainFromPregain = std::make_unique<ControlPushButton>(
             ConfigKey(getGroup(), "update_replaygain_from_pregain"));
@@ -489,8 +498,8 @@ void BaseTrackPlayerImpl::loadTrack(TrackPointer pTrack) {
     // It seems that the trick is to first clear the loop out point, and then
     // the loop in point. If we first clear the loop in point, the loop out point
     // does not get cleared.
-    m_pLoopInPoint->set(newLoopIn);
-    m_pLoopOutPoint->set(newLoopOut);
+    m_loopInPoint.set(newLoopIn);
+    m_loopOutPoint.set(newLoopOut);
 
     if (m_pChannelToCloneFrom) {
 #ifdef __STEM__
@@ -593,7 +602,7 @@ void BaseTrackPlayerImpl::connectLoadedTrack() {
                 TrackPointer pTrack = m_pLoadedTrack;
                 if (pTrack) {
                     const auto key = pTrack->getKeys().getGlobalKey();
-                    m_pKey->set(static_cast<double>(key));
+                    m_key.set(static_cast<double>(key));
                 }
             });
 
@@ -715,10 +724,10 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
         emit loadingTrack(pNewTrack, pOldTrack);
         m_pDuration->set(0);
         m_pFileBPM->set(0);
-        m_pKey->set(0);
+        m_key.set(0);
         slotSetTrackColor(std::nullopt);
-        m_pLoopInPoint->set(kNoTrigger);
-        m_pLoopOutPoint->set(kNoTrigger);
+        m_loopInPoint.set(kNoTrigger);
+        m_loopOutPoint.set(kNoTrigger);
         m_pLoadedTrack.reset();
         emit playerEmpty();
         emit trackRatingChanged(0);
@@ -734,33 +743,24 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
         // Update the BPM and duration values that are stored in ControlObjects
         m_pDuration->set(m_pLoadedTrack->getDuration());
         m_pFileBPM->set(m_pLoadedTrack->getBpm());
-        m_pKey->set(m_pLoadedTrack->getKey());
+        m_key.set(m_pLoadedTrack->getKey());
         slotSetTrackColor(m_pLoadedTrack->getColor());
 
-        if(m_pConfig->getValue(
-                ConfigKey("[Mixer Profile]", "EqAutoReset"), false)) {
-            if (m_pLowFilter) {
-                m_pLowFilter->set(1.0);
-            }
-            if (m_pMidFilter) {
-                m_pMidFilter->set(1.0);
-            }
-            if (m_pHighFilter) {
-                m_pHighFilter->set(1.0);
-            }
-            if (m_pLowFilterKill) {
-                m_pLowFilterKill->set(0.0);
-            }
-            if (m_pMidFilterKill) {
-                m_pMidFilterKill->set(0.0);
-            }
-            if (m_pHighFilterKill) {
-                m_pHighFilterKill->set(0.0);
-            }
+        if (m_pConfig->getValue(
+                    ConfigKey("[Mixer Profile]", "EqAutoReset"), false) &&
+                m_lowFilter.valid() && m_lowFilterKill.valid() &&
+                m_midFilter.valid() && m_midFilterKill.valid() &&
+                m_highFilter.valid() && m_highFilterKill.valid()) {
+            m_lowFilter.set(1.0);
+            m_midFilter.set(1.0);
+            m_highFilter.set(1.0);
+            m_lowFilterKill.set(0.0);
+            m_midFilterKill.set(0.0);
+            m_highFilterKill.set(0.0);
         }
         if (m_pConfig->getValue(
                 ConfigKey("[Mixer Profile]", "GainAutoReset"), false)) {
-            m_pPreGain->set(1.0);
+            m_preGain.set(1.0);
         }
 
         if (!m_pChannelToCloneFrom) {
@@ -775,7 +775,7 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
                 if (!m_pEngineMixer->getEngineSync()->otherSyncedPlaying(getGroup())) {
                     if (reset == TrackLoadReset::RESET_SPEED ||
                             reset == TrackLoadReset::RESET_PITCH_AND_SPEED) {
-                        m_pRateRatio->set(1.0);
+                        m_rateRatio.set(1.0);
                     }
 
                     auto* pRateUltraControl = ControlObject::getControl(m_group, "rate_ultra");
@@ -790,12 +790,12 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
                 // With KeylockMode::LockCurrentKey we need to reset `pitch`
                 // instead of `pitch_adjust` to avoid a roundtrip in KeyControl
                 // which would lead `pitch` != 0
-                if (m_pKeylock->toBool() &&
-                        m_pKeylockMode->get() ==
+                if (m_keylock.toBool() &&
+                        m_keylockMode.get() ==
                                 static_cast<double>(KeylockMode::LockCurrentKey)) {
-                    m_pPitch->set(0.0);
+                    m_pitch.set(0.0);
                 } else {
-                    m_pPitchAdjust->set(0.0);
+                    m_pitchAdjust.set(0.0);
                 }
             }
         } else {
@@ -805,12 +805,12 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
             // During sync this is applied to all synced decks
             if (ControlObject::get(ConfigKey(getGroup(), "sync_mode")) !=
                     static_cast<double>(SyncMode::Follower)) {
-                m_pRateRatio->set(ControlObject::get(ConfigKey(
+                m_rateRatio.set(ControlObject::get(ConfigKey(
                         m_pChannelToCloneFrom->getGroup(), "rate_ratio")));
             }
 
             // copy pitch
-            m_pPitchAdjust->set(ControlObject::get(ConfigKey(
+            m_pitchAdjust.set(ControlObject::get(ConfigKey(
                     m_pChannelToCloneFrom->getGroup(), "pitch_adjust")));
 
             // copy the loop state
@@ -1029,8 +1029,8 @@ void BaseTrackPlayerImpl::slotSetReplayGain(mixxx::ReplayGain replayGain) {
 
 void BaseTrackPlayerImpl::slotAdjustReplayGain(
         mixxx::ReplayGain replayGain, const QString& requestingPlayerGroup) {
-    const double factor = m_pReplayGain->get() / replayGain.getRatio();
-    const double newPregain = m_pPreGain->get() * factor;
+    const double factor = m_replayGain.get() / replayGain.getRatio();
+    const double newPregain = m_preGain.get() * factor;
 
     // There is a very slight chance that there will be a buffer call in between these sets.
     // Therefore, we first adjust the control that is being lowered before the control
@@ -1039,13 +1039,13 @@ void BaseTrackPlayerImpl::slotAdjustReplayGain(
     // in other players this track is loaded to.
     if (factor < 1.0) {
         if (requestingPlayerGroup == m_group) {
-            m_pPreGain->set(newPregain);
+            m_preGain.set(newPregain);
         }
         setReplayGain(replayGain.getRatio());
     } else {
         setReplayGain(replayGain.getRatio());
         if (requestingPlayerGroup == m_group) {
-            m_pPreGain->set(newPregain);
+            m_preGain.set(newPregain);
         }
     }
 }
@@ -1121,15 +1121,12 @@ EngineDeck* BaseTrackPlayerImpl::getEngineDeck() const {
 
 void BaseTrackPlayerImpl::setupEqControls() {
     const QString group = kEffectGroupFormat.arg(getGroup());
-    m_pLowFilter = make_parented<ControlProxy>(group, QStringLiteral("parameter1"), this);
-    m_pMidFilter = make_parented<ControlProxy>(group, QStringLiteral("parameter2"), this);
-    m_pHighFilter = make_parented<ControlProxy>(group, QStringLiteral("parameter3"), this);
-    m_pLowFilterKill = make_parented<ControlProxy>(
-            group, QStringLiteral("button_parameter1"), this);
-    m_pMidFilterKill = make_parented<ControlProxy>(
-            group, QStringLiteral("button_parameter2"), this);
-    m_pHighFilterKill = make_parented<ControlProxy>(
-            group, QStringLiteral("button_parameter3"), this);
+    m_lowFilter = PollingControlProxy(group, QStringLiteral("parameter1"));
+    m_midFilter = PollingControlProxy(group, QStringLiteral("parameter2"));
+    m_highFilter = PollingControlProxy(group, QStringLiteral("parameter3"));
+    m_lowFilterKill = PollingControlProxy(group, QStringLiteral("button_parameter1"));
+    m_midFilterKill = PollingControlProxy(group, QStringLiteral("button_parameter2"));
+    m_highFilterKill = PollingControlProxy(group, QStringLiteral("button_parameter3"));
 }
 
 void BaseTrackPlayerImpl::slotWaveformZoomValueChangeRequest(double v) {
@@ -1200,7 +1197,7 @@ void BaseTrackPlayerImpl::slotShiftFocusedHotcueMillis(double milliseconds) {
         return;
     }
 
-    if (m_pQuantizeEnabled.toBool()) {
+    if (m_quantizeEnabled.toBool()) {
         m_pLoadedTrack->shiftHotcuePositionBeats(hotcueIndex, milliseconds > 0 ? 1 : -1);
     } else {
         m_pLoadedTrack->shiftHotcuePositionMillis(hotcueIndex, milliseconds);
@@ -1221,7 +1218,7 @@ void BaseTrackPlayerImpl::slotUpdateReplayGainFromPregain(double pressed) {
     if (!m_pLoadedTrack) {
         return;
     }
-    const double gain = m_pPreGain->get();
+    const double gain = m_preGain.get();
     // Gain is at unity already, ignore and return.
     if (gain == 1.0) {
         return;
@@ -1230,6 +1227,6 @@ void BaseTrackPlayerImpl::slotUpdateReplayGainFromPregain(double pressed) {
 }
 
 void BaseTrackPlayerImpl::setReplayGain(double value) {
-    m_pReplayGain->set(value);
+    m_replayGain.set(value);
     m_replaygainPending = false;
 }
