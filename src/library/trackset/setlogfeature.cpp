@@ -2,6 +2,7 @@
 
 #include <QMenu>
 #include <QSqlTableModel>
+#include <QStandardPaths>
 
 #include "library/library.h"
 #include "library/library_prefs.h"
@@ -743,6 +744,46 @@ void SetlogFeature::slotPlaylistTableRenamed(int playlistId, const QString& newN
     // qDebug() << "SetlogFeature::slotPlaylistTableRenamed() Id:" << playlistId;
     if (m_playlistDao.getHiddenType(playlistId) == PlaylistDAO::PLHT_SET_LOG) {
         updateChildModel(QSet<int>{playlistId});
+    }
+}
+
+void SetlogFeature::slotExportPlaylistAndTracksForHistoryImport() {
+    // * select dir
+    // * export playlist as CSV
+    //   - compact, ie. only columns required for import
+    //     timestamp, location (no path, just filename)
+    // * export track files
+    const QString lastPlaylistDirectory = m_pConfig->getValue(
+            ConfigKey("[Library]", "LastImportExportPlaylistDirectory"),
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation));
+}
+
+void SetlogFeature::slotImportMixxxPlaylistAndTrackFiles() {
+    // * select directory that contains
+    //   - playlist.csv:
+    //   - track files
+    // * get all locations from CSV
+    // * check if all locations are in the directory
+    //   -> warn if not
+    // * import tracks, store ids and timestamp
+    // * insert each track at the right time slot
+
+    const QString lastPlaylistDirectory = m_pConfig->getValue(
+            ConfigKey("[Library]", "LastImportExportPlaylistDirectory"),
+            QStandardPaths::writableLocation(QStandardPaths::MusicLocation));
+    const QString importDir = QFileDialog::getExistingDirectory(
+            mixxx::widgethelper::getSkinWidget(),
+            tr("Choose a music directory"),
+            lastPlaylistDirectory,
+            // ronso0: native xfce 4.14 file picker shows all files
+            // which makes fiding the desired dir a straining voyage de scroll.
+            // This is no matter what QFileDialog options are set, what gtk
+            // stylesheets hacks are applied, if xdgportal is set explicitly.etc.
+            //
+            // Just use the Qt dialog
+            QFileDialog::ShowDirsOnly);
+    if (importDir.isEmpty()) {
+        return;
     }
 }
 

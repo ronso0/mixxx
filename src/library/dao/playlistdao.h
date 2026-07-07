@@ -96,6 +96,12 @@ class PlaylistDAO : public QObject, public virtual DAO {
     void removeTracksFromPlaylistById(int playlistId, TrackId trackId);
     // Insert a track into a specific position in a playlist
     bool insertTrackIntoPlaylist(TrackId trackId, int playlistId, int position);
+    // Insert a track at a certain position and adopt the timestamp
+    bool insertTrackIntoPlaylistSetTimestamp(
+            TrackId trackId,
+            const int playlistId,
+            int position,
+            const QString& timePlayedStrUtc);
     // Inserts a list of tracks into playlist
     int insertTracksIntoPlaylist(const QList<TrackId>& trackIds, const int playlistId, int position);
     // Remove all tracks from the Auto-DJ Queue
