@@ -50,6 +50,9 @@ class SetlogFeature : public BasePlaylistFeature {
     void slotPlaylistTableRenamed(int playlistId, const QString& newName) override;
     void slotDeleteAllUnlockedChildPlaylists();
 
+    void slotExportPlaylistAndTracksForHistoryImport();
+    void slotImportMixxxPlaylistAndTrackFiles();
+
   private:
     void deleteAllUnlockedPlaylistsWithFewerTracks();
     void lockOrUnlockAllChildPlaylists(bool lock);

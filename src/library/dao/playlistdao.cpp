@@ -900,6 +900,63 @@ bool PlaylistDAO::insertTrackIntoPlaylist(TrackId trackId, const int playlistId,
     return true;
 }
 
+bool PlaylistDAO::insertTrackIntoPlaylistSetTimestamp(
+        TrackId trackId,
+        const int playlistId,
+        int position,
+        const QString& timePlayedStrUtc) {
+    if (playlistId < 0 || !trackId.isValid() || position < 0) {
+        return false;
+    }
+    // Verify timestamp is UTC 2026-07-06T23:23:13,000
+    QDateTime timestampDt = mixxx::convertVariantToDateTime(timePlayedStrUtc);
+    VERIFY_OR_DEBUG_ASSERT(timestampDt.isValid()) {
+        return false;
+    }
+
+    ScopedTransaction transaction(m_database);
+
+    int max_position = getMaxPosition(playlistId) + 1;
+
+    if (position > max_position) {
+        position = max_position;
+    }
+
+    // Move all the tracks in the playlist up by one
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral(
+            "UPDATE PlaylistTracks SET position=position+1 "
+            "WHERE position>=:position AND playlist_id=:id"));
+    query.bindValue(":id", playlistId);
+    query.bindValue(":position", position);
+
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query);
+        return false;
+    }
+
+    // Insert the song into the PlaylistTracks table
+    query.prepare(QStringLiteral(
+            "INSERT INTO PlaylistTracks (playlist_id, track_id, position, pl_datetime_added)"
+            "VALUES (:playlist_id, :track_id, :position, %1)")
+                    .arg(timePlayedStrUtc));
+    query.bindValue(":playlist_id", playlistId);
+    query.bindValue(":track_id", trackId.toVariant());
+    query.bindValue(":position", position);
+
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query);
+        return false;
+    }
+    transaction.commit();
+
+    m_playlistsTrackIsIn.insert(trackId, playlistId);
+    emit trackAdded(playlistId, trackId, position);
+    emit tracksAdded(QSet<int>{playlistId});
+    emit playlistContentChanged(QSet<int>{playlistId});
+    return true;
+}
+
 int PlaylistDAO::insertTracksIntoPlaylist(const QList<TrackId>& trackIds,
         const int playlistId,
         int position) {
