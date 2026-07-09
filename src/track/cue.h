@@ -25,7 +25,9 @@ class Cue : public QObject {
     static_assert(kNoHotCue != mixxx::kFirstHotCueIndex,
             "Conflicting definitions of invalid and first hot cue index");
 
-    static constexpr double kShiftCuesOffsetMillis = 10;
+    // ronso0: changed from 10 to 5 in order to sync it with `beats_translate_earlier|later`
+    // BpmControl -> kBeatShiftMillis
+    static constexpr double kShiftCuesOffsetMillis = 5;
     static constexpr double kShiftCuesOffsetMillisSmall = 1;
 
     struct StartAndEndPositions {
