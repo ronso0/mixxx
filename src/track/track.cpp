@@ -978,6 +978,7 @@ void Track::setMainCuePosition(mixxx::audio::FramePos position) {
 void Track::shiftCuePositionsMillis(double milliseconds) {
     auto locked = lockMutex(&m_qMutex);
 
+    kLogger.warning() << "Shift cue positions by" << milliseconds << "ms";
     VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
         return;
     }
@@ -1127,6 +1128,7 @@ void Track::shiftBeatsMillis(double milliseconds) {
     if (milliseconds == 0 || !m_pBeats) {
         return;
     }
+    kLogger.warning() << "Shift beats by" << milliseconds << "ms";
     const double frames =
             m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(
                     milliseconds);
