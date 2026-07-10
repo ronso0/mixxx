@@ -3485,6 +3485,7 @@ if(ENGINEPRIME)
       BUILD_COMMAND ${CMAKE_COMMAND} --build . --target DjInterop
       BUILD_BYPRODUCTS <INSTALL_DIR>/${DJINTEROP_LIBRARY}
       EXCLUDE_FROM_ALL TRUE
+      BUILD_JOB_SERVER_AWARE TRUE
     )
 
     # Since we have built libdjinterop from sources as a static library, its
@@ -3639,6 +3640,7 @@ if(KEYFINDER)
       BUILD_COMMAND ${CMAKE_COMMAND} --build .
       BUILD_BYPRODUCTS <INSTALL_DIR>/${KeyFinder_LIBRARY}
       EXCLUDE_FROM_ALL TRUE
+      BUILD_JOB_SERVER_AWARE TRUE
     )
 
     # This is a bit of a hack to make sure that the include directory actually
@@ -3715,6 +3717,7 @@ if(SIGNALSMITH)
     BUILD_COMMAND ${CMAKE_COMMAND} --build .
     INSTALL_COMMAND true
     EXCLUDE_FROM_ALL TRUE
+    BUILD_JOB_SERVER_AWARE TRUE
   )
 
   add_dependencies(mixxx-lib signalsmith-stretch)
