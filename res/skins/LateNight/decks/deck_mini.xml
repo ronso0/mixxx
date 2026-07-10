@@ -244,7 +244,13 @@
             </Children>
           </WidgetGroup>
         </Children>
+        <!-- used to remove the borders facing the compact VU meters when they are shown -->
+        <Connection>
+          <ConfigKey persist="true">[Skin],show_vumeters_compact</ConfigKey>
+          <BindProperty>highlight</BindProperty>
+        </Connection>
       </WidgetGroup><!-- DeckMiniN -->
+
     </Children>
   </WidgetGroup>
 </Template>
