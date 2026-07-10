@@ -87,15 +87,11 @@
           <Template src="skins:LateNight/decks/rate_controls_compact.xml"/>
 
         </Children>
-        <!-- This is supposed to reduce margin and eliminate the border that
-          touches the optional VU meters when they're visible.
-          Unfortunately it is buggy and works only for the state that is
-          active while the skin is loaded. If the highlight value changes the
-          layout may be screwed and inner widgets overlap the outer border.. wtf?
+        <!-- used to remove the borders facing the compact VU meters when they are shown -->
         <Connection>
-          <ConfigKey persist="true">[LateNight],show_vumeters_compact</ConfigKey>
+          <ConfigKey persist="true">[Skin],show_vumeters_compact</ConfigKey>
           <BindProperty>highlight</BindProperty>
-        </Connection> -->
+        </Connection>
       </WidgetGroup><!-- DeckCompactN -->
 
     </Children>
