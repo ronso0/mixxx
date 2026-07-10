@@ -147,6 +147,38 @@ Description:
           </WidgetGroup><!-- DeckSizeSettings -->
 <!-- Deck size selectors -->
 
+<!-- Mini decks 3/4 -->
+          <WidgetGroup>
+            <!-- <ObjectName>DeckSizeSettings</ObjectName> -->
+            <Size>225me,20f</Size>
+            <Layout>horizontal</Layout>
+            <Children>
+              <WidgetGroup>
+                <Size>225f,18f</Size>
+                <Layout>stacked</Layout>
+                <Children>
+                  <!-- translucent cover when Mixer is shown (all decks are maximized) -->
+                  <Template src="skins:LateNight/helpers/skin_settings_cover.xml">
+                    <SetVariable name="Setting">[Skin],show_mixer</SetVariable>
+                  </Template>
+
+                  <!-- translucent cover when Mixer is shown (all decks are maximized) -->
+                  <Template src="skins:LateNight/helpers/skin_settings_cover_inverted.xml">
+                    <SetVariable name="Setting">[LateNight],show_compact_deck</SetVariable>
+                  </Template>
+
+                  <!-- Decks 3/4: mini deck or selected size -->
+                  <Template src="skins:LateNight/helpers/skin_settings_button_2state.xml">
+                    <!-- <SetVariable name="TooltipId">show_intro_outro_cues</SetVariable> -->
+                    <SetVariable name="Text">Mini Decks 3/4</SetVariable>
+                    <SetVariable name="Setting">[LateNight],show_mini_decks34</SetVariable>
+                  </Template>
+
+                </Children>
+              </WidgetGroup><!-- Deck size toggles + stacked show_mixer hint/toggle -->
+            </Children>
+          </WidgetGroup><!-- Mini decks 3/4 -->
+
 
 <!-- Deck Options FULL / Compact / mini -->
           <WidgetGroup>

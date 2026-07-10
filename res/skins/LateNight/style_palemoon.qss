@@ -1939,7 +1939,7 @@ WPushButton#Reverse[pressed="true"],
 #MicDucking[value="1"],
 #MicDucking[value="2"],
 WPushButton#StemMuteButton,
-#PassthroughButton[displayValue="1"],
+/*#PassthroughButton[displayValue="1"],*/
 #BroadcastButton[displayValue="4"], /* warning */
 QPushButton#pushButtonAutoDJ:checked,
 QPushButton#pushButtonAnalyze:checked {
@@ -1976,6 +1976,7 @@ WPushButton#PlayDeckMini[displayValue="1"],
 WPushButton#PlaySampler[displayValue="1"],
 WPushButton#PlayPreview[displayValue="1"],
 WPushButton#PlayIndicator[displayValue="1"],
+#PassthroughButton[displayValue="1"],
 WPushButton#VinylStatus[displayValue="1"], /* enabled, OK */
 #BroadcastButton[displayValue="2"] {
   background-color: #438225;
