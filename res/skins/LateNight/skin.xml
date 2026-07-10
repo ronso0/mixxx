@@ -59,6 +59,8 @@
           See deck.xml and /helpers/skin_helper_deck_size.xml for documentation.
           0=mini 1=compact(default) 2=full deck -->
       <attribute persist="true" config_key="[LateNight],deck_size_without_mixer">1</attribute>
+      <!-- Show mini decks 3/4 (eg. when they use Passthrough) -->
+      <attribute persist="true" config_key="[LateNight],show_mini_decks34">1</attribute>
       <!-- Full deck -->
       <attribute persist="true" config_key="[Skin],show_rate_controls">1</attribute>
       <attribute persist="true" config_key="[Skin],show_rate_control_buttons">1</attribute>
@@ -205,7 +207,9 @@
       <SetVariable name="PlayedOverlayColor">#dd151515</SetVariable>
       <SetVariable name="EndOfTrackColor">#f856e7</SetVariable>
       <SetVariable name="SlipBorderOutlineColor">#f08c00</SetVariable>
-      <SetVariable name="PassthroughLabelColor">#b24c12</SetVariable>
+      <!-- <SetVariable name="PassthroughLabelColor">#b24c12</SetVariable> -->
+      <!-- Green like play button -->
+      <SetVariable name="PassthroughLabelColor">#438225</SetVariable>
       <SetVariable name="OverviewFontSizeDeck">13</SetVariable>
       <SetVariable name="OverviewFontSizeDeckMini">11</SetVariable>
       <SetVariable name="OverviewFontSizeSampler">10</SetVariable>
@@ -392,7 +396,7 @@
     <SingletonDefinition>
       <ObjectName>Deck3_Src</ObjectName>
       <Children>
-      <Template src="skins:LateNight/decks/deck.xml">
+      <Template src="skins:LateNight/decks/deck_34.xml">
         <SetVariable name="ChanNum">3</SetVariable>
         <SetVariable name="DeckGroup">34</SetVariable>
         <SetVariable name="SignalColor"><Variable name="SignalColor_34"/></SetVariable>
@@ -404,7 +408,7 @@
     <SingletonDefinition>
       <ObjectName>Deck4_Src</ObjectName>
       <Children>
-      <Template src="skins:LateNight/decks/deck.xml">
+      <Template src="skins:LateNight/decks/deck_34.xml">
         <SetVariable name="ChanNum">4</SetVariable>
         <SetVariable name="DeckGroup">34</SetVariable>
         <SetVariable name="SignalColor"><Variable name="SignalColor_34"/></SetVariable>

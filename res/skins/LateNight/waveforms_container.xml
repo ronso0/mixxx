@@ -32,14 +32,24 @@
 
               <WidgetGroup>
                 <Layout>horizontal</Layout>
-                <SizePolicy>me,me</SizePolicy>
+                <SizePolicy>me,min</SizePolicy>
                 <Children>
-                  <Template src="skins:LateNight/waveform.xml">
-                    <SetVariable name="ChanNum">3</SetVariable>
-                    <SetVariable name="SignalColor"><Variable name="SignalColor_34"/></SetVariable>
-                    <SetVariable name="BgColorWaveform"><Variable name="BgColorWaveform_34"/></SetVariable>
-                    <SetVariable name="Highlight">[Skin],show_4decks</SetVariable>
-                  </Template>
+                  <WidgetGroup>
+                    <Layout>horizontal</Layout>
+                    <SizePolicy>me,me</SizePolicy>
+                    <Children>
+                      <Template src="skins:LateNight/waveform.xml">
+                        <SetVariable name="ChanNum">3</SetVariable>
+                        <SetVariable name="SignalColor"><Variable name="SignalColor_34"/></SetVariable>
+                        <SetVariable name="BgColorWaveform"><Variable name="BgColorWaveform_34"/></SetVariable>
+                      </Template>
+                    </Children>
+                    <Connection>
+                      <ConfigKey persist="true">[LateNight],show_mini_decks34</ConfigKey>
+                      <Transform><Not/></Transform>
+                      <BindProperty>visible</BindProperty>
+                    </Connection>
+                  </WidgetGroup>
                 </Children>
                 <Connection>
                   <ConfigKey persist="true">[Skin],show_4decks</ConfigKey>
@@ -55,7 +65,6 @@
                     <SetVariable name="ChanNum">1</SetVariable>
                     <SetVariable name="SignalColor"><Variable name="SignalColor_12"/></SetVariable>
                     <SetVariable name="BgColorWaveform"><Variable name="BgColorWaveform_12"/></SetVariable>
-                    <SetVariable name="Highlight">[Skin],show_4decks</SetVariable>
                   </Template>
                 </Children>
               </WidgetGroup>
@@ -68,20 +77,30 @@
                     <SetVariable name="ChanNum">2</SetVariable>
                     <SetVariable name="SignalColor"><Variable name="SignalColor_12"/></SetVariable>
                     <SetVariable name="BgColorWaveform"><Variable name="BgColorWaveform_12"/></SetVariable>
-                    <SetVariable name="Highlight">[Skin],show_4decks</SetVariable>
                   </Template>
                 </Children>
               </WidgetGroup>
 
               <WidgetGroup>
                 <Layout>horizontal</Layout>
-                <SizePolicy>me,me</SizePolicy>
+                <SizePolicy>me,min</SizePolicy>
                 <Children>
-                  <Template src="skins:LateNight/waveform.xml">
-                    <SetVariable name="ChanNum">4</SetVariable>
-                    <SetVariable name="SignalColor"><Variable name="SignalColor_34"/></SetVariable>
-                    <SetVariable name="BgColorWaveform"><Variable name="BgColorWaveform_34"/></SetVariable>
-                  </Template>
+                  <WidgetGroup>
+                    <Layout>horizontal</Layout>
+                    <SizePolicy>me,me</SizePolicy>
+                    <Children>
+                      <Template src="skins:LateNight/waveform.xml">
+                        <SetVariable name="ChanNum">4</SetVariable>
+                        <SetVariable name="SignalColor"><Variable name="SignalColor_34"/></SetVariable>
+                        <SetVariable name="BgColorWaveform"><Variable name="BgColorWaveform_34"/></SetVariable>
+                      </Template>
+                    </Children>
+                    <Connection>
+                      <ConfigKey persist="true">[LateNight],show_mini_decks34</ConfigKey>
+                      <Transform><Not/></Transform>
+                      <BindProperty>visible</BindProperty>
+                    </Connection>
+                  </WidgetGroup>
                 </Children>
                 <Connection>
                   <ConfigKey persist="true">[Skin],show_4decks</ConfigKey>
