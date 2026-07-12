@@ -1,9 +1,11 @@
 #pragma once
 
 #include <QHeaderView>
+#include <QList>
 #include <QMap>
 #include <QMenu>
 
+#include "library/basetrackcache.h"
 #include "proto/headers.pb.h"
 #include "util/parented_ptr.h"
 
@@ -90,6 +92,16 @@ class WTrackTableViewHeader : public QHeaderView {
     // Work around Qt6 paint bug with sort indicator
     void paintSection(QPainter* pPainter, const QRect& rect, int logicalIndex) const override;
 
+    /// Sets the current multi-column sort state so the header can draw
+    /// indicators for secondary and tertiary sort columns.
+    void setSortColumns(const QList<SortColumn>& sortColumns) {
+        m_sortColumns = sortColumns;
+        // Trigger a repaint of all sections to update indicators
+        if (count() > 0) {
+            viewport()->update();
+        }
+    }
+
   signals:
     void shuffle();
 
@@ -124,4 +136,5 @@ class WTrackTableViewHeader : public QHeaderView {
     QMap<int, int> m_hiddenColumnSizes;
     int m_hoveredSection;
     int m_previousHoveredSection;
+    QList<SortColumn> m_sortColumns;
 };
