@@ -32,6 +32,10 @@ class BaseSqlTableModel : public BaseTrackTableModel {
     void setSearch(const QString& searchText);
     void setSort(int column, Qt::SortOrder order);
 
+    const QList<SortColumn>& getSortColumns() const {
+        return m_sortColumns;
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Inherited from QAbstractItemModel
     ///////////////////////////////////////////////////////////////////////////
