@@ -8,6 +8,7 @@
 #include <QUrl>
 
 #include "control/controlobject.h"
+#include "library/basesqltablemodel.h"
 #include "library/dao/trackschema.h"
 #include "library/library.h"
 #include "library/library_prefs.h"
@@ -1875,6 +1876,16 @@ void WTrackTableView::doSortByColumn(int headerSection, Qt::SortOrder sortOrder)
     }
 
     sortByColumn(headerSection, sortOrder);
+
+    // Propagate the multi-column sort state to the header for drawing
+    // secondary/tertiary sort indicators.
+    auto* pHeader = qobject_cast<WTrackTableViewHeader*>(horizontalHeader());
+    if (pHeader) {
+        auto* pSqlModel = qobject_cast<BaseSqlTableModel*>(model());
+        if (pSqlModel) {
+            pHeader->setSortColumns(pSqlModel->getSortColumns());
+        }
+    }
 
     if (usePositions) {
         selectTracksByPosition(selectedTrackPositions, prevColumn);

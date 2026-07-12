@@ -708,8 +708,38 @@ void WTrackTableViewHeader::paintSection(
     opt.icon = QIcon();   // prevent icon overlap
     style()->drawControl(QStyle::CE_HeaderSection, &opt, pPainter, this);
 
-    const QRect contentRect = style()->subElementRect(QStyle::SE_HeaderLabel, &opt, this);
+    // Determine if this section is a sort column and at what rank,
+    // so we can reserve space for secondary/tertiary indicators.
+    int sectionSortRank = -1; // -1 = not sorted, 0 = primary, 1 = secondary, 2 = tertiary
+    bool hasMultiSortColumns = !m_sortColumns.isEmpty();
+    if (hasMultiSortColumns && isSortIndicatorShown()) {
+        for (int sortIdx = 0; sortIdx < m_sortColumns.size(); ++sortIdx) {
+            if (m_sortColumns[sortIdx].m_column == logicalIndex) {
+                sectionSortRank = sortIdx;
+                break;
+            }
+        }
+    }
+    // Fallback: if m_sortColumns hasn't been set yet (e.g. during initialization),
+    // use QHeaderView's single sort indicator state for the primary indicator.
+    if (!hasMultiSortColumns && isSortIndicatorShown() && sortIndicatorSection() == logicalIndex) {
+        sectionSortRank = 0;
+    }
+
+    QRect contentRect = style()->subElementRect(QStyle::SE_HeaderLabel, &opt, this);
     // Note: contentRect.height() is now actually equal to m_preferredHeight
+
+    // If this section has a sort indicator, narrow the content rect
+    // to prevent text from overlapping the indicator area.
+    if (sectionSortRank >= 0) {
+        const QRect origIndiRect = style()->subElementRect(QStyle::SE_HeaderArrow, &opt, this);
+        int indiWH = origIndiRect.height();
+        if (layoutDirection() == Qt::LeftToRight) {
+            contentRect.setRight(contentRect.right() - indiWH);
+        } else {
+            contentRect.setLeft(contentRect.left() + indiWH);
+        }
+    }
 
     { // Draw text. Use PainterScope, just in case...
         PainterScope painterScope(pPainter);
@@ -730,8 +760,14 @@ void WTrackTableViewHeader::paintSection(
         pPainter->drawText(contentRect, title, textOption);
     }
 
-    // Draw sort indicator if needed
-    if (isSortIndicatorShown() && sortIndicatorSection() == logicalIndex) {
+    // Draw sort indicators for all sort columns that reference this section
+    if (sectionSortRank >= 0) {
+        Qt::SortOrder order;
+        if (hasMultiSortColumns) {
+            order = m_sortColumns[sectionSortRank].m_order;
+        } else {
+            order = sortIndicatorOrder();
+        }
         // Use the style's original indicator rect but make width = height
         const QRect origIndiRect = style()->subElementRect(QStyle::SE_HeaderArrow, &opt, this);
         int indiWH = origIndiRect.height();
@@ -740,15 +776,13 @@ void WTrackTableViewHeader::paintSection(
                 : origIndiRect.left();
         opt.rect = QRect(indiRectLeft, origIndiRect.top(), indiWH, indiWH);
 
-        // NOTE: Don't use drawPrimitive(PE_IndicatorHeaderArrow) because of its
-        // platform-specific arrow flipping logic in QFusionStyle::drawPrimitive
-        // (ascending = up on Linux, down on Windows/macOS) which is not used by
-        // QHeaderView's default painting via
-        // QStyleSheetStyle::drawControl(CE_Header|CE_HeaderLabel).
-        // Instead, we use the fail-safe method of drawing up/down arrows explicitly
-        // with drawPrimitive(PE_IndicatorArrowUp|Down) for consistent appearance.
-        // This also updates the widget so qss icons are applied immediately.
-        style()->drawPrimitive((sortIndicatorOrder() == Qt::AscendingOrder)
+        // PainterScope to isolate opacity changes
+        PainterScope scope(pPainter);
+        double opacity = (sectionSortRank == 0) ? 1.0
+                : (sectionSortRank == 1)        ? 0.6
+                                                : 0.3;
+        pPainter->setOpacity(opacity);
+        style()->drawPrimitive((order == Qt::AscendingOrder)
                         ? QStyle::PE_IndicatorArrowUp
                         : QStyle::PE_IndicatorArrowDown,
                 &opt,
