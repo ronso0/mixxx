@@ -377,6 +377,7 @@ class WTrackMenu : public QMenu {
     parented_ptr<QAction> m_pClearLoopsAction;
     parented_ptr<QAction> m_pClearWaveformAction;
     parented_ptr<QAction> m_pClearCommentAction;
+    parented_ptr<QAction> m_pClearCoverAction;
     parented_ptr<QAction> m_pClearKeyAction;
     parented_ptr<QAction> m_pClearReplayGainAction;
     parented_ptr<QAction> m_pClearAllMetadataAction;
