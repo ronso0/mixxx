@@ -200,7 +200,7 @@ void WTrackMenu::createMenus() {
         m_pMetadataUpdateExternalCollectionsMenu = make_parented<QMenu>(m_pMetadataMenu);
         m_pMetadataUpdateExternalCollectionsMenu->setTitle(tr("Update external collections"));
 
-        m_pCoverMenu = make_parented<WCoverArtMenu>(m_pMetadataMenu);
+        m_pCoverMenu = make_parented<WCoverArtMenu>(this);
         m_pCoverMenu->setTitle(tr("Cover Art"));
         connect(m_pCoverMenu.get(),
                 &WCoverArtMenu::coverInfoSelected,
@@ -486,6 +486,12 @@ void WTrackMenu::createActions() {
         m_pClearCommentAction = make_parented<QAction>(tr("Comment"), m_pClearMetadataMenu);
         connect(m_pClearCommentAction, &QAction::triggered, this, &WTrackMenu::slotClearComment);
 
+        m_pClearCoverAction = make_parented<QAction>(tr("Cover"), m_pClearMetadataMenu);
+        connect(m_pClearWaveformAction,
+                &QAction::triggered,
+                m_pCoverMenu,
+                &WCoverArtMenu::slotUnset);
+
         m_pClearAllMetadataAction = make_parented<QAction>(tr("All"), m_pClearMetadataMenu);
         connect(m_pClearAllMetadataAction, &QAction::triggered, this, &WTrackMenu::slotClearAllMetadata);
 
@@ -711,7 +717,6 @@ void WTrackMenu::setupActions() {
     if (featureIsEnabled(Feature::Metadata)) {
         m_pMetadataMenu->addAction(m_pImportMetadataFromFileAct);
         m_pMetadataMenu->addAction(m_pExportMetadataAct);
-        m_pMetadataMenu->addMenu(m_pCoverMenu);
 
         m_pMetadataMenu->addAction(m_pImportMetadataFromMusicBrainzAct);
 
@@ -744,6 +749,8 @@ void WTrackMenu::setupActions() {
         }
 
         addSeparator();
+
+        addMenu(m_pCoverMenu);
         addMenu(m_pMetadataMenu);
 
         m_pHotcueMenu->addAction(m_pSortHotcuesByPositionCompressAction);
@@ -757,15 +764,18 @@ void WTrackMenu::setupActions() {
         m_pClearMetadataMenu->addAction(m_pClearPlayCountAction);
         m_pClearMetadataMenu->addAction(m_pClearRatingAction);
         m_pClearMetadataMenu->addAction(m_pClearCommentAction);
+        m_pClearMetadataMenu->addSeparator();
         m_pClearMetadataMenu->addAction(m_pClearMainCueAction);
         m_pClearMetadataMenu->addAction(m_pClearHotCuesAction);
         m_pClearMetadataMenu->addAction(m_pClearIntroCueAction);
         m_pClearMetadataMenu->addAction(m_pClearOutroCueAction);
         m_pClearMetadataMenu->addAction(m_pClearLoopsAction);
+        m_pClearMetadataMenu->addSeparator();
         m_pClearMetadataMenu->addAction(m_pClearKeyAction);
         m_pClearMetadataMenu->addAction(m_pClearReplayGainAction);
-        m_pClearMetadataMenu->addAction(m_pClearWaveformAction);
         m_pClearMetadataMenu->addSeparator();
+        m_pClearMetadataMenu->addAction(m_pClearWaveformAction);
+        m_pClearMetadataMenu->addAction(m_pClearCoverAction);
         m_pClearMetadataMenu->addSeparator();
         m_pClearMetadataMenu->addAction(m_pClearAllMetadataAction);
         addMenu(m_pClearMetadataMenu);
