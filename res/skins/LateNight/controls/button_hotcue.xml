@@ -16,7 +16,8 @@
         <Group><Variable name="Group"/></Group>
         <Hotcue><Variable name="number"/></Hotcue>
         <NumberStates>3</NumberStates>
-        <DimBrightThreshold><Variable name="DimBrightThresholdHotcueBtn"/></DimBrightThreshold>
+        <!-- <DimBrightThreshold><Variable name="DimBrightThresholdHotcueBtn"/></DimBrightThreshold> -->
+        <DimBrightThreshold>1</DimBrightThreshold>
         <DndRectMargin><Variable name="DndRectMarginHotcueBtn"/></DndRectMargin>
         <State>
           <Number>0</Number>
