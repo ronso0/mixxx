@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QDebug>
+#include <QKeyEvent>
 #include <QMetaProperty>
 #include <QRegExp>
 #include <QStyleOption>
@@ -315,7 +316,12 @@ void WTrackProperty::slotShowTrackMenuChangeRequest(bool show) {
                 }
             } else if (pTrackMenu->getDeckGroup() == m_group) {
                 // Hide this deck's menu, ignore other menus
-                pTrackMenu->close();
+                // Send Esc key which closes submenus first, one by one
+                // Note: pTrackMenu->close() would close the menu right away,
+                // which may not always be what the user wants to do.
+                QKeyEvent escKeyEv = QKeyEvent{
+                        QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier};
+                QApplication::sendEvent(pTrackMenu, &escKeyEv);
                 return;
             }
         }
