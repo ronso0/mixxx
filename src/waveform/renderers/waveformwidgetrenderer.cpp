@@ -413,6 +413,7 @@ void WaveformWidgetRenderer::resizeRenderer(int width, int height, float deviceP
     m_width = width;
     m_height = height;
     m_devicePixelRatio = devicePixelRatio;
+    qWarning() << "WaWiRenderer::resize() h:" << height << "| w:" << width;
     for (int i = 0; i < m_rendererStack.size(); ++i) {
         m_rendererStack[i]->setDirty(true);
         m_rendererStack[i]->onResize();

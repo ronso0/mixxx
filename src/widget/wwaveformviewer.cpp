@@ -59,6 +59,7 @@ void WWaveformViewer::setup(const QDomNode& node, const SkinContext& context) {
 void WWaveformViewer::resizeEvent(QResizeEvent* event) {
     Q_UNUSED(event);
     if (m_waveformWidget) {
+        qWarning() << "WaViewer::resizeEvent() h:" << height() << "| w:" << width();
         // Note m_waveformWidget is a WaveformWidgetAbstract,
         // so this calls the method of WaveformWidgetAbstract,
         // note of the derived waveform widgets which are also
