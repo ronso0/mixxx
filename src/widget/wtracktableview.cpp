@@ -619,7 +619,12 @@ void WTrackTableView::slotShowHideTrackMenu(bool show) {
         }
         showTrackMenu(evPos, indexAt(evPos));
     } else {
-        m_pTrackMenu->close();
+        // Send Esc key which closes submenus first, one by one.
+        // Note: pTrackMenu->close() would close the menu right away,
+        // which may not always be what the user wants to do.
+        QKeyEvent escKeyEv = QKeyEvent{
+                QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier};
+        QApplication::sendEvent(m_pTrackMenu, &escKeyEv);
     }
 }
 
