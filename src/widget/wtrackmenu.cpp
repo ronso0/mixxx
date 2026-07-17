@@ -1256,11 +1256,9 @@ void WTrackMenu::updateMenus() {
     }
 
     if (featureIsEnabled(Feature::FindOnWeb)) {
-        // We have a new Track
         m_pFindOnWebMenu->clear();
         m_pFindOnWebLastAct->setVisible(false);
-        const auto pTrack = getFirstTrackPointer();
-        const bool enableMenu = pTrack ? WFindOnWebMenu::hasEntriesForTrack(*pTrack) : false;
+        const bool enableMenu = WFindOnWebMenu::hasEntriesForTrack(*pTrack);
         if (enableMenu) {
             mixxx::library::createFindOnWebSubmenus(
                     m_pFindOnWebMenu.toWeakRef(),
