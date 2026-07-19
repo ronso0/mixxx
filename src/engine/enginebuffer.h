@@ -91,10 +91,11 @@ class EngineBuffer : public EngineObject {
 #ifdef __RUBBERBAND__
         RubberBandFaster = 1,
         RubberBandFiner = 2,
+        RubberBandR3ShortWindow = 3,
 #endif
 #ifdef __SIGNALSMITH__
-        SignalSmithDefault = 3,
-        SignalSmithCheaper = 4,
+        SignalSmithDefault = 4,
+        SignalSmithCheaper = 5,
 #endif
     };
     Q_ENUM(KeylockEngine);
@@ -105,6 +106,7 @@ class EngineBuffer : public EngineObject {
 #ifdef __RUBBERBAND__
             KeylockEngine::RubberBandFaster,
             KeylockEngine::RubberBandFiner,
+            KeylockEngine::RubberBandR3ShortWindow,
 #endif
 #ifdef __SIGNALSMITH__
             KeylockEngine::SignalSmithDefault,
@@ -195,6 +197,11 @@ class EngineBuffer : public EngineObject {
                 return tr("Rubberband R3 (near-hi-fi quality)");
             }
             [[fallthrough]];
+        case KeylockEngine::RubberBandR3ShortWindow:
+            if (EngineBufferScaleRubberBand::isEngineFinerAvailable()) {
+                return tr("Rubberband R3 short window (near-hi-fi quality)");
+            }
+            [[fallthrough]];
 #endif
 #ifdef __SIGNALSMITH__
         case KeylockEngine::SignalSmithCheaper:
@@ -219,6 +226,7 @@ class EngineBuffer : public EngineObject {
         case KeylockEngine::RubberBandFaster:
             return true;
         case KeylockEngine::RubberBandFiner:
+        case KeylockEngine::RubberBandR3ShortWindow:
             return EngineBufferScaleRubberBand::isEngineFinerAvailable();
 #endif
 #ifdef __SIGNALSMITH__
