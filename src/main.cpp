@@ -331,7 +331,9 @@ int main(int argc, char * argv[]) {
 
     int exitCode = runMixxx(&app, args);
 
+    qDebug() << "====================================";
     qDebug() << "Mixxx shutdown complete with code" << exitCode;
+    qDebug() << "====================================";
 
     mixxx::Logging::shutdown();
 
