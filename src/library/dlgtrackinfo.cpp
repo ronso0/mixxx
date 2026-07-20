@@ -1,5 +1,6 @@
 #include "library/dlgtrackinfo.h"
 
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QStyleFactory>
 #include <QtDebug>
@@ -122,6 +123,20 @@ void DlgTrackInfo::init() {
             &QPushButton::clicked,
             this,
             &DlgTrackInfo::slotCancel);
+
+    // Add tab switching with Ctrl + PageDown|PageUp
+    // (in addition to existing Ctr+Tab/Ctrl+Shit+Tab)
+    auto* nextTab = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_PageDown), this);
+    connect(nextTab, &QShortcut::activated, this, [this]() {
+        int nextIndex = (tabWidget->currentIndex() + 1) % tabWidget->count();
+        tabWidget->setCurrentIndex(nextIndex);
+    });
+    auto* prevTab = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_PageUp), this);
+    connect(prevTab, &QShortcut::activated, this, [this]() {
+        int count = tabWidget->count();
+        int prevIndex = (tabWidget->currentIndex() - 1 + count) % count;
+        tabWidget->setCurrentIndex(prevIndex);
+    });
 
     // BPM edit buttons
     connect(bpmHalve, &QPushButton::clicked, this, [this] {
