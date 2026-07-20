@@ -66,7 +66,7 @@ bool extractIntFromRegex(const QRegularExpression& regex, const QString& group, 
 /// Returns the first object from a list of `BaseTrackPlayer` instances where
 /// the corresponding `play` CO is set to 0.
 template<class T>
-T* findFirstStoppedPlayerInList(const QList<T*>& players) {
+T* findFirstStoppedPlayerInList(const QList<T*>& players, bool skipPassthrough = false) {
     for (T* pPlayer : players) {
         VERIFY_OR_DEBUG_ASSERT(pPlayer != nullptr) {
             continue;
@@ -74,10 +74,17 @@ T* findFirstStoppedPlayerInList(const QList<T*>& players) {
 
         ControlObject* pPlayControl = ControlObject::getControl(
                 ConfigKey(pPlayer->getGroup(), "play"));
-        VERIFY_OR_DEBUG_ASSERT(pPlayControl != nullptr) {
+        VERIFY_OR_DEBUG_ASSERT(pPlayControl) {
             continue;
         }
 
+        if (skipPassthrough) {
+            ControlObject* pPassthroughControl = ControlObject::getControl(
+                    ConfigKey(pPlayer->getGroup(), "passthrough"));
+            if (pPassthroughControl && pPassthroughControl->toBool()) {
+                continue;
+            }
+        }
         if (!pPlayControl->toBool()) {
             return pPlayer;
         }
@@ -731,7 +738,8 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
-    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
+    // Don't load into active Passthrough decks
+    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks, true /* skip passthrough */);
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
