@@ -62,7 +62,14 @@ void main(void) {
     if (new_currentIndex >= 0.0 && new_currentIndex <= float(waveformLength - 1)) {
         // Since the magnitude of the (low, mid, high) vector is used as the
         // waveform height, re-scale the maximum height to 1.
-        highp float scaleFactor = 1.0 / sqrt(3.0);
+        // ronso0: applying a compensation factor here so I can have somewhat equal
+        // waveform and overview height (with 'All' gain of 1.6).
+        // This tries to work around the different native scaling of the
+        // Stacked wave and RGB overview.
+        //
+        // Original: 1.0 / sqrt(3.0) = 0.5774 -> to low, overview is clamped
+        // highp float scaleFactor = 1.0 / sqrt(3.0);
+        highp float scaleFactor = 0.65f;
 
         highp vec4 new_currentDataUnscaled = getWaveformData(new_currentIndex) * allGain;
         new_currentDataUnscaled.x *= scaleFactor;
