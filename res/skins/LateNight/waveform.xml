@@ -292,7 +292,7 @@
           </Visual>
         </Children>
         <Connection>
-          <ConfigKey persist="true"><Variable name="Highlight"/></ConfigKey>
+          <ConfigKey persist="true">[Skin],show_4decks</ConfigKey>
           <BindProperty>highlight</BindProperty>
         </Connection>
       </WidgetGroup>

@@ -255,8 +255,10 @@ int main(int argc, char * argv[]) {
         return kParseCmdlineArgsErrorExitCode;
     }
 
-    // If you change this here, you also need to change it in
-    // ErrorDialogHandler::errorDialog(). TODO(XXX): Remove this hack.
+    // Set a unique thread object name
+    //
+    // This is used for a check within ErrorDialogHandler::errorDialog()
+    // for earlier Qt versions
     QThread::currentThread()->setObjectName("Main");
 
     // Create the ErrorDialogHandler in the main thread, otherwise it will be
@@ -329,7 +331,9 @@ int main(int argc, char * argv[]) {
 
     int exitCode = runMixxx(&app, args);
 
+    qDebug() << "====================================";
     qDebug() << "Mixxx shutdown complete with code" << exitCode;
+    qDebug() << "====================================";
 
     mixxx::Logging::shutdown();
 

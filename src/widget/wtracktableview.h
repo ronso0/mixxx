@@ -55,12 +55,14 @@ class WTrackTableView : public WLibraryTableView {
 #endif
     void assignNextTrackColor() override;
     void assignPreviousTrackColor() override;
+    void trackRatingChangeRequestRelative(int change);
     TrackModel::SortColumnId getColumnIdFromCurrentIndex() override;
     QList<TrackId> getSelectedTrackIds() const;
     bool isTrackInCurrentView(const TrackId& trackId);
     void setSelectedTracks(const QList<TrackId>& tracks);
     TrackId getCurrentTrackId() const;
     bool setCurrentTrackId(const TrackId& trackId, int column = 0, bool scrollToTrack = false);
+    void selectPinnedTrack(const TrackId& id);
 
     void addToAutoDJBottom();
     void addToAutoDJTop();

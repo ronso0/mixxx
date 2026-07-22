@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QLocale>
+#include <QStyle>
 
 #include "defs_urls.h"
 #include "moc_dlgabout.cpp"
@@ -10,8 +11,8 @@
 #include "util/desktophelper.h"
 #include "util/versionstore.h"
 
-DlgAbout::DlgAbout()
-        : QDialog(nullptr),
+DlgAbout::DlgAbout(QWidget* pParent)
+        : QDialog(pParent),
           Ui::DlgAboutDlg() {
     setupUi(this);
     setWindowIcon(QIcon(MIXXX_ICON_PATH));
@@ -164,19 +165,35 @@ DlgAbout::DlgAbout()
             << "Ahmed Salah"
             << "Dheeraj Arora"
             << "Pranav Jadhav"
-            << "endcredits33"
-            << "cucucat"
             << "Laura Mora"
+            << "Aleph Mota"
+            << "Carl Hedgren"
+            << "vespadj"
             << "Tom&aacute;&scaron; Ba&#382;ant"
             << "Serveny"
             << "Robert Hendrickx"
             << "Rishabh Saini"
-            << "J&eacute;r&ocirc;me Froissart"
             << "Daniel Kinahan"
             << "Anuj Nayak"
             << "Jeff Magill"
             << "Michael Scherer"
-            << "Simon Tegelid";
+            << "Simon Tegelid"
+            << "Lorenzo Manacorda"
+            << "Chris Tallon"
+            << "ecker00"
+            << "David L Morris"
+            << "Joshua Noeske"
+            << "konstruktiv"
+            << "Ry Currier"
+            << "Sanjana S."
+            << "Felix Dietz"
+            << "presentformyfriends"
+            << "JCCoynel"
+            << "Sean Champ"
+            << "Abdelrahman Medhat Saber"
+            << "Aleksei Kubantsev"
+            << "Felicia Hummel"
+            << "Pranav Jadhav";
 
     QStringList specialThanks;
     specialThanks
@@ -479,6 +496,11 @@ DlgAbout::DlgAbout()
              << sectionTemplate.arg(s_specialThanks,
                                     specialThanks.join("<br>"));
     textBrowser->setHtml(sections.join(""));
+
+    // Apparenty a custm stylesheet is not applied before show(). In order to
+    // create the correct link color and pick the Donate icon matching the
+    // stylesheet we need to polsih manually.
+    style()->polish(this);
 
     textWebsiteLink->setText(
             QString("<a style=\"color:%1;\" href=\"%2\">%3</a>")

@@ -40,6 +40,9 @@ constexpr int kLocalBpmSpan = 4;
 // of the next beat.
 constexpr double kPastBeatMatchThreshold = 1 / 8.0;
 
+// Same as Cue::kShiftCuesOffsetMillis
+constexpr int kBeatShiftMillis = 5;
+
 mixxx::Bpm averageBpmRoundedWithinRange(double averageLength, double rateRatio) {
     // (60 seconds per minute) * (1000 milliseconds per second) /
     //   (X millis per beat)
@@ -371,17 +374,7 @@ void BpmControl::slotTranslateBeatsMove(double v) {
     if (!pTrack) {
         return;
     }
-    const mixxx::BeatsPointer pBeats = pTrack->getBeats();
-    if (pBeats) {
-        // TODO(rryan): Track::frameInfo is possibly inaccurate!
-        const double sampleOffset = frameInfo().sampleRate * v * 0.01;
-        const mixxx::audio::FrameDiff_t frameOffset =
-                sampleOffset / mixxx::kEngineChannelOutputCount;
-        const auto translatedBeats = pBeats->tryTranslate(frameOffset);
-        if (translatedBeats) {
-            pTrack->trySetBeats(*translatedBeats);
-        }
-    }
+    pTrack->shiftBeatsMillis(kBeatShiftMillis * v);
 }
 
 void BpmControl::slotBeatsUndoAdjustment(double v) {

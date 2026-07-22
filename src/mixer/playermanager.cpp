@@ -66,7 +66,7 @@ bool extractIntFromRegex(const QRegularExpression& regex, const QString& group, 
 /// Returns the first object from a list of `BaseTrackPlayer` instances where
 /// the corresponding `play` CO is set to 0.
 template<class T>
-T* findFirstStoppedPlayerInList(const QList<T*>& players) {
+T* findFirstStoppedPlayerInList(const QList<T*>& players, bool skipPassthrough = false) {
     for (T* pPlayer : players) {
         VERIFY_OR_DEBUG_ASSERT(pPlayer != nullptr) {
             continue;
@@ -74,10 +74,17 @@ T* findFirstStoppedPlayerInList(const QList<T*>& players) {
 
         ControlObject* pPlayControl = ControlObject::getControl(
                 ConfigKey(pPlayer->getGroup(), "play"));
-        VERIFY_OR_DEBUG_ASSERT(pPlayControl != nullptr) {
+        VERIFY_OR_DEBUG_ASSERT(pPlayControl) {
             continue;
         }
 
+        if (skipPassthrough) {
+            ControlObject* pPassthroughControl = ControlObject::getControl(
+                    ConfigKey(pPlayer->getGroup(), "passthrough"));
+            if (pPassthroughControl && pPassthroughControl->toBool()) {
+                continue;
+            }
+        }
         if (!pPlayControl->toBool()) {
             return pPlayer;
         }
@@ -151,11 +158,9 @@ PlayerManager::~PlayerManager() {
     m_samplers.clear();
     m_microphones.clear();
     m_auxiliaries.clear();
-
-    if (m_pTrackAnalysisScheduler) {
-        m_pTrackAnalysisScheduler->stop();
-        m_pTrackAnalysisScheduler.reset();
-    }
+    // We need to delete m_pTrackAnalysisScheduler here immediately synchronously,
+    // waiting for pending threads to have finished, to not kill them during exit
+    delete m_pTrackAnalysisScheduler.release();
 }
 
 void PlayerManager::bindToLibrary(Library* pLibrary) {
@@ -733,7 +738,8 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
-    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
+    // Don't load into active Passthrough decks
+    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks, true /* skip passthrough */);
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
@@ -753,6 +759,24 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     }
 #endif
 
+    // Don't load into invisible decks 3/4
+    int deckNum = -1;
+    VERIFY_OR_DEBUG_ASSERT(extractIntFromRegex(kDeckRegex, pDeck->getGroup(), &deckNum)) {
+        qWarning() << "PlayerManager: couldn't extract number from deck group" << pDeck->getGroup();
+        return;
+    }
+    if (deckNum > 2) {
+        // Don't care if we have a skin that didn't create the [Skin],show_4decks control.
+        ControlObject* pSkinShowDeck34Control = ControlObject::getControl(
+                // TODO Move ConfigKey to some defs.h file, it's also used by
+                // AutoDJProcessor and listed in ControlPickerMenu
+                ConfigKey(QStringLiteral("[Skin]"), QStringLiteral("show_4decks")));
+        if (pSkinShowDeck34Control != nullptr && !pSkinShowDeck34Control->toBool()) {
+            qDebug() << "PlayerManager: don't load into invisible deck" << deckNum;
+            return;
+        }
+    }
+
     pDeck->slotLoadTrack(pTrack,
 #ifdef __STEM__
             mixxx::StemChannelSelection(),
@@ -767,7 +791,7 @@ void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& locatio
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
     }
-
+    // Do we need a the decks 3/4 check here, too?
     slotLoadLocationToPlayer(location, pDeck->getGroup(), play);
 }
 

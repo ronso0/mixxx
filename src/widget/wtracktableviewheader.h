@@ -1,22 +1,27 @@
 #pragma once
 
 #include <QHeaderView>
+#include <QList>
 #include <QMap>
 #include <QMenu>
 
+#include "library/basetrackcache.h"
 #include "proto/headers.pb.h"
+#include "util/parented_ptr.h"
 
 class TrackModel;
 class QAction;
 class QCheckBox;
 class QContextMenuEvent;
 class QWidget;
+class QWidgetAction;
+class WMenuCheckBox;
 class WTrackTableViewHeader;
 
 // Thanks to StackOverflow http://stackoverflow.com/questions/1163030/qt-qtableview-and-horizontalheader-restorestate
 // answer with this code snippet: http://codepad.org/2gPIMPYU
 class HeaderViewState {
-public:
+  public:
     HeaderViewState() {}
 
     // Populate the object based on the provided live view.
@@ -31,9 +36,10 @@ public:
 
     // Returns a serialized protobuf of the current state.
     QString saveState() const;
-    // Apply the state to the provided view.  The data in the object may be
+    // Apply the state to the provided view. The data in the object may be
     // changed if the header format has changed.
-    void restoreState(WTrackTableViewHeader* pHeaders);
+    // Don't sort if explicitly disabled, for example when cloning the Tracks header.
+    void restoreState(WTrackTableViewHeader* pHeaders, bool restoreCommonState);
 
     // returns false if no headers are listed to be shown.
     bool healthy() const {
@@ -48,7 +54,7 @@ public:
         return false;
     }
 
-private:
+  private:
     mixxx::library::HeaderViewState m_view_state;
 };
 
@@ -62,8 +68,7 @@ class WTrackTableViewHeader : public QHeaderView {
     void setModel(QAbstractItemModel* model) override;
 
     void saveHeaderState();
-    void restoreHeaderState();
-    void loadDefaultHeaderState();
+
     // Returns false if the header state is not stored in the database (on first time usage)
     bool hasPersistedHeaderState();
 
@@ -87,24 +92,49 @@ class WTrackTableViewHeader : public QHeaderView {
     // Work around Qt6 paint bug with sort indicator
     void paintSection(QPainter* pPainter, const QRect& rect, int logicalIndex) const override;
 
+    /// Sets the current multi-column sort state so the header can draw
+    /// indicators for secondary and tertiary sort columns.
+    void setSortColumns(const QList<SortColumn>& sortColumns) {
+        m_sortColumns = sortColumns;
+        // Trigger a repaint of all sections to update indicators
+        if (count() > 0) {
+            viewport()->update();
+        }
+    }
+
   signals:
     void shuffle();
 
   private slots:
     void showOrHideColumn(int);
+    void toggleSyncCommonHeaderState(bool checked);
 
   private:
     int hiddenCount();
-    void clearActions();
+    void updateMenu();
+    void updateCommonHeaderActions();
+    bool shouldSyncWithCommonHeaderState();
+    void restoreHeaderState();
+    void loadDefaultHeaderState();
+    // Try to load the saved common header state.
+    void loadCommonHeaderState();
+    void storeAsCommonHeaderState();
     TrackModel* getTrackModel();
 
     void setHeightForFont();
 
-    QMenu m_menu;
+    parented_ptr<QMenu> m_pMenu;
     QMap<int, QCheckBox*> m_columnCheckBoxes;
+
+    parented_ptr<QAction> m_pStoreAsCommontHeaderAction;
+    parented_ptr<QAction> m_pLoadCommonHeaderAction;
+    parented_ptr<WMenuCheckBox> m_pSyncCheckBox;
+    parented_ptr<QWidgetAction> m_pSyncAction;
+    parented_ptr<QAction> m_pShuffleAction;
 
     int m_preferredHeight;
     QMap<int, int> m_hiddenColumnSizes;
     int m_hoveredSection;
     int m_previousHoveredSection;
+    QList<SortColumn> m_sortColumns;
 };

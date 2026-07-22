@@ -23,6 +23,7 @@
 #include "util/assert.h"
 #include "util/defs.h"
 #include "util/file.h"
+#include "util/widgethelper.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wlibrarytextbrowser.h"
@@ -444,7 +445,8 @@ void BasePlaylistFeature::slotDeletePlaylist() {
         return;
     }
 
-    QMessageBox::StandardButton btn = QMessageBox::question(nullptr,
+    QMessageBox::StandardButton btn = QMessageBox::question(
+            mixxx::widgethelper::getSkinWidget(), // parent to apply skin styles,
             tr("Confirm Deletion"),
             tr("Do you really want to delete playlist <b>%1</b>?")
                     .arg(m_playlistDao.getPlaylistName(playlistId)),
@@ -647,11 +649,11 @@ void BasePlaylistFeature::slotExportPlaylist() {
     pPlaylistTableModel->select();
 
     // check config if relative paths are desired
-    bool useRelativePath = m_pConfig->getValue<bool>(
+    PlaylistExportFilePathMode filePathMode = m_pConfig->getValue<PlaylistExportFilePathMode>(
             kUseRelativePathOnExportConfigKey);
 
     if (fileLocation.endsWith(".csv", Qt::CaseInsensitive)) {
-        ParserCsv::writeCSVFile(fileLocation, pPlaylistTableModel.get(), useRelativePath);
+        ParserCsv::writeCSVFile(fileLocation, pPlaylistTableModel.get(), filePathMode);
     } else if (fileLocation.endsWith(".txt", Qt::CaseInsensitive)) {
         if (m_playlistDao.getHiddenType(pPlaylistTableModel->getPlaylist()) ==
                 PlaylistDAO::PLHT_SET_LOG) {
@@ -670,7 +672,7 @@ void BasePlaylistFeature::slotExportPlaylist() {
         exportPlaylistItemsIntoFile(
                 fileLocation,
                 playlistItems,
-                useRelativePath);
+                filePathMode);
     }
 }
 
@@ -706,7 +708,7 @@ void BasePlaylistFeature::slotExportTrackFiles() {
         return;
     }
 
-    TrackExportWizard track_export(nullptr, m_pConfig, tracks);
+    TrackExportWizard track_export(m_pConfig, tracks);
     track_export.exportTracks();
 }
 
@@ -823,8 +825,8 @@ QString BasePlaylistFeature::fetchPlaylistLabel(int playlistId) {
 }
 
 void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
-    // qDebug() << "BasePlaylistFeature::updateChildModel() for"
-    //          << playlistIds.count() << "playlist(s)";
+    qWarning() << "BasePlaylistFeature::updateChildModel() for"
+               << playlistIds.count() << "playlist(s)";
     if (playlistIds.isEmpty()) {
         return;
     }
@@ -842,6 +844,7 @@ void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
                 id = pChild->getData().toInt(&ok);
                 if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
                     label = fetchPlaylistLabel(id);
+                    qWarning() << "--> update playlist" << label;
                     pChild->setLabel(label);
                     decorateChild(pChild, id);
                     markTreeItem(pChild);
@@ -851,6 +854,7 @@ void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
             id = pTreeItem->getData().toInt(&ok);
             if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
                 label = fetchPlaylistLabel(id);
+                qWarning() << "--> update playlist" << label;
                 pTreeItem->setLabel(label);
                 decorateChild(pTreeItem, id);
                 markTreeItem(pTreeItem);
@@ -889,37 +893,44 @@ void BasePlaylistFeature::slotTrackSelected(TrackId trackId) {
     m_selectedTrackId = trackId;
     m_playlistDao.getPlaylistsTrackIsIn(m_selectedTrackId, &m_playlistIdsOfSelectedTrack);
 
+    bool shouldRootBeBold = false;
+
     for (int row = 0; row < m_pSidebarModel->rowCount(); ++row) {
         QModelIndex index = m_pSidebarModel->index(row, 0);
         TreeItem* pTreeItem = m_pSidebarModel->getItem(index);
         DEBUG_ASSERT(pTreeItem != nullptr);
-        markTreeItem(pTreeItem);
+
+        // If any child item is marked bold, the root item must be, too
+        if (markTreeItem(pTreeItem)) {
+            shouldRootBeBold = true;
+        }
     }
+
+    m_pSidebarModel->getRootItem()->setBold(shouldRootBeBold);
 
     m_pSidebarModel->triggerRepaint();
 }
 
-void BasePlaylistFeature::markTreeItem(TreeItem* pTreeItem) {
+bool BasePlaylistFeature::markTreeItem(TreeItem* pTreeItem) {
     bool ok;
+    bool isBold = false;
     int playlistId = pTreeItem->getData().toInt(&ok);
     if (ok) {
-        bool shouldBold = m_playlistIdsOfSelectedTrack.contains(playlistId);
-        pTreeItem->setBold(shouldBold);
-        if (shouldBold && pTreeItem->hasParent()) {
-            TreeItem* item = pTreeItem;
-            // extra parents, because -Werror=parentheses
-            while ((item = item->parent())) {
-                item->setBold(true);
+        isBold = m_playlistIdsOfSelectedTrack.contains(playlistId);
+    }
+
+    if (pTreeItem->hasChildren()) {
+        QList<TreeItem*> children = pTreeItem->children();
+        for (int i = 0; i < children.size(); i++) {
+            if (markTreeItem(children.at(i))) {
+                isBold = true;
             }
         }
     }
-    if (pTreeItem->hasChildren()) {
-        QList<TreeItem*> children = pTreeItem->children();
 
-        for (int i = 0; i < children.size(); i++) {
-            markTreeItem(children.at(i));
-        }
-    }
+    pTreeItem->setBold(isBold);
+
+    return isBold;
 }
 
 QString BasePlaylistFeature::createPlaylistLabel(const QString& name,

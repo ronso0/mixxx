@@ -22,6 +22,9 @@
 #ifdef __RUBBERBAND__
 #include "engine/bufferscalers/enginebufferscalerubberband.h"
 #endif
+#ifdef __SIGNALSMITH__
+#include "engine/bufferscalers/enginebufferscalesignalsmith.h"
+#endif
 
 //for the writer
 #ifdef __SCALER_DEBUG__
@@ -88,6 +91,11 @@ class EngineBuffer : public EngineObject {
 #ifdef __RUBBERBAND__
         RubberBandFaster = 1,
         RubberBandFiner = 2,
+        RubberBandR3ShortWindow = 3,
+#endif
+#ifdef __SIGNALSMITH__
+        SignalSmithDefault = 4,
+        SignalSmithCheaper = 5,
 #endif
     };
     Q_ENUM(KeylockEngine);
@@ -97,7 +105,12 @@ class EngineBuffer : public EngineObject {
             KeylockEngine::SoundTouch,
 #ifdef __RUBBERBAND__
             KeylockEngine::RubberBandFaster,
-            KeylockEngine::RubberBandFiner
+            KeylockEngine::RubberBandFiner,
+            KeylockEngine::RubberBandR3ShortWindow,
+#endif
+#ifdef __SIGNALSMITH__
+            KeylockEngine::SignalSmithDefault,
+            KeylockEngine::SignalSmithCheaper,
 #endif
     };
 
@@ -184,6 +197,17 @@ class EngineBuffer : public EngineObject {
                 return tr("Rubberband R3 (near-hi-fi quality)");
             }
             [[fallthrough]];
+        case KeylockEngine::RubberBandR3ShortWindow:
+            if (EngineBufferScaleRubberBand::isEngineFinerAvailable()) {
+                return tr("Rubberband R3 short window (near-hi-fi quality)");
+            }
+            [[fallthrough]];
+#endif
+#ifdef __SIGNALSMITH__
+        case KeylockEngine::SignalSmithCheaper:
+            return tr("Signalsmith Stretch (Cheaper)");
+        case KeylockEngine::SignalSmithDefault:
+            return tr("Signalsmith Stretch (Default)");
 #endif
         default:
 #ifdef __RUBBERBAND__
@@ -202,7 +226,13 @@ class EngineBuffer : public EngineObject {
         case KeylockEngine::RubberBandFaster:
             return true;
         case KeylockEngine::RubberBandFiner:
+        case KeylockEngine::RubberBandR3ShortWindow:
             return EngineBufferScaleRubberBand::isEngineFinerAvailable();
+#endif
+#ifdef __SIGNALSMITH__
+        case KeylockEngine::SignalSmithDefault:
+        case KeylockEngine::SignalSmithCheaper:
+            return true;
 #endif
         default:
             return false;
@@ -464,6 +494,9 @@ class EngineBuffer : public EngineObject {
     EngineBufferScaleST* m_pScaleST;
 #ifdef __RUBBERBAND__
     EngineBufferScaleRubberBand* m_pScaleRB;
+#endif
+#ifdef __SIGNALSMITH__
+    EngineBufferScaleSignalSmith* m_pScaleSignalSmith;
 #endif
 
     // Indicates whether the scaler has changed since the last process()

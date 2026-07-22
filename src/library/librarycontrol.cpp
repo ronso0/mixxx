@@ -4,6 +4,8 @@
 #include <QCheckBox>
 #include <QKeyEvent>
 #include <QModelIndex>
+#include <QSplashScreen>
+#include <QTimer>
 #include <QWindow>
 #include <QtDebug>
 
@@ -12,9 +14,15 @@
 #include "control/controlpushbutton.h"
 #include "library/library.h"
 #include "library/libraryview.h"
+#include "library/trackcollection.h"
+#include "library/trackcollectionmanager.h"
+#include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
 #include "moc_librarycontrol.cpp"
+#include "track/track.h"
+#include "track/track_decl.h"
 #include "util/cmdlineargs.h"
+#include "util/widgethelper.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wsearchlineedit.h"
@@ -25,8 +33,8 @@ namespace {
 const QString kAppGroup = QStringLiteral("[App]");
 } // namespace
 
-LoadToGroupController::LoadToGroupController(LibraryControl* pParent, const QString& group)
-        : QObject(pParent),
+LoadToGroupController::LoadToGroupController(LibraryControl* pLibraryControl, const QString& group)
+        : QObject(pLibraryControl),
           m_group(group) {
     m_pLoadControl = std::make_unique<ControlPushButton>(ConfigKey(group, "LoadSelectedTrack"));
     connect(m_pLoadControl.get(),
@@ -58,8 +66,18 @@ LoadToGroupController::LoadToGroupController(LibraryControl* pParent, const QStr
 
     connect(this,
             &LoadToGroupController::loadToGroup,
-            pParent,
+            pLibraryControl,
             &LibraryControl::slotLoadSelectedTrackToGroup);
+
+    m_pAppendLoadedTrackToPrepPlaylistControl =
+            std::make_unique<ControlPushButton>(
+                    ConfigKey(m_group, "append_deck_track_to_prep_playlist"));
+    connect(m_pAppendLoadedTrackToPrepPlaylistControl.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this, pLibraryControl](double value) {
+                pLibraryControl->slotAppendDeckTrackToPrepPlaylist(value, m_group);
+            });
 }
 
 LoadToGroupController::~LoadToGroupController() = default;
@@ -87,6 +105,29 @@ void LoadToGroupController::slotLoadToGroupAndPlay(double v) {
     }
 }
 
+PinLoadedTrackController::PinLoadedTrackController(
+        LibraryControl* pLibraryControl, const QString& group)
+        : QObject(pLibraryControl) {
+    m_pPinLoadedTrackControl =
+            std::make_unique<ControlPushButton>(ConfigKey(group, "pin_loaded_track"));
+    m_pPinLoadedTrackControl->setButtonMode(mixxx::control::ButtonMode::Toggle);
+    connect(m_pPinLoadedTrackControl.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this, group](double v) {
+                emit pinLoadedTrack(group, v);
+            });
+    connect(this,
+            &PinLoadedTrackController::pinLoadedTrack,
+            pLibraryControl,
+            &LibraryControl::slotPinLoadedTrack);
+}
+
+void PinLoadedTrackController::reset() {
+    QSignalBlocker(this);
+    m_pPinLoadedTrackControl->set(0);
+}
+
 LibraryControl::LibraryControl(Library* pLibrary)
         : QObject(pLibrary),
           m_pLibrary(pLibrary),
@@ -95,6 +136,9 @@ LibraryControl::LibraryControl(Library* pLibrary)
           m_pLibraryWidget(nullptr),
           m_pSidebarWidget(nullptr),
           m_pSearchbox(nullptr),
+          m_prepSplashScreen(nullptr),
+          m_prepSplashScreenTimer(nullptr),
+          m_pinnedTrackId(TrackId()),
           m_numDecks(kAppGroup, QStringLiteral("num_decks"), this),
           m_numSamplers(kAppGroup, QStringLiteral("num_samplers"), this),
           m_numPreviewDecks(kAppGroup, QStringLiteral("num_preview_decks"), this) {
@@ -387,6 +431,26 @@ LibraryControl::LibraryControl(Library* pLibrary)
             this,
             &LibraryControl::slotTrackColorNext);
 
+    // Track Rating controls
+    m_pStarsUp = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "stars_up"));
+    m_pStarsDown = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "stars_down"));
+    connect(m_pStarsUp.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this](double value) {
+                if (value > 0) {
+                    slotTrackRatingChangeRequestRelative(1);
+                }
+            });
+    connect(m_pStarsDown.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this](double value) {
+                if (value > 0) {
+                    slotTrackRatingChangeRequestRelative(-1);
+                }
+            });
+
     // Controls to select saved searchbox queries and to clear the searchbox
     m_pSelectHistoryNext = std::make_unique<ControlPushButton>(
             ConfigKey("[Library]", "search_history_next"));
@@ -471,6 +535,13 @@ LibraryControl::LibraryControl(Library* pLibrary)
                 emit showHideTrackMenu(show);
             });
 
+    m_pRemoveTrackFilesFromDisk = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "remove_track files"));
+    m_pRemoveTrackFilesFromDisk->setStates(2);
+    m_pRemoveTrackFilesFromDisk->connectValueChangeRequest(
+            this,
+            &LibraryControl::slotRemoveTrackFiles);
+
     // Deprecated controls
     m_pSelectNextTrack = std::make_unique<ControlPushButton>(ConfigKey("[Playlist]", "SelectNextTrack"));
     connect(m_pSelectNextTrack.get(),
@@ -524,6 +595,66 @@ LibraryControl::LibraryControl(Library* pLibrary)
             this,
             &LibraryControl::slotLoadSelectedIntoFirstStopped);
 
+    m_pBookmarkNext = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "bookmark_next"));
+    connect(m_pBookmarkNext.get(),
+            &ControlPushButton::valueChanged,
+            this,
+            [this](double value) {
+                VERIFY_OR_DEBUG_ASSERT(m_pSidebarWidget) {
+                    return;
+                }
+                if (value > 0) {
+                    m_pSidebarWidget->slotGoToNextPrevBookmark(1);
+                }
+            });
+    m_pBookmarkPrev = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "bookmark_prev"));
+    connect(m_pBookmarkPrev.get(),
+            &ControlPushButton::valueChanged,
+            this,
+            [this](double value) {
+                VERIFY_OR_DEBUG_ASSERT(m_pSidebarWidget) {
+                    return;
+                }
+                if (value > 0) {
+                    m_pSidebarWidget->slotGoToNextPrevBookmark(-1);
+                }
+            });
+    m_pBookmarkSelect = std::make_unique<ControlEncoder>(
+            ConfigKey("[Library]", "bookmark_selector"), false);
+    connect(m_pBookmarkSelect.get(),
+            &ControlEncoder::valueChanged,
+            this,
+            [this](double steps) {
+                VERIFY_OR_DEBUG_ASSERT(m_pSidebarWidget) {
+                    return;
+                }
+                int iSteps = static_cast<int>(steps);
+                if (iSteps) {
+                    m_pSidebarWidget->slotGoToNextPrevBookmark(static_cast<int>(steps));
+                }
+            });
+
+    m_pAppendSelectedTrackToPrepPlaylistControl =
+            std::make_unique<ControlPushButton>(
+                    ConfigKey("[Library]", "append_selected_track_to_prep_playlist"));
+    connect(m_pAppendSelectedTrackToPrepPlaylistControl.get(),
+            &ControlObject::valueChanged,
+            this,
+            &LibraryControl::slotAppendSelectedTrackToPrepPlaylist);
+
+    m_pPinSelectedTrack = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "pin_selected_track"), false);
+    m_pPinSelectedTrack->setButtonMode(mixxx::control::ButtonMode::Toggle);
+    connect(m_pPinSelectedTrack.get(),
+            &ControlObject::valueChanged,
+            this,
+            &LibraryControl::slotPinSelectedTrack);
+
+    m_pHasPinnedTrack = std::make_unique<ControlObject>(ConfigKey("[Library]", "has_pinned_track"));
+    m_pHasPinnedTrack->setReadOnly();
+
 #ifdef MIXXX_USE_QML
     if (!CmdlineArgs::Instance().isQml())
 #endif
@@ -552,6 +683,12 @@ LibraryControl::~LibraryControl() = default;
 void LibraryControl::maybeCreateGroupController(const QString& group) {
     if (m_loadToGroupControllers.find(group) == m_loadToGroupControllers.end()) {
         m_loadToGroupControllers.emplace(group, std::make_unique<LoadToGroupController>(this, group));
+    }
+    if (PlayerManager::isDeckGroup(group)) {
+        if (m_pinLoadedTrackControllers.find(group) == m_pinLoadedTrackControllers.end()) {
+            m_pinLoadedTrackControllers.emplace(group,
+                    std::make_unique<PinLoadedTrackController>(this, group));
+        }
     }
 }
 
@@ -672,6 +809,88 @@ void LibraryControl::slotLoadSelectedIntoFirstStopped(double v) {
     }
 }
 
+void LibraryControl::slotPinSelectedTrack(double v) {
+    if (!m_pLibraryWidget) {
+        return;
+    }
+
+    TrackId newId;
+    if (v > 0) {
+        WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+        if (!pTrackTableView) {
+            return;
+        }
+        TrackId id = pTrackTableView->getCurrentTrackId();
+        if (!id.isValid()) {
+            m_pPinSelectedTrack->setAndConfirm(0);
+        }
+        newId = id;
+    }
+
+    // Reset all players' pin controls
+    for (const auto& pinController : m_pinLoadedTrackControllers) {
+        PinLoadedTrackController* controller = pinController.second.get();
+        controller->reset();
+    }
+
+    m_pinnedTrackId = newId;
+    updateHasPinnedTrackControl();
+    emit pinnedTrackIdChanged(newId);
+}
+
+/// Pin or unpin a track (unpin with invalid id)
+void LibraryControl::slotPinLoadedTrack(const QString& group, double v) {
+    TrackId newId;
+    TrackPointer pNewTrack;
+    if (v > 0) {
+        const auto groupsAndLoadedTracks = PlayerInfo::instance().getLoadedTracks();
+        auto it = groupsAndLoadedTracks.constFind(group);
+        if (it == groupsAndLoadedTracks.constEnd()) {
+            return;
+        }
+        TrackPointer loadedTrack = it.value();
+        if (loadedTrack) {
+            pNewTrack = loadedTrack;
+            newId = loadedTrack->getId();
+        }
+    }
+
+    // Reset the library pin control
+    m_pPinSelectedTrack->setAndConfirm(0);
+    // as well as all other players' pin controls
+    for (const auto& pinController : m_pinLoadedTrackControllers) {
+        if (newId.isValid() && pinController.first == group) {
+            continue;
+        }
+        PinLoadedTrackController* controller = pinController.second.get();
+        controller->reset();
+    }
+    m_pinnedTrackId = newId;
+    updateHasPinnedTrackControl();
+    emit pinnedTrackChanged(pNewTrack);
+}
+
+void LibraryControl::updateHasPinnedTrackControl() {
+    m_pHasPinnedTrack->setAndConfirm(m_pinnedTrackId.isValid() ? 1 : 0);
+};
+
+void LibraryControl::selectedPinnedTrack() {
+    if (!m_pLibraryWidget) {
+        return;
+    }
+
+    if (!m_pinnedTrackId.isValid()) {
+        return;
+    }
+
+    WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+    if (!pTrackTableView) {
+        return;
+    }
+
+    pTrackTableView->selectPinnedTrack(m_pinnedTrackId);
+}
+
 void LibraryControl::slotAutoDjAddTop(double v) {
     if (!m_pLibraryWidget || v <= 0) {
         return;
@@ -703,6 +922,137 @@ void LibraryControl::slotAutoDjAddReplace(double v) {
     if (pTrackTableView) {
         pTrackTableView->addToAutoDJReplace();
     }
+}
+
+void LibraryControl::slotAppendDeckTrackToPrepPlaylist(double value, const QString& group) {
+    if (value <= 0) {
+        return;
+    }
+    TrackPointer pTrack = PlayerInfo::instance().getTrackInfo(group);
+    if (!pTrack) {
+        return;
+    }
+    TrackId id = pTrack->getId();
+    appendTrackToPrepPlaylist(id, group);
+}
+
+void LibraryControl::slotAppendSelectedTrackToPrepPlaylist(double value) {
+    if (value <= 0) {
+        return;
+    }
+    if (!m_pLibraryWidget) {
+        return;
+    }
+
+    WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+    if (!pTrackTableView) {
+        return;
+    }
+    TrackId id = pTrackTableView->getCurrentTrackId();
+    appendTrackToPrepPlaylist(id);
+}
+
+void LibraryControl::appendTrackToPrepPlaylist(TrackId id, const QString& group) {
+    if (!id.isValid()) {
+        return;
+    }
+    PlaylistDAO& playlistDao = m_pLibrary->trackCollectionManager()
+                                       ->internalCollection()
+                                       ->getPlaylistDAO();
+
+    // If the track is not in the Prep playlist, append it.
+    // If it's already in there, show a confirmation (grey heart + blue checkmark)
+    // If it's already in there and the splashscreen is still visible, remove it.
+    bool contains = false;
+    bool appended = false;
+    if (playlistDao.isTrackInPrepPlaylist(id)) {
+        if (m_lastPrepTrack == id && m_prepSplashScreen && m_prepSplashScreen->isVisible()) {
+            // We just added it, or tried to and got the confirmation screen.
+            // Remove immediately.
+            if (playlistDao.removeTrackFromPrepPlaylist(id)) {
+                qInfo() << "Removed track" << id << "from Prep playlist";
+            } else {
+                qWarning() << "Removing track" << id << "from Prep playlist failed!";
+                return;
+            }
+        } else {
+            // Show confirmation
+            contains = true;
+        }
+    } else {
+        // Append
+        if (playlistDao.appendTrackToPrepPlaylist(id)) {
+            qInfo() << "Appended track" << id << "to Prep playlist";
+            appended = true;
+        } else {
+            qWarning() << "Appending track" << id << "to Prep playlist failed!";
+            return;
+        }
+    }
+
+    m_lastPrepTrack = id;
+
+    VERIFY_OR_DEBUG_ASSERT(m_pLibraryWidget) {
+        return;
+    }
+
+    // Show floating heart icon for 1.5 s
+    if (!m_prepSplashScreen) {
+        QScreen* pScreen =
+                mixxx::widgethelper::getScreenForWidgetOrApplication(*m_pLibraryWidget);
+        if (!pScreen) {
+            qWarning() << "--no main screen found!";
+            return;
+        }
+        // For some reason the splashscreen won't be shown on top the fullscreen
+        // main window when it's constructed like this:
+        // QSplashScreen(pScreen, heart, flags) // seen with Qt 6.2.3
+        m_prepSplashScreen = std::make_unique<QSplashScreen>();
+        m_prepSplashScreen->setScreen(pScreen);
+        m_prepSplashScreen->setWindowFlags(
+                // This would cover other dialogs raised afterwards.
+                // Apparently, with another popup, this also makes the timeout
+                // event/callback to be ignored so the splashscreen wouldn't disappear.
+                // Qt::WindowStaysOnTopHint |
+                Qt::WindowDoesNotAcceptFocus |
+                // required to make it visible with fullscreen main window
+                Qt::FramelessWindowHint);
+        m_prepSplashScreen->resize(280, 235);
+    }
+    if (!m_prepSplashScreenTimer) {
+        m_prepSplashScreenTimer = std::make_unique<QTimer>();
+        m_prepSplashScreenTimer->setSingleShot(true);
+        m_prepSplashScreenTimer->setInterval(1500);
+        m_prepSplashScreenTimer->callOnTimeout(this, [this]() { m_prepSplashScreen->close(); });
+    }
+
+    // Pick the appropriate pixmap.
+    // Don't set it right away, the splashscreen may still be visible.
+    QPixmap pixmap;
+    if (contains) {
+        pixmap = QPixmap(":/images/library/ic_heart_checked_xxl.png");
+    } else if (appended) {
+        pixmap = QPixmap(":/images/library/ic_heart_cyan_xxl.png");
+    } else { // removed
+        pixmap = QPixmap(":/images/library/ic_heart_broken_xxl.png");
+    }
+
+    // Use start timer for both cases, set interval to 300 ms if the splashscreen is visible
+    int timeout = 5;
+    if (m_prepSplashScreen->isVisible()) {
+        m_prepSplashScreen->close();
+        m_prepSplashScreenTimer->stop();
+        timeout = 300;
+    }
+    QTimer::singleShot(timeout,
+            Qt::CoarseTimer,
+            this,
+            [this, pixmap]() {
+                m_prepSplashScreen->setPixmap(pixmap);
+                m_prepSplashScreen->show();
+                m_prepSplashScreen->raise();
+                m_prepSplashScreenTimer->start();
+            });
 }
 
 void LibraryControl::slotSelectNextTrack(double v) {
@@ -812,6 +1162,14 @@ void LibraryControl::slotScrollDown(double v) {
 }
 
 void LibraryControl::slotScrollVertical(double v) {
+    if (m_focusedWidget == FocusWidget::ContextMenu) {
+        const auto key = (v < 0) ? Qt::Key_Left : Qt::Key_Right;
+        const auto times = static_cast<unsigned short>(std::abs(v));
+        QKeyEvent event = QKeyEvent{QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times};
+        QApplication::sendEvent(QApplication::focusWindow(), &event);
+        return;
+    }
+
     const auto key = (v < 0) ? Qt::Key_PageUp : Qt::Key_PageDown;
     const auto times = static_cast<unsigned short>(std::abs(v));
     emitKeyEvent(QKeyEvent{QEvent::KeyPress, key, Qt::NoModifier, QString(), false, times});
@@ -1099,7 +1457,9 @@ void LibraryControl::slotGoToItem(double v) {
         // Note that Tracks and AutoDJ always return 'false':
         // expanding those root items via controllers is considered dispensable
         // because the subfeatures' actions can't be accessed by controllers anyway.
-        if (m_pSidebarWidget->isLeafNodeSelected()) {
+        if (m_pSidebarWidget->selectFocusedIndex()) {
+            return;
+        } else if (m_pSidebarWidget->isLeafNodeSelected()) {
             setLibraryFocus(FocusWidget::TracksTable);
         } else {
             // Otherwise toggle the sidebar item expanded state
@@ -1121,6 +1481,9 @@ void LibraryControl::slotGoToItem(double v) {
         QKeyEvent pressSpace = QKeyEvent{QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier};
         QKeyEvent releaseSpace = QKeyEvent{QEvent::KeyRelease, Qt::Key_Space, Qt::NoModifier};
         auto* pWindow = QApplication::focusWindow();
+        auto* pWid = QApplication::focusWidget();
+        qWarning() << "LibCon slotGoToItem, focWin:" << pWindow->title();
+        qWarning() << "LibCon slotGoToItem, focWid:" << pWid;
         if (pWindow) {
             QApplication::sendEvent(pWindow, &pressSpace);
             QApplication::sendEvent(pWindow, &releaseSpace);
@@ -1156,6 +1519,7 @@ void LibraryControl::slotSortColumn(double v) {
 }
 
 void LibraryControl::slotSortColumnToggle(double v) {
+    qWarning() << "slotSortColumnToggle" << v;
     int sortColumnId = static_cast<int>(v);
     if (sortColumnId == static_cast<int>(TrackModel::SortColumnId::CurrentIndex)) {
         if (!m_pLibraryWidget) {
@@ -1165,11 +1529,14 @@ void LibraryControl::slotSortColumnToggle(double v) {
         sortColumnId =
                 static_cast<int>(m_pLibraryWidget->getActiveView()
                                          ->getColumnIdFromCurrentIndex());
+        qWarning() << "-> SortColumnId::CurrentIndex, id =" << sortColumnId;
     }
 
     if (static_cast<int>(m_pSortColumn->get()) == sortColumnId) {
+        qWarning() << "-> sortcol id is already" << sortColumnId << "-> toggle order";
         m_pSortOrder->set((m_pSortOrder->get() == 0) ? 1.0 : 0.0);
     } else {
+        qWarning() << "-> set sortcol id to" << sortColumnId << "-> set order to 0";
         m_pSortColumn->set(sortColumnId);
         m_pSortOrder->set(0.0);
     }
@@ -1216,4 +1583,32 @@ void LibraryControl::slotTrackColorNext(double v) {
     if (pTrackTableView) {
         pTrackTableView->assignNextTrackColor();
     }
+}
+
+void LibraryControl::slotTrackRatingChangeRequestRelative(int change) {
+    if (!m_pLibraryWidget || change == 0) {
+        return;
+    }
+
+    WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+    if (pTrackTableView) {
+        pTrackTableView->trackRatingChangeRequestRelative(change);
+    }
+}
+
+void LibraryControl::slotRemoveTrackFiles(double value) {
+    if (value <= 0) {
+        return;
+    }
+
+    if (m_pLibraryWidget == nullptr) {
+        return;
+    }
+    auto* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+    // FIXME also check if it has focus?
+    // Control may also be used to do stuff in sidebar?
+    if (pTrackTableView == nullptr) {
+        return;
+    }
+    pTrackTableView->slotDeleteTracksFromDisk();
 }

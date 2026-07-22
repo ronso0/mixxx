@@ -8,6 +8,7 @@
 #include "util/db/sqltransaction.h"
 #include "util/dnd.h"
 #include "util/logger.h"
+#include "util/widgethelper.h"
 
 namespace {
 
@@ -63,6 +64,7 @@ void TrackCollection::repairDatabase(const QSqlDatabase& database) {
 
     kLogger.info() << "Repairing database";
     m_crates.repairDatabase(database);
+    m_directoryDao.repairDatabase(database);
 }
 
 void TrackCollection::connectDatabase(const QSqlDatabase& database) {
@@ -305,13 +307,13 @@ bool TrackCollection::hideTracks(const QList<TrackId>& trackIds) {
                  "\"\n\n";
 
          if (QMessageBox::question(
-                 nullptr,
-                 tr("Hiding tracks"),
-                 tr("The selected tracks are in the following playlists:"
-                     "%1"
-                     "Hiding them will remove them from these playlists. Continue?")
-                         .arg(playlistNamesSection),
-                 QMessageBox::Ok | QMessageBox::Cancel) != QMessageBox::Ok) {
+                     mixxx::widgethelper::getSkinWidget(), // parent to apply skin styles
+                     tr("Hiding tracks"),
+                     tr("The selected tracks are in the following playlists:"
+                        "%1"
+                        "Hiding them will remove them from these playlists. Continue?")
+                             .arg(playlistNamesSection),
+                     QMessageBox::Ok | QMessageBox::Cancel) != QMessageBox::Ok) {
              return false;
          }
      }

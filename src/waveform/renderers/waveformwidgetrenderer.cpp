@@ -47,6 +47,8 @@ WaveformWidgetRenderer::WaveformWidgetRenderer(const QString& group)
           m_scaleFactor(1.0),
           m_playMarkerPosition(s_defaultPlayMarkerPosition),
           m_pContext(nullptr),
+          m_hotcueDragInProgress(false),
+          m_hotcueDragIndex(Cue::kNoHotCue),
           m_passthroughEnabled(false) {
     //qDebug() << "WaveformWidgetRenderer";
     for (int type = ::WaveformRendererAbstract::Play;
@@ -411,6 +413,7 @@ void WaveformWidgetRenderer::resizeRenderer(int width, int height, float deviceP
     m_width = width;
     m_height = height;
     m_devicePixelRatio = devicePixelRatio;
+    qWarning() << "WaWiRenderer::resize() h:" << height << "| w:" << width;
     for (int i = 0; i < m_rendererStack.size(); ++i) {
         m_rendererStack[i]->setDirty(true);
         m_rendererStack[i]->onResize();

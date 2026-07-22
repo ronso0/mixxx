@@ -25,6 +25,9 @@
 
 namespace {
 constexpr int kDefaultFuzzyRateRangePercent = 75;
+const ConfigKey kDimColumnsCfgkey(
+        QStringLiteral("[Library]"), QStringLiteral("dim_columns"));
+const char* kColumnIdPropName = "colId";
 } // namespace
 
 using namespace mixxx::library::prefs;
@@ -134,6 +137,68 @@ DlgPrefLibrary::DlgPrefLibrary(
 
     connect(btn_library_font, &QAbstractButton::clicked, this, &DlgPrefLibrary::slotSelectFont);
 
+    // Dim columns checkboxes
+    // Collect all relevant columns (all visible columns with text data, and Rating)
+    // Note(ronso0) Let's assume that Artist and Title columns are never dimmed.
+    const QList<ColumnCache::Column> columns{
+            ColumnCache::COLUMN_LIBRARYTABLE_ALBUM,
+            ColumnCache::COLUMN_LIBRARYTABLE_ALBUMARTIST,
+            ColumnCache::COLUMN_LIBRARYTABLE_COMPOSER,
+            ColumnCache::COLUMN_LIBRARYTABLE_TRACKNUMBER,
+            ColumnCache::COLUMN_LIBRARYTABLE_COMMENT,
+            ColumnCache::COLUMN_LIBRARYTABLE_GENRE,
+            ColumnCache::COLUMN_LIBRARYTABLE_GROUPING,
+            ColumnCache::COLUMN_LIBRARYTABLE_BPM,
+            ColumnCache::COLUMN_LIBRARYTABLE_DURATION,
+            ColumnCache::COLUMN_LIBRARYTABLE_YEAR,
+            ColumnCache::COLUMN_LIBRARYTABLE_KEY,
+            ColumnCache::COLUMN_LIBRARYTABLE_TUNING_FREQUENCY,
+            ColumnCache::COLUMN_LIBRARYTABLE_BITRATE,
+            ColumnCache::COLUMN_LIBRARYTABLE_RATING,
+            ColumnCache::COLUMN_LIBRARYTABLE_REPLAYGAIN,
+            ColumnCache::COLUMN_LIBRARYTABLE_FILETYPE,
+            ColumnCache::COLUMN_LIBRARYTABLE_TIMESPLAYED,
+            ColumnCache::COLUMN_LIBRARYTABLE_LAST_PLAYED_AT,
+            ColumnCache::COLUMN_LIBRARYTABLE_DATETIMEADDED,
+            ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_DATETIMEADDED,
+            ColumnCache::COLUMN_TRACKLOCATIONSTABLE_LOCATION};
+    // Checkboxes are sorted into a 2-column grid, first column is filled first.
+    // Set number of grid rows (no need for bitwise or modulo wizardry since we
+    // can simply count the columns ;) -- adjust when columns are added/removed
+    // 21 column names => 11 rows
+    int gridRows = 11;
+    int num = 0;
+    // We need to adjust the existing Tab stops for the new items,
+    // ie. squeeze checkboxes in between the Played Color checkbox above and the
+    // Search Timeout spinbox below the grid layout
+    QWidget* pPrevWidget = checkbox_played_track_color;
+    for (auto col : columns) {
+        const QString title = m_pLibrary->columnTitle(col);
+        // Set `this` as parent, else the setting the tabstop will not work
+        auto pCheckBox = std::make_unique<QCheckBox>(title, this);
+        // For the checkbox <-> column relation we simply use the column id (enum),
+        // which also use to read from / write to the config (int).
+        // This allows a simple data flow to the BaseTrackTableModel
+        // FIXME this has the small downside that the column selection is shifted
+        // when a Mixxx version reorders, adds or removes columns.
+        pCheckBox->setProperty(kColumnIdPropName, col);
+
+        // Tab stop
+        auto* pBoxPtr = pCheckBox.get();
+        setTabOrder(pPrevWidget, pBoxPtr);
+        pPrevWidget = pBoxPtr;
+
+        // Insert into grid
+        int rowNum = (num + 1 <= gridRows) ? num : num - gridRows;
+        int colNum = (num + 1 <= gridRows) ? 0 : 1;
+        // The layout takes ownership!
+        layout_dimColumns->addWidget(pCheckBox.release(), rowNum, colNum);
+
+        num++;
+    }
+    setTabOrder(pPrevWidget, spinBox_search_debouncing_timeout);
+
+    // Plugins/decoders list
     // TODO(XXX) this string should be extracted from the soundsources
     QString builtInFormatsStr = "Ogg Vorbis, FLAC, WAVE, AIFF";
 #if defined(__MAD__) || defined(__COREAUDIO__)
@@ -153,26 +218,19 @@ DlgPrefLibrary::DlgPrefLibrary(
 #endif
     builtInFormats->setText(builtInFormatsStr);
 
+    // Store translated label texts
+    label_settingsManualLink->setProperty(kOriginalText, tr("See the manual for details"));
+    label_searchBpmFuzzyRangeInfo->setProperty(
+            kOriginalText, label_searchBpmFuzzyRangeInfo->text());
     // Create text color manual links
-    createLinkColor();
-    // Add link to the manual where configuration files are explained in detail
-    label_settingsManualLink->setText(coloredLinkString(
-            m_pLinkColor,
-            tr("See the manual for details"),
-            MIXXX_MANUAL_SETTINGS_DIRECTORY_URL));
+    updateColoredLinkTexts();
+
     // TODO It seems this isnot required anymore with Qt 6.2.3
     connect(label_settingsManualLink,
             &QLabel::linkActivated,
             [](const QString& url) {
                 mixxx::DesktopHelper::openUrl(url);
             });
-
-    // Add link to the track search documentation
-    label_searchBpmFuzzyRangeInfo->setText(
-            label_searchBpmFuzzyRangeInfo->text() + QStringLiteral(" ") +
-            coloredLinkString(m_pLinkColor,
-                    QStringLiteral("(?)"),
-                    MIXXX_MANUAL_SETTINGS_DIRECTORY_URL));
     connect(label_searchBpmFuzzyRangeInfo,
             &QLabel::linkActivated,
             [](const QString& url) {
@@ -269,7 +327,8 @@ void DlgPrefLibrary::slotResetToDefaults() {
     spinbox_history_min_tracks_to_keep->setValue(1);
     checkBox_sync_track_metadata->setChecked(false);
     checkBox_serato_metadata_export->setChecked(false);
-    checkBox_use_relative_path->setChecked(false);
+    radioButton_absolutePaths->setChecked(true);
+
     checkBox_edit_metadata_selected_clicked->setChecked(kEditMetadataSelectedClickDefault);
     radioButton_dbclick_deck->setChecked(true);
     spinbox_bpm_precision->setValue(BaseTrackTableModel::kBpmColumnPrecisionDefault);
@@ -301,6 +360,15 @@ void DlgPrefLibrary::slotResetToDefaults() {
 
     spinBox_sidebar_hover_expand_delay->setValue(kSidebarHoverExpandDelayDefault);
 
+    // By default no column is greyed out
+    for (int i = 0; i < layout_dimColumns->count(); i++) {
+        auto* pItem = layout_dimColumns->itemAt(i);
+        auto* pBox = qobject_cast<QCheckBox*>(pItem->widget());
+        if (pBox) {
+            pBox->setChecked(false);
+        }
+    }
+
     checkBox_show_rhythmbox->setChecked(true);
     checkBox_show_banshee->setChecked(true);
     checkBox_show_itunes->setChecked(true);
@@ -327,8 +395,22 @@ void DlgPrefLibrary::slotUpdate() {
     checkBox_serato_metadata_export->setChecked(
             m_pConfig->getValue(kSyncSeratoMetadataConfigKey, false));
     setSeratoMetadataEnabled(checkBox_sync_track_metadata->isChecked());
-    checkBox_use_relative_path->setChecked(m_pConfig->getValue(
-            kUseRelativePathOnExportConfigKey, false));
+
+    PlaylistExportFilePathMode filePathMode =
+            m_pConfig->getValue<PlaylistExportFilePathMode>(
+                    kUseRelativePathOnExportConfigKey,
+                    PlaylistExportFilePathMode::AbsolutePaths);
+    switch (filePathMode) {
+    case PlaylistExportFilePathMode::RelativePaths:
+        radioButton_relativePaths->setChecked(true);
+        break;
+    case PlaylistExportFilePathMode::NoPaths:
+        radioButton_noPaths->setChecked(true);
+        break;
+    case PlaylistExportFilePathMode::AbsolutePaths:
+    default:
+        radioButton_absolutePaths->setChecked(true);
+    }
 
     checkBox_show_rhythmbox->setChecked(m_pConfig->getValue(
             ConfigKey("[Library]", "ShowRhythmboxLibrary"), true));
@@ -343,39 +425,66 @@ void DlgPrefLibrary::slotUpdate() {
     checkBox_show_serato->setChecked(m_pConfig->getValue(
             ConfigKey("[Library]", "ShowSeratoLibrary"), true));
 
-    QString dateFormat = m_pConfig->getValue(
+    m_dateFormat = m_pConfig->getValue(
             kDateFormatConfigKey,
             BaseTrackTableModel::kDateFormatDefault);
+    qWarning() << "slotUpdate, dateformat:" << m_dateFormat;
 
     // Determine the matching preset or custom
     BaseTrackTableModel::DateFormat preset = BaseTrackTableModel::DateFormat::Custom;
-    if (dateFormat.isEmpty()) {
+    if (m_dateFormat.isEmpty()) {
         preset = BaseTrackTableModel::DateFormat::Native;
-    } else if (dateFormat == QStringLiteral("yyyy-MM-dd")) {
+    } else if (m_dateFormat == QStringLiteral("yyyy-MM-dd")) {
         preset = BaseTrackTableModel::DateFormat::ISO8601;
-    } else if (dateFormat == QStringLiteral("d/M/yy")) {
+    } else if (m_dateFormat == QStringLiteral("d/M/yy")) {
         preset = BaseTrackTableModel::DateFormat::RegionalShort;
-    } else if (dateFormat == QStringLiteral("dd.MM.yyyy")) {
+    } else if (m_dateFormat == QStringLiteral("dd.MM.yyyy")) {
         preset = BaseTrackTableModel::DateFormat::RegionalLong;
+    } else {
+        m_lastCustomDateFormat = m_dateFormat;
+        qWarning() << "-> type: Custom";
+        qWarning() << "-> store last custom format:" << m_lastCustomDateFormat;
     }
 
     int dateIndex = comboBox_dateFormat->findData(QVariant::fromValue(preset));
+    qWarning() << "-> idx:" << dateIndex;
     if (dateIndex != -1) {
+        qWarning() << "-> setCurrIdx";
+        const QSignalBlocker signalBlocker(comboBox_dateFormat);
         comboBox_dateFormat->setCurrentIndex(dateIndex);
+        slotDateFormatIndexChanged(dateIndex);
     }
 
-    if (preset == BaseTrackTableModel::DateFormat::Custom) {
-        comboBox_dateFormat->setEditable(true);
-        comboBox_dateFormat->setEditText(dateFormat);
-        m_lastCustomDateFormat = dateFormat;
-    } else {
-        comboBox_dateFormat->setEditable(false);
+    // Ensure the format is applied to the library view on startup/load
+    BaseTrackTableModel::setDateFormat(m_dateFormat);
+    updateDateFormatPreview();
+
+    // Dim columns
+    // Parse int list from config string, create ColumnCache::Column list
+    const QString columnIdsStr = m_pConfig->getValue(kDimColumnsCfgkey, QString());
+    const auto idStrList = columnIdsStr.tokenize(QLatin1Char(','));
+    QList<ColumnCache::Column> columns;
+    for (const auto& idStr : idStrList) {
+        bool isInt = false;
+        int colId = idStr.toInt(&isInt);
+        if (isInt &&
+                colId > ColumnCache::COLUMN_LIBRARYTABLE_INVALID &&
+                colId < ColumnCache::NUM_COLUMNS) {
+            columns.append(static_cast<ColumnCache::Column>(colId));
+        }
     }
-
-    updateDateFormatPreview(dateFormat);
-
-    // Ensure the static member is updated on startup/load
-    BaseTrackTableModel::setDateFormat(dateFormat);
+    // update checkboxes
+    for (int i = 0; i < layout_dimColumns->count(); i++) {
+        auto* pItem = layout_dimColumns->itemAt(i);
+        auto* pBox = qobject_cast<QCheckBox*>(pItem->widget());
+        if (pBox) {
+            const QVariant colIdVar = pBox->property(kColumnIdPropName);
+            const auto column = colIdVar.value<ColumnCache::Column>();
+            pBox->setChecked(columns.contains(column));
+        }
+    }
+    // apply to table models immediately
+    BaseTrackTableModel::setDimColumns(columns);
 
     switch (m_pConfig->getValue<int>(
             kTrackDoubleClickActionConfigKey,
@@ -466,6 +575,22 @@ void DlgPrefLibrary::slotUpdate() {
     spinBox_sidebar_hover_expand_delay->setValue(sidebarHoverExpandDelay);
 }
 
+void DlgPrefLibrary::updateColoredLinkTexts() {
+    createLinkColor();
+    // Add link to the manual where configuration files are explained in detail
+    label_settingsManualLink->setText(coloredLinkString(
+            m_pLinkColor,
+            label_settingsManualLink->property(kOriginalText).toString(),
+            MIXXX_MANUAL_SETTINGS_DIRECTORY_URL));
+    // Add link to the track search documentation
+    label_searchBpmFuzzyRangeInfo->setText(
+            label_searchBpmFuzzyRangeInfo->property(kOriginalText).toString() +
+            QStringLiteral(" ") +
+            coloredLinkString(m_pLinkColor,
+                    QStringLiteral("(?)"),
+                    MIXXX_MANUAL_SETTINGS_DIRECTORY_URL));
+}
+
 void DlgPrefLibrary::slotCancel() {
     resetLibraryFont();
 }
@@ -481,7 +606,13 @@ void DlgPrefLibrary::slotAddDir() {
             this,
             tr("Choose a music directory"),
             QStandardPaths::writableLocation(QStandardPaths::MusicLocation),
-            QFileDialog::ShowDirsOnly);
+            // ronso0: native xfce 4.14 file picker shows all files
+            // which makes fiding the desired dir a straining voyage de scroll.
+            // This is no matter what QFileDialog options are set, what gtk
+            // stylesheets hacks are applied, if xdgportal is set explicitly.etc.
+            //
+            // Just use the Qt dialog
+            QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog);
     if (!fd.isEmpty()) {
         if (m_pLibrary->requestAddDir(fd)) {
             populateDirList();
@@ -611,8 +742,15 @@ void DlgPrefLibrary::slotApply() {
             kSyncSeratoMetadataConfigKey,
             ConfigValue{checkBox_serato_metadata_export->isChecked()});
 
-    m_pConfig->set(kUseRelativePathOnExportConfigKey,
-            ConfigValue((int)checkBox_use_relative_path->isChecked()));
+    PlaylistExportFilePathMode filePathMode =
+            PlaylistExportFilePathMode::AbsolutePaths;
+    if (radioButton_relativePaths->isChecked()) {
+        filePathMode = PlaylistExportFilePathMode::RelativePaths;
+    } else if (radioButton_noPaths->isChecked()) {
+        filePathMode = PlaylistExportFilePathMode::NoPaths;
+    }
+    m_pConfig->setValue<PlaylistExportFilePathMode>(
+            kUseRelativePathOnExportConfigKey, filePathMode);
 
     m_pConfig->set(kEnableSearchCompletionsConfigKey,
             ConfigValue(checkBox_enable_search_completions->isChecked()));
@@ -677,6 +815,9 @@ void DlgPrefLibrary::slotApply() {
         m_iOriginalTrackTableRowHeight = rowHeight;
     }
 
+    m_pConfig->setValue(kDateFormatConfigKey, m_dateFormat);
+    BaseTrackTableModel::setDateFormat(m_dateFormat);
+
     BaseTrackTableModel::setApplyPlayedTrackColor(
             checkbox_played_track_color->isChecked());
     m_pConfig->set(
@@ -686,6 +827,25 @@ void DlgPrefLibrary::slotApply() {
     int sidebarHoverExpandDelay = spinBox_sidebar_hover_expand_delay->value();
     m_pConfig->setValue(kSidebarHoverExpandDelayConfigKey, sidebarHoverExpandDelay);
     emit m_pLibrary->setSidebarHoverExpandDelay(sidebarHoverExpandDelay);
+
+    // Dim columns
+    QStringList columnIds;
+    QList<ColumnCache::Column> columns;
+    for (int i = 0; i < layout_dimColumns->count(); i++) {
+        auto* pItem = layout_dimColumns->itemAt(i);
+        auto* pBox = qobject_cast<QCheckBox*>(pItem->widget());
+        if (pBox && pBox->isChecked()) {
+            const QVariant colIdVar = pBox->property(kColumnIdPropName);
+            bool isInt = false;
+            int colId = colIdVar.toInt(&isInt);
+            DEBUG_ASSERT(isInt);
+            columnIds.append(QString::number(colId));
+            columns.append(static_cast<ColumnCache::Column>(colId));
+        }
+    }
+    const QString columnIdsJoint = columnIds.join(',');
+    m_pConfig->set(kDimColumnsCfgkey, columnIdsJoint);
+    BaseTrackTableModel::setDimColumns(columns);
 
     // TODO(rryan): Don't save here.
     m_pConfig->save();
@@ -799,20 +959,21 @@ void DlgPrefLibrary::setSeratoMetadataEnabled(bool shouldSyncTrackMetadata) {
 }
 
 void DlgPrefLibrary::slotDateFormatIndexChanged(int index) {
+    qWarning() << "    slotDateFormatIndexChanged" << index;
     auto type = comboBox_dateFormat->itemData(index)
                         .value<BaseTrackTableModel::DateFormat>();
-
+    QString format;
     if (type == BaseTrackTableModel::DateFormat::Custom) {
-        // Enable editing for Custom
-        if (!comboBox_dateFormat->isEditable()) {
-            comboBox_dateFormat->setEditable(true);
-            comboBox_dateFormat->setEditText(m_lastCustomDateFormat);
-        }
+        qWarning() << "    -> Custom, format:" << m_lastCustomDateFormat;
+        // Enable editing for Custom and set the custom format string
+        comboBox_dateFormat->setEditable(true);
+        comboBox_dateFormat->setEditText(m_lastCustomDateFormat);
+        format = m_lastCustomDateFormat;
+        qWarning() << "    -> box text:      " << comboBox_dateFormat->currentText();
     } else {
         // Disable editing for Presets
         comboBox_dateFormat->setEditable(false);
 
-        QString format;
         switch (type) {
         case BaseTrackTableModel::DateFormat::Native:
             format = QString();
@@ -830,12 +991,13 @@ void DlgPrefLibrary::slotDateFormatIndexChanged(int index) {
             // Should not happen here given the if/else above
             break;
         }
-        slotDateFormatChanged(format);
     }
+    slotDateFormatChanged(format);
 }
 
 void DlgPrefLibrary::slotDateFormatChanged(const QString& text) {
-    QString format = text;
+    qWarning() << "    slotDateFormatChanged, text:" << text;
+    m_dateFormat = text;
     // If not editable, we are in a Preset mode, but 'text' might be the Item
     // Label (e.g. "Native ...") depending on how this was called. However, our
     // slotDateFormatIndexChanged calls this explicitly with the correct format
@@ -848,16 +1010,14 @@ void DlgPrefLibrary::slotDateFormatChanged(const QString& text) {
             auto type = comboBox_dateFormat->itemData(index)
                                 .value<BaseTrackTableModel::DateFormat>();
             if (type == BaseTrackTableModel::DateFormat::Custom) {
-                m_lastCustomDateFormat = format;
+                m_lastCustomDateFormat = m_dateFormat;
             }
         }
     }
+    updateDateFormatPreview();
 }
 
-void DlgPrefLibrary::updateDateFormatPreview(const QString& format) {
-    const QString previewStr = mixxx::formatDate(QDate::currentDate(), format);
+void DlgPrefLibrary::updateDateFormatPreview() {
+    const QString previewStr = mixxx::formatDate(QDate::currentDate(), m_dateFormat);
     label_dateFormatPreview->setText(previewStr);
-
-    m_pConfig->setValue(kDateFormatConfigKey, format);
-    BaseTrackTableModel::setDateFormat(format);
 }

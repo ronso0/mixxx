@@ -63,6 +63,10 @@ QString BaseTrackCache::columnSortForFieldIndex(int index) const {
     return m_columnCache.columnSortForFieldIndex(index);
 }
 
+QString BaseTrackCache::columnTitle(ColumnCache::Column column) const {
+    return m_columnCache.columnTitle(column);
+}
+
 void BaseTrackCache::slotTracksAddedOrChanged(const QSet<TrackId>& trackIds) {
     if (sDebug) {
         qDebug() << this << "slotTracksAddedOrChanged" << trackIds.size();
@@ -690,8 +694,8 @@ int BaseTrackCache::compareColumnValues(int sortColumn,
             sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_CHANNELS) ||
             sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_TIMESPLAYED) ||
             sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING) ||
-            sortColumn == fieldIndex(ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_POSITION)
-    ) {
+            sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR) ||
+            sortColumn == fieldIndex(ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_POSITION)) {
         // Sort as floats.
         double delta = val1.toDouble() - val2.toDouble();
 

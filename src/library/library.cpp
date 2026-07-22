@@ -10,6 +10,7 @@
 #include "library/autodj/autodjfeature.h"
 #include "library/banshee/bansheefeature.h"
 #include "library/browse/browsefeature.h"
+#include "library/dateformatbroadcaster.h"
 #ifdef __ENGINEPRIME__
 #include "library/export/libraryexporter.h"
 #endif
@@ -75,6 +76,8 @@ Library::Library(
           m_pKeyNotation(std::make_unique<ControlObject>(
                   mixxx::library::prefs::kKeyNotationConfigKey, false)) {
     qRegisterMetaType<LibraryRemovalType>("LibraryRemovalType");
+
+    DateFormatChangedBroadcaster::createInstance();
 
     connect(m_pTrackCollectionManager,
             &TrackCollectionManager::libraryScanFinished,
@@ -267,9 +270,29 @@ Library::Library(
     m_editMetadataSelectedClick = m_pConfig->getValue(
             kEditMetadataSelectedClickConfigKey,
             kEditMetadataSelectedClickDefault);
+
+    if (m_pSidebarModel && m_pConfig) {
+        m_pSidebarModel->loadBookmarksFromConfig(m_pConfig);
+    }
+
+    // Forward the 'pinned track' signal so eg. WTrackProperty can be notified
+    connect(m_pLibraryControl,
+            &LibraryControl::pinnedTrackChanged,
+            this,
+            &Library::pinnedTrackChanged);
+    // and a wrapper when LibraryControl only has the TrackId
+    connect(m_pLibraryControl,
+            &LibraryControl::pinnedTrackIdChanged,
+            this,
+            &Library::slotPinnedTrackIdChanged);
 }
 
-Library::~Library() = default;
+Library::~Library() {
+    if (m_pSidebarModel && m_pConfig) {
+        m_pSidebarModel->saveBookmarksToConfig(m_pConfig);
+    }
+    DateFormatChangedBroadcaster::destroy();
+}
 
 TrackCollectionManager* Library::trackCollectionManager() const {
     // Cannot be implemented inline due to forward declarations
@@ -560,7 +583,23 @@ void Library::slotShowTrackModel(QAbstractItemModel* model) {
     }
     emit showTrackModel(model);
     emit switchToView(m_sTrackViewName);
-    emit restoreSearch(trackModel->currentSearch());
+
+    if (m_pLibraryControl->hasPinnedTrack()) {
+        // TODO try to make sure the pinned track is visible
+        // Ie. clear the current search if it's not.
+        // Currently the user has to take care of that, then click sidebar item
+        // again in order to select the track(s)
+        // isTrackIdInCurrentLibraryView(pinnedTrack) doesn't fit since the
+        // TrackModel also only holds the filtered tracks.
+        // emit restoreSearch(QString()) clears searchbox for all features,
+        // but doesn't clear the model filter
+        //
+        // Try to select pinned track
+        m_pLibraryControl->selectedPinnedTrack();
+    } else {
+        // No pinned track, restore search
+        emit restoreSearch(trackModel->currentSearch());
+    }
 }
 
 void Library::slotSwitchToView(const QString& view) {
@@ -597,6 +636,14 @@ void Library::slotLoadTrackToPlayer(
     emit loadTrackToPlayer(pTrack, group, play);
 }
 #endif
+
+void Library::slotPinnedTrackIdChanged(const TrackId& id) {
+    TrackPointer pTrack;
+    if (id.isValid()) {
+        pTrack = trackCollectionManager()->getTrackById(id);
+    }
+    emit pinnedTrackChanged(pTrack);
+}
 
 void Library::slotRefreshLibraryModels() {
     m_pMixxxLibraryFeature->refreshLibraryModels();
@@ -660,6 +707,7 @@ bool Library::requestAddDir(const QString& dir) {
         return false;
     }
 
+    emit trackDirectoriesUpdated();
     return true;
 }
 
@@ -697,6 +745,7 @@ bool Library::requestRemoveDir(const QString& dir, LibraryRemovalType removalTyp
         DEBUG_ASSERT(!"unreachable");
     }
 
+    emit trackDirectoriesUpdated();
     return true;
 }
 
@@ -704,6 +753,7 @@ bool Library::requestRelocateDir(const QString& oldDir, const QString& newDir) {
     DirectoryDAO::RelocateResult result =
             m_pTrackCollectionManager->relocateDirectory(oldDir, newDir);
     if (result == DirectoryDAO::RelocateResult::Ok) {
+        emit trackDirectoriesUpdated();
         return true;
     }
 
@@ -801,6 +851,10 @@ bool Library::isTrackIdInCurrentLibraryView(const TrackId& trackId) {
     } else {
         return false;
     }
+}
+
+QString Library::columnTitle(ColumnCache::Column column) const {
+    return m_pTrackCollectionManager->internalCollection()->getTrackSource()->columnTitle(column);
 }
 
 void Library::slotSaveCurrentViewState() const {

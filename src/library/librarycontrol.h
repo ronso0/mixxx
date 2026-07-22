@@ -8,6 +8,8 @@
 #ifdef __STEM__
 #include "engine/engine.h"
 #endif
+#include "track/trackid.h"
+#include "track/track_decl.h"
 
 class ControlEncoder;
 class ControlObject;
@@ -18,6 +20,8 @@ class WLibrary;
 class WLibrarySidebar;
 class WSearchLineEdit;
 class KeyboardEventFilter;
+class QSplashScreen;
+class QTimer;
 
 class LoadToGroupController : public QObject {
     Q_OBJECT
@@ -43,10 +47,25 @@ class LoadToGroupController : public QObject {
     const QString m_group;
     std::unique_ptr<ControlObject> m_pLoadControl;
     std::unique_ptr<ControlObject> m_pLoadAndPlayControl;
+    std::unique_ptr<ControlObject> m_pAppendLoadedTrackToPrepPlaylistControl;
 
 #ifdef __STEM__
     std::unique_ptr<ControlPushButton> m_loadSelectedTrackStems;
 #endif
+};
+
+class PinLoadedTrackController : public QObject {
+    Q_OBJECT
+  public:
+    PinLoadedTrackController(LibraryControl* pParent, const QString& group);
+
+    void reset();
+
+  signals:
+    void pinLoadedTrack(const QString& group, double v);
+
+  private:
+    std::unique_ptr<ControlPushButton> m_pPinLoadedTrackControl;
 };
 
 class LibraryControl : public QObject {
@@ -62,10 +81,17 @@ class LibraryControl : public QObject {
     void setLibraryFocus(FocusWidget newFocusWidget,
             Qt::FocusReason focusReason = Qt::OtherFocusReason);
     FocusWidget getFocusedWidget();
+    bool hasPinnedTrack() const {
+        return m_pinnedTrackId.isValid();
+    }
+    void selectedPinnedTrack();
 
   signals:
     void clearSearchIfClearButtonHasFocus();
     void showHideTrackMenu(bool show);
+
+    void pinnedTrackIdChanged(const TrackId& id);
+    void pinnedTrackChanged(TrackPointer pTrack);
 
   public slots:
     // Deprecated navigation slots
@@ -76,6 +102,13 @@ class LibraryControl : public QObject {
 #else
     void slotLoadSelectedTrackToGroup(const QString& group, bool play);
 #endif
+
+    void slotAppendDeckTrackToPrepPlaylist(double v, const QString& group);
+    void slotAppendSelectedTrackToPrepPlaylist(double v);
+
+    void slotPinSelectedTrack(double v);
+    void slotPinLoadedTrack(const QString& group, double v);
+
     void slotUpdateTrackMenuControl(bool visible);
 
   private slots:
@@ -109,6 +142,10 @@ class LibraryControl : public QObject {
     void slotTrackColorPrev(double v);
     void slotTrackColorNext(double v);
 
+    void slotTrackRatingChangeRequestRelative(int change);
+
+    void slotRemoveTrackFiles(double value);
+
     // Deprecated navigation slots
     void slotSelectNextTrack(double v);
     void slotSelectPrevTrack(double v);
@@ -138,8 +175,14 @@ class LibraryControl : public QObject {
   private:
     Library* m_pLibrary;
 
+    void appendTrackToPrepPlaylist(TrackId id, const QString& group = QString());
+
     // Simulate pressing a key on the keyboard
     void emitKeyEvent(QKeyEvent&& event);
+
+    void pinTrack(const TrackId& id);
+    void pinTrack(TrackPointer pTrack);
+    void updateHasPinnedTrackControl();
 
     // Controls to navigate vertically within currently focused widget (up/down buttons)
     std::unique_ptr<ControlPushButton> m_pMoveUp;
@@ -191,8 +234,15 @@ class LibraryControl : public QObject {
     std::unique_ptr<ControlPushButton> m_pTrackColorPrev;
     std::unique_ptr<ControlPushButton> m_pTrackColorNext;
 
+    // Controls to change track rating
+    std::unique_ptr<ControlPushButton> m_pStarsUp;
+    std::unique_ptr<ControlPushButton> m_pStarsDown;
+
     // Control to show/hide the track menu
     std::unique_ptr<ControlPushButton> m_pShowTrackMenu;
+
+    // Remove selected track files from disk / to Trash
+    std::unique_ptr<ControlPushButton> m_pRemoveTrackFilesFromDisk;
 
     // Controls to navigate search history
     std::unique_ptr<ControlPushButton> m_pSelectHistoryNext;
@@ -215,15 +265,29 @@ class LibraryControl : public QObject {
     std::unique_ptr<ControlObject> m_pSelectNextSidebarItem;
     std::unique_ptr<ControlObject> m_pToggleSidebarItem;
     std::unique_ptr<ControlObject> m_pLoadSelectedIntoFirstStopped;
+    std::unique_ptr<ControlPushButton> m_pPinSelectedTrack;
+    std::unique_ptr<ControlObject> m_pHasPinnedTrack;
+
+    std::unique_ptr<ControlPushButton> m_pBookmarkNext;
+    std::unique_ptr<ControlPushButton> m_pBookmarkPrev;
+    std::unique_ptr<ControlEncoder> m_pBookmarkSelect;
+
+    std::unique_ptr<ControlObject> m_pAppendSelectedTrackToPrepPlaylistControl;
 
     // Library widgets
     WLibrary* m_pLibraryWidget;
     WLibrarySidebar* m_pSidebarWidget;
     WSearchLineEdit* m_pSearchbox;
 
+    std::unique_ptr<QSplashScreen> m_prepSplashScreen;
+    std::unique_ptr<QTimer> m_prepSplashScreenTimer;
+    TrackId m_lastPrepTrack;
+    TrackId m_pinnedTrackId;
+
     // Other variables
     ControlProxy m_numDecks;
     ControlProxy m_numSamplers;
     ControlProxy m_numPreviewDecks;
     std::map<QString, std::unique_ptr<LoadToGroupController>> m_loadToGroupControllers;
+    std::map<QString, std::unique_ptr<PinLoadedTrackController>> m_pinLoadedTrackControllers;
 };

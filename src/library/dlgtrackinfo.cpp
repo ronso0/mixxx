@@ -1,5 +1,6 @@
 #include "library/dlgtrackinfo.h"
 
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QStyleFactory>
 #include <QtDebug>
@@ -41,11 +42,10 @@ constexpr double kCentsPerOctave = 1200.0;
 } // namespace
 
 DlgTrackInfo::DlgTrackInfo(
+        QWidget* pParent,
         UserSettingsPointer pUserSettings,
         const TrackModel* trackModel)
-        // No parent because otherwise it inherits the style parent's
-        // style which can make it unreadable. Bug #673411
-        : QDialog(nullptr),
+        : QDialog(pParent),
           m_pUserSettings(std::move(pUserSettings)),
           m_pTrackModel(trackModel),
           m_tapFilter(this, kFilterLength, kMaxInterval),
@@ -123,6 +123,20 @@ void DlgTrackInfo::init() {
             &QPushButton::clicked,
             this,
             &DlgTrackInfo::slotCancel);
+
+    // Add tab switching with Ctrl + PageDown|PageUp
+    // (in addition to existing Ctr+Tab/Ctrl+Shit+Tab)
+    auto* nextTab = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_PageDown), this);
+    connect(nextTab, &QShortcut::activated, this, [this]() {
+        int nextIndex = (tabWidget->currentIndex() + 1) % tabWidget->count();
+        tabWidget->setCurrentIndex(nextIndex);
+    });
+    auto* prevTab = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_PageUp), this);
+    connect(prevTab, &QShortcut::activated, this, [this]() {
+        int count = tabWidget->count();
+        int prevIndex = (tabWidget->currentIndex() - 1 + count) % count;
+        tabWidget->setCurrentIndex(prevIndex);
+    });
 
     // BPM edit buttons
     connect(bpmHalve, &QPushButton::clicked, this, [this] {
@@ -985,7 +999,9 @@ void DlgTrackInfo::slotTrackChanged(TrackId trackId) {
 void DlgTrackInfo::slotImportMetadataFromMusicBrainz() {
     if (!m_pDlgTagFetcher) {
         m_pDlgTagFetcher = std::make_unique<DlgTagFetcher>(
-                m_pUserSettings, m_pTrackModel);
+                this,
+                m_pUserSettings,
+                m_pTrackModel);
         connect(m_pDlgTagFetcher.get(),
                 &QDialog::finished,
                 this,

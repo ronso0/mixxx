@@ -5,20 +5,24 @@
 #include <QObject>
 #include <QSharedPointer>
 #include <QString>
+#include <memory>
 
 #include "audio/types.h"
 #include "control/pollingcontrolproxy.h"
 #include "engine/sidechain/enginenetworkstream.h"
 #include "preferences/usersettings.h"
-#include "soundio/networkenumerator.h"
 #include "soundio/portaudioenumerator.h"
 #include "soundio/sounddevice.h"
+#include "soundio/sounddeviceenumerator.h"
+#include "soundio/sounddevicenetwork.h"
+#include "soundio/sounddevicestatus.h"
 #include "soundio/soundmanagerconfig.h"
 #include "util/cmdlineargs.h"
 #include "util/types.h"
 
 class EngineMixer;
 class ControlObject;
+class PipewireEnumerator;
 
 #define SOUNDMANAGER_DISCONNECTED 0
 #define SOUNDMANAGER_CONNECTING 1
@@ -87,7 +91,7 @@ class SoundManager : public QObject {
     QList<AudioInput> registeredInputs() const;
 
     QSharedPointer<EngineNetworkStream> getNetworkStream() const {
-        return m_networkEnumerator.getNetworkStream();
+        return m_pNetworkStream;
     }
 
     void underflowHappened(int code) {
@@ -109,7 +113,19 @@ class SoundManager : public QObject {
         m_audioLatencyOverloadCount.set(0);
     }
 
+    // currently only used by pipewire
+    void updateDeviceChannels(SoundDevicePointer pDevice);
+#ifdef __PIPEWIRE__
+    bool isPipewireSelected();
+#endif
+
   signals:
+    void deviceAdded(SoundDevicePointer pDevice);
+    void deviceRemoved(SoundDevicePointer pDevice);
+    void deviceChannelsUpdated(SoundDevicePointer pDevice);
+    void deviceConnected(const SoundDeviceId& pDevice, const AudioPath* pPath);
+    void deviceDisconnected(const AudioPath* pPath);
+
     void devicesUpdated(); // emitted when pointers to SoundDevices go stale
     void devicesSetup(); // emitted when the sound devices have been set up
     void devicesClosed(); // emitted when the sound devices have been closed and resources freed
@@ -118,6 +134,10 @@ class SoundManager : public QObject {
 
   private slots:
     void completeDevicesClosing();
+
+  public slots:
+    void addDevice(SoundDevicePointer pDevice);
+    void removeDevice(SoundDevicePointer pDevice);
 
   private:
     // Closes all the devices and empties the list of devices we have.
@@ -130,7 +150,7 @@ class SoundManager : public QObject {
     void closeDevices(bool sleepAfterClosing, bool async = false);
 
     bool jackApiUsed() const {
-        return m_config.getAPI() == MIXXX_PORTAUDIO_JACK_STRING;
+        return m_config.getAPI() == SoundManagerConfig::kAPIJack;
     }
 
     EngineMixer* m_pEngineMixer;
@@ -150,6 +170,8 @@ class SoundManager : public QObject {
     PollingControlProxy m_audioLatencyOverloadCount;
     PollingControlProxy m_audioLatencyOverload;
 
-    PortAudioEnumerator m_paEnumerator;
-    NetworkEnumerator m_networkEnumerator;
+    std::unique_ptr<SoundDeviceEnumerator> m_pEnumerator;
+
+    QSharedPointer<EngineNetworkStream> m_pNetworkStream;
+    QSharedPointer<SoundDeviceNetwork> m_pNetworkDevice;
 };

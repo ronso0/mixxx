@@ -16,6 +16,12 @@ constexpr CSAMPLE_GAIN kSpeedGainMultiplier = 4.0f;
 constexpr CSAMPLE_GAIN kMaxTotalGainBySpeed = 0.9f;
 // value to normalize gain to 1 at speed one
 const CSAMPLE_GAIN kSpeedOneDiv = std::log10((1 * kSpeedGainMultiplier) + 1);
+
+// Speed threshold below which we start attenuating gain while scratching.
+constexpr double kScratchSlowSpeedThreshold = 0.4;
+// Gain applied when scratching at zero speed. The gain ramps linearly
+// from 1.0 at the threshold down to this value at zero speed.
+constexpr CSAMPLE_GAIN kScratchZeroSpeedGain = 0.1f; // -20 dB
 } // anonymous namespace
 
 ControlPotmeter* EnginePregain::s_pReplayGainBoost = nullptr;
@@ -72,7 +78,7 @@ void EnginePregain::process(CSAMPLE* pInOut, const std::size_t bufferSize) {
         // TODO(XXX): consider a good default.
         // Do we expect an replaygain leveled input or
         // Normalized to 1 input?
-        fReplayGainCorrection = 1; // We expect a replaygain leveled input
+        fReplayGainCorrection = 3; // We expect a replaygain leveled input
     } else if (fReplayGain == 0) {
         // use predicted replaygain
         fReplayGainCorrection = static_cast<CSAMPLE_GAIN>(s_pDefaultBoost->get());
@@ -145,6 +151,28 @@ void EnginePregain::process(CSAMPLE* pInOut, const std::size_t bufferSize) {
         speedGain = math_min(kMaxTotalGainBySpeed / totalGain, speedGain);
     }
     totalGain *= static_cast<CSAMPLE_GAIN>(speedGain);
+
+    // ronso0 / Cline
+    // When scratching at very low speeds (below the threshold), attenuate the
+    // gain to emulate the natural volume drop on a turntable when moving the
+    // platter slowly. This applies a smooth linear ramp from no attenuation at
+    // the threshold down to kScratchZeroSpeedGain at zero speed.
+    // Goal is to avoid chirp sounds when scratching with raw (unfiltered) input from S4mk3 mapping
+    // using PositionScratchController for wheel scratching.
+    if (m_scratching) {
+        const double absSpeed = fabs(m_dSpeed);
+        if (absSpeed < kScratchSlowSpeedThreshold) {
+            // Linear interpolation between kScratchZeroSpeedGain (at speed 0)
+            // and 1.0 (at speed threshold)
+            const double t = absSpeed / kScratchSlowSpeedThreshold;
+            const CSAMPLE_GAIN scratchSlowGain =
+                    static_cast<CSAMPLE_GAIN>(kScratchZeroSpeedGain +
+                            (1.0 - kScratchZeroSpeedGain) * t);
+            totalGain *= scratchSlowGain;
+            qWarning() << "EnginePregain::process() -> scratching @ <= 0.2 -> lower gain to"
+                       << totalGain;
+        }
+    }
 
     if ((m_dSpeed * m_dOldSpeed < 0) && m_scratching) {
         // direction changed, go though zero if scratching

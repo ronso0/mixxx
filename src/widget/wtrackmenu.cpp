@@ -84,7 +84,7 @@ void appendBpmPreviewtoBpmAction(QAction* pAction, const double bpm) {
         if (scaledBpm.back() == '.') {
             scaledBpm.chop(1);
         }
-        text.append(QStringLiteral(" | %1 BPM").arg(scaledBpm));
+        text.append(QStringLiteral("%1").arg(scaledBpm));
         pAction->setText(text);
     }
 }
@@ -115,6 +115,8 @@ WTrackMenu::WTrackMenu(
           m_pNumSamplers(kAppGroup, QStringLiteral("num_samplers")),
           m_pNumDecks(kAppGroup, QStringLiteral("num_decks")),
           m_pNumPreviewDecks(kAppGroup, QStringLiteral("num_preview_decks")),
+          m_bSearchRelatedMenuLoaded(false),
+          m_bFindOnWebMenuLoaded(false),
           m_bPlaylistMenuLoaded(false),
           m_bCrateMenuLoaded(false),
           m_eActiveFeatures(flags),
@@ -198,7 +200,7 @@ void WTrackMenu::createMenus() {
         m_pMetadataUpdateExternalCollectionsMenu = make_parented<QMenu>(m_pMetadataMenu);
         m_pMetadataUpdateExternalCollectionsMenu->setTitle(tr("Update external collections"));
 
-        m_pCoverMenu = make_parented<WCoverArtMenu>(m_pMetadataMenu);
+        m_pCoverMenu = make_parented<WCoverArtMenu>(this);
         m_pCoverMenu->setTitle(tr("Cover Art"));
         connect(m_pCoverMenu.get(),
                 &WCoverArtMenu::coverInfoSelected,
@@ -242,11 +244,11 @@ void WTrackMenu::createMenus() {
                 &QMenu::aboutToShow,
                 this,
                 [this] {
-                    // TODO When accidentally leaving the menu and reopening it,
-                    // the previous check states are cleared.
-                    // Clear in closeEvent() only? And create actions on aboutToShow
-                    // only if it's empty?
+                    if (m_bSearchRelatedMenuLoaded) {
+                        return;
+                    }
                     m_pSearchRelatedMenu->clear();
+                    m_pSearchRelatedMenu->setDeckGroup(m_deckGroup);
                     const auto pTrack = getFirstTrackPointer();
                     if (pTrack) {
                         // Ensure it's enabled, else we can't add actions.
@@ -257,6 +259,7 @@ void WTrackMenu::createMenus() {
                     }
                     m_pSearchRelatedMenu->setEnabled(
                             !m_pSearchRelatedMenu->isEmpty());
+                    m_bSearchRelatedMenuLoaded = true;
                 });
         connect(m_pSearchRelatedMenu,
                 &WSearchRelatedTracksMenu::triggerSearch,
@@ -271,16 +274,25 @@ void WTrackMenu::createMenus() {
         DEBUG_ASSERT(!m_pFindOnWebMenu);
         m_pFindOnWebMenu = make_parented<QMenu>(tr("Find on Web"), this);
         m_pFindOnWebLastAct = make_parented<FindOnWebLast>(this, m_pConfig);
-    }
-
-    if (featureIsEnabled(Feature::RemoveFromDisk)) {
-        // Qt added QFile::MoveToTrash() in 5.15. If that's not available we
-        // permanently delete files, put the action into a submenu for safety
-        // reasons and display different messages in the delete dialogs.
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-        m_pRemoveFromDiskMenu = make_parented<QMenu>(this);
-        m_pRemoveFromDiskMenu->setTitle(tr("Delete Track Files"));
-#endif
+        connect(m_pFindOnWebMenu,
+                &QMenu::aboutToShow,
+                this,
+                [this] {
+                    if (m_bFindOnWebMenuLoaded) {
+                        return;
+                    }
+                    m_pFindOnWebMenu->clear();
+                    const auto pTrack = getFirstTrackPointer();
+                    if (pTrack) {
+                        mixxx::library::createFindOnWebSubmenus(
+                                m_pFindOnWebMenu.toWeakRef(),
+                                m_pFindOnWebLastAct.toWeakRef(),
+                                *pTrack);
+                    }
+                    m_pFindOnWebMenu->setEnabled(
+                            !m_pFindOnWebMenu->isEmpty());
+                    m_bFindOnWebMenuLoaded = true;
+                });
     }
 }
 
@@ -290,15 +302,26 @@ void WTrackMenu::createActions() {
             QKeySequence(static_cast<int>(kHideRemoveShortcutModifier) |
                     kHideRemoveShortcutKey);
 
-    if (featureIsEnabled(Feature::AutoDJ)) {
-        m_pAutoDJBottomAct = make_parented<QAction>(tr("Add to Auto DJ Queue (bottom)"), this);
-        connect(m_pAutoDJBottomAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJBottom);
+    if (featureIsEnabled(Feature::LoadTo)) {
+        if (featureIsEnabled(Feature::AutoDJ)) {
+            m_pAutoDJBottomAct = make_parented<QAction>(tr("Auto DJ (bottom)"), this);
+            connect(m_pAutoDJBottomAct,
+                    &QAction::triggered,
+                    this,
+                    &WTrackMenu::slotAddToAutoDJBottom);
 
-        m_pAutoDJTopAct = make_parented<QAction>(tr("Add to Auto DJ Queue (top)"), this);
-        connect(m_pAutoDJTopAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJTop);
+            m_pAutoDJTopAct = make_parented<QAction>(tr("Auto DJ (top)"), this);
+            connect(m_pAutoDJTopAct,
+                    &QAction::triggered,
+                    this,
+                    &WTrackMenu::slotAddToAutoDJTop);
 
-        m_pAutoDJReplaceAct = make_parented<QAction>(tr("Add to Auto DJ Queue (replace)"), this);
-        connect(m_pAutoDJReplaceAct, &QAction::triggered, this, &WTrackMenu::slotAddToAutoDJReplace);
+            m_pAutoDJReplaceAct = make_parented<QAction>(tr("Auto DJ (replace)"), this);
+            connect(m_pAutoDJReplaceAct,
+                    &QAction::triggered,
+                    this,
+                    &WTrackMenu::slotAddToAutoDJReplace);
+        }
     }
 
     if (featureIsEnabled(Feature::Remove)) {
@@ -335,12 +358,7 @@ void WTrackMenu::createActions() {
     }
 
     if (featureIsEnabled(Feature::RemoveFromDisk)) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         m_pRemoveFromDiskAct = make_parented<QAction>(tr("Move Track File(s) to Trash"), this);
-#else
-        m_pRemoveFromDiskAct = make_parented<QAction>(
-                tr("Delete Files from Disk"), m_pRemoveFromDiskMenu);
-#endif
         connect(m_pRemoveFromDiskAct,
                 &QAction::triggered,
                 this,
@@ -350,10 +368,14 @@ void WTrackMenu::createActions() {
     if (featureIsEnabled(Feature::Metadata)) {
         m_pStarRatingAction = make_parented<WStarRatingAction>(this);
         m_pStarRatingAction->setObjectName("RatingAction");
+        // This is for when the rating is set with mouse click.
+        // See keypressEvent() for changes via keyboard.
         connect(m_pStarRatingAction,
                 &WStarRatingAction::ratingSet,
                 this,
-                &WTrackMenu::slotSetRating);
+                [this](int rating) {
+                    slotSetRating(rating);
+                });
     }
 
     if (featureIsEnabled(Feature::Properties)) {
@@ -428,6 +450,9 @@ void WTrackMenu::createActions() {
         m_pClearBeatsAction = make_parented<QAction>(tr("BPM and Beatgrid"), m_pClearMetadataMenu);
         connect(m_pClearBeatsAction, &QAction::triggered, this, &WTrackMenu::slotClearBeats);
 
+        m_pClearPlayedAction = make_parented<QAction>(tr("Played"), m_pClearMetadataMenu);
+        connect(m_pClearPlayedAction, &QAction::triggered, this, &WTrackMenu::slotResetPlayedState);
+
         m_pClearPlayCountAction = make_parented<QAction>(tr("Play Count"), m_pClearMetadataMenu);
         connect(m_pClearPlayCountAction, &QAction::triggered, this, &WTrackMenu::slotClearPlayCount);
 
@@ -461,6 +486,12 @@ void WTrackMenu::createActions() {
         m_pClearCommentAction = make_parented<QAction>(tr("Comment"), m_pClearMetadataMenu);
         connect(m_pClearCommentAction, &QAction::triggered, this, &WTrackMenu::slotClearComment);
 
+        m_pClearCoverAction = make_parented<QAction>(tr("Cover"), m_pClearMetadataMenu);
+        connect(m_pClearWaveformAction,
+                &QAction::triggered,
+                m_pCoverMenu,
+                &WCoverArtMenu::slotUnset);
+
         m_pClearAllMetadataAction = make_parented<QAction>(tr("All"), m_pClearMetadataMenu);
         connect(m_pClearAllMetadataAction, &QAction::triggered, this, &WTrackMenu::slotClearAllMetadata);
 
@@ -489,21 +520,21 @@ void WTrackMenu::createActions() {
         connect(m_pBpmUnlockAction, &QAction::triggered, this, &WTrackMenu::slotUnlockBpm);
 
         //BPM edit actions
-        m_pBpmHalveAction = make_parented<QAction>(tr("Halve BPM"), m_pBPMMenu);
+        m_pBpmHalveAction = make_parented<QAction>(tr("Halve   "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmHalveAction, 0.5);
-        m_pBpmTwoThirdsAction = make_parented<QAction>(tr("2/3 BPM"), m_pBPMMenu);
+        m_pBpmTwoThirdsAction = make_parented<QAction>(tr("2/3      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmTwoThirdsAction, 2.0 / 3.0);
-        m_pBpmThreeFourthsAction = make_parented<QAction>(tr("3/4 BPM"), m_pBPMMenu);
+        m_pBpmThreeFourthsAction = make_parented<QAction>(tr("3/4      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmThreeFourthsAction, 3.0 / 4.0);
-        m_pBpmFourFifthsAction = make_parented<QAction>(tr("4/5 BPM"), m_pBPMMenu);
+        m_pBpmFourFifthsAction = make_parented<QAction>(tr("4/5      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmFourFifthsAction, 4.0 / 5.0);
-        m_pBpmFiveFourthsAction = make_parented<QAction>(tr("5/4 BPM"), m_pBPMMenu);
+        m_pBpmFiveFourthsAction = make_parented<QAction>(tr("5/4      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmFiveFourthsAction, 5.0 / 4.0);
-        m_pBpmFourThirdsAction = make_parented<QAction>(tr("4/3 BPM"), m_pBPMMenu);
+        m_pBpmFourThirdsAction = make_parented<QAction>(tr("4/3      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmFourThirdsAction, 4.0 / 3.0);
-        m_pBpmThreeHalvesAction = make_parented<QAction>(tr("3/2 BPM"), m_pBPMMenu);
+        m_pBpmThreeHalvesAction = make_parented<QAction>(tr("3/2      "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmThreeHalvesAction, 3.0 / 2.0);
-        m_pBpmDoubleAction = make_parented<QAction>(tr("Double BPM"), m_pBPMMenu);
+        m_pBpmDoubleAction = make_parented<QAction>(tr("Double   "), m_pBPMMenu);
         storeActionTextAndScaleInProperties(m_pBpmDoubleAction, 2.0);
 
         connect(m_pBpmHalveAction, &QAction::triggered, this, [this] {
@@ -613,14 +644,18 @@ void WTrackMenu::setupActions() {
         addSeparator();
     }
 
-    if (featureIsEnabled(Feature::AutoDJ)) {
-        addAction(m_pAutoDJBottomAct);
-        addAction(m_pAutoDJTopAct);
-        addAction(m_pAutoDJReplaceAct);
-        addSeparator();
-    }
-
     if (featureIsEnabled(Feature::LoadTo)) {
+        if (featureIsEnabled(Feature::AutoDJ)) {
+            m_pLoadToMenu->addAction(m_pAutoDJBottomAct);
+            m_pLoadToMenu->addAction(m_pAutoDJTopAct);
+            m_pLoadToMenu->addAction(m_pAutoDJReplaceAct);
+            m_pLoadToMenu->addSeparator();
+        }
+
+        m_pLoadToMenu->addMenu(m_pDeckMenu);
+
+        m_pLoadToMenu->addMenu(m_pSamplerMenu);
+
         addMenu(m_pLoadToMenu);
         addSeparator();
     }
@@ -682,7 +717,6 @@ void WTrackMenu::setupActions() {
     if (featureIsEnabled(Feature::Metadata)) {
         m_pMetadataMenu->addAction(m_pImportMetadataFromFileAct);
         m_pMetadataMenu->addAction(m_pExportMetadataAct);
-        m_pMetadataMenu->addMenu(m_pCoverMenu);
 
         m_pMetadataMenu->addAction(m_pImportMetadataFromMusicBrainzAct);
 
@@ -715,6 +749,8 @@ void WTrackMenu::setupActions() {
         }
 
         addSeparator();
+
+        addMenu(m_pCoverMenu);
         addMenu(m_pMetadataMenu);
 
         m_pHotcueMenu->addAction(m_pSortHotcuesByPositionCompressAction);
@@ -724,18 +760,22 @@ void WTrackMenu::setupActions() {
 
     if (featureIsEnabled(Feature::Reset)) {
         m_pClearMetadataMenu->addAction(m_pClearBeatsAction);
+        m_pClearMetadataMenu->addAction(m_pClearPlayedAction);
         m_pClearMetadataMenu->addAction(m_pClearPlayCountAction);
         m_pClearMetadataMenu->addAction(m_pClearRatingAction);
         m_pClearMetadataMenu->addAction(m_pClearCommentAction);
+        m_pClearMetadataMenu->addSeparator();
         m_pClearMetadataMenu->addAction(m_pClearMainCueAction);
         m_pClearMetadataMenu->addAction(m_pClearHotCuesAction);
         m_pClearMetadataMenu->addAction(m_pClearIntroCueAction);
         m_pClearMetadataMenu->addAction(m_pClearOutroCueAction);
         m_pClearMetadataMenu->addAction(m_pClearLoopsAction);
+        m_pClearMetadataMenu->addSeparator();
         m_pClearMetadataMenu->addAction(m_pClearKeyAction);
         m_pClearMetadataMenu->addAction(m_pClearReplayGainAction);
-        m_pClearMetadataMenu->addAction(m_pClearWaveformAction);
         m_pClearMetadataMenu->addSeparator();
+        m_pClearMetadataMenu->addAction(m_pClearWaveformAction);
+        m_pClearMetadataMenu->addAction(m_pClearCoverAction);
         m_pClearMetadataMenu->addSeparator();
         m_pClearMetadataMenu->addAction(m_pClearAllMetadataAction);
         addMenu(m_pClearMetadataMenu);
@@ -757,6 +797,15 @@ void WTrackMenu::setupActions() {
 
     addSeparator();
 
+    if (featureIsEnabled(Feature::Properties)) {
+        addAction(m_pPropertiesAct);
+        addSeparator();
+    }
+
+    if (featureIsEnabled(Feature::FileBrowser)) {
+        addAction(m_pFileBrowserAct);
+    }
+
     if (featureIsEnabled(Feature::HideUnhidePurge)) {
         if (m_pTrackModel->hasCapabilities(TrackModel::Capability::Hide)) {
             addAction(m_pHideAct);
@@ -773,18 +822,8 @@ void WTrackMenu::setupActions() {
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         addAction(m_pRemoveFromDiskAct);
 #else
-        m_pRemoveFromDiskMenu->addAction(m_pRemoveFromDiskAct);
-        addMenu(m_pRemoveFromDiskMenu);
+        addAction(m_pRemoveFromDiskAct);
 #endif
-    }
-
-    if (featureIsEnabled(Feature::FileBrowser)) {
-        addAction(m_pFileBrowserAct);
-    }
-
-    if (featureIsEnabled(Feature::Properties)) {
-        addSeparator();
-        addAction(m_pPropertiesAct);
     }
 }
 
@@ -988,17 +1027,17 @@ void WTrackMenu::updateMenus() {
     // Gray out some stuff if multiple songs were selected.
     const bool singleTrackSelected = getTrackCount() == 1;
 
+    auto pTrack = getFirstTrackPointer();
+    VERIFY_OR_DEBUG_ASSERT(pTrack) {
+        return;
+    }
+
     if (featureIsEnabled(Feature::SearchRelated)) {
-        // Enable only if we have one valid track pointer.
-        // this prevents the cursor getting stuck on this menu in case it gets
-        // disabled when encountering a track nullptr in lambda function
-        // connected to aboutToShow() signal (see createMenus()).
-        // Note: track nullptr can happen when TrackDAO returns nullptr because
-        // the selected track references a file referenced by another cached track.
-        DEBUG_ASSERT(m_pSearchRelatedMenu);
-        const auto pTrack = getFirstTrackPointer();
-        m_pSearchRelatedMenu->setEnabled(pTrack != nullptr);
-        // TODO Only enable for single track?
+        m_bSearchRelatedMenuLoaded = false;
+    }
+
+    if (featureIsEnabled(Feature::FindOnWeb)) {
+        m_bFindOnWebMenuLoaded = false;
     }
 
     if (featureIsEnabled(Feature::LoadTo)) {
@@ -1032,10 +1071,9 @@ void WTrackMenu::updateMenus() {
                 bool deckEnabled =
                         (!deckPlaying || allowLoadTrackIntoPlayingDeck) &&
                         singleTrackSelected;
-                auto pTrack = getFirstTrackPointer();
                 generateTrackLoadMenu(deckGroup,
                         tr("Deck %1").arg(i),
-                        getFirstTrackPointer(),
+                        pTrack,
                         m_pDeckMenu,
                         true,
                         deckEnabled);
@@ -1050,7 +1088,6 @@ void WTrackMenu::updateMenus() {
         if (singleTrackSelected && iNumSamplers > 0) {
             QMenu* pMenu = m_pSamplerMenu;
             int samplersInMenu = 0;
-            TrackPointer pTrack = getFirstTrackPointer();
             for (int i = 1; i <= iNumSamplers; ++i) {
                 if (samplersInMenu == maxSamplersPerMenu) {
                     samplersInMenu = 0;
@@ -1080,7 +1117,7 @@ void WTrackMenu::updateMenus() {
             // currently there is only one preview deck so just map it here.
             generateTrackLoadMenu(PlayerManager::groupForPreviewDeck(0),
                     tr("Preview Deck"),
-                    getFirstTrackPointer(),
+                    pTrack,
                     m_pLoadToMenu,
                     false);
         }
@@ -1116,6 +1153,7 @@ void WTrackMenu::updateMenus() {
 
         // We use the last selected track for the cover art context to be
         // consistent with selectionChanged above.
+        // This clears the menu and creates all actions as required
         m_pCoverMenu->setCoverArt(getCoverInfoOfLastTrack());
     }
 
@@ -1152,24 +1190,18 @@ void WTrackMenu::updateMenus() {
             m_pBpmUndoAction->setEnabled(!anyBpmLocked && canUndoBeatsChange());
 
             // Append scaled BPM preview for single selection
+            // TODO ... and multiple tracks with same BPM.
+            // See DlgTrackInfoMulti
             if (singleTrackSelected) {
-                TrackPointer pTrack;
-                if (m_pTrackModel) {
-                    pTrack = getFirstTrackPointer();
-                } else if (m_pTrack) {
-                    pTrack = m_pTrack;
-                }
-                if (pTrack) {
-                    const double bpm = pTrack->getBpm();
-                    appendBpmPreviewtoBpmAction(m_pBpmHalveAction, bpm);
-                    appendBpmPreviewtoBpmAction(m_pBpmTwoThirdsAction, bpm);
-                    appendBpmPreviewtoBpmAction(m_pBpmThreeFourthsAction, bpm);
-                    appendBpmPreviewtoBpmAction(m_pBpmFourFifthsAction, bpm);
-                    appendBpmPreviewtoBpmAction(m_pBpmFiveFourthsAction, bpm);
-                    appendBpmPreviewtoBpmAction(m_pBpmFourThirdsAction, bpm);
-                    appendBpmPreviewtoBpmAction(m_pBpmThreeHalvesAction, bpm);
-                    appendBpmPreviewtoBpmAction(m_pBpmDoubleAction, bpm);
-                }
+                const double bpm = pTrack->getBpm();
+                appendBpmPreviewtoBpmAction(m_pBpmHalveAction, bpm);
+                appendBpmPreviewtoBpmAction(m_pBpmTwoThirdsAction, bpm);
+                appendBpmPreviewtoBpmAction(m_pBpmThreeFourthsAction, bpm);
+                appendBpmPreviewtoBpmAction(m_pBpmFourFifthsAction, bpm);
+                appendBpmPreviewtoBpmAction(m_pBpmFiveFourthsAction, bpm);
+                appendBpmPreviewtoBpmAction(m_pBpmFourThirdsAction, bpm);
+                appendBpmPreviewtoBpmAction(m_pBpmThreeHalvesAction, bpm);
+                appendBpmPreviewtoBpmAction(m_pBpmDoubleAction, bpm);
             }
         }
     }
@@ -1243,11 +1275,9 @@ void WTrackMenu::updateMenus() {
     }
 
     if (featureIsEnabled(Feature::FindOnWeb)) {
-        // We have a new Track
         m_pFindOnWebMenu->clear();
         m_pFindOnWebLastAct->setVisible(false);
-        const auto pTrack = getFirstTrackPointer();
-        const bool enableMenu = pTrack ? WFindOnWebMenu::hasEntriesForTrack(*pTrack) : false;
+        const bool enableMenu = WFindOnWebMenu::hasEntriesForTrack(*pTrack);
         if (enableMenu) {
             mixxx::library::createFindOnWebSubmenus(
                     m_pFindOnWebMenu.toWeakRef(),
@@ -1275,6 +1305,24 @@ void WTrackMenu::loadTrack(
     }
     m_pTrack = pTrack;
     m_deckGroup = deckGroup;
+}
+
+void WTrackMenu::keyPressEvent(QKeyEvent* pEvent) {
+    if (activeAction() == qobject_cast<QAction*>(m_pStarRatingAction)) {
+        // used to suppress triggered() signal to keep the menu open.
+        // Unfortunately this also blocks ratingSet(rating), so we need to
+        // call slotSetRating().
+        m_pStarRatingAction->blockSignals(true);
+        if (pEvent->key() == Qt::Key_Left || pEvent->key() == Qt::Key_PageUp) {
+            m_pStarRatingAction->decRating();
+            slotSetRating(m_pStarRatingAction->getRating(), false);
+        } else if (pEvent->key() == Qt::Key_Right || pEvent->key() == Qt::Key_PageDown) {
+            m_pStarRatingAction->incRating();
+            slotSetRating(m_pStarRatingAction->getRating(), false);
+        }
+        m_pStarRatingAction->blockSignals(false);
+    }
+    QMenu::keyPressEvent(pEvent);
 }
 
 void WTrackMenu::loadTrackModelIndices(
@@ -1607,7 +1655,7 @@ void WTrackMenu::addSelectionToPlaylist(int iPlaylistId) {
 
         do {
             bool ok = false;
-            name = QInputDialog::getText(nullptr,
+            name = QInputDialog::getText(this,
                     tr("Create New Playlist"),
                     tr("Enter name for new playlist:"),
                     QLineEdit::Normal,
@@ -1618,11 +1666,11 @@ void WTrackMenu::addSelectionToPlaylist(int iPlaylistId) {
                 return;
             }
             if (playlistDao.getPlaylistIdFromName(name) != -1) {
-                QMessageBox::warning(nullptr,
+                QMessageBox::warning(this,
                         tr("Playlist Creation Failed"),
                         tr("A playlist by that name already exists."));
             } else if (name.isEmpty()) {
-                QMessageBox::warning(nullptr,
+                QMessageBox::warning(this,
                         tr("Playlist Creation Failed"),
                         tr("A playlist cannot have a blank name."));
             } else {
@@ -1631,7 +1679,7 @@ void WTrackMenu::addSelectionToPlaylist(int iPlaylistId) {
         } while (!validNameGiven);
         iPlaylistId = playlistDao.createPlaylist(name); //-1 is changed to the new playlist ID return from the DAO
         if (iPlaylistId == -1) {
-            QMessageBox::warning(nullptr,
+            QMessageBox::warning(this,
                     tr("Playlist Creation Failed"),
                     tr("An unknown error occurred while creating playlist: ") + name);
             return;
@@ -1954,7 +2002,7 @@ class SetRatingTrackPointerOperation : public mixxx::TrackPointerOperation {
 
 } // anonymous namespace
 
-void WTrackMenu::slotSetRating(int rating) {
+void WTrackMenu::slotSetRating(int rating, bool close) {
     if (!mixxx::TrackRecord::isValidRating(rating)) {
         return;
     }
@@ -1967,7 +2015,9 @@ void WTrackMenu::slotSetRating(int rating) {
             progressLabelText,
             &trackOperator);
 
-    hide();
+    if (close) {
+        hide();
+    }
 }
 
 namespace {
@@ -2033,6 +2083,28 @@ void WTrackMenu::loadSelectionToGroup(const QString& group,
 #else
     emit loadTrackToPlayer(pTrack, group, play);
 #endif
+}
+
+namespace {
+
+class ResetPlayedStateTrackPointerOperation : public mixxx::TrackPointerOperation {
+  private:
+    void doApply(const TrackPointer& pTrack) const override {
+        pTrack->updatePlayedStatusKeepPlayCount(false);
+    }
+};
+
+} // anonymous namespace
+
+// slot for reset played, sets played to 0 and keeps played count
+void WTrackMenu::slotResetPlayedState() {
+    const auto progressLabelText =
+            tr("Resetting played state of %n track(s)", "", getTrackCount());
+    const auto trackOperator =
+            ResetPlayedStateTrackPointerOperation();
+    applyTrackPointerOperation(
+            progressLabelText,
+            &trackOperator);
 }
 
 namespace {
@@ -2501,7 +2573,7 @@ void WTrackMenu::slotRemoveFromDisk() {
     }
 
     {
-        QDialog dlgDelConfirm;
+        QDialog dlgDelConfirm(mixxx::widgethelper::getSkinWidget());
 
         // Prepare the delete confirmation dialog.
         // First, create the list view for the files to be deleted
@@ -2562,7 +2634,8 @@ void WTrackMenu::slotRemoveFromDisk() {
                 tr("Okay"),
 #endif
                 QDialogButtonBox::AcceptRole);
-        cancelBtn->setDefault(true);
+        // cancelBtn->setDefault(true);
+        deleteBtn->setDefault(true);
 
         // Populate the main layout
         auto pDelLayout = make_parented<QVBoxLayout>(&dlgDelConfirm);
@@ -2598,6 +2671,22 @@ void WTrackMenu::slotRemoveFromDisk() {
     const TrackPointerList tracks = getTrackPointers();
     const QStringList groups = PlayerInfo::instance().getPlayerGroupsWithTracksLoaded(tracks);
     for (const QString& group : groups) {
+        // can cause trouble
+        // scenario:
+        // AutoDJ is running
+        // current track sucks
+        // click Fade Now
+        // before current deck is stopped, open track menu
+        // select Purge and move track file to Trash
+        //
+        // last step may lead to
+        // * deck playing
+        // * play_latched = 0
+        // * no 'play' indicator like when previewing from Cue or hotcue
+        //
+        // But this sequence here looks safe..
+        //
+        // Maybe load/eject conflicts with track load options??
         ControlObject::set(ConfigKey(group, "stop"), 1.0);
         ControlObject::set(ConfigKey(group, "eject"), 1.0);
         ControlObject::set(ConfigKey(group, "eject"), 0.0);
@@ -2623,57 +2712,6 @@ void WTrackMenu::slotRemoveFromDisk() {
     if (!tracksToPurge.isEmpty()) {
         // Purge only those tracks whose files have actually been deleted.
         m_pLibrary->trackCollectionManager()->purgeTracks(tracksToPurge);
-
-        if (s_showPurgeSuccessPopup) {
-            // Show purge summary message
-            QMessageBox msgBoxPurgeTracks;
-            msgBoxPurgeTracks.setIcon(QMessageBox::Information);
-            QString msgTitle;
-            QString msgText;
-            if (m_pTrackModel) {
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-                msgTitle = tr("Track Files Deleted");
-#else
-                msgTitle = tr("Track Files Moved To Trash");
-#endif
-                msgText =
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-                        tr("%1 track files were deleted from disk and purged "
-                           "from the Mixxx database.")
-#else
-                        tr("%1 track files were moved to trash and purged "
-                           "from the Mixxx database.")
-#endif
-                                .arg(QString::number(tracksToPurge.length())) +
-                        QStringLiteral("<br><br>") +
-                        tr("Note: if you are in the Computer or Recording view you "
-                           "need to click the current view again to see changes.");
-            } else {
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-                msgTitle = tr("Track File Deleted");
-                msgText = tr(
-                        "Track file was deleted from disk and purged "
-                        "from the Mixxx database.");
-#else
-                msgTitle = tr("Track File Moved To Trash");
-                msgText = tr(
-                        "Track file was moved to trash and purged "
-                        "from the Mixxx database.");
-#endif
-            }
-            QCheckBox notAgainCB(tr("Don't show again during this session"));
-            notAgainCB.setCheckState(Qt::Unchecked);
-            msgBoxPurgeTracks.setWindowTitle(msgTitle);
-            msgBoxPurgeTracks.setText(msgText);
-            msgBoxPurgeTracks.setTextFormat(Qt::RichText);
-            msgBoxPurgeTracks.setCheckBox(&notAgainCB);
-            msgBoxPurgeTracks.setStandardButtons(QMessageBox::Ok);
-            msgBoxPurgeTracks.exec();
-
-            if (notAgainCB.isChecked()) {
-                s_showPurgeSuccessPopup = false;
-            }
-        }
     }
 
     const QList<QString> tracksToKeep(trackOperator.getTracksToKeep());
@@ -2685,7 +2723,7 @@ void WTrackMenu::slotRemoveFromDisk() {
         return;
     }
 
-    QDialog dlgNotDeleted;
+    QDialog dlgNotDeleted(mixxx::widgethelper::getSkinWidget());
 
     // Else show a message with a list of tracks that could not be deleted.
     auto pNotDeletedLabel = make_parented<QLabel>(&dlgNotDeleted);
@@ -2733,7 +2771,7 @@ void WTrackMenu::slotRemoveFromDisk() {
     emit restoreCurrentViewStateOrIndex();
 }
 
-void WTrackMenu::slotShowDlgTrackInfo() {
+void WTrackMenu::slotShowDlgTrackInfo(bool findReplaceMode) {
     if (isEmpty()) {
         return;
     }
@@ -2742,15 +2780,76 @@ void WTrackMenu::slotShowDlgTrackInfo() {
         // Use the batch editor.
         // Create a fresh dialog on invocation.
         m_pDlgTrackInfoMulti = std::make_unique<DlgTrackInfoMulti>(
+                this,
                 m_pConfig);
+        // NOTE As soon as DlgTrackInfo is deleted the TrackPointers are dropped
+        // which causes metadata synchronization (export to track files if enabled)
+        // which in turn causes a GUI lag since the export is apparently run in
+        // the main thread.
+        // Trying to lint the symptoms by showing a progress dialog.
+        // FIXME Use the same delay mechanism as LibraryScannerDlg which shows the
+        // dialog only after 2 sec of activity.
         connect(m_pDlgTrackInfoMulti.get(),
                 &QDialog::finished,
                 this,
                 [this]() {
                     if (m_pDlgTrackInfoMulti.get() == sender()) {
+                        // Steal the tracks safely before the dialog goes away
+                        QList<TrackPointer> tracksToRelease =
+                                m_pDlgTrackInfoMulti
+                                        ->getTracksClearLoadedTracksHash();
+
                         m_pDlgTrackInfoMulti.release()->deleteLater();
                         // clear the track property name
                         m_trackProperty.clear();
+
+                        // Set up the progress dialog
+                        QProgressDialog progress(
+                                tr("Saving track metadata of %1 tracks.\n"
+                                   "It safe to hide this. Track operations will "
+                                   "resume in the background")
+                                        .arg(QString::number(tracksToRelease.size())),
+                                tr("Hide"),
+                                0,
+                                tracksToRelease.size(),
+                                this);
+                        progress.setWindowModality(Qt::WindowModal);
+                        progress.setWindowTitle(tr("Saving track metadata"));
+                        progress.setRange(0, tracksToRelease.size());
+                        // FIXME Itwould be cool to have the label left-aligned
+                        // like the detailed text in a QMessageBox (depending on
+                        // layout direction of course, RTL/LTR).
+                        // And have the Hide button centered horizontally, and
+                        // maybe even stretched to full width.
+
+                        progress.setMinimumDuration(0);
+                        progress.show();
+
+                        // Drop the pointers one by one
+                        int total = tracksToRelease.size();
+                        for (int i = 0; i < total; ++i) {
+                            progress.setValue(i + 1);
+
+                            // Pop the first item. If it's the last reference, Mixxx
+                            // triggers the synchronous file write and database save.
+                            tracksToRelease.pop_front();
+
+                            // If the dialog is still active, process all queued events,
+                            // for example to let the GUI paint the progress bar update
+                            // and waveform movements.
+                            // Else, like before introducing this dialog, the main event
+                            // main event loop was blocked by the track operations.
+                            //
+                            // Also note that QEventLoop::ExcludeUserInputEvents does
+                            // apparently not block emulated keypress event done by
+                            // controller mappings, eg. [Library],MoveVertical
+                            if (!progress.wasCanceled()) {
+                                // QCoreApplication::processEvents();
+                                QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+                            }
+                        }
+
+                        progress.setValue(total);
                     }
                 });
         QList<TrackPointer> tracks;
@@ -2764,11 +2863,16 @@ void WTrackMenu::slotShowDlgTrackInfo() {
         }
         m_pDlgTrackInfoMulti->loadTracks(tracks);
         m_pDlgTrackInfoMulti->show();
-        m_pDlgTrackInfoMulti->focusField(m_trackProperty);
+        if (findReplaceMode) {
+            m_pDlgTrackInfoMulti->prepareFindReplace(m_trackProperty);
+        } else {
+            m_pDlgTrackInfoMulti->focusField(m_trackProperty);
+        }
     } else {
         // Use the single-track editor with Next/Prev buttons and DlgTagFetcher.
         // Create a fresh dialog on invocation.
         m_pDlgTrackInfo = std::make_unique<DlgTrackInfo>(
+                this,
                 m_pConfig,
                 m_pTrackModel);
         connect(m_pDlgTrackInfo.get(),
@@ -2802,7 +2906,9 @@ void WTrackMenu::slotShowDlgTagFetcher() {
     }
     // Create a fresh dialog on invocation
     m_pDlgTagFetcher = std::make_unique<DlgTagFetcher>(
-            m_pConfig, m_pTrackModel);
+            this,
+            m_pConfig,
+            m_pTrackModel);
     connect(m_pDlgTagFetcher.get(),
             &QDialog::finished,
             this,

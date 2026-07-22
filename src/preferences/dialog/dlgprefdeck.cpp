@@ -15,6 +15,7 @@
 
 namespace {
 constexpr int kDefaultRateRangePercent = 8;
+constexpr bool kDefaultUltraSpeedEnabled = false;
 constexpr double kRateDirectionInverted = -1;
 constexpr bool kDefaultRateDirectionInverted = true;
 constexpr RateControl::RampMode kDefaultRampingMode = RateControl::RampMode::Stepping;
@@ -45,8 +46,6 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
           m_iNumConfiguredDecks(0),
           m_iNumConfiguredSamplers(0) {
     setupUi(this);
-    // Create text color for the cue mode link "?" to the manual
-    createLinkColor();
 
     m_pNumDecks->connectValueChanged(this, [=, this](double value) { slotNumDecksChanged(value); });
     slotNumDecksChanged(m_pNumDecks->get(), true);
@@ -220,12 +219,22 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
 
     // Double-tap Load to clone a deck via keyboard or controller ([ChannelN],LoadSelectedTrack)
     m_bCloneDeckOnLoadDoubleTap = m_pConfig->getValue(
-            ConfigKey(kControlsGroup, QStringLiteral("CloneDeckOnLoadDoubleTap")), true);
+            ConfigKey(kControlsGroup, QStringLiteral("CloneDeckOnLoadDoubleTap")),
+            kDefaultCloneDeckOnLoad);
     checkBoxCloneDeckOnLoadDoubleTap->setChecked(m_bCloneDeckOnLoadDoubleTap);
     connect(checkBoxCloneDeckOnLoadDoubleTap,
             &QCheckBox::toggled,
             this,
             &DlgPrefDeck::slotCloneDeckOnLoadDoubleTapCheckbox);
+
+    m_bBeatjumpLoopmove = m_pConfig->getValue(
+            ConfigKey(kControlsGroup, QStringLiteral("BeatjumpDoesLoopmove")),
+            kDefaultBeatjumpDoesLoopmove);
+    checkboxBeatjumpLoopmove->setChecked(m_bBeatjumpLoopmove);
+    connect(checkboxBeatjumpLoopmove,
+            &QCheckBox::toggled,
+            this,
+            &DlgPrefDeck::slotBeatjumpLoopmove);
 
     m_bRateDownIncreasesSpeed = m_pConfig->getValue(
             ConfigKey(kControlsGroup, QStringLiteral("RateDir")), kDefaultRateDirectionInverted);
@@ -304,21 +313,16 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
         pControl->set(static_cast<int>(m_keyunlockMode));
     }
 
-    // Cue Mode
-    // Add "(?)" with a manual link to the label
-    labelCueMode->setText(labelCueMode->text() + QChar(' ') +
-            coloredLinkString(
-                    m_pLinkColor,
-                    QStringLiteral("(?)"),
-                    MIXXX_MANUAL_CUE_MODES_URL));
+    // Store translated label texts
+    labelCueMode->setProperty(kOriginalText, labelCueMode->text());
+    labelSyncMode->setProperty(kOriginalText, labelSyncMode->text());
+    // Create text color manual links
+    updateColoredLinkTexts();
 
-    // Sync Mode
-    // Add "(?)" with a manual link to the label
-    labelSyncMode->setText(labelSyncMode->text() + QChar(' ') +
-            coloredLinkString(
-                    m_pLinkColor,
-                    QStringLiteral("(?)"),
-                    MIXXX_MANUAL_SYNC_MODES_URL));
+    connect(CheckBoxUltraSpeed,
+            &QCheckBox::toggled,
+            this,
+            &DlgPrefDeck::slotUltraSpeedCheckboxToggled);
 
     // Speed / Pitch reset configuration
     // Update "reset speed" and "reset pitch" check boxes
@@ -328,15 +332,24 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
             BaseTrackPlayer::TrackLoadReset::RESET_PITCH);
 
     m_speedAutoReset = (configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_SPEED ||
-            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED);
+            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED ||
+            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED);
     m_pitchAutoReset = (configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH ||
-            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED);
+            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED ||
+            configSPAutoReset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED);
+    m_ultraspeedAutoReset = (configSPAutoReset ==
+            BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED);
 
     checkBoxResetSpeed->setChecked(m_speedAutoReset);
     checkBoxResetPitch->setChecked(m_pitchAutoReset);
+    checkBoxResetUltraspeed->setChecked(m_ultraspeedAutoReset);
 
     connect(checkBoxResetSpeed, &QCheckBox::toggled, this, &DlgPrefDeck::slotUpdateSpeedAutoReset);
     connect(checkBoxResetPitch, &QCheckBox::toggled, this, &DlgPrefDeck::slotUpdatePitchAutoReset);
+    connect(checkBoxResetUltraspeed,
+            &QCheckBox::toggled,
+            this,
+            &DlgPrefDeck::slotUpdateUltraspeedAutoReset);
 
     //
     // Ramping Temporary Rate Change configuration
@@ -433,10 +446,10 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
 }
 
 DlgPrefDeck::~DlgPrefDeck() {
-    qDeleteAll(m_rateControls);
     qDeleteAll(m_rateDirectionControls);
     qDeleteAll(m_cueControls);
     qDeleteAll(m_rateRangeControls);
+    qDeleteAll(m_rateUtraEnabledControls);
     qDeleteAll(m_keylockModeControls);
     qDeleteAll(m_keyunlockModeControls);
 }
@@ -448,7 +461,14 @@ void DlgPrefDeck::slotUpdate() {
     slotSetTrackTimeDisplay(m_pControlTrackTimeDisplay->get());
 
     checkBoxCloneDeckOnLoadDoubleTap->setChecked(m_pConfig->getValue(
-            ConfigKey(kControlsGroup, QStringLiteral("CloneDeckOnLoadDoubleTap")), true));
+            ConfigKey(kControlsGroup, QStringLiteral("CloneDeckOnLoadDoubleTap")),
+            kDefaultCloneDeckOnLoad));
+
+    checkboxBeatjumpLoopmove->setChecked(m_pConfig->getValue(
+            ConfigKey(kControlsGroup, QStringLiteral("BeatjumpDoesLoopmove")),
+            kDefaultBeatjumpDoesLoopmove));
+
+    updateUltraSpeedCheckBox();
 
     double rateRange = m_rateRangeControls[0]->get();
     int index = ComboBoxRateRange->findData(static_cast<int>(rateRange * 100.0));
@@ -491,20 +511,33 @@ void DlgPrefDeck::slotUpdate() {
         radioButtonResetUnlockedKey->setChecked(true);
     }
 
+    // TODO use some kind of flag for this ??
     auto reset = m_pConfig->getValue(ConfigKey(kControlsGroup, QStringLiteral("SpeedAutoReset")),
             BaseTrackPlayer::TrackLoadReset::RESET_PITCH);
     if (reset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH) {
         checkBoxResetPitch->setChecked(true);
         checkBoxResetSpeed->setChecked(false);
+        checkBoxResetUltraspeed->setChecked(false);
     } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_SPEED) {
         checkBoxResetPitch->setChecked(false);
         checkBoxResetSpeed->setChecked(true);
+        checkBoxResetUltraspeed->setChecked(true);
     } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED) {
         checkBoxResetPitch->setChecked(true);
         checkBoxResetSpeed->setChecked(true);
+        checkBoxResetUltraspeed->setChecked(true);
+    } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED) {
+        checkBoxResetPitch->setChecked(true);
+        checkBoxResetSpeed->setChecked(false);
+        checkBoxResetUltraspeed->setChecked(true);
+    } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_ULTRASPEED) {
+        checkBoxResetPitch->setChecked(false);
+        checkBoxResetSpeed->setChecked(false);
+        checkBoxResetUltraspeed->setChecked(true);
     } else if (reset == BaseTrackPlayer::TrackLoadReset::RESET_NONE) {
         checkBoxResetPitch->setChecked(false);
         checkBoxResetSpeed->setChecked(false);
+        checkBoxResetUltraspeed->setChecked(false);
     }
 
     if (m_bRateRamping == RateControl::RampMode::Linear) {
@@ -523,6 +556,26 @@ void DlgPrefDeck::slotUpdate() {
     spinBoxPermanentRateFine->setValue(RateControl::getPermanentRateChangeFineAmount());
 }
 
+void DlgPrefDeck::updateColoredLinkTexts() {
+    createLinkColor();
+    // Cue Mode
+    // Add "(?)" with a manual link to the label
+    labelCueMode->setText(
+            labelCueMode->property(kOriginalText).toString() + QChar(' ') +
+            coloredLinkString(
+                    m_pLinkColor,
+                    QStringLiteral("(?)"),
+                    MIXXX_MANUAL_CUE_MODES_URL));
+    // Sync Mode
+    // Add "(?)" with a manual link to the label
+    labelSyncMode->setText(
+            labelSyncMode->property(kOriginalText).toString() + QChar(' ') +
+            coloredLinkString(
+                    m_pLinkColor,
+                    QStringLiteral("(?)"),
+                    MIXXX_MANUAL_SYNC_MODES_URL));
+}
+
 void DlgPrefDeck::slotResetToDefaults() {
     // Track time display mode
     slotSetTrackTimeDisplay(kDefaultPositionDisplayType);
@@ -533,8 +586,13 @@ void DlgPrefDeck::slotResetToDefaults() {
     // 8% Rate Range
     ComboBoxRateRange->setCurrentIndex(ComboBoxRateRange->findData(kDefaultRateRangePercent));
 
+    // Disable Ultra Speed slider (rate_ultra)
+    CheckBoxUltraSpeed->setChecked(kDefaultUltraSpeedEnabled);
+
     // Clone decks by double-tapping Load button.
     checkBoxCloneDeckOnLoadDoubleTap->setChecked(kDefaultCloneDeckOnLoad);
+
+    checkboxBeatjumpLoopmove->setChecked(kDefaultBeatjumpDoesLoopmove);
 
     // Mixxx cue mode
     ComboBoxCueMode->setCurrentIndex(0);
@@ -559,6 +617,7 @@ void DlgPrefDeck::slotResetToDefaults() {
 
     checkBoxResetSpeed->setChecked(false);
     checkBoxResetPitch->setChecked(true);
+    checkBoxResetUltraspeed->setChecked(false);
 
     radioButtonSoftLeader->setChecked(true);
 
@@ -580,26 +639,48 @@ void DlgPrefDeck::setRateRangeForAllDecks(int rangePercent) {
     }
 }
 
+void DlgPrefDeck::maybeToggleUltraSpeedForAllDecks() {
+    Qt::CheckState rateUltraCheckState = CheckBoxUltraSpeed->checkState();
+    if (rateUltraCheckState == Qt::CheckState::PartiallyChecked) {
+        // Don't override the user-set mixed state
+        return;
+    }
+
+    int enabled = rateUltraCheckState == Qt::CheckState::Checked ? 1.0 : 0.0;
+    for (ControlProxy* pControl : std::as_const(m_rateUtraEnabledControls)) {
+        pControl->set(enabled);
+    }
+}
+
+void DlgPrefDeck::updateUltraSpeedCheckBox() {
+    // Ultra speed (rate_ultra_enabled) can be set per deck and it's persistent,
+    // so read all controls and check it fully or partially
+    int numEnabled = 0;
+    for (ControlProxy* pControl : std::as_const(m_rateUtraEnabledControls)) {
+        if (pControl->toBool()) {
+            numEnabled++;
+        }
+    }
+    if (numEnabled == 0) {
+        CheckBoxUltraSpeed->setCheckState(Qt::CheckState::Unchecked);
+    } else if (numEnabled < m_rateUtraEnabledControls.size()) {
+        CheckBoxUltraSpeed->setCheckState(Qt::CheckState::PartiallyChecked);
+    } else {
+        CheckBoxUltraSpeed->setCheckState(Qt::CheckState::Checked);
+    }
+}
+
 void DlgPrefDeck::slotRateInversionCheckbox(bool inverted) {
     m_bRateDownIncreasesSpeed = inverted;
 }
 
 void DlgPrefDeck::setRateDirectionForAllDecks(bool inverted) {
-    double oldRateDirectionMultiplier = m_rateDirectionControls[0]->get();
     double rateDirectionMultiplier = 1.0;
     if (inverted) {
         rateDirectionMultiplier = kRateDirectionInverted;
     }
     for (ControlProxy* pControl : std::as_const(m_rateDirectionControls)) {
         pControl->set(rateDirectionMultiplier);
-    }
-
-    // If the rate slider direction setting has changed,
-    // multiply the rate by -1 so the current sound does not change.
-    if (rateDirectionMultiplier != oldRateDirectionMultiplier) {
-        for (ControlProxy* pControl : std::as_const(m_rateControls)) {
-            pControl->set(-1 * pControl->get());
-        }
     }
 }
 
@@ -694,6 +775,10 @@ void DlgPrefDeck::slotLoadWhenDeckPlayingIndexChanged(int comboboxIndex) {
             comboBoxLoadWhenDeckPlaying->itemData(comboboxIndex).toInt());
 }
 
+void DlgPrefDeck::slotBeatjumpLoopmove(bool checked) {
+    m_bBeatjumpLoopmove = checked;
+}
+
 void DlgPrefDeck::slotApply() {
     m_pConfig->set(ConfigKey(kControlsGroup, QStringLiteral("SetIntroStartAtMainCue")),
             ConfigValue(m_bSetIntroStartAtMainCue));
@@ -720,6 +805,9 @@ void DlgPrefDeck::slotApply() {
     m_pConfig->setValue(ConfigKey(kControlsGroup, QStringLiteral("CloneDeckOnLoadDoubleTap")),
             m_bCloneDeckOnLoadDoubleTap);
 
+    m_pConfig->setValue(ConfigKey(kControlsGroup, QStringLiteral("BeatjumpDoesLoopmove")),
+            m_bBeatjumpLoopmove);
+
     // Set rate range
     // Set the config value before setting the CO values in setRateRangeForAllDecks()
     // because a proxy in DlgPrefLibrary listens to [Channe1],rate_range changes
@@ -728,18 +816,29 @@ void DlgPrefDeck::slotApply() {
             m_iRateRangePercent);
     setRateRangeForAllDecks(m_iRateRangePercent);
 
+    maybeToggleUltraSpeedForAllDecks();
+
     m_pConfig->setValue(ConfigKey(kControlsGroup, QStringLiteral("RateDir")),
             m_bRateDownIncreasesSpeed);
     setRateDirectionForAllDecks(m_bRateDownIncreasesSpeed);
 
     BaseTrackPlayer::TrackLoadReset configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_NONE;
 
-    if (m_speedAutoReset && m_pitchAutoReset) {
-        configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED;
-    } else if (m_speedAutoReset) {
-        configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_SPEED;
-    } else if (m_pitchAutoReset) {
-        configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_PITCH;
+    // When ultraspeed auto-reset is requested, use RESET_PITCH_AND_SPEED or
+    // RESET_SPEED depending on the pitch checkbox state. These enum values
+    // already reset the ultra speed slider in the engine.
+    if (m_pitchAutoReset) {
+        if (m_speedAutoReset) {
+            configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_SPEED;
+        } else if (m_ultraspeedAutoReset) {
+            configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_PITCH_AND_ULTRASPEED;
+        }
+    } else {
+        if (m_speedAutoReset) {
+            configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_SPEED;
+        } else if (m_ultraspeedAutoReset) {
+            configSPAutoReset = BaseTrackPlayer::TrackLoadReset::RESET_ULTRASPEED;
+        }
     }
 
     m_pConfig->setValue(ConfigKey(kControlsGroup, QStringLiteral("SpeedAutoReset")),
@@ -803,10 +902,10 @@ void DlgPrefDeck::slotNumDecksChanged(double new_count, bool initializing) {
 
     for (int i = m_iNumConfiguredDecks; i < numdecks; ++i) {
         QString group = PlayerManager::groupForDeck(i);
-        m_rateControls.push_back(new ControlProxy(
-                group, "rate"));
         m_rateRangeControls.push_back(new ControlProxy(
                 group, "rateRange"));
+        m_rateUtraEnabledControls.push_back(new ControlProxy(
+                group, "rate_ultra_enabled"));
         m_rateDirectionControls.push_back(new ControlProxy(
                 group, "rate_dir"));
         m_cueControls.push_back(new ControlProxy(
@@ -826,6 +925,8 @@ void DlgPrefDeck::slotNumDecksChanged(double new_count, bool initializing) {
         setRateDirectionForAllDecks(m_rateDirectionControls[0]->get() == kRateDirectionInverted);
         setRateRangeForAllDecks(static_cast<int>(m_rateRangeControls[0]->get() * 100.0));
     }
+
+    updateUltraSpeedCheckBox();
 }
 
 void DlgPrefDeck::slotNumSamplersChanged(double new_count, bool initializing) {
@@ -836,8 +937,6 @@ void DlgPrefDeck::slotNumSamplersChanged(double new_count, bool initializing) {
 
     for (int i = m_iNumConfiguredSamplers; i < numsamplers; ++i) {
         QString group = PlayerManager::groupForSampler(i);
-        m_rateControls.push_back(new ControlProxy(
-                group, "rate"));
         m_rateRangeControls.push_back(new ControlProxy(
                 group, "rateRange"));
         m_rateDirectionControls.push_back(new ControlProxy(
@@ -863,10 +962,23 @@ void DlgPrefDeck::slotNumSamplersChanged(double new_count, bool initializing) {
 
 void DlgPrefDeck::slotUpdateSpeedAutoReset(bool b) {
     m_speedAutoReset = b;
+    // Ultra speed auto-reset follows speed auto-reset. When speed is checked,
+    // also check ultraspeed. The user can uncheck ultraspeed independently.
+    if (b) {
+        checkBoxResetUltraspeed->setChecked(true);
+    }
 }
 
 void DlgPrefDeck::slotUpdatePitchAutoReset(bool b) {
     m_pitchAutoReset = b;
+}
+
+void DlgPrefDeck::slotUpdateUltraspeedAutoReset(bool b) {
+    m_ultraspeedAutoReset = b;
+}
+
+void DlgPrefDeck::slotUltraSpeedCheckboxToggled(bool checked) {
+    checkBoxResetUltraspeed->setEnabled(checked);
 }
 
 int DlgPrefDeck::cueDefaultIndexByData(int userData) const {

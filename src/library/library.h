@@ -6,6 +6,7 @@
 #include <QPointer>
 
 #include "analyzer/trackanalysisscheduler.h"
+#include "library/columncache.h"
 #include "library/library_decl.h"
 #ifdef __ENGINEPRIME__
 #include "library/trackset/crate/crateid.h"
@@ -99,6 +100,9 @@ class Library: public QObject {
     void setRowHeight(int rowHeight);
     void setEditMetadataSelectedClick(bool enable);
 
+    /// returns the localized column name used in the GUI
+    QString columnTitle(ColumnCache::Column column) const;
+
     /// Switches to the internal track collection view
     /// and focuses the search box.
     void searchTracksInCollection();
@@ -131,6 +135,9 @@ class Library: public QObject {
     void slotLoadTrackToPlayer(TrackPointer pTrack, const QString& group, bool play);
 #endif
     void slotLoadLocationToPlayer(const QString& location, const QString& group, bool play);
+
+    void slotPinnedTrackIdChanged(const TrackId& id);
+
     void slotRefreshLibraryModels();
     void slotCreatePlaylist();
     void slotCreateCrate();
@@ -178,6 +185,12 @@ class Library: public QObject {
     void setSidebarHoverExpandDelay(int delay);
 
     void onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);
+
+    void trackDirectoriesUpdated();
+
+    void showRecordingSettings();
+
+    void pinnedTrackChanged(TrackPointer pTrack);
 
   private slots:
       void onPlayerManagerTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);

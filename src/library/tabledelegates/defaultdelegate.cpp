@@ -32,6 +32,9 @@ void DefaultDelegate::setTextColor(
     auto colorData = index.data(Qt::ForegroundRole);
     if (colorData.canConvert<QColor>()) {
         const QColor fgColor = colorData.value<QColor>();
+        option.palette.setColor(QPalette::Normal, QPalette::Text, fgColor);
+        option.palette.setColor(QPalette::Inactive, QPalette::Text, fgColor);
+
         if (fgColor == hlColor) {
             return;
         }

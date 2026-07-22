@@ -6,6 +6,7 @@
 #include "library/library_decl.h"
 #include "library/library_prefs.h"
 #include "library/scanner/libraryscanner.h"
+#include "library/scanner/libraryscannerdlg.h"
 #include "library/trackcollection.h"
 #include "moc_trackcollectionmanager.cpp"
 #include "sources/soundsourceproxy.h"
@@ -13,14 +14,13 @@
 #include "util/assert.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/logger.h"
+#include "util/widgethelper.h"
+
+using namespace mixxx::library::prefs;
 
 namespace {
 
 const mixxx::Logger kLogger("TrackCollectionManager");
-
-const QString kConfigGroup = QStringLiteral("[TrackCollection]");
-
-const ConfigKey kConfigKeyRepairDatabaseOnNextRestart(kConfigGroup, "RepairDatabaseOnNextRestart");
 
 inline
 parented_ptr<TrackCollection> createInternalTrackCollection(
@@ -47,10 +47,10 @@ TrackCollectionManager::TrackCollectionManager(
 
     // TODO(XXX): Add a checkbox in the library preferences for checking
     // and repairing the database on the next restart of the application.
-    if (pConfig->getValue(kConfigKeyRepairDatabaseOnNextRestart, false)) {
+    if (pConfig->getValue(kRepairDatabaseOnNextRestartConfigKey, false)) {
         m_pInternalCollection->repairDatabase(dbConnection);
         // Reset config value
-        pConfig->setValue(kConfigKeyRepairDatabaseOnNextRestart, false);
+        pConfig->setValue(kRepairDatabaseOnNextRestartConfigKey, false);
     }
 
     m_pInternalCollection->connectDatabase(dbConnection);
@@ -72,6 +72,7 @@ TrackCollectionManager::TrackCollectionManager(
         // Exclude the library scanner from tests
         kLogger.info() << "Library scanner is disabled in test mode";
     } else {
+        // Note: scanner is created/moved to its own thread
         m_pScanner = std::make_unique<LibraryScanner>(pDbConnectionPool, pConfig);
 
         // Forward signals
@@ -131,6 +132,14 @@ TrackCollectionManager::TrackCollectionManager(
 
         kLogger.info() << "Starting library scanner thread";
         m_pScanner->start();
+
+        // Delay creation of scanner progress dialog until it is actually needed.
+        // Benefit, on manual scan when GUI is ready / the skin widget has been built:
+        // skin widget can be used as parent which makes the dlg inherit its stylesheet.
+        connect(m_pScanner.get(),
+                &LibraryScanner::startScan,
+                this,
+                &TrackCollectionManager::createAndConnectScannerDlg);
     }
 }
 
@@ -170,6 +179,83 @@ TrackCollectionManager::~TrackCollectionManager() {
     m_pInternalCollection->disconnectDatabase();
 
     GlobalTrackCache::destroyInstance();
+}
+
+void TrackCollectionManager::createAndConnectScannerDlg() {
+    auto* pSkinWidget = mixxx::widgethelper::getSkinWidget();
+    m_pScannerProgressDlg = make_parented<LibraryScannerDlg>(pSkinWidget);
+
+    // Delete dialog when it's not needed anymore.
+    // Else Mixxx will crash during shutdown -- probably parent conflict because
+    // CoreService::finalize is called after MixxxMainWindow has been closed /
+    // skin widget ahs been deleted.
+    connect(m_pScannerProgressDlg.get(),
+            &QDialog::finished,
+            this,
+            [this]() {
+                m_pScannerProgressDlg->deleteLater();
+                m_pScannerProgressDlg = nullptr;
+            });
+    // DPDP (Dangling Pointer Defense Path) A: Normal Dialog Execution Lifecycle
+    connect(m_pScannerProgressDlg.get(),
+            &QDialog::finished,
+            this,
+            [this]() {
+                if (m_pScannerProgressDlg) {
+                    m_pScannerProgressDlg->deleteLater();
+                    // Clear the parented_ptr right after scheduling deletion
+                    m_pScannerProgressDlg = nullptr;
+                }
+            });
+
+    // DPDP B: Application Shutdown / GUI Teardown
+    // The skin widget fires 'destroyed' BEFORE it starts deleting out its children.
+    if (pSkinWidget) {
+        connect(pSkinWidget,
+                &QObject::destroyed,
+                this,
+                [this]() {
+                    // Detach safely while the dialog object is still technically alive.
+                    // This prevents ~TrackCollectionManager() from touching a dangling pointer.
+                    m_pScannerProgressDlg = nullptr;
+                });
+    }
+
+    connect(m_pScanner.get(),
+            &LibraryScanner::addQueuedTasks,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::addQueuedTasks);
+    connect(m_pScanner.get(),
+            &LibraryScanner::progressLoading,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotUpdate);
+    connect(m_pScanner.get(),
+            &LibraryScanner::progressHashing,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotUpdate);
+    connect(m_pScanner.get(),
+            &LibraryScanner::scanStarted,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotScanStarted);
+    connect(m_pScanner.get(),
+            &LibraryScanner::scanFinished,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotScanFinished);
+    connect(m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::scanCancelled,
+            m_pScanner.get(),
+            &LibraryScanner::slotCancel,
+            Qt::DirectConnection);
+
+    TrackDAO* pTrackDAO = &(m_pInternalCollection->getTrackDAO());
+    connect(pTrackDAO,
+            &TrackDAO::progressVerifyTracksOutside,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotUpdate);
+    connect(pTrackDAO,
+            &TrackDAO::progressCoverArt,
+            m_pScannerProgressDlg.get(),
+            &LibraryScannerDlg::slotUpdateCover);
 }
 
 void TrackCollectionManager::startLibraryAutoScan() {
@@ -313,7 +399,7 @@ ExportTrackMetadataResult TrackCollectionManager::exportTrackMetadataBeforeSavin
             (pTrack->isDirty() &&
                     m_pConfig &&
                     m_pConfig->getValueString(
-                                     mixxx::library::prefs::kSyncTrackMetadataConfigKey)
+                                     kSyncTrackMetadataConfigKey)
                                     .toInt() == 1)) {
         switch (mode) {
         case TrackMetadataExportMode::Immediate: {

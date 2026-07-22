@@ -17,6 +17,7 @@ class QWidget;
 
 namespace {
 constexpr bool kDefaultCloneDeckOnLoad = true;
+constexpr bool kDefaultBeatjumpDoesLoopmove = true;
 } // namespace
 
 namespace {
@@ -53,6 +54,7 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
     void slotSetTrackLoadMode(int comboboxIndex);
     void slotLoadWhenDeckPlayingIndexChanged(int comboboxIndex);
     void slotCloneDeckOnLoadDoubleTapCheckbox(bool);
+    void slotBeatjumpLoopmove(bool checked);
     void slotRateRampingModeLinearButton(bool);
     void slotRateRampSensitivitySlider(int);
 
@@ -61,8 +63,13 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
     void slotNumDecksChanged(double, bool initializing=false);
     void slotNumSamplersChanged(double, bool initializing=false);
 
+    void slotUltraSpeedCheckboxToggled(bool);
     void slotUpdateSpeedAutoReset(bool);
     void slotUpdatePitchAutoReset(bool);
+    void slotUpdateUltraspeedAutoReset(bool);
+
+  private slots:
+    void updateColoredLinkTexts() override;
 
   private:
     // Because the CueDefault list is out of order, we have to set the combo
@@ -73,6 +80,8 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
 
     void setRateRangeForAllDecks(int rangePercent);
     void setRateDirectionForAllDecks(bool inverted);
+    void maybeToggleUltraSpeedForAllDecks();
+    void updateUltraSpeedCheckBox();
 
     const UserSettingsPointer m_pConfig;
 
@@ -83,9 +92,9 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
     const parented_ptr<ControlProxy> m_pNumSamplers;
 
     QList<ControlProxy*> m_cueControls;
-    QList<ControlProxy*> m_rateControls;
     QList<ControlProxy*> m_rateDirectionControls;
     QList<ControlProxy*> m_rateRangeControls;
+    QList<ControlProxy*> m_rateUtraEnabledControls;
     QList<ControlProxy*> m_keylockModeControls;
     QList<ControlProxy*> m_keyunlockModeControls;
 
@@ -98,12 +107,14 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
 
     bool m_bSetIntroStartAtMainCue;
     bool m_bCloneDeckOnLoadDoubleTap;
+    bool m_bBeatjumpLoopmove;
 
     int m_iRateRangePercent;
     bool m_bRateDownIncreasesSpeed;
 
     bool m_speedAutoReset;
     bool m_pitchAutoReset;
+    bool m_ultraspeedAutoReset;
     KeylockMode m_keylockMode;
     KeyunlockMode m_keyunlockMode;
     SeekOnLoadMode m_seekOnLoadMode;

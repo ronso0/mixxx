@@ -8,6 +8,7 @@
 #include <QUrl>
 
 #include "control/controlobject.h"
+#include "library/basesqltablemodel.h"
 #include "library/dao/trackschema.h"
 #include "library/library.h"
 #include "library/library_prefs.h"
@@ -38,6 +39,12 @@ const ConfigKey kVScrollBarPosConfigKey{
         // unit of compilation and cannot be reused here!
         QStringLiteral("[Library]"),
         QStringLiteral("VScrollBarPos")};
+
+// Delay after track selection changed before loading un-cached covers and
+// updating the sidebar labels. Default is 100.
+// Longer delays will decrease CPU/memory load when scrolling the library with
+// Up/Down keys (or [Library],MoveUp/Down.
+constexpr int kTrackSelectDelayMillis = 500;
 
 } // anonymous namespace
 
@@ -151,10 +158,10 @@ void WTrackTableView::slotGuiTick50ms(double /*unused*/) {
         return;
     }
 
-    // if the user is stopped in the same row for more than 0.1 s,
-    // we load un-cached cover arts as well.
+    // if the user is stopped in the same row for more than N millis, we load
+    // un-cached cover arts as well and emit a signal to update the sidebar labels.
     mixxx::Duration timeDelta = mixxx::Time::elapsed() - m_lastUserAction;
-    if (m_loadCachedOnly && timeDelta > mixxx::Duration::fromMillis(100)) {
+    if (m_loadCachedOnly && timeDelta > mixxx::Duration::fromMillis(kTrackSelectDelayMillis)) {
         // Show the currently selected track in the large cover art view and
         // highlights crate and playlists. Doing this in selectionChanged
         // slows down scrolling performance so we wait until the user has
@@ -500,6 +507,27 @@ void WTrackTableView::assignNextTrackColor() {
     }
 }
 
+void WTrackTableView::trackRatingChangeRequestRelative(int change) {
+    TrackModel* pTrackModel = getTrackModel();
+    if (!pTrackModel) {
+        return;
+    }
+    const QModelIndexList indices = getSelectedRows();
+    if (indices.isEmpty()) {
+        return;
+    }
+
+    const QModelIndex index = indices.at(0);
+    TrackPointer pTrack = pTrackModel->getTrack(index);
+    if (pTrack) {
+        int newRating = pTrack->getRating() + change;
+        if (mixxx::TrackRecord::isValidRating(newRating) &&
+                newRating != pTrack->getRating()) {
+            pTrack->setRating(newRating);
+        }
+    }
+}
+
 void WTrackTableView::slotPurge() {
     TrackModel* pTrackModel = getTrackModel();
     if (!pTrackModel) {
@@ -591,7 +619,12 @@ void WTrackTableView::slotShowHideTrackMenu(bool show) {
         }
         showTrackMenu(evPos, indexAt(evPos));
     } else {
-        m_pTrackMenu->close();
+        // Send Esc key which closes submenus first, one by one.
+        // Note: pTrackMenu->close() would close the menu right away,
+        // which may not always be what the user wants to do.
+        QKeyEvent escKeyEv = QKeyEvent{
+                QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier};
+        QApplication::sendEvent(m_pTrackMenu, &escKeyEv);
     }
 }
 
@@ -1225,6 +1258,7 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         if (event->modifiers().testFlag(Qt::NoModifier)) {
             slotMouseDoubleClicked(currentIndex());
         } else if ((event->modifiers() & kPropertiesShortcutModifier)) {
+            bool findReplaceMode = event->modifiers() & Qt::ShiftModifier;
             TrackModel* pTrackModel = getTrackModel();
             if (!pTrackModel ||
                     !pTrackModel->hasCapabilities(
@@ -1243,7 +1277,16 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             // desired column.
             const QString columnName = columnNameOfIndex(currentIndex());
             m_pTrackMenu->setTrackPropertyName(columnName);
-            m_pTrackMenu->slotShowDlgTrackInfo();
+            m_pTrackMenu->slotShowDlgTrackInfo(findReplaceMode);
+        } else if (event->modifiers() & kTrackMenuModifier) {
+            const QPoint evPos = QPoint(10, 10);
+            // might as well use QCursor::pos(), but keeping the menu within the
+            // tracks table is clearer. Note that with QCursor::pos() we'd need
+            // to consider multiple screens / virtual screens, too.
+            QContextMenuEvent* cme = // mapToGlobal() is required!
+                    new QContextMenuEvent(QContextMenuEvent::Keyboard, evPos, mapToGlobal(evPos));
+            contextMenuEvent(cme);
+            return;
         }
         return;
     }
@@ -1254,6 +1297,76 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
             slotDeleteTracksFromDisk();
         }
         return;
+    }
+    case Qt::Key_C: {
+        // Alt + C edits track comment -> open Track Info, focus comment
+        // Alt + Shift + C clears comment of selected tracks
+        if (event->modifiers().testFlag(Qt::AltModifier)) {
+            VERIFY_OR_DEBUG_ASSERT(m_pTrackMenu.get()) {
+                initTrackMenu();
+            }
+            const QModelIndexList indices = getSelectedRows();
+            if (indices.isEmpty()) {
+                return;
+            }
+            m_pTrackMenu->loadTrackModelIndices(indices);
+            if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+                // Clear comment
+                m_pTrackMenu->clearComments();
+                return;
+            }
+
+            // Edit comment
+            // If only one track is selected -> open inline editor
+            // multiple tracks -> use Track Info dialog, focus comment field
+            if (indices.size() == 1) {
+                int commColIndex = -1;
+                for (int i = 0; i < model()->columnCount(); ++i) {
+                    if (isColumnHidden(i)) {
+                        continue;
+                    }
+                    const QString colName = model()->headerData(
+                                                           i,
+                                                           Qt::Horizontal,
+                                                           TrackModel::kHeaderNameRole)
+                                                    .toString();
+                    if (colName == QStringLiteral("comment")) {
+                        commColIndex = i;
+                        break;
+                    }
+                }
+                if (commColIndex != -1) {
+                    const QModelIndex commIndex =
+                            model()->index(indices.first().row(), commColIndex);
+                    edit(commIndex, EditKeyPressed, nullptr);
+                }
+            } else {
+                m_pTrackMenu->setTrackPropertyName(QStringLiteral("comment"));
+                m_pTrackMenu->slotShowDlgTrackInfo();
+            }
+            return;
+        }
+        break;
+    }
+    case Qt::Key_Space: {
+        if (event->modifiers() & Qt::ShiftModifier) {
+            // Sort by focused column
+            TrackModel::SortColumnId sortColumnId = getColumnIdFromCurrentIndex();
+            if (sortColumnId == TrackModel::SortColumnId::Invalid) {
+                return;
+            }
+
+            if (static_cast<int>(sortColumnId) != static_cast<int>(m_pSortColumn->get())) {
+                m_pSortColumn->set(static_cast<int>(sortColumnId));
+            } else {
+                // Already sorted by this column, invert sort order
+                m_pSortOrder->set((m_pSortOrder->get() == 0) ? 1.0 : 0.0);
+            }
+
+            applySortingIfVisible();
+            return;
+        }
+        break;
     }
     default:
         break;
@@ -1278,6 +1391,8 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
                 setCurrentIndex(QModelIndex());
             }
 
+            // ronso0: Alt+Up/Down should focus sidebar and preselect next bookmark
+            // Same for Alt+P: focus sidebar and preselect Prep playlist
             if (event->modifiers().testFlag(Qt::AltModifier) &&
                     (event->key() == Qt::Key_Up ||
                             event->key() == Qt::Key_Down ||
@@ -1307,6 +1422,23 @@ void WTrackTableView::keyPressEvent(QKeyEvent* event) {
         }
     }
     QTableView::keyPressEvent(event);
+}
+
+void WTrackTableView::selectPinnedTrack(const TrackId& id) {
+    if (!isVisible()) {
+        return;
+    }
+    if (!id.isValid()) {
+        return;
+    }
+    selectTrack(id);
+    // emit trackSelected() in order to keep/restore the sidebar item decoration
+    // (bold) that allows to identify playlists/crates that also hold the track
+    TrackPointer pTrack = m_pLibrary->trackCollectionManager()->getTrackById(id);
+    if (!pTrack) {
+        return;
+    }
+    emit trackSelected(pTrack);
 }
 
 void WTrackTableView::resizeEvent(QResizeEvent* event) {
@@ -1415,7 +1547,7 @@ void WTrackTableView::hideOrRemoveSelectedTracks() {
             }
         }
 
-        QMessageBox msg;
+        QMessageBox msg(this);
         msg.setIcon(QMessageBox::Question);
         msg.setWindowTitle(title);
         msg.setText(message);
@@ -1680,7 +1812,7 @@ void WTrackTableView::moveSelection(int delta) {
 
     while (delta != 0) {
         QItemSelectionModel* currentSelection = selectionModel();
-        if (currentSelection->selectedRows().length() > 0) {
+        if (!currentSelection->selectedRows().isEmpty()) {
             if (delta > 0) {
                 // i is positive, so we want to move the highlight down
                 int row = currentSelection->selectedRows().last().row();
@@ -1749,6 +1881,16 @@ void WTrackTableView::doSortByColumn(int headerSection, Qt::SortOrder sortOrder)
     }
 
     sortByColumn(headerSection, sortOrder);
+
+    // Propagate the multi-column sort state to the header for drawing
+    // secondary/tertiary sort indicators.
+    auto* pHeader = qobject_cast<WTrackTableViewHeader*>(horizontalHeader());
+    if (pHeader) {
+        auto* pSqlModel = qobject_cast<BaseSqlTableModel*>(model());
+        if (pSqlModel) {
+            pHeader->setSortColumns(pSqlModel->getSortColumns());
+        }
+    }
 
     if (usePositions) {
         selectTracksByPosition(selectedTrackPositions, prevColumn);
@@ -1832,6 +1974,10 @@ void WTrackTableView::selectTracksById(const QList<TrackId>& trackIds, int prevC
     // Refocus the cell in the column that was focused before sorting.
     // With this, any Up/Down key press moves the selection and keeps the
     // horizontal scrollbar position we will restore below.
+    // Use our prevColumn if the argument is invalid.
+    if (prevColum == -1) {
+        prevColum = m_prevColumn;
+    }
     QModelIndex restoreIndex = pItemModel->index(currentIndex().row(), prevColum);
     if (restoreIndex.isValid()) {
         setCurrentIndex(restoreIndex);

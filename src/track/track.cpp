@@ -432,11 +432,6 @@ bool Track::trySetBeats(mixxx::BeatsPointer pBeats) {
     return trySetBeatsMarkDirtyAndUnlock(&locked, pBeats, false);
 }
 
-bool Track::trySetAndLockBeats(mixxx::BeatsPointer pBeats) {
-    auto locked = lockMutex(&m_qMutex);
-    return trySetBeatsMarkDirtyAndUnlock(&locked, pBeats, true);
-}
-
 bool Track::setBeatsWhileLocked(mixxx::BeatsPointer pBeats) {
     if (m_pBeats == pBeats) {
         return false;
@@ -465,9 +460,10 @@ bool Track::setBeatsWhileLocked(mixxx::BeatsPointer pBeats) {
 bool Track::trySetBeatsWhileLocked(
         mixxx::BeatsPointer pBeats,
         bool lockBpmAfterSet) {
-    if (m_pBeats && m_record.getBpmLocked()) {
-        // Track has already a valid and locked beats object, abort.
-        qDebug() << "Track beats is already set and BPM-locked. Discard the new beats";
+    if (m_record.getBpmLocked()) {
+        // The BPM is locked, so the beatgrid must not be changed - regardless
+        // of whether one currently exists.
+        qDebug() << "Track is BPM-locked. Discarding new beats";
         return false;
     }
 
@@ -927,7 +923,7 @@ const ConstWaveformPointer& Track::getWaveform() const {
 }
 
 void Track::setWaveform(ConstWaveformPointer pWaveform) {
-    m_waveform = pWaveform;
+    m_waveform = std::move(pWaveform);
     emit waveformUpdated();
 }
 
@@ -982,13 +978,81 @@ void Track::setMainCuePosition(mixxx::audio::FramePos position) {
 void Track::shiftCuePositionsMillis(double milliseconds) {
     auto locked = lockMutex(&m_qMutex);
 
+    kLogger.warning() << "Shift cue positions by" << milliseconds << "ms";
+    VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
+        return;
+    }
+    const double frames =
+            m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(
+                    milliseconds);
+    for (const CuePointer& pCue : std::as_const(m_cuePoints)) {
+        pCue->shiftPositionFrames(frames);
+    }
+
+    markDirtyAndUnlock(&locked);
+}
+
+void Track::shiftHotcuePositionMillis(int hotcue, double milliseconds) {
+    auto locked = lockMutex(&m_qMutex);
+
+    CuePointer pHotcue = findHotcueByIndex(hotcue);
+    if (!pHotcue) {
+        return;
+    }
     VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
         return;
     }
     double frames = m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(milliseconds);
-    for (const CuePointer& pCue : std::as_const(m_cuePoints)) {
-        pCue->shiftPositionFrames(frames);
+    pHotcue->shiftPositionFrames(frames);
+
+    markDirtyAndUnlock(&locked);
+}
+
+void Track::shiftHotcuePositionBeats(int hotcue, int direction) {
+    if (direction == 0) {
+        return;
     }
+    if (!m_pBeats) {
+        return;
+    }
+    direction = direction > 0 ? 1 : -1;
+
+    auto locked = lockMutex(&m_qMutex);
+    CuePointer pHotcue = findHotcueByIndex(hotcue);
+    if (!pHotcue) {
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(m_record.getStreamInfoFromSource()) {
+        return;
+    }
+
+    auto currPos = pHotcue->getPosition();
+    VERIFY_OR_DEBUG_ASSERT(currPos.isValid()) {
+        return;
+    };
+
+    // This is called by `shift_focused_hotcue_later|earlier[_small]` when
+    // `quantize` is enabled.
+    // Hence the purpose is to shift the cue to the prev or next beat position.
+    // In case the cue is currently not quantized (like when cue has been set
+    // without quantize or beatgrid has been shifted since setting it) we shift
+    // it to the closest beat first.
+    // The user may then shift to the prev/next beat.
+
+    // If the cue is be exactly on a beat findNthBeat(pos, n) would return that
+    // same position. In that case we need to look one beat further.
+    auto newPos = currPos;
+    int offset = 1;
+    while (newPos == currPos) {
+        VERIFY_OR_DEBUG_ASSERT(offset <= 2) {
+            qWarning() << "Could not shift cue point, couldn't find next/prev beat";
+            return;
+        }
+        newPos = m_pBeats->findNthBeat(currPos, direction * offset);
+        offset++;
+    }
+
+    pHotcue->shiftPositionFrames(newPos - currPos);
 
     markDirtyAndUnlock(&locked);
 }
@@ -1058,6 +1122,20 @@ void Track::setHotcueIndicesSortedByPosition(HotcueSortMode sortMode) {
 
     markDirtyAndUnlock(&locked);
     emit cuesUpdated();
+}
+
+void Track::shiftBeatsMillis(double milliseconds) {
+    if (milliseconds == 0 || !m_pBeats) {
+        return;
+    }
+    kLogger.warning() << "Shift beats by" << milliseconds << "ms";
+    const double frames =
+            m_record.getStreamInfoFromSource()->getSignalInfo().millis2frames(
+                    milliseconds);
+    const auto translatedBeats = m_pBeats->tryTranslate(frames);
+    if (translatedBeats) {
+        trySetBeats(*translatedBeats);
+    }
 }
 
 void Track::analysisFinished() {
@@ -1811,6 +1889,24 @@ ExportTrackMetadataResult Track::exportMetadata(
         // updated as expected! In these edge cases users need to explicitly
         // trigger the re-export of file tags or they could modify other metadata
         // properties.
+        if (!m_bMarkedForMetadataExport) {
+            // Suppress comparison of analyzer-only properties to avoid
+            // triggering file tag writes when only BPM or Key have been
+            // changed by the analyzers without any explicit user action.
+            // User-initiated export (via "Export Metadata" action) still
+            // exports everything because m_bMarkedForMetadataExport is set.
+            //
+            // Revert BPM to the file's value, so only non-BPM field changes
+            // (artist, title, album, comment, genre, etc.) trigger a write.
+            // BPM is already protected by integer comparison below, but
+            // restoring it here makes the intent clear.
+            normalizedFromRecord.refTrackInfo().setBpm(
+                    importedFromFile.getTrackInfo().getBpm());
+            // Revert Key text to the file's value, so Key-only changes from
+            // the analyzer never trigger a file tag write.
+            normalizedFromRecord.refTrackInfo().setKeyText(
+                    importedFromFile.getTrackInfo().getKeyText());
+        }
         if (!m_bMarkedForMetadataExport &&
                 !normalizedFromRecord.anyFileTagsModified(
                         importedFromFile,

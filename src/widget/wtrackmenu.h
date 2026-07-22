@@ -111,10 +111,15 @@ class WTrackMenu : public QMenu {
     // WARNING: This function hides non-virtual QMenu::popup().
     // This has been done on purpose to ensure menu doesn't popup without loaded track(s).
     void popup(const QPoint& pos, QAction* at = nullptr);
-    void slotShowDlgTrackInfo();
+    void slotShowDlgTrackInfo(bool findReplaceMode = false);
     // Library management
+    void clearComments() {
+        slotClearComment();
+    }
     void slotRemoveFromDisk();
     const QString getDeckGroup() const;
+
+    void keyPressEvent(QKeyEvent* pEvent) override;
 
   signals:
 #ifdef __STEM__
@@ -137,13 +142,14 @@ class WTrackMenu : public QMenu {
     void slotSelectInLibrary();
 
     // Track rating
-    void slotSetRating(int rating);
+    void slotSetRating(int rating, bool close = true);
 
     // Row color
     void slotColorPicked(const mixxx::RgbColor::optional_t& color);
 
     // Reset
     void slotClearBeats();
+    void slotResetPlayedState();
     void slotClearPlayCount();
     void slotClearRating();
     void slotClearComment();
@@ -300,9 +306,6 @@ class WTrackMenu : public QMenu {
     parented_ptr<WSearchRelatedTracksMenu> m_pSearchRelatedMenu;
     parented_ptr<QMenu> m_pFindOnWebMenu;
     parented_ptr<FindOnWebLast> m_pFindOnWebLastAct;
-#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
-    QMenu* m_pRemoveFromDiskMenu{};
-#endif
 
     // Update ReplayGain from Track
     parented_ptr<QAction> m_pUpdateReplayGainAct;
@@ -364,6 +367,7 @@ class WTrackMenu : public QMenu {
 
     // Clear track metadata actions
     parented_ptr<QAction> m_pClearBeatsAction;
+    parented_ptr<QAction> m_pClearPlayedAction;
     parented_ptr<QAction> m_pClearPlayCountAction;
     parented_ptr<QAction> m_pClearRatingAction;
     parented_ptr<QAction> m_pClearMainCueAction;
@@ -373,6 +377,7 @@ class WTrackMenu : public QMenu {
     parented_ptr<QAction> m_pClearLoopsAction;
     parented_ptr<QAction> m_pClearWaveformAction;
     parented_ptr<QAction> m_pClearCommentAction;
+    parented_ptr<QAction> m_pClearCoverAction;
     parented_ptr<QAction> m_pClearKeyAction;
     parented_ptr<QAction> m_pClearReplayGainAction;
     parented_ptr<QAction> m_pClearAllMetadataAction;
@@ -397,6 +402,8 @@ class WTrackMenu : public QMenu {
 
     QList<UpdateExternalTrackCollection> m_updateInExternalTrackCollections;
 
+    bool m_bSearchRelatedMenuLoaded;
+    bool m_bFindOnWebMenuLoaded;
     bool m_bPlaylistMenuLoaded;
     bool m_bCrateMenuLoaded;
 

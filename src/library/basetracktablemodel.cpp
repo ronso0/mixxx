@@ -9,6 +9,7 @@
 #include "base/Pitch.h"
 #include "library/coverartcache.h"
 #include "library/dao/trackschema.h"
+#include "library/dateformatbroadcaster.h"
 #include "library/starrating.h"
 #include "library/tabledelegates/bpmdelegate.h"
 #include "library/tabledelegates/checkboxdelegate.h"
@@ -111,16 +112,51 @@ void BaseTrackTableModel::setKeyColorPalette(const ColorPalette& palette) {
 bool BaseTrackTableModel::s_bApplyPlayedTrackColor =
         kApplyPlayedTrackColorDefault;
 
+// static
 void BaseTrackTableModel::setApplyPlayedTrackColor(bool apply) {
     s_bApplyPlayedTrackColor = apply;
 }
 
+QList<ColumnCache::Column> BaseTrackTableModel::s_dimColumns =
+        QList<ColumnCache::Column>{};
+
 const QString BaseTrackTableModel::kDateFormatDefault = QString();
 QString BaseTrackTableModel::s_dateFormat = BaseTrackTableModel::kDateFormatDefault;
 
+// static
 void BaseTrackTableModel::setDateFormat(const QString& format) {
-    s_dateFormat = format;
+    if (format != s_dateFormat) {
+        s_dateFormat = format;
+        auto* broadcaster = DateFormatChangedBroadcaster::instance();
+        emit broadcaster->dateFormatChanged();
+    }
 }
+
+void BaseTrackTableModel::slotEmitDataChangedForDateColumns() {
+    // Notify the view to update.
+    // These are the columns that use s_dateFormat
+    QList<int> columns;
+    columns.append(fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_DATETIMEADDED));
+    columns.append(fieldIndex(ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_DATETIMEADDED));
+    columns.append(fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_LAST_PLAYED_AT));
+    const QVector<int> roles{Qt::DisplayRole};
+    QModelIndex topLeft;
+    QModelIndex bottomRight;
+    for (int i : columns) {
+        if (i == -1) {
+            // Skip if a certain model doesn't have this column
+            continue;
+        }
+        topLeft = index(0, i);
+        bottomRight = index(rowCount() - 1, i);
+        emit dataChanged(topLeft, bottomRight, roles);
+    }
+}
+
+// static
+void BaseTrackTableModel::setDimColumns(const QList<ColumnCache::Column>& columns) {
+    s_dimColumns = columns;
+};
 
 BaseTrackTableModel::BaseTrackTableModel(
         QObject* parent,
@@ -148,6 +184,12 @@ BaseTrackTableModel::BaseTrackTableModel(
                 this,
                 &BaseTrackTableModel::slotCoverFound);
     }
+
+    auto* dateFormatBroadcaster = DateFormatChangedBroadcaster::instance();
+    connect(dateFormatBroadcaster,
+            &DateFormatChangedBroadcaster::dateFormatChanged,
+            this,
+            &BaseTrackTableModel::slotEmitDataChangedForDateColumns);
 }
 
 void BaseTrackTableModel::initTableColumnsAndHeaderProperties(
@@ -444,6 +486,14 @@ QVariant BaseTrackTableModel::data(
                 missingRaw.toBool()) {
             return QVariant::fromValue(m_trackMissingColor);
         }
+
+        // Also use the 'played' color to grey out the columns selected in
+        // Library preferences, regardless the track's 'played' state
+        const auto field = mapColumn(index.column());
+        if (s_dimColumns.contains(field)) {
+            return QVariant::fromValue(m_trackPlayedColor);
+        }
+
         if (s_bApplyPlayedTrackColor) {
             // Custom text color for played tracks
             auto playedRaw = rawSiblingValue(

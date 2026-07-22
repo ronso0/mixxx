@@ -578,7 +578,8 @@ TEST_F(SearchQueryParserTest, BpmFilter) {
     EXPECT_TRUE(pQuery->match(pTrack));
 
     EXPECT_STREQ(
-            qPrintable(QString("bpm BETWEEN 94 AND 106")),
+            qPrintable(QString("(bpm >= 94 AND bpm < 106) OR (bpm >= 47 AND "
+                               "bpm < 53) OR (bpm >= 188 AND bpm < 212)")),
             qPrintable(pQuery->toSql()));
 
     // Test empty BPM (incomplete query)
@@ -860,10 +861,8 @@ TEST_F(SearchQueryParserTest, CrateFilter) {
     auto pQuery(m_parser.parseQuery(QString("crate: %1").arg(searchTerm), QString()));
 
     // locations for test tracks
-    const QString kTrackALocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-jpg.mp3")));
-    const QString kTrackBLocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-png.mp3")));
+    const QString kTrackALocationTest(getTestFile(QStringLiteral("-jpg.mp3")));
+    const QString kTrackBLocationTest(getTestFile(QStringLiteral("-png.mp3")));
 
     // Create new crate and add it to the collection
     Crate testCrate;
@@ -899,12 +898,9 @@ TEST_F(SearchQueryParserTest, ShortCrateFilter) {
     auto pQuery(m_parser.parseQuery(QString("%1").arg(searchTerm), QString()));
 
     // locations for test tracks
-    const QString kTrackALocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-jpg.mp3")));
-    const QString kTrackBLocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-png.mp3")));
-    const QString kTrackCLocationTest(
-            getTestDir().filePath(QStringLiteral("id3-test-data/artist.mp3")));
+    const QString kTrackALocationTest(getTestFile(QStringLiteral("-jpg.mp3")));
+    const QString kTrackBLocationTest(getTestFile(QStringLiteral("-png.mp3")));
+    const QString kTrackCLocationTest(getTestFile(QStringLiteral("-vbr.mp3")));
 
     // Create new crate and add it to the collection
     Crate testCrate;
@@ -953,10 +949,8 @@ TEST_F(SearchQueryParserTest, CrateFilterQuote){
     auto pQuery(m_parser.parseQuery(QString("crate: \"%1\"").arg(searchTerm), QString()));
 
     // locations for test tracks
-    const QString kTrackALocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-jpg.mp3")));
-    const QString kTrackBLocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-png.mp3")));
+    const QString kTrackALocationTest(getTestFile(QStringLiteral("-jpg.mp3")));
+    const QString kTrackBLocationTest(getTestFile(QStringLiteral("-png.mp3")));
 
     // Create new crate and add it to the collection
     Crate testCrate;
@@ -996,10 +990,8 @@ TEST_F(SearchQueryParserTest, CrateFilterWithOther){
     auto pQuery(m_parser.parseQuery(QString("crate: %1 artist: asdf").arg(searchTerm), QString()));
 
     // locations for test tracks
-    const QString kTrackALocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-jpg.mp3")));
-    const QString kTrackBLocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-png.mp3")));
+    const QString kTrackALocationTest(getTestFile(QStringLiteral("-jpg.mp3")));
+    const QString kTrackBLocationTest(getTestFile(QStringLiteral("-png.mp3")));
 
     // Create new crate and add it to the collection
     Crate testCrate;
@@ -1043,10 +1035,8 @@ TEST_F(SearchQueryParserTest, CrateFilterWithCrateFilterAndNegation){
             QString()));
 
     // locations for test tracks
-    const QString kTrackALocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-jpg.mp3")));
-    const QString kTrackBLocationTest(getTestDir().filePath(
-            QStringLiteral("id3-test-data/cover-test-png.mp3")));
+    const QString kTrackALocationTest(getTestFile(QStringLiteral("-jpg.mp3")));
+    const QString kTrackBLocationTest(getTestFile(QStringLiteral("-png.mp3")));
 
     // Create new crates and add them to the collection
     Crate testCrateA;
@@ -1390,4 +1380,67 @@ TEST_F(SearchQueryParserTest, QuotedOrOperator) {
     pTrackI->setTitle("a | contrived|example and more");
     pTrackI->setComment("house");
     EXPECT_TRUE(pQuery->match(pTrackI));
+}
+
+TEST_F(SearchQueryParserTest, OrOperatorInParenthesis) {
+    m_parser.setSearchColumns({"title"});
+
+    TrackPointer pTrackA = newTestTrack();
+    TrackPointer pTrackB = newTestTrack();
+    TrackPointer pTrackC = newTestTrack();
+    TrackPointer pTrackD = newTestTrack();
+    TrackPointer pTrackE = newTestTrack();
+    TrackPointer pTrackF = newTestTrack();
+    pTrackA->setTitle("purple");
+    pTrackB->setTitle("black shoe");
+    pTrackC->setTitle("red shoe");
+    pTrackD->setTitle("white jacket");
+    pTrackE->setTitle("white");
+    pTrackF->setTitle("jacket");
+
+    // Regular use case
+    auto pQuery = m_parser.parseQuery("shoe (black|purple) | jacket (white|red)", QString());
+    //                                      (-----|------) |        (-----|---)
+    //                               = shoe AND black
+    //                              OR shoe AND purple
+    //                              OR jacket AND white
+    //                              OR jacket AND red
+    EXPECT_FALSE(pQuery->match(pTrackA)); // purple
+    EXPECT_TRUE(pQuery->match(pTrackB));  // black shoe
+    EXPECT_FALSE(pQuery->match(pTrackC)); // red shoe
+    EXPECT_TRUE(pQuery->match(pTrackD));  // white jacket
+    EXPECT_FALSE(pQuery->match(pTrackE)); // white
+    EXPECT_FALSE(pQuery->match(pTrackF)); // jacket
+
+    // Quotes in 2nd level OR node
+    pQuery = m_parser.parseQuery(R"(shoe (black|"purple nose") | "white ja" | red)", QString());
+    //                                   (     |"           ") | "        " |
+    //                                  split here,          here     and here
+    //                          = shoe AND black
+    //                         OR shoe AND "purple nose"
+    //                         OR "white ja"
+    //                         OR red
+    EXPECT_FALSE(pQuery->match(pTrackA)); // purple
+    EXPECT_TRUE(pQuery->match(pTrackB));  // shoe black
+    EXPECT_TRUE(pQuery->match(pTrackC));  // red shoe
+    EXPECT_TRUE(pQuery->match(pTrackD));  // white jacket
+    EXPECT_FALSE(pQuery->match(pTrackE)); // white
+    EXPECT_FALSE(pQuery->match(pTrackF)); // jacket
+
+    // | inside quotes and unclosed parenthesis
+    pQuery = m_parser.parseQuery(R"(shoe (black"|purple) | jacket" (white|"red)", QString());
+    //                                   (     "↑        ↑       " (     ↑"
+    //                            not splitting here or here,            |
+    //                            they're inside quotes                  |
+    //                                                    not splitting here either
+    //                                                    because of missing )
+    //                          = shoe
+    //                        AND (black"|purple) | jacket
+    //                        AND (white|"red
+    EXPECT_FALSE(pQuery->match(pTrackA)); // purple
+    EXPECT_FALSE(pQuery->match(pTrackB)); // black shoe
+    EXPECT_FALSE(pQuery->match(pTrackC)); // red shoe
+    EXPECT_FALSE(pQuery->match(pTrackD)); // white jacket
+    EXPECT_FALSE(pQuery->match(pTrackE)); // white
+    EXPECT_FALSE(pQuery->match(pTrackE)); // jacket
 }

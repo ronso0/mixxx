@@ -97,11 +97,9 @@
                 <MaximumSize>,18</MaximumSize>
                 <Layout>vertical</Layout>
                 <Children>
-                  <EffectChainPresetSelector>
-                    <ObjectName>QuickEffectSelectorLeft</ObjectName>
-                    <Size>40me,18f</Size>
-                    <EffectUnitGroup>[QuickEffectRack1_[Channel1]]</EffectUnitGroup>
-                  </EffectChainPresetSelector>
+                  <SingletonContainer>
+                    <ObjectName>QuickEffectSelector1</ObjectName>
+                  </SingletonContainer>
                 </Children>
                 <Connection>
                   <ConfigKey persist="true">[Skin],show_eq_knobs</ConfigKey>
@@ -227,11 +225,9 @@
                 <MaximumSize>,18</MaximumSize>
                 <Layout>vertical</Layout>
                 <Children>
-                  <EffectChainPresetSelector>
-                    <ObjectName>QuickEffectSelectorRight</ObjectName>
-                    <Size>40me,18f</Size>
-                    <EffectUnitGroup>[QuickEffectRack1_[Channel2]]</EffectUnitGroup>
-                  </EffectChainPresetSelector>
+                  <SingletonContainer>
+                    <ObjectName>QuickEffectSelector2</ObjectName>
+                  </SingletonContainer>
                 </Children>
                 <Connection>
                   <ConfigKey persist="true">[Skin],show_eq_knobs</ConfigKey>

@@ -38,6 +38,8 @@ class DlgPrefLibrary : public DlgPreferencePage, public Ui::DlgPrefLibraryDlg {
 
     QUrl helpUrl() const override;
 
+    void updateColoredLinkTexts() override;
+
   public slots:
     // Common preference page slots.
     void slotUpdate() override;
@@ -76,7 +78,7 @@ class DlgPrefLibrary : public DlgPreferencePage, public Ui::DlgPrefLibraryDlg {
     void resetLibraryFont();
     void updateSearchLineEditHistoryOptions();
     void setSeratoMetadataEnabled(bool shouldSyncTrackMetadata);
-    void updateDateFormatPreview(const QString& format);
+    void updateDateFormatPreview();
 
     QStandardItemModel m_dirListModel;
     UserSettingsPointer m_pConfig;
@@ -87,5 +89,6 @@ class DlgPrefLibrary : public DlgPreferencePage, public Ui::DlgPrefLibraryDlg {
     // Listen to rate range changes in order to update the fuzzy BPM range
     parented_ptr<ControlProxy> m_pRateRangeDeck1;
 
+    QString m_dateFormat;
     QString m_lastCustomDateFormat;
 };
