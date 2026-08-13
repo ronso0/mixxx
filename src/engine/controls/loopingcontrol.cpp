@@ -54,6 +54,7 @@ LoopingControl::LoopingControl(const QString& group,
           m_bAdjustingLoopOutOld(false),
           m_bLoopOutPressedWhileLoopDisabled(false),
           m_prevLoopSize(-1),
+          m_prevLoopsizeChangeRequestWasInsideLoop(false),
           m_trueTrackBeats(false) {
     m_currentPosition.setValue(mixxx::audio::kStartFramePos);
     m_pActiveBeatLoop = nullptr;
@@ -877,7 +878,7 @@ void LoopingControl::slotLoopIn(double pressed) {
     if (!m_pTrack) {
         return;
     }
-
+    m_prevLoopsizeChangeRequestWasInsideLoop = false;
     // If loop is enabled, suspend looping and set the loop in point
     // when this button is released.
     if (m_bLoopingEnabled) {
@@ -1009,6 +1010,7 @@ void LoopingControl::slotLoopOut(double pressed) {
         return;
     }
 
+    m_prevLoopsizeChangeRequestWasInsideLoop = false;
     // If loop is enabled, suspend looping and set the loop out point
     // when this button is released.
     if (m_bLoopingEnabled) {
@@ -1233,6 +1235,8 @@ void LoopingControl::notifySeek(mixxx::audio::FramePos newPosition) {
         return;
     }
 
+    m_prevLoopsizeChangeRequestWasInsideLoop = false;
+
     LoopInfo loopInfo = m_loopInfo.getValue();
     const auto currentPosition = m_currentPosition.getValue();
     VERIFY_OR_DEBUG_ASSERT(m_pRateControl) {
@@ -1351,6 +1355,7 @@ void LoopingControl::trackLoaded(TrackPointer pNewTrack) {
 
 void LoopingControl::trackBeatsUpdated(mixxx::BeatsPointer pBeats) {
     clearActiveBeatLoop();
+    m_prevLoopsizeChangeRequestWasInsideLoop = false;
     if (pBeats) {
         m_pBeats = pBeats;
         m_trueTrackBeats = true;
@@ -1364,8 +1369,8 @@ void LoopingControl::trackBeatsUpdated(mixxx::BeatsPointer pBeats) {
         m_trueTrackBeats = false;
     }
     double loaded_loop_size = -1;
-    LoopInfo loopInfo = m_loopInfo.getValue();
-    if (loopInfo.startPosition.isValid() && loopInfo.endPosition.isValid()) {
+    if (playposInsideLoop()) {
+        LoopInfo loopInfo = getLoopInfo();
         loaded_loop_size = findBeatloopSizeForLoop(
                 loopInfo.startPosition, loopInfo.endPosition);
         if (loaded_loop_size != -1) {
@@ -1807,7 +1812,24 @@ void LoopingControl::slotBeatLoopSizeChangeRequest(double beats) {
         return;
     }
 
-    slotBeatLoop(beats, true, false);
+    // Change the current loop only if it's active or the playpos is inside it.
+    // Else, set only the loopsize CO.
+    // FIXME when shrinking a loop while we're inside we might move the loop end
+    // to before the playpos and we'd "lose contact" to the loop, eg. to undo
+    // undesired shrinking
+    if (m_bLoopingEnabled ||
+            playposInsideLoop() ||
+            (playposAfterLoop() && m_prevLoopsizeChangeRequestWasInsideLoop)) {
+        // TODO also reset this bool when seeking
+        m_prevLoopsizeChangeRequestWasInsideLoop = true;
+        // qWarning() << "     Loop size change to" << beats
+        //            << "-> active loop || inside loop -> change loop & loopsize CO";
+        slotBeatLoop(beats, true, false);
+    } else {
+        // qWarning() << "     Loop size change to" << beats
+        //            << "-> not looping, not inside loop -> change only loopsize CO";
+        m_pCOBeatLoopSize->setAndConfirm(beats);
+    }
 }
 
 void LoopingControl::slotBeatLoopToggle(double pressed) {
