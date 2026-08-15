@@ -393,6 +393,11 @@ void WTrackMenu::createActions() {
         connect(m_pPropertiesAct, &QAction::triggered, this, &WTrackMenu::slotShowDlgTrackInfo);
     }
 
+    if (!m_pTrackModel) {
+        qWarning() << "Deck menu, creating bitrate action";
+        m_pBitrateAction = make_parented<QAction>("---", this);
+    }
+
     if (featureIsEnabled(Feature::FileBrowser)) {
         m_pFileBrowserAct = make_parented<QAction>(tr("Open in File Browser"), this);
         connect(m_pFileBrowserAct, &QAction::triggered, this, &WTrackMenu::slotOpenInFileBrowser);
@@ -797,6 +802,16 @@ void WTrackMenu::setupActions() {
     }
 
     addSeparator();
+
+    // Print bitrate for deck menus (there is no bitrate widget, and checking Track Info
+    // is a bit overkill)
+    if (m_pBitrateAction) {
+        qWarning() << "Deck group?" << m_deckGroup << "| m_pTrack?"
+                   << bool(m_pTrack != nullptr);
+        qWarning() << "Adding bitrate action";
+        addAction(m_pBitrateAction);
+        addSeparator();
+    }
 
     if (featureIsEnabled(Feature::Properties)) {
         addAction(m_pPropertiesAct);
@@ -1273,6 +1288,15 @@ void WTrackMenu::updateMenus() {
 
     if (featureIsEnabled(Feature::Properties)) {
         m_pPropertiesAct->setEnabled(true);
+    }
+
+    if (m_pBitrateAction) {
+        const QString bitrateText =
+                (m_pTrack->getBitrateText().isEmpty()
+                                ? "?"
+                                : m_pTrack->getBitrateText()) +
+                ' ' + mixxx::audio::Bitrate::unit();
+        m_pBitrateAction->setText(bitrateText);
     }
 
     if (featureIsEnabled(Feature::FindOnWeb)) {

@@ -334,6 +334,9 @@ class WTrackMenu : public QMenu {
     // Show track-editor action
     parented_ptr<QAction> m_pPropertiesAct;
 
+    // Bitrate text action, no-op
+    parented_ptr<QAction> m_pBitrateAction;
+
     // Open file in default file browser
     parented_ptr<QAction> m_pFileBrowserAct;
 
