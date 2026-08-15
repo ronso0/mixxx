@@ -1043,8 +1043,15 @@ void DlgTrackInfoMulti::saveTracks() {
         // Replace: \n is seen as two separate chars (\ + n), replace all
         // occurrences with linefeed char \n.
         QString replaceStr = txtReplace->text();
+        bool append = false;
         replaceStr.replace("\\n", "\n");
         if (findStr.isEmpty() && !replaceStr.isEmpty()) {
+            if (replaceStr.startsWith(QStringLiteral("\\e"))) {
+                replaceStr = replaceStr.mid(2); // remove '\e'
+                append = true;
+                qWarning() << "    -> starts with \e -> append = true"
+                           << "new text:" << replaceStr;
+            }
             findRegEx = QRegularExpression(replaceStr, QRegularExpression::CaseInsensitiveOption);
             doInsert = true;
         }
@@ -1056,7 +1063,11 @@ void DlgTrackInfoMulti::saveTracks() {
 
         if (doInsert) {
             // for tag purpose, separate the new tag with a whitespace
-            replaceStr.append(' ');
+            if (append) {
+                replaceStr.prepend(' ');
+            } else {
+                replaceStr.append(' ');
+            }
         }
 
         for (auto& rec : m_trackRecords) {
@@ -1090,8 +1101,14 @@ void DlgTrackInfoMulti::saveTracks() {
                         continue;
                     }
                 }
-                qWarning() << "    no match, insert" << replaceStr;
-                propertyStr.insert(0, replaceStr);
+                if (append) {
+                    qWarning() << "    no match, append" << replaceStr;
+                    propertyStr.append(replaceStr);
+                } else {
+                    // for tag purpose, separate the new tag with a whitespace
+                    qWarning() << "    no match, prepend" << replaceStr;
+                    propertyStr.insert(0, replaceStr);
+                }
                 qWarning() << "    write newPropStr:" << propertyStr;
                 propAccessor.setter(metadata, propertyStr);
                 qWarning() << "    check:           " << propAccessor.getter(metadata);
