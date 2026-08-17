@@ -74,6 +74,7 @@ SINT ReadAheadManager::getNextSamples(double dRate,
     if (loop_trigger != kNoTrigger) {
         samplesToSeekTrigger = in_reverse ? m_currentPosition - loop_trigger
                                           : loop_trigger - m_currentPosition;
+        qDebug() << "ReadAheadManager: loop trigger, samplesToSeekTrigger:" << samplesToSeekTrigger;
         if (samplesToSeekTrigger >= 0.0) {
             // We can only read whole frames from the reader.
             // Use ceil here, to be sure to reach the loop trigger.
@@ -196,6 +197,8 @@ SINT ReadAheadManager::getNextSamples(double dRate,
             // start the loop later accordingly to be sure the loop length is as desired
             // e.g. exactly one bar.
             m_currentPosition += overshoot;
+            qDebug() << "  -> preseek_samples > 0 | overshoot:" << overshoot
+                     << "| currPos:" << m_currentPosition;
 
             // Example in frames;
             // loop start 1.1 loop end 3.3 loop length 2.2
