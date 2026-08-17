@@ -486,6 +486,7 @@ mixxx::audio::FramePos LoopingControl::nextTrigger(bool reverse,
                 // bool seek is only valid after the loop has changed
                 switch (loopInfo.seekMode) {
                 case LoopSeekMode::Changed:
+                    qWarning() << "nextTrigger ::Changed";
                     // here the loop has changed and the play position
                     // should be moved with it
                     *pTargetPosition = adjustedPositionInsideAdjustedLoop(currentPosition,
@@ -508,16 +509,20 @@ mixxx::audio::FramePos LoopingControl::nextTrigger(bool reverse,
                         }
                     }
                     if (movedOut) {
+                        qWarning() << "nextTrigger ::MovedOut -> movedOut";
                         *pTargetPosition = adjustedPositionInsideAdjustedLoop(currentPosition,
                                 reverse,
                                 loopInfo.startPosition,
                                 loopInfo.endPosition,
                                 loopInfo.startPosition,
                                 loopInfo.endPosition);
+                    } else {
+                        qWarning() << "nextTrigger ::MovedOut -> NOT movedOut, break";
                     }
                     break;
                 }
                 case LoopSeekMode::None:
+                    qWarning() << "nextTrigger ::None -> no-op";
                     // Nothing to do here. This is used for enabling saved loops
                     // which we want to do without jumping to the loop start
                     // position.
@@ -526,6 +531,7 @@ mixxx::audio::FramePos LoopingControl::nextTrigger(bool reverse,
                 m_oldLoopInfo = loopInfo;
                 if (pTargetPosition->isValid()) {
                     // jump immediately
+                    qWarning() << "            -> return currpos";
                     return currentPosition;
                 }
             }
@@ -533,6 +539,7 @@ mixxx::audio::FramePos LoopingControl::nextTrigger(bool reverse,
                 *pTargetPosition = loopInfo.endPosition;
                 return loopInfo.startPosition;
             } else {
+                qWarning() << "            -> target = loopEnd pos, return loopEnd pos";
                 *pTargetPosition = loopInfo.startPosition;
                 return loopInfo.endPosition;
             }
@@ -2131,7 +2138,17 @@ mixxx::audio::FramePos LoopingControl::adjustedPositionInsideAdjustedLoop(
                 ceil((adjustedPosition.value() - newLoopEndPosition.value()) /
                         newLoopSize);
         adjustedPosition -= adjustSteps * newLoopSize;
-        DEBUG_ASSERT(adjustedPosition < newLoopEndPosition);
+        qWarning() << "newLoopEndPos: " << qSetRealNumberPrecision(18)
+                   << newLoopEndPosition.value() << "| newLoopSize:" << newLoopSize;
+        qWarning() << "adjusted steps:" << qSetRealNumberPrecision(18) << adjustSteps;
+        qWarning() << "adjusted pos:  " << qSetRealNumberPrecision(18) << adjustedPosition.value();
+        VERIFY_OR_DEBUG_ASSERT(adjustedPosition < newLoopEndPosition) {
+            qWarning() << "adjustedPosition >= newLoopEndPosition";
+            qWarning() << "SHOULDN'T HAPPEN: adjustedPositionInsideAdjustedLoop "
+                       << "set new position to before in point --"
+                       << " seeking to in point";
+            adjustedPosition = newLoopStartPosition;
+        };
         VERIFY_OR_DEBUG_ASSERT(adjustedPosition >= newLoopStartPosition) {
             // This can happen when offset calculation above has double precision
             // issues (noticed around 0.00) which shifts the pos beyond loop in
@@ -2160,8 +2177,12 @@ mixxx::audio::FramePos LoopingControl::adjustedPositionInsideAdjustedLoop(
         }
     }
     if (adjustedPosition != currentPosition) {
+        qWarning() << "return adjustedPosition" << adjustedPosition.value();
+        qWarning() << "-------------------------------------";
         return adjustedPosition;
     } else {
+        qWarning() << "return kInvalidFramePos";
+        qWarning() << "-------------------------------------";
         return mixxx::audio::kInvalidFramePos;
     }
 }
