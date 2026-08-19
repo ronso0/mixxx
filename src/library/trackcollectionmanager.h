@@ -92,6 +92,10 @@ class TrackCollectionManager: public QObject,
     };
     SaveTrackResult saveTrack(const TrackPointer& pTrack) const;
 
+    const UserSettingsPointer& config() const {
+        return m_pConfig;
+    }
+
   signals:
     void libraryScanStarted();
     void libraryScanFinished();

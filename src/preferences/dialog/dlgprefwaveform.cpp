@@ -151,6 +151,10 @@ DlgPrefWaveform::DlgPrefWaveform(
             &QCheckBox::toggled,
             this,
             &DlgPrefWaveform::slotSetNormalizeOverview);
+    connect(applyEqToWaveformCheckBox,
+            &QCheckBox::toggled,
+            this,
+            &DlgPrefWaveform::slotSetApplyEqToWaveform);
     connect(factory,
             &WaveformWidgetFactory::waveformMeasured,
             this,
@@ -221,6 +225,7 @@ void DlgPrefWaveform::slotUpdate() {
     midVisualGain->setValue(factory->getVisualGain(WaveformWidgetFactory::Mid));
     highVisualGain->setValue(factory->getVisualGain(WaveformWidgetFactory::High));
     normalizeOverviewCheckBox->setChecked(factory->isOverviewNormalized());
+    applyEqToWaveformCheckBox->setChecked(factory->isEqAppliedToWaveform());
     // Round zoom to int to get a default zoom index.
     defaultZoomComboBox->setCurrentIndex(static_cast<int>(factory->getDefaultZoom()) - 1);
     playMarkerPositionSlider->setValue(static_cast<int>(factory->getPlayMarkerPosition() * 100));
@@ -287,6 +292,9 @@ void DlgPrefWaveform::slotResetToDefaults() {
 
     // Don't normalize overview.
     normalizeOverviewCheckBox->setChecked(false);
+
+    // Apply EQ knobs to waveforms.
+    applyEqToWaveformCheckBox->setChecked(true);
 
     // 60FPS is the default
     frameRateSlider->setValue(60);
@@ -370,6 +378,10 @@ void DlgPrefWaveform::slotSetVisualGainHigh(double gain) {
 
 void DlgPrefWaveform::slotSetNormalizeOverview(bool normalize) {
     WaveformWidgetFactory::instance()->setOverviewNormalized(normalize);
+}
+
+void DlgPrefWaveform::slotSetApplyEqToWaveform(bool apply) {
+    WaveformWidgetFactory::instance()->setApplyEqToWaveform(apply);
 }
 
 void DlgPrefWaveform::slotWaveformMeasured(float frameRate, int droppedFrames) {

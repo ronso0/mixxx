@@ -7,9 +7,22 @@
 #include "skin/legacy/imgsource.h"
 #include "skin/legacy/imgloader.h"
 #include "skin/legacy/imgcolor.h"
+#include "skin/legacy/imghighcontrast.h"
 #include "skin/legacy/imginvert.h"
 #include "skin/legacy/legacyskinparser.h"
 #include "skin/legacy/skincontext.h"
+
+namespace {
+/// Bite DJ: tops the skin's image/colour chain with the daylight-mode filter
+/// when the mode is on, so it is the last thing applied to every skin colour
+/// and every skin image. Takes ownership either way.
+ImgSource* withHighContrast(ImgSource* pParent) {
+    if (!HighContrast::isEnabled()) {
+        return pParent;
+    }
+    return new ImgHighContrast(pParent);
+}
+} // namespace
 
 void ColorSchemeParser::setupLegacyColorSchemes(const QDomElement& docElem,
         UserSettingsPointer pConfig,
@@ -18,8 +31,8 @@ void ColorSchemeParser::setupLegacyColorSchemes(const QDomElement& docElem,
     QDomNode schemeNode = findConfiguredColorSchemeNode(docElem, pConfig);
 
     if (!schemeNode.isNull()) {
-        QSharedPointer<ImgSource> pImgSrc =
-                QSharedPointer<ImgSource>(parseFilters(schemeNode.namedItem("Filters")));
+        QSharedPointer<ImgSource> pImgSrc = QSharedPointer<ImgSource>(
+                withHighContrast(parseFilters(schemeNode.namedItem("Filters"))));
         WPixmapStore::setLoader(pImgSrc);
         WImageStore::setLoader(pImgSrc);
         WSkinColor::setLoader(pImgSrc);
@@ -34,7 +47,7 @@ void ColorSchemeParser::setupLegacyColorSchemes(const QDomElement& docElem,
         }
     } else {
         QSharedPointer<ImgSource> pImgSrc =
-                QSharedPointer<ImgSource>(new ImgLoader());
+                QSharedPointer<ImgSource>(withHighContrast(new ImgLoader()));
         WPixmapStore::setLoader(pImgSrc);
         WImageStore::setLoader(pImgSrc);
         WSkinColor::setLoader(pImgSrc);

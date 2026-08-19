@@ -3,6 +3,7 @@
 #include <QDir>
 #include <QMetaType>
 
+#include "effects/backends/builtin/graphiceqeffect.h"
 #include "effects/chains/equalizereffectchain.h"
 #include "effects/chains/outputeffectchain.h"
 #include "effects/chains/quickeffectchain.h"
@@ -80,6 +81,23 @@ void EffectsManager::setup() {
     // readEffectsXml() is running is also initialized.
     m_initializedFromEffectsXml = true;
     readEffectsXml();
+
+    // The skin's Settings -> EQ page binds directly to this slot's parameter
+    // COs and assumes the 8-band Graphic EQ, so the slot may never be empty
+    // or hold a different main EQ.
+    const auto pOutputSlot = m_outputEffectChain->getEffectSlot(0);
+    VERIFY_OR_DEBUG_ASSERT(pOutputSlot) {
+        return;
+    }
+    const EffectManifestPointer pLoadedManifest = pOutputSlot->getManifest();
+    if (!pLoadedManifest || pLoadedManifest->id() != GraphicEQEffect::getId()) {
+        const EffectManifestPointer pGraphicEq = m_pBackendManager->getManifest(
+                GraphicEQEffect::getId(), EffectBackendType::BuiltIn);
+        VERIFY_OR_DEBUG_ASSERT(pGraphicEq) {
+            return;
+        }
+        pOutputSlot->loadEffectWithDefaults(pGraphicEq);
+    }
 }
 
 void EffectsManager::registerInputChannel(const ChannelHandleAndGroup& handle_group) {

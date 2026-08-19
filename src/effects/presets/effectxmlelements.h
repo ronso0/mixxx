@@ -38,6 +38,10 @@ const QString kEffectBackendType(QStringLiteral("BackendType"));
 
 const QString kParametersRoot(QStringLiteral("Parameters"));
 const QString kParameter(QStringLiteral("Parameter"));
+
+// Bite DJ fork: per-slot cache of recently-edited effects, so switching
+// effects via the BeatFX picker preserves user knob/button/metaknob state.
+const QString kRememberedEffects(QStringLiteral("RememberedEffects"));
 const QString kParameterId(QStringLiteral("Id"));
 const QString kParameterValue(QStringLiteral("Value"));
 const QString kParameterLinkType(QStringLiteral("LinkType"));

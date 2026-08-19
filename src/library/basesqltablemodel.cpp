@@ -192,6 +192,10 @@ void BaseSqlTableModel::select() {
     if (!m_bInitialized) {
         return;
     }
+    // Fresh row data supersedes any "missing file" flags raised at load time;
+    // a re-inserted drive / rescan should re-enable loading (see
+    // verifyTrackFileExists()).
+    clearMissingTrackFlags();
     // We should be able to detect when a select() would be a no-op. The DAO's
     // do not currently broadcast signals for when common things happen. In the
     // future, we can turn this check on and avoid a lot of needless

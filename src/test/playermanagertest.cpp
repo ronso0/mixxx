@@ -4,6 +4,10 @@
 
 #include "control/controlindicatortimer.h"
 #include "database/mixxxdb.h"
+#include "effects/backends/builtin/graphiceqeffect.h"
+#include "effects/backends/effectmanifest.h"
+#include "effects/effectchain.h"
+#include "effects/effectslot.h"
 #include "effects/effectsmanager.h"
 #include "engine/channels/enginedeck.h"
 #include "engine/enginebuffer.h"
@@ -126,6 +130,19 @@ class PlayerManagerTest : public MixxxDbTest, SoundSourceProviderRegistration {
     std::shared_ptr<RecordingManager> m_pRecordingManager;
     std::shared_ptr<Library> m_pLibrary;
 };
+
+// Bite DJ: the skin's Settings -> EQ page binds to the output chain's first
+// effect slot assuming the 8-band Graphic EQ; EffectsManager::setup() must
+// guarantee it is loaded there.
+TEST_F(PlayerManagerTest, MainOutputHasGraphicEq) {
+    auto pChain = m_pEffectsManager->getOutputEffectChain();
+    ASSERT_NE(nullptr, pChain);
+    auto pSlot = pChain->getEffectSlot(0);
+    ASSERT_NE(nullptr, pSlot);
+    const EffectManifestPointer pManifest = pSlot->getManifest();
+    ASSERT_NE(nullptr, pManifest);
+    EXPECT_EQ(GraphicEQEffect::getId(), pManifest->id());
+}
 
 TEST_F(PlayerManagerTest, UnEjectTest) {
     // Ejecting an empty deck with no previously-recorded ejected track has no effect.

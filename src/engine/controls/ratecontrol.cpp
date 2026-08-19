@@ -635,3 +635,18 @@ void RateControl::resetPositionScratchController() {
     // https://github.com/mixxxdj/mixxx/issues/15082
     m_pScratchController->reset();
 }
+
+void RateControl::endScratching() {
+    // Bite DJ: same handover a cue press makes (CueControl::endScratching), for
+    // the same reason - see EngineBuffer::slotControlPlayRequest. Clearing
+    // scratch2_enable hands the rate straight back to the deck, whatever the
+    // brake time and whether or not the brake is even on; the scratch engine
+    // reads the cleared flag back on its next tick and decides from what it was
+    // doing whether to abandon a run-out or to take the deck back
+    // (ControllerScriptInterfaceLegacy::scratchProcess).
+    if (!m_pScratch2Enable->toBool()) {
+        return;
+    }
+    m_pScratch2->set(0.0);
+    m_pScratch2Enable->set(0.0);
+}

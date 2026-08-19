@@ -3,23 +3,31 @@
 #include <QApplication>
 #include <QDir>
 #include <QMessageBox>
+#include <QSqlQuery>
 
 #include "control/controlobject.h"
+#include "control/controlpushbutton.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "library/analysis/analysisfeature.h"
 #include "library/autodj/autodjfeature.h"
 #include "library/banshee/bansheefeature.h"
 #include "library/browse/browsefeature.h"
+#include "library/dao/analysisdao.h"
+#include "library/dao/fsanalysiscache.h"
+#include "library/dao/fscueoverridestore.h"
+#include "library/dao/fsmetaoverridestore.h"
+#include "library/queryutil.h"
 #ifdef __ENGINEPRIME__
 #include "library/export/libraryexporter.h"
 #endif
 #include "library/externaltrackcollection.h"
 #include "library/itunes/itunesfeature.h"
 #include "library/library_prefs.h"
+#include "library/librarycolumncontrol.h"
 #include "library/librarycontrol.h"
 #include "library/libraryfeature.h"
 #include "library/mixxxlibraryfeature.h"
-#include "library/recording/recordingfeature.h"
+#include "library/playedtracks.h"
 #include "library/rekordbox/rekordboxfeature.h"
 #include "library/rhythmbox/rhythmboxfeature.h"
 #include "library/serato/seratofeature.h"
@@ -33,7 +41,15 @@
 #include "library/traktor/traktorfeature.h"
 #include "mixer/playermanager.h"
 #include "moc_library.cpp"
+#include "notifications/notifications.h"
+#include "preferences/keydetectionsettings.h"
+#include "preferences/systemsettings.h"
+#include "track/globaltrackcache.h"
+#include "track/keyutils.h"
+#include "track/track.h"
+#include "track/trackref.h"
 #include "util/assert.h"
+#include "util/db/dbconnectionpooled.h"
 #include "util/logger.h"
 #include "util/sandbox.h"
 #include "widget/wlibrary.h"
@@ -44,6 +60,19 @@
 namespace {
 
 const mixxx::Logger kLogger("Library");
+
+/// True when `path` is `root` itself or lives somewhere below it. Both are
+/// cleaned first so a trailing slash on either side still matches, and the
+/// separator check keeps "/media/usb1" from swallowing "/media/usb10".
+bool isPathUnder(const QString& path, const QString& root) {
+    if (path.isEmpty() || root.isEmpty()) {
+        return false;
+    }
+    const QString cleanPath = QDir::cleanPath(path);
+    const QString cleanRoot = QDir::cleanPath(root);
+    return cleanPath == cleanRoot ||
+            cleanPath.startsWith(cleanRoot + QLatin1Char('/'));
+}
 
 } // namespace
 
@@ -69,6 +98,7 @@ Library::Library(
           m_pTrackCollectionManager(pTrackCollectionManager),
           m_pSidebarModel(make_parented<SidebarModel>(this)),
           m_pLibraryControl(make_parented<LibraryControl>(this)),
+          m_pLibraryColumnControl(make_parented<LibraryColumnControl>(pConfig, this)),
           m_pLibraryWidget(nullptr),
           m_pMixxxLibraryFeature(nullptr),
           m_pPlaylistFeature(nullptr),
@@ -78,11 +108,55 @@ Library::Library(
 
     m_pKeyNotation.reset(
             new ControlObject(mixxx::library::prefs::kKeyNotationConfigKey));
+    connect(m_pKeyNotation.data(),
+            &ControlObject::valueChanged,
+            this,
+            &Library::slotKeyNotationChanged);
+
+    m_pClearCachedWaveforms.reset(new ControlPushButton(
+            ConfigKey(QStringLiteral("[Library]"),
+                    QStringLiteral("clear_cached_waveforms"))));
+    connect(m_pClearCachedWaveforms.data(),
+            &ControlPushButton::valueChanged,
+            this,
+            &Library::slotClearCachedWaveforms);
+
+    m_pResetPlayedTracks.reset(new ControlPushButton(
+            ConfigKey(QStringLiteral("[Library]"),
+                    QStringLiteral("reset_played_tracks"))));
+    connect(m_pResetPlayedTracks.data(),
+            &ControlPushButton::valueChanged,
+            this,
+            &Library::slotResetPlayedTracks);
+
+    m_pClearCueOverrides.reset(new ControlPushButton(
+            ConfigKey(QStringLiteral("[Library]"),
+                    QStringLiteral("clear_cue_overrides"))));
+    connect(m_pClearCueOverrides.data(),
+            &ControlPushButton::valueChanged,
+            this,
+            &Library::slotClearCueOverrides);
+
+    m_pClearMetaOverrides.reset(new ControlPushButton(
+            ConfigKey(QStringLiteral("[Library]"),
+                    QStringLiteral("clear_meta_overrides"))));
+    connect(m_pClearMetaOverrides.data(),
+            &ControlPushButton::valueChanged,
+            this,
+            &Library::slotClearMetaOverrides);
 
     connect(m_pTrackCollectionManager,
             &TrackCollectionManager::libraryScanFinished,
             this,
             &Library::slotRefreshLibraryModels);
+
+    // Bite DJ: react to an eject before the features do (they connect to
+    // mountEjected from their constructors, i.e. after this) so the view is
+    // dismissed while its model still knows which device it was reading.
+    connect(this,
+            &Library::mountEjected,
+            this,
+            &Library::slotMountEjected);
 
     // TODO(rryan) -- turn this construction / adding of features into a static
     // method or something -- CreateDefaultLibrary
@@ -134,7 +208,9 @@ Library::Library(
             &BrowseFeature::slotLibraryScanFinished);
     addFeature(m_pBrowseFeature);
 
-    addFeature(new RecordingFeature(this, m_pConfig, pRecordingManager));
+    // Bite DJ: no "Recordings" sidebar entry. Recording is started and stopped
+    // per drive from the Settings tab and lands in <mount>/Recordings, which
+    // the Computer browser reaches like any other folder on the stick.
 
     addFeature(new SetlogFeature(this, UserSettingsPointer(m_pConfig)));
 
@@ -193,10 +269,11 @@ Library::Library(
         addFeature(new TraktorFeature(this, m_pConfig));
     }
 
-    // TODO(XXX) Rekordbox feature added persistently as the only way to enable it to
-    // dynamically appear/disappear when correctly prepared removable devices
-    // are mounted/unmounted would be to have some form of timed thread to check
-    // periodically. Not ideal performance wise.
+    // Bite DJ: the Rekordbox and Serato features register hidden
+    // (isSidebarVisibleByDefault() == false) and only surface their sidebar
+    // entry while a device carrying the respective library is mounted. Each
+    // feature runs its own background enumeration poll and emits
+    // requestSidebarVisibility as devices come and go.
     if (m_pConfig->getValue(
                 ConfigKey(kConfigGroup, "ShowRekordboxLibrary"), true)) {
         addFeature(new RekordboxFeature(this, m_pConfig));
@@ -345,6 +422,10 @@ void Library::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
             &WLibrarySidebar::clicked,
             m_pSidebarModel,
             &SidebarModel::clicked);
+    connect(pSidebarWidget,
+            &WLibrarySidebar::leafItemActivated,
+            this,
+            &Library::sidebarLeafItemActivated);
     // Lazy model: Let triangle symbol increment the model
     connect(pSidebarWidget,
             &WLibrarySidebar::expanded,
@@ -529,6 +610,37 @@ void Library::onPlayerManagerTrackAnalyzerIdle() {
     if (m_pAnalysisFeature) {
         m_pAnalysisFeature->resumeAnalysis();
     }
+}
+
+void Library::slotMountEjected(const QString& mountPoint) {
+    if (!m_pLibraryWidget || !m_pLibraryWidget->currentWidget()) {
+        return;
+    }
+    WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+    if (!pTrackTableView) {
+        return;
+    }
+    auto* pTrackModel = dynamic_cast<TrackModel*>(pTrackTableView->model());
+    if (!pTrackModel ||
+            !isPathUnder(pTrackModel->backingLocation(), mountPoint)) {
+        // Either the view isn't reading from disk at all (the internal
+        // library, a crate) or it belongs to a device that is still mounted.
+        return;
+    }
+
+    kLogger.info() << "Closing library view backed by ejected mount" << mountPoint;
+
+    // Stop a directory listing that is still walking the dead mount; for the
+    // browse model this also empties the table.
+    pTrackModel->maybeStopModelPopulation();
+
+    // Pop back to the sidebar browser. The skin binds both panes to
+    // [Sidebar],sidebar_visible and LibraryControl focuses the sidebar as soon
+    // as it is shown, so the DJ lands on the device list ready to pick
+    // another playlist instead of staring at rows that can no longer load.
+    ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
+                               QStringLiteral("sidebar_visible")),
+            1);
 }
 
 void Library::slotShowTrackModel(QAbstractItemModel* model) {
@@ -758,6 +870,278 @@ void Library::slotRestoreCurrentViewState() const {
     if (m_pLibraryWidget) {
         return m_pLibraryWidget->restoreCurrentViewState();
     }
+}
+
+void Library::slotKeyNotationChanged(double value) {
+    const auto notationType =
+            static_cast<KeyUtils::KeyNotation>(static_cast<int>(value));
+    QString notationName;
+    switch (notationType) {
+    case KeyUtils::KeyNotation::OpenKey:
+        notationName = KEY_NOTATION_OPEN_KEY;
+        break;
+    case KeyUtils::KeyNotation::Lancelot:
+        notationName = KEY_NOTATION_LANCELOT;
+        break;
+    case KeyUtils::KeyNotation::Traditional:
+        notationName = KEY_NOTATION_TRADITIONAL;
+        break;
+    case KeyUtils::KeyNotation::OpenKeyAndTraditional:
+        notationName = KEY_NOTATION_OPEN_KEY_AND_TRADITIONAL;
+        break;
+    case KeyUtils::KeyNotation::LancelotAndTraditional:
+        notationName = KEY_NOTATION_LANCELOT_AND_TRADITIONAL;
+        break;
+    case KeyUtils::KeyNotation::Custom:
+        notationName = KEY_NOTATION_CUSTOM;
+        break;
+    default:
+        return;
+    }
+    KeyDetectionSettings(m_pConfig).setKeyNotation(notationName);
+
+    // Bite DJ: also refresh KeyUtils::s_notation so the library Key column
+    // (which renders via single-arg KeyUtils::keyToString → s_notation) picks
+    // up the change without re-opening DlgPrefKey. Custom notation can't be
+    // reconstructed from notationType alone; DlgPrefKey remains the only path
+    // that writes it.
+    if (notationType != KeyUtils::KeyNotation::Custom) {
+        QMap<mixxx::track::io::key::ChromaticKey, QString> notation;
+        for (int i = static_cast<int>(mixxx::track::io::key::C_MAJOR);
+                i <= static_cast<int>(mixxx::track::io::key::B_MINOR);
+                ++i) {
+            const auto key =
+                    static_cast<mixxx::track::io::key::ChromaticKey>(i);
+            notation[key] = KeyUtils::keyToString(key, notationType);
+        }
+        KeyUtils::setNotation(notation);
+    }
+}
+
+void Library::slotClearCachedWaveforms(double value) {
+    if (value <= 0) {
+        return;
+    }
+    AnalysisDao analysisDao(m_pConfig);
+    QSqlDatabase dbConnection = mixxx::DbConnectionPooled(m_pDbConnectionPool);
+    analysisDao.deleteAnalysesByType(dbConnection, AnalysisDao::TYPE_WAVEFORM);
+    analysisDao.deleteAnalysesByType(dbConnection, AnalysisDao::TYPE_WAVESUMMARY);
+
+    QSqlQuery query(dbConnection);
+    // bpm_lock=0 mirrors the right-click "Clear BPM and Beatgrid" menu, which
+    // skips locked tracks via Track::trySetBeats.
+    query.prepare(QStringLiteral(
+            "UPDATE library SET bpm=0, beats=NULL, beats_version='', "
+            "beats_sub_version='' WHERE bpm_lock=0"));
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query) << "couldn't clear bpm/beats";
+    }
+    query.prepare(QStringLiteral(
+            "UPDATE library SET key='', key_id=0, keys=NULL, "
+            "keys_version='', keys_sub_version=''"));
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query) << "couldn't clear keys";
+    }
+    query.prepare(QStringLiteral(
+            "UPDATE library SET replaygain=0, replaygain_peak=-1"));
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query) << "couldn't clear replaygain";
+    }
+
+    // The analysis cache normally lives on the track's own drive
+    // (FsAnalysisCache), not in the home dir — wipe it on every connected USB
+    // drive too.
+    int clearedDrives = 0;
+    bool driveErrors = false;
+    if (SystemSettings* pSystemSettings = SystemSettings::tryInstance()) {
+        const QStringList mountPoints = pSystemSettings->usbMountPoints();
+        for (const QString& mountPoint : mountPoints) {
+            if (FsAnalysisCache::clearFilesystemCache(mountPoint)) {
+                ++clearedDrives;
+            } else {
+                driveErrors = true;
+            }
+        }
+    }
+
+    if (Notifications* pNotifications = Notifications::tryInstance()) {
+        if (driveErrors) {
+            pNotifications->publish(
+                    tr("Analysis cache cleared, but some USB drive caches "
+                       "could not be deleted"),
+                    Notifications::Severity::Warning);
+        } else if (clearedDrives > 0) {
+            pNotifications->publish(
+                    tr("Analysis cache cleared, including %n USB drive(s)",
+                            nullptr,
+                            clearedDrives),
+                    Notifications::Severity::Info);
+        } else {
+            pNotifications->publish(tr("Analysis cache cleared"),
+                    Notifications::Severity::Info);
+        }
+    }
+    kLogger.info() << "Cleared cached waveforms and analysis data on"
+                   << clearedDrives << "USB drive(s)";
+}
+
+void Library::slotClearCueOverrides(double value) {
+    if (value <= 0) {
+        return;
+    }
+
+    // The overrides live on the drives themselves, one store per filesystem,
+    // so "globally" means every drive that is connected right now.
+    int clearedDrives = 0;
+    bool driveErrors = false;
+    if (SystemSettings* pSystemSettings = SystemSettings::tryInstance()) {
+        const QStringList mountPoints = pSystemSettings->usbMountPoints();
+        for (const QString& mountPoint : mountPoints) {
+            if (FsCueOverrideStore::clearFilesystemOverrides(mountPoint)) {
+                ++clearedDrives;
+            } else {
+                driveErrors = true;
+            }
+        }
+    }
+    // A track that is still loaded must not write its cues back out and
+    // re-create the override we just deleted. Suppress that before touching
+    // any of them below, so the edit those removals amount to cannot be
+    // flushed by a save that lands in between.
+    FsCueOverrideStore::suppressPendingSaves();
+
+    // Clearing the overrides has to show on the decks too, not just on the
+    // drive: put every track that is still loaded back to the cues its source
+    // library exported, so its pads and waveform markers agree with what the
+    // drive now holds. Tracks are reached through the cache only, so nothing is
+    // re-read from the drive.
+    //
+    // Only the tracks that actually carried an override are touched, and each
+    // is restored to the cue set captured before that override was applied
+    // rather than emptied: what is being cleared is the DJ's own edits, not the
+    // rekordbox ANLZ / Serato marker cues underneath them. Blanking would be
+    // permanent for a Serato track — its markers are imported from the file's
+    // tags once, after which the library database is authoritative and no
+    // reload brings them back.
+    int clearedTracks = 0;
+    const QStringList overriddenLocations = FsCueOverrideStore::overriddenLocations();
+    for (const QString& location : overriddenLocations) {
+        const TrackPointer pTrack = GlobalTrackCacheLocker().lookupTrackByRef(
+                TrackRef::fromFilePath(location));
+        if (!pTrack) {
+            // Not loaded anymore; its override is gone from the drive and the
+            // next load starts from the source library.
+            continue;
+        }
+        if (FsCueOverrideStore::restoreImportedCues(pTrack.get())) {
+            ++clearedTracks;
+        }
+    }
+
+    if (Notifications* pNotifications = Notifications::tryInstance()) {
+        if (driveErrors) {
+            pNotifications->publish(
+                    tr("Cue overrides cleared, but some USB drives could not "
+                       "be written to"),
+                    Notifications::Severity::Warning);
+        } else if (clearedDrives > 0) {
+            pNotifications->publish(
+                    tr("Cue overrides cleared on %n USB drive(s)",
+                            nullptr,
+                            clearedDrives),
+                    Notifications::Severity::Info);
+        } else {
+            pNotifications->publish(tr("No USB drives to clear cue overrides from"),
+                    Notifications::Severity::Info);
+        }
+    }
+    kLogger.info() << "Cleared Bite DJ cue overrides on" << clearedDrives
+                   << "USB drive(s) and on" << clearedTracks << "loaded track(s)";
+}
+
+void Library::slotClearMetaOverrides(double value) {
+    if (value <= 0) {
+        return;
+    }
+
+    // Same shape as the cue overrides above: the ratings live on the drives
+    // themselves, one store per filesystem, so "globally" means every drive
+    // that is connected right now.
+    int clearedDrives = 0;
+    bool driveErrors = false;
+    if (SystemSettings* pSystemSettings = SystemSettings::tryInstance()) {
+        const QStringList mountPoints = pSystemSettings->usbMountPoints();
+        for (const QString& mountPoint : mountPoints) {
+            if (FsMetaOverrideStore::clearFilesystemOverrides(mountPoint)) {
+                ++clearedDrives;
+            } else {
+                driveErrors = true;
+            }
+        }
+    }
+    // A track that is still loaded must not write its rating back out and
+    // re-create the override we just deleted.
+    FsMetaOverrideStore::suppressPendingSaves();
+
+    // Put every track that is still loaded back to the rating its source
+    // library exported, so the decks and the library views agree with what the
+    // drive now holds. Tracks are reached through the cache only, so nothing is
+    // re-read from the drive, and only the tracks that actually carried an
+    // override are touched.
+    int clearedTracks = 0;
+    const QStringList overriddenLocations = FsMetaOverrideStore::overriddenLocations();
+    for (const QString& location : overriddenLocations) {
+        const TrackPointer pTrack = GlobalTrackCacheLocker().lookupTrackByRef(
+                TrackRef::fromFilePath(location));
+        if (!pTrack) {
+            // Not loaded anymore; its override is gone from the drive and the
+            // next load starts from the source library.
+            continue;
+        }
+        if (FsMetaOverrideStore::restoreImportedRating(pTrack.get())) {
+            ++clearedTracks;
+        }
+    }
+
+    // The Rekordbox views read their stars from the copy of the device's own
+    // library this unit scanned, not from the tracks, so they need telling.
+    emit metaOverridesCleared();
+
+    if (Notifications* pNotifications = Notifications::tryInstance()) {
+        if (driveErrors) {
+            pNotifications->publish(
+                    tr("Ratings cleared, but some USB drives could not be "
+                       "written to"),
+                    Notifications::Severity::Warning);
+        } else if (clearedDrives > 0) {
+            pNotifications->publish(
+                    tr("Ratings cleared on %n USB drive(s)",
+                            nullptr,
+                            clearedDrives),
+                    Notifications::Severity::Info);
+        } else {
+            pNotifications->publish(tr("No USB drives to clear ratings from"),
+                    Notifications::Severity::Info);
+        }
+    }
+    kLogger.info() << "Cleared Bite DJ metadata overrides on" << clearedDrives
+                   << "USB drive(s) and on" << clearedTracks << "loaded track(s)";
+}
+
+void Library::slotResetPlayedTracks(double value) {
+    if (value <= 0) {
+        return;
+    }
+    // Session state only: the models repaint themselves off
+    // PlayedTracks::playedTracksChanged. All-time play counts in the database
+    // are deliberately left alone — this clears the "already spent tonight"
+    // tint, not the track's history.
+    PlayedTracks::instance().clear();
+    if (Notifications* pNotifications = Notifications::tryInstance()) {
+        pNotifications->publish(tr("Played track markers reset"),
+                Notifications::Severity::Info);
+    }
+    kLogger.info() << "Reset played track markers for this session";
 }
 
 LibraryTableModel* Library::trackTableModel() const {

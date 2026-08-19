@@ -87,7 +87,11 @@ void WEffectSelector::slotEffectSelected(int newIndex) {
             m_pEffectsManager->getBackendManager()->getManifestFromUniqueId(
                     itemData(newIndex).toString());
 
-    m_pEffectSlot->loadEffectWithDefaults(pManifest);
+    // Bite DJ fork: route through the per-manifest cache so the BeatFX
+    // picker preserves user knob/metaknob state across effect switches.
+    // Standard chains opt in; EQ/QuickEffect/Output fall through to
+    // loadEffectWithDefaults internally.
+    m_pEffectSlot->switchEffectRemembering(pManifest);
 
     setBaseTooltip(itemData(newIndex, Qt::ToolTipRole).toString());
     // Clicking an effect item moves keyboard focus to the list view.

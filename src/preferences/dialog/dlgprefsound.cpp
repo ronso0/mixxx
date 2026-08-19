@@ -18,6 +18,10 @@
 namespace {
 
 const QString kAppGroup = QStringLiteral("[App]");
+// [BiteDJ],show_booth_output in mixxx.cfg controls whether the booth
+// output is offered in this pane; hidden by default.
+const ConfigKey kShowBoothOutputKey(
+        QStringLiteral("[BiteDJ]"), QStringLiteral("show_booth_output"));
 
 bool soundItemAlreadyExists(const AudioPath& output, const QWidget& widget) {
     for (const QObject* pObj : widget.children()) {
@@ -47,8 +51,13 @@ DlgPrefSound::DlgPrefSound(QWidget* pParent,
           m_bLatencyChanged(false),
           m_bSkipConfigClear(true),
           m_loading(false),
-          m_configValid(true) {
+          m_configValid(true),
+          m_showBoothOutput(pSettings->getValue(kShowBoothOutputKey, false)) {
     setupUi(this);
+    if (!m_showBoothOutput) {
+        boothDelayLabel->hide();
+        boothDelaySpinBox->hide();
+    }
     // Create text color for the wiki links
     createLinkColor();
 
@@ -307,9 +316,19 @@ void DlgPrefSound::slotApply() {
         return;
     }
 
+    const QMultiHash<SoundDeviceId, AudioOutput> oldOutputs = m_config.getOutputs();
     m_config.clearInputs();
     m_config.clearOutputs();
     emit writePaths(&m_config);
+    if (!m_showBoothOutput) {
+        // No booth item exists to write its path, so carry over any booth
+        // output configured in soundconfig.xml instead of dropping it.
+        for (auto it = oldOutputs.constBegin(); it != oldOutputs.constEnd(); ++it) {
+            if (it.value().getType() == AudioPathType::Booth) {
+                m_config.addOutput(it.key(), it.value());
+            }
+        }
+    }
 
     SoundDeviceStatus status = SoundDeviceStatus::Ok;
     {
@@ -367,12 +386,15 @@ void DlgPrefSound::initializePaths() {
 }
 
 void DlgPrefSound::addPath(const AudioOutput& output) {
+    AudioPathType type = output.getType();
+    if (type == AudioPathType::Booth && !m_showBoothOutput) {
+        return;
+    }
     // if we already know about this output, don't make a new entry
 
     if (soundItemAlreadyExists(output, *outputTab)) {
         return;
     }
-    AudioPathType type = output.getType();
     // TODO who owns this?
     DlgPrefSoundItem* pSoundItem = new DlgPrefSoundItem(outputTab,
             type,

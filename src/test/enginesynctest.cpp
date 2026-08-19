@@ -2840,6 +2840,11 @@ TEST_F(EngineSyncTest, QuantizeHotCueActivate) {
             m_pTrack1->getSampleRate(), mixxx::audio::kStartFramePos, mixxx::Bpm(130));
     m_pTrack1->trySetBeats(pBeats1);
 
+    // This covers the stock preview-while-held behaviour, which is no longer
+    // the default: [Controls],HotcueActivatePlays makes a press on a paused
+    // deck jump to the cue and play on instead of seeking back on release.
+    m_pConfig->set(ConfigKey("[Controls]", "HotcueActivatePlays"), ConfigValue(0));
+
     auto pHotCue2Activate = std::make_unique<ControlProxy>(m_sGroup2, "hotcue_1_activate");
     mixxx::BeatsPointer pBeats2 = mixxx::Beats::fromConstTempo(
             m_pTrack2->getSampleRate(), mixxx::audio::kStartFramePos, mixxx::Bpm(100));

@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdexcept>
 
+#include "library/dao/fsanalysiscache.h"
 #include "library/export/engineprimeexportrequest.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
@@ -456,10 +457,24 @@ void EnginePrimeExportJob::loadTrack(const TrackRef& trackRef) {
     // Load the track.
     m_pLastLoadedTrack = m_pTrackCollectionManager->getOrAddTrack(trackRef);
 
-    // Load high-resolution waveform from analysis info.
-    auto& analysisDao = m_pTrackCollectionManager->internalCollection()->getAnalysisDAO();
-    const auto waveformAnalyses = analysisDao.getAnalysesForTrackByType(
-            m_pLastLoadedTrack->getId(), AnalysisDao::TYPE_WAVEFORM);
+    // Load high-resolution waveform from analysis info. When the per-filesystem
+    // cache is enabled, waveforms live on the track's own filesystem keyed by
+    // location rather than in the home database.
+    QList<AnalysisDao::AnalysisInfo> waveformAnalyses;
+    FsAnalysisCache fsAnalysisCache(m_pTrackCollectionManager->config());
+    if (fsAnalysisCache.isEnabled()) {
+        const auto analyses =
+                fsAnalysisCache.getAnalysesForTrack(m_pLastLoadedTrack->getLocation());
+        for (const auto& analysis : analyses) {
+            if (analysis.type == AnalysisDao::TYPE_WAVEFORM) {
+                waveformAnalyses.append(analysis);
+            }
+        }
+    } else {
+        auto& analysisDao = m_pTrackCollectionManager->internalCollection()->getAnalysisDAO();
+        waveformAnalyses = analysisDao.getAnalysesForTrackByType(
+                m_pLastLoadedTrack->getId(), AnalysisDao::TYPE_WAVEFORM);
+    }
     if (!waveformAnalyses.isEmpty()) {
         const auto& waveformAnalysis = waveformAnalyses.first();
         m_pLastLoadedWaveform.reset(

@@ -78,6 +78,11 @@ public:
           mixxx::audio::FramePos targetPos);
   void notifySeek(mixxx::audio::FramePos position) override;
   void resetPositionScratchController();
+  /// Takes the deck off any scratch that is still driving it, so a transport
+  /// change plays (or stops) at the track's own rate rather than at whatever
+  /// rate the platter happened to be left at. Bite DJ's vinyl brake makes that
+  /// rate audible for seconds after the wheel is released.
+  void endScratching();
 
 public slots:
   void slotRateRangeChanged(double);

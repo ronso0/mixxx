@@ -13,7 +13,9 @@
 #include "engine/sync/enginesync.h"
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
+#include "mixer/samplerdrive.h"
 #include "moc_basetrackplayer.cpp"
+#include "notifications/notifications.h"
 #include "track/track.h"
 #include "util/sandbox.h"
 #include "vinylcontrol/defs_vinylcontrol.h"
@@ -521,13 +523,45 @@ void BaseTrackPlayerImpl::slotLoadTrack(TrackPointer pNewTrack, bool bPlay) {
             // We don't have access.
             return;
         }
+        // If the file is missing, abort the load *before* unloading whatever is
+        // already in the deck. Stock Mixxx unloads first and only discovers the
+        // missing file later in the reader worker, which clears a perfectly good
+        // loaded track. The DJ would rather keep the current track than have the
+        // deck go empty because they aimed at a stale/removed entry.
+        if (!fileInfo.checkFileExists()) {
+            // Note: alert directly rather than via slotLoadFailed(), which would
+            // unload m_pLoadedTrack in the case where the DJ re-loads the very
+            // track that just went missing — the deck must stay as-is.
+            // Show only the (truncated) filename rather than the full path:
+            // the path is too long to fit the alert on the small appliance
+            // screen, so it ends up invisible to the DJ.
+            QString fileName = fileInfo.fileName();
+            constexpr int kMaxFileNameChars = 32;
+            if (fileName.length() > kMaxFileNameChars) {
+                fileName = fileName.left(kMaxFileNameChars) + QStringLiteral("…");
+            }
+            notifyLoadFailed(pNewTrack,
+                    tr("The file '%1' could not be found.").arg(fileName));
+            return;
+        }
+        // Bite DJ: a sampler slot holds a file from the drive the DJ picked on
+        // the Samplers tab and nothing else, wherever the load came from — the
+        // LOAD button, the library, a controller. That single rule is what
+        // makes the grid empty when the drive is pulled and refill when it
+        // comes back. SamplerDrive publishes the reason itself; a deck, a
+        // preview deck and a sampler on a drive-less build are never refused.
+        if (SamplerDrive* pSamplerDrive = SamplerDrive::tryInstance()) {
+            if (pSamplerDrive->refuseSampleLoad(getGroup(), fileInfo.location())) {
+                return;
+            }
+        }
     }
 
     auto pOldTrack = unloadTrack();
 
     loadTrack(pNewTrack);
 
-    // await slotTrackLoaded()/slotLoadFailed()
+   
     // emit this before pEngineBuffer->loadTrack() to avoid receiving
     // unexpected slotTrackLoaded() before, in case the track is still cached #10504.
     emit loadingTrack(pNewTrack, pOldTrack);
@@ -553,18 +587,23 @@ void BaseTrackPlayerImpl::slotLoadFailed(TrackPointer pTrack, const QString& rea
     }
     m_pChannelToCloneFrom = nullptr;
 
-    // Alert user.
-    // The QMessageBox blocks the event loop (and the GUI since it's modal dialog),
-    // though if a controller's Load button was pressed repeatedly we may get
-    // multiple identical messages for the same track.
-    // Avoid this and show only one message per track track at a time.
+    notifyLoadFailed(pTrack, reason);
+}
+
+void BaseTrackPlayerImpl::notifyLoadFailed(
+        const TrackPointer& pTrack, const QString& reason) {
     if (pTrack && m_pPrevFailedTrackId == pTrack->getId()) {
         return;
-    } else if (pTrack) {
-        m_pPrevFailedTrackId = pTrack->getId();
     }
-    QMessageBox::warning(nullptr, tr("Couldn't load track."), reason);
-    m_pPrevFailedTrackId = TrackId();
+    m_pPrevFailedTrackId = pTrack ? pTrack->getId() : TrackId();
+
+    if (Notifications* pNotifications = Notifications::tryInstance()) {
+        pNotifications->publish(reason, Notifications::Severity::Error);
+    } else {
+        // Stock Mixxx (no Notifications singleton) — fall back to the modal
+        // dialog so an error is still surfaced.
+        QMessageBox::warning(nullptr, tr("Couldn't load track."), reason);
+    }
 }
 
 void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
@@ -596,6 +635,10 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
         // before handing them out to application code.
         // TODO(XXX): Don't hesitate to delete the preceding NOTE if you think
         // that it is not needed anymore.
+
+        // A track loaded successfully, so clear the dedup guard: if the DJ
+        // later returns to a track that fails, they should be alerted again.
+        m_pPrevFailedTrackId = TrackId();
 
         // Update the BPM and duration values that are stored in ControlObjects
         m_pDuration->set(m_pLoadedTrack->getDuration());

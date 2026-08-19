@@ -15,6 +15,7 @@
 #include "util/denormalsarezero.h"
 #include "util/fifo.h"
 #include "util/math.h"
+#include "util/rtscheduling.h"
 #include "util/sample.h"
 #include "util/timer.h"
 #include "util/trace.h"
@@ -25,6 +26,11 @@
 #include <pa_linux_alsa.h>
 // for sched_getscheduler
 #include <sched.h>
+#endif
+
+#ifdef __LINUX__
+// for pthread_setname_np
+#include <pthread.h>
 #endif
 
 namespace {
@@ -944,6 +950,20 @@ int SoundDevicePortAudio::callbackProcessClkRef(
 
     if (!m_bSetThreadPriority) {
 #ifdef __LINUX__
+        // Name the engine callback thread at the OS level (comm, max 15
+        // chars). Qt's setObjectName() in EngineMixer::process() does not
+        // propagate to adopted threads, so without this the thread shows up
+        // as "mixxx" in ps/top, indistinguishable from the GUI main thread.
+        // The name lets scripts pin or chrt it: ps -T -o tid,comm | grep
+        // mixxx-engine.
+        pthread_setname_np(pthread_self(), "mixxx-engine");
+
+        // PortAudio's ALSA host API (PaAlsa_EnableRealtimeScheduling above)
+        // already starts this callback thread SCHED_FIFO, but at a priority
+        // of its own choosing. Re-set it explicitly.
+        mixxx::promoteCurrentThreadToRealtime(
+                mixxx::kRtPrioAudioEngine, "mixxx-engine");
+
         // Verify if we are a thread with "real-time" policy.
         // The audio thread on Linux should be set to SCHED_FIFO with a priority
         // that's somewhere between 60 and 90 depending on the allowed priority
@@ -952,6 +972,10 @@ int SoundDevicePortAudio::callbackProcessClkRef(
         if ((sched_getscheduler(0) & SCHED_FIFO) == 0) {
             qWarning() << "Engine thread not scheduled with the real-time policy SCHED_FIFO";
         }
+
+        // Move onto the isolated audio core when the launcher asks for it
+        mixxx::pinCurrentThreadToCpuFromEnv(
+                "ENGINE_CPU", "mixxx-engine");
 #else
         // Turn on TimeCritical priority for the callback thread.
         // If we are running in Linux this will have no effect. Either the thread is

@@ -1,6 +1,5 @@
 #include "widget/wtracktableview.h"
 
-#include <QDrag>
 #include <QModelIndex>
 #include <QScrollBar>
 #include <QShortcut>
@@ -9,6 +8,7 @@
 #include "control/controlobject.h"
 #include "library/dao/trackschema.h"
 #include "library/library.h"
+#include "library/librarycolumncontrol.h"
 #include "library/library_prefs.h"
 #include "library/librarytablemodel.h"
 #include "library/searchqueryparser.h"
@@ -20,6 +20,7 @@
 #include "preferences/dialog/dlgprefdeck.h"
 #include "preferences/dialog/dlgpreflibrary.h"
 #include "sources/soundsourceproxy.h"
+#include "track/globaltrackcache.h"
 #include "track/track.h"
 #include "track/trackref.h"
 #include "util/assert.h"
@@ -161,10 +162,23 @@ void WTrackTableView::slotGuiTick50ms(double /*unused*/) {
                 // A single track has been selected
                 TrackModel* pTrackModel = getTrackModel();
                 if (pTrackModel) {
-                    TrackPointer pTrack = pTrackModel->getTrack(indices.first());
-                    if (pTrack) {
-                        emit trackSelected(pTrack);
-                    }
+                    const QModelIndex index = indices.first();
+                    // Merely selecting/focusing a row (e.g. jogging through a
+                    // playlist on a controller) must never touch disk or the
+                    // database: TrackModel::getTrack() on a track that isn't
+                    // cached yet this session synchronously re-imports its
+                    // metadata (TagLib read, possibly a DB write), which is
+                    // ruinous over a slow USB drive. So only show the preview
+                    // cover art / highlight sidebar crates & playlists when a
+                    // Track object already happens to be in memory; the full
+                    // (possibly disk-heavy) load is deferred to when the
+                    // track is actually loaded to a deck, which already goes
+                    // through TrackModel::getTrack() on its own.
+                    const TrackRef trackRef = TrackRef::fromFilePath(
+                            pTrackModel->getTrackLocation(index));
+                    TrackPointer pTrack =
+                            GlobalTrackCacheLocker().lookupTrackByRef(trackRef);
+                    emit trackSelected(pTrack);
                 }
             } else {
                 // None or multiple tracks have been selected
@@ -257,7 +271,18 @@ void WTrackTableView::loadTrackModel(QAbstractItemModel* pNewModel, bool restore
 
     setModel(pNewModel);
     setHorizontalHeader(header);
-    header->setSectionsMovable(true);
+    // Bite DJ fork: when LibraryColumnControl owns column visibility +
+    // widths, also lock the order and disable user drag-resize. Reorders
+    // wouldn't survive restart (we no longer save the per-model protobuf)
+    // and drag-resize would silently get clobbered by the next flex-weight
+    // re-apply on header resize — both are confusing transient UX. Fixed
+    // resize mode still permits programmatic resizeSection(), which is
+    // what LibraryColumnControl::applyTo uses.
+    const bool columnControlActive = LibraryColumnControl::tryInstance() != nullptr;
+    header->setSectionsMovable(!columnControlActive);
+    if (columnControlActive) {
+        header->setSectionResizeMode(QHeaderView::Fixed);
+    }
     header->setSectionsClickable(true);
     // Setting this to true would render all column labels BOLD as soon as the
     // tableview is focused -- and would not restore the previous style when
@@ -339,18 +364,18 @@ void WTrackTableView::loadTrackModel(QAbstractItemModel* pNewModel, bool restore
         applySorting();
     }
 
-    // Set up drag and drop behavior according to whether or not the track
-    // model says it supports it.
+    // Set up drop behavior according to whether or not the track model says it
+    // supports it. Dragging tracks out of the table is disabled: on the touch
+    // screen a press and drag scrolls the list (see TouchScrollFilter), so
+    // there is no gesture left to start a drag with.
 
     // Defaults
     setAcceptDrops(true);
-    setDragDropMode(QAbstractItemView::DragOnly);
-    // Always enable drag for now (until we have a model that doesn't support
-    // this.)
-    setDragEnabled(true);
+    setDragDropMode(QAbstractItemView::NoDragDrop);
+    setDragEnabled(false);
 
     if (pNewTrackModel->hasCapabilities(TrackModel::Capability::ReceiveDrops)) {
-        setDragDropMode(QAbstractItemView::DragDrop);
+        setDragDropMode(QAbstractItemView::DropOnly);
         setDropIndicatorShown(true);
         setAcceptDrops(true);
         //viewport()->setAcceptDrops(true);
@@ -426,9 +451,18 @@ void WTrackTableView::slotMouseDoubleClicked(const QModelIndex& index) {
     if (doubleClickAction == DlgPrefLibrary::TrackDoubleClickAction::LoadToDeck &&
             pTrackModel->hasCapabilities(
                     TrackModel::Capability::LoadToDeck)) {
-        TrackPointer pTrack = pTrackModel->getTrack(index);
-        if (pTrack) {
-            emit loadTrack(pTrack);
+        // Block the load (and flag the row) if the file has gone missing, so
+        // the deck keeps its current track and the DJ can't keep retrying a
+        // dead entry. verifyTrackFileExists() is a no-op for library models.
+        // Check it BEFORE getTrack(): in the Browse view getTrack() imports the
+        // file's metadata (getOrAddTrack), which on a pulled USB is a slow,
+        // failing TagLib read. Doing it only when the load may proceed stops the
+        // repeated reads that otherwise fire on every blocked re-tap.
+        if (pTrackModel->verifyTrackFileExists(index)) {
+            TrackPointer pTrack = pTrackModel->getTrack(index);
+            if (pTrack) {
+                emit loadTrack(pTrack);
+            }
         }
     } else if (doubleClickAction == DlgPrefLibrary::TrackDoubleClickAction::AddToAutoDJBottom &&
             pTrackModel->hasCapabilities(
@@ -660,44 +694,6 @@ void WTrackTableView::onSearch(const QString& text) {
 }
 
 void WTrackTableView::onShow() {
-}
-
-void WTrackTableView::mousePressEvent(QMouseEvent* pEvent) {
-    DragAndDropHelper::mousePressed(pEvent);
-    WLibraryTableView::mousePressEvent(pEvent);
-}
-
-void WTrackTableView::mouseMoveEvent(QMouseEvent* pEvent) {
-    // Only use this for drag and drop if the LeftButton is pressed we need to
-    // check for this because mousetracking is activated and this function is
-    // called every time the mouse is moved -- kain88 May 2012
-    if (pEvent->buttons() != Qt::LeftButton) {
-        // Needed for mouse-tracking to fire entered() events. If we call this
-        // outside of this if statement then we get 'ghost' drags. See issue
-        // #6507
-        WLibraryTableView::mouseMoveEvent(pEvent);
-        return;
-    }
-
-    TrackModel* pTrackModel = getTrackModel();
-    if (!pTrackModel) {
-        return;
-    }
-    //qDebug() << "MouseMoveEvent";
-
-    if (DragAndDropHelper::mouseMoveInitiatesDrag(pEvent)) {
-        // Iterate over selected rows and append each item's location url to a list.
-        QList<QString> locations;
-        const QModelIndexList indices = getSelectedRows();
-
-        for (const QModelIndex& index : indices) {
-            if (!index.isValid()) {
-                continue;
-            }
-            locations.append(pTrackModel->getTrackLocation(index));
-        }
-        DragAndDropHelper::dragTrackLocations(locations, this, "library");
-    }
 }
 
 // Drag enter event, happens when a dragged item hovers over the track table view
@@ -1411,8 +1407,19 @@ void WTrackTableView::loadSelectedTrackToGroup(const QString& group, bool play) 
     }
     auto index = indices.at(0);
     auto* pTrackModel = getTrackModel();
-    TrackPointer pTrack;
-    if (pTrackModel && (pTrack = pTrackModel->getTrack(index))) {
+    if (!pTrackModel) {
+        return;
+    }
+    // Skip the load if the file is missing; flags the row and keeps the deck
+    // intact (no-op for library models, see TrackModel::verifyTrackFileExists).
+    // Verify BEFORE getTrack(): in the Browse view getTrack() does a slow,
+    // failing TagLib metadata import for a pulled-USB file, so we must not call
+    // it on every blocked re-tap of a dead entry.
+    if (!pTrackModel->verifyTrackFileExists(index)) {
+        return;
+    }
+    TrackPointer pTrack = pTrackModel->getTrack(index);
+    if (pTrack) {
         emit loadTrackToPlayer(pTrack, group, play);
     }
 }

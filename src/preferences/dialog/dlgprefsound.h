@@ -103,4 +103,5 @@ class DlgPrefSound : public DlgPreferencePage, public Ui::DlgPrefSoundDlg  {
     bool m_bSkipConfigClear;
     bool m_loading;
     bool m_configValid;
+    bool m_showBoothOutput;
 };

@@ -535,9 +535,8 @@ void EngineBuffer::loadFakeTrack(TrackPointer pTrack, bool bPlay) {
 void EngineBuffer::slotTrackLoaded(TrackPointer pTrack,
         mixxx::audio::SampleRate trackSampleRate,
         double trackNumSamples) {
-    if (kLogger.traceEnabled()) {
-        kLogger.trace() << "slotTrackLoaded" << getGroup();
-    }
+    kLogger.info() << "slotTrackLoaded" << getGroup()
+                   << (pTrack ? pTrack->getLocation() : QString());
     TrackPointer pOldTrack = m_pCurrentTrack;
     m_pause.lock();
 
@@ -591,9 +590,7 @@ void EngineBuffer::slotTrackLoadFailed(TrackPointer pTrack,
 
 void EngineBuffer::ejectTrack() {
     // clear track values in any case, may fix https://github.com/mixxxdj/mixxx/issues/8000
-    if (kLogger.traceEnabled()) {
-        kLogger.trace() << "ejectTrack()";
-    }
+    kLogger.info() << "ejectTrack" << getGroup();
     TrackPointer pOldTrack = m_pCurrentTrack;
     m_pause.lock();
 
@@ -774,6 +771,27 @@ void EngineBuffer::verifyPlay() {
 }
 
 void EngineBuffer::slotControlPlayRequest(double v) {
+    // Bite DJ: play and pause out-rank a run-out, the same way a cue does. With
+    // the vinyl brake set, a released jog wheel goes on scratching the deck for
+    // as long as [BiteDJ],vinyl_brake says (and a script brake or spinback for
+    // as long as its ramp lasts), so without this a play press would sound out
+    // the rest of the coast - slow, backwards, or silent once the platter has
+    // arrived - and a pause press would leave the deck spinning down after the
+    // DJ asked for silence. Pressing either says "be playing / be stopped, now",
+    // so hand the rate back to the deck first and let the transport change land
+    // on the track's own speed.
+    //
+    // Every play button there is comes in here: this is the change-request
+    // handler for [ChannelN],play, so the skin's toggle, a mapping, `stop`,
+    // `start_play` and `play_stutter` all pass through it. It fires even when
+    // the request does not change the state, which is what covers a controller
+    // with a dedicated play button pressed during an `engine.brake()` - the deck
+    // never stopped playing, so there is no transition to watch for.
+    //
+    // A platter still under the DJ's hand takes itself back on the scratch
+    // engine's next tick, so pausing mid-scratch does not leave the wheel dead.
+    m_pRateControl->endScratching();
+
     bool oldPlay = m_playButton->toBool();
     bool verifiedPlay = updateIndicatorsAndModifyPlay(v > 0.0, oldPlay);
 

@@ -2,6 +2,7 @@
 
 #include <QTimer>
 #include <QUrl>
+#include <QtDebug>
 
 #include "library/libraryfeature.h"
 #include "library/treeitem.h"
@@ -32,7 +33,17 @@ SidebarModel::SidebarModel(
 }
 
 void SidebarModel::addLibraryFeature(LibraryFeature* pFeature) {
-    m_sFeatures.push_back(pFeature);
+    m_allFeatures.push_back(pFeature);
+    if (pFeature->isSidebarVisibleByDefault()) {
+        const int row = m_sFeatures.size();
+        beginInsertRows(QModelIndex(), row, row);
+        m_sFeatures.push_back(pFeature);
+        endInsertRows();
+    }
+    connect(pFeature,
+            &LibraryFeature::requestSidebarVisibility,
+            this,
+            &SidebarModel::setFeatureVisible);
     connect(pFeature,
             &LibraryFeature::featureIsLoading,
             this,
@@ -77,6 +88,61 @@ void SidebarModel::addLibraryFeature(LibraryFeature* pFeature) {
             &QAbstractItemModel::rowsRemoved,
             this,
             &SidebarModel::slotRowsRemoved);
+}
+
+void SidebarModel::setFeatureVisible(LibraryFeature* pFeature, bool visible) {
+    VERIFY_OR_DEBUG_ASSERT(m_allFeatures.contains(pFeature)) {
+        return;
+    }
+    const int currentRow = m_sFeatures.indexOf(pFeature);
+    if (visible == (currentRow >= 0)) {
+        return;
+    }
+    qDebug() << "SidebarModel::setFeatureVisible"
+             << pFeature->title().toString() << visible;
+    if (visible) {
+        // Insert at the feature's registration position, i.e. after the
+        // last visible feature that was registered before it.
+        int row = 0;
+        for (int i = 0; i < m_allFeatures.size() && m_allFeatures[i] != pFeature; ++i) {
+            if (m_sFeatures.contains(m_allFeatures[i])) {
+                ++row;
+            }
+        }
+        beginInsertRows(QModelIndex(), row, row);
+        m_sFeatures.insert(row, pFeature);
+        endInsertRows();
+    } else {
+        beginRemoveRows(QModelIndex(), currentRow, currentRow);
+        m_sFeatures.removeAt(currentRow);
+        endRemoveRows();
+    }
+}
+
+LibraryFeature* SidebarModel::featureForModel(const QAbstractItemModel* pModel) const {
+    for (LibraryFeature* pFeature : m_allFeatures) {
+        if (pFeature->sidebarModel() == pModel) {
+            return pFeature;
+        }
+    }
+    return nullptr;
+}
+
+// Row change signals from a hidden feature's child model must not be
+// forwarded: with no top-level row in this model, the translated parent
+// index would be invalid and the rows would masquerade as new top-level
+// items. The subtree is picked up wholesale (via lazy rowCount queries)
+// when the feature becomes visible again. Returns true if the current
+// begin* signal must be swallowed and records that so the paired end*
+// signal is swallowed too.
+bool SidebarModel::shouldSuppressChildModelSignals(int* pSuppressionCounter) {
+    const QAbstractItemModel* pModel = qobject_cast<QAbstractItemModel*>(sender());
+    LibraryFeature* pFeature = featureForModel(pModel);
+    if (pFeature && !m_sFeatures.contains(pFeature)) {
+        ++(*pSuppressionCounter);
+        return true;
+    }
+    return false;
 }
 
 QModelIndex SidebarModel::getDefaultSelection() {
@@ -495,6 +561,12 @@ QModelIndex SidebarModel::translateIndex(
 
 void SidebarModel::slotDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight) {
     // qDebug() << "slotDataChanged topLeft:" << topLeft << "bottomRight:" << bottomRight;
+    LibraryFeature* pFeature = featureForModel(
+            qobject_cast<QAbstractItemModel*>(sender()));
+    if (pFeature && !m_sFeatures.contains(pFeature)) {
+        // Hidden feature; its items are not reachable from any view.
+        return;
+    }
     QModelIndex topLeftTranslated = translateSourceIndex(topLeft);
     QModelIndex bottomRightTranslated = translateSourceIndex(bottomRight);
     emit dataChanged(topLeftTranslated, bottomRightTranslated);
@@ -503,6 +575,9 @@ void SidebarModel::slotDataChanged(const QModelIndex& topLeft, const QModelIndex
 void SidebarModel::slotRowsAboutToBeInserted(const QModelIndex& parent, int start, int end) {
     //qDebug() << "slotRowsABoutToBeInserted" << parent << start << end;
 
+    if (shouldSuppressChildModelSignals(&m_suppressedInserts)) {
+        return;
+    }
     QModelIndex newParent = translateSourceIndex(parent);
     beginInsertRows(newParent, start, end);
 }
@@ -510,6 +585,9 @@ void SidebarModel::slotRowsAboutToBeInserted(const QModelIndex& parent, int star
 void SidebarModel::slotRowsAboutToBeRemoved(const QModelIndex& parent, int start, int end) {
     //qDebug() << "slotRowsABoutToBeRemoved" << parent << start << end;
 
+    if (shouldSuppressChildModelSignals(&m_suppressedRemoves)) {
+        return;
+    }
     QModelIndex newParent = translateSourceIndex(parent);
     beginRemoveRows(newParent, start, end);
 }
@@ -520,6 +598,10 @@ void SidebarModel::slotRowsInserted(const QModelIndex& parent, int start, int en
     Q_UNUSED(end);
     // qDebug() << "slotRowsInserted" << parent << start << end;
     // QModelIndex newParent = translateSourceIndex(parent);
+    if (m_suppressedInserts > 0) {
+        --m_suppressedInserts;
+        return;
+    }
     endInsertRows();
 }
 
@@ -529,6 +611,10 @@ void SidebarModel::slotRowsRemoved(const QModelIndex& parent, int start, int end
     Q_UNUSED(end);
     //qDebug() << "slotRowsRemoved" << parent << start << end;
     //QModelIndex newParent = translateSourceIndex(parent);
+    if (m_suppressedRemoves > 0) {
+        --m_suppressedRemoves;
+        return;
+    }
     endRemoveRows();
 }
 
@@ -581,6 +667,10 @@ void SidebarModel::slotFeatureSelect(LibraryFeature* pFeature, const QModelIndex
                 break;
             }
         }
+    }
+    if (!ind.isValid()) {
+        // A hidden feature has no root index to select.
+        return;
     }
     emit selectIndex(ind);
 }

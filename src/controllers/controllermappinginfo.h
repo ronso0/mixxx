@@ -64,11 +64,21 @@ class MappingInfo {
         return m_products;
     }
 
+    // Bite DJ: <hidden>true</hidden> in <info> opts a mapping out of the
+    // in-skin Devices picker. The controller is still auto-applied when a
+    // matching device appears (see ControllerSettings::refreshRows), so
+    // virtual/internal devices self-configure without occupying a row the
+    // user can't usefully toggle.
+    inline bool isHidden() const {
+        return m_hidden;
+    }
+
   private:
     ProductInfo parseBulkProduct(const QDomElement& element) const;
     ProductInfo parseHIDProduct(const QDomElement& element) const;
 
     bool m_valid;
+    bool m_hidden;
     QString m_path;
     QString m_dirPath;
     QString m_name;

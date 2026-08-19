@@ -1,8 +1,12 @@
 #include "analyzer/trackanalysisscheduler.h"
 
+#include <QDir>
+#include <QMutexLocker>
+
 #include "analyzer/analyzerscheduledtrack.h"
 #include "analyzer/analyzertrack.h"
 #include "moc_trackanalysisscheduler.cpp"
+#include "track/track.h"
 #include "track/trackid.h"
 #include "util/logger.h"
 
@@ -25,6 +29,9 @@ void deleteTrackAnalysisScheduler(TrackAnalysisScheduler* plainPtr) {
 }
 
 } // anonymous namespace
+
+QMutex TrackAnalysisScheduler::s_instancesMutex;
+QList<TrackAnalysisScheduler*> TrackAnalysisScheduler::s_instances;
 
 TrackAnalysisScheduler::NullPointer::NullPointer()
     : Pointer(nullptr, [](TrackAnalysisScheduler*){}) {
@@ -88,10 +95,15 @@ TrackAnalysisScheduler::TrackAnalysisScheduler(
         worker.thread()->suspend();
         worker.thread()->start(kWorkerThreadPriority);
     }
+
+    QMutexLocker locked(&s_instancesMutex);
+    s_instances.append(this);
 }
 
 TrackAnalysisScheduler::~TrackAnalysisScheduler() {
     kLogger.debug() << "Destroying";
+    QMutexLocker locked(&s_instancesMutex);
+    s_instances.removeOne(this);
 }
 
 void TrackAnalysisScheduler::emitProgressOrFinished() {
@@ -201,6 +213,9 @@ void TrackAnalysisScheduler::onWorkerThreadProgress(
         DEBUG_ASSERT(!trackId.isValid());
         DEBUG_ASSERT(analyzerProgress == kAnalyzerProgressUnknown);
         worker.onAnalyzerProgress(analyzerProgress);
+        // The worker holds no track while idle; submitNextTrack() below records
+        // a fresh one if it hands work over.
+        worker.forgetSubmittedTrack();
         submitNextTrack(&worker);
         break;
     case AnalyzerThreadState::Busy:
@@ -215,6 +230,9 @@ void TrackAnalysisScheduler::onWorkerThreadProgress(
         break;
     case AnalyzerThreadState::Done:
         DEBUG_ASSERT(trackId.isValid());
+        // The worker has released the audio file (whether it finished or was
+        // cancelled); it no longer holds this track.
+        worker.forgetSubmittedTrack();
         // Ignore delayed signals for tracks that are no longer pending
         if (m_pendingTrackIds.find(trackId) != m_pendingTrackIds.end()) {
             DEBUG_ASSERT((analyzerProgress == kAnalyzerProgressDone) // success
@@ -288,6 +306,8 @@ bool TrackAnalysisScheduler::submitNextTrack(Worker* worker) {
                 AnalyzerTrack nextTrack(nextTrackPtr, nextScheduledTrack.getOptions());
                 if (m_pendingTrackIds.insert(nextTrackId).second) {
                     if (worker->submitNextTrack(std::move(nextTrack))) {
+                        worker->recordSubmittedTrack(
+                                nextTrackId, nextTrackPtr->getLocation());
                         m_queuedTracks.pop_front();
                         ++m_dequeuedTracksCount;
                         return true;
@@ -335,4 +355,73 @@ void TrackAnalysisScheduler::stop() {
     m_queuedTracks.clear();
     m_pendingTrackIds.clear();
     DEBUG_ASSERT((allTracksFinished()));
+}
+
+void TrackAnalysisScheduler::cancelTrack(TrackId trackId) {
+    if (!trackId.isValid()) {
+        return;
+    }
+    // Drop it from the not-yet-started queue. A queued track holds no open file,
+    // so there is nothing else to do for it.
+    for (auto it = m_queuedTracks.begin(); it != m_queuedTracks.end();) {
+        if (it->getTrackId() == trackId) {
+            it = m_queuedTracks.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    // Abort the worker analyzing it, if any. The worker reports back as Done,
+    // which clears it from m_pendingTrackIds.
+    for (auto& worker : m_workers) {
+        if (worker && worker.submittedTrackId() == trackId) {
+            kLogger.debug() << "Cancelling in-progress analysis of track" << trackId;
+            worker.cancelSubmittedTrack();
+        }
+    }
+    emitProgressOrFinished();
+}
+
+void TrackAnalysisScheduler::cancelTracksOnPath(const QString& path) {
+    QString prefix = QDir::cleanPath(path);
+    if (!prefix.endsWith(QLatin1Char('/'))) {
+        prefix.append(QLatin1Char('/'));
+    }
+    // Drop queued-but-not-started tracks that live on the volume so a freed
+    // worker doesn't immediately reopen another file on it. Their location is
+    // resolved lazily because the queue only stores track ids.
+    for (auto it = m_queuedTracks.begin(); it != m_queuedTracks.end();) {
+        const TrackPointer pTrack = m_pEnvironment->loadTrackById(it->getTrackId());
+        if (pTrack && pTrack->getLocation().startsWith(prefix)) {
+            it = m_queuedTracks.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    // Abort any worker whose open audio file is on the volume so the file
+    // descriptor is released and the volume can be unmounted.
+    for (auto& worker : m_workers) {
+        if (worker && worker.submittedTrackLocation().startsWith(prefix)) {
+            kLogger.debug() << "Cancelling analysis on ejected volume:"
+                            << worker.submittedTrackLocation();
+            worker.cancelSubmittedTrack();
+        }
+    }
+    emitProgressOrFinished();
+}
+
+//static
+void TrackAnalysisScheduler::cancelAnalysisUnderPath(const QString& path) {
+    // Snapshot under the lock and iterate without it: cancelTracksOnPath emits
+    // progress()/finished() to same-thread receivers synchronously, and one of
+    // them may construct or destroy a scheduler (which takes s_instancesMutex).
+    // All schedulers live on this (the calling) thread, so the snapshot stays
+    // valid for the duration of the loop.
+    QList<TrackAnalysisScheduler*> instances;
+    {
+        QMutexLocker locked(&s_instancesMutex);
+        instances = s_instances;
+    }
+    for (TrackAnalysisScheduler* pScheduler : std::as_const(instances)) {
+        pScheduler->cancelTracksOnPath(path);
+    }
 }

@@ -40,6 +40,8 @@ class KeyControl : public EngineControl {
     void slotRateChanged();
     void slotSyncKey(double);
     void slotResetKey(double);
+    void slotPitchUp2(double);
+    void slotPitchDown2(double);
 
   private:
     void setEngineKey(double key, double key_distance);
@@ -60,6 +62,8 @@ class KeyControl : public EngineControl {
     std::unique_ptr<ControlPotmeter> m_pPitchAdjust;
     std::unique_ptr<ControlPushButton> m_pButtonSyncKey;
     std::unique_ptr<ControlPushButton> m_pButtonResetKey;
+    std::unique_ptr<ControlPushButton> m_pButtonPitchUp2;
+    std::unique_ptr<ControlPushButton> m_pButtonPitchDown2;
     std::unique_ptr<ControlPushButton> m_keylockMode;
     std::unique_ptr<ControlPushButton> m_keyunlockMode;
 
@@ -69,6 +73,10 @@ class KeyControl : public EngineControl {
     // The current effective key of the engine
     std::unique_ptr<ControlObject> m_pEngineKey;
     std::unique_ptr<ControlPotmeter> m_pEngineKeyDistance;
+
+    // 1 while the effective key differs from the file key, else 0. Plain CO
+    // (not a potmeter) so skin connections can test it with <IsEqual>.
+    std::unique_ptr<ControlObject> m_pKeyShifted;
 
     struct PitchTempoRatio m_pitchRateInfo;
     QAtomicInt m_updatePitchRequest;

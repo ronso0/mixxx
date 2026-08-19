@@ -36,7 +36,6 @@ const QString kSchemeKey = QStringLiteral("Scheme");
 const QString kResizableSkinKey = QStringLiteral("ResizableSkin");
 const QString kLocaleKey = QStringLiteral("Locale");
 const QString kTooltipsKey = QStringLiteral("Tooltips");
-const QString kMultiSamplingKey = QStringLiteral("multi_sampling");
 const QString kHideMenuBarKey = QStringLiteral("hide_menubar");
 
 // TODO move these to a common *_defs.h file, some are also used by e.g. MixxxMainWindow
@@ -189,43 +188,6 @@ DlgPrefInterface::DlgPrefInterface(
     comboBoxScreensaver->setCurrentIndex(comboBoxScreensaver->findData(
             QVariant::fromValue(m_pScreensaverManager->status())));
 
-    // Multi-Sampling
-#ifdef MIXXX_USE_QML
-    if (CmdlineArgs::Instance().isQml()) {
-        multiSamplingComboBox->clear();
-        multiSamplingComboBox->addItem(tr("Disabled"),
-                QVariant::fromValue(mixxx::preferences::MultiSamplingMode::Disabled));
-        multiSamplingComboBox->addItem(tr("2x MSAA"),
-                QVariant::fromValue(mixxx::preferences::MultiSamplingMode::Two));
-        multiSamplingComboBox->addItem(tr("4x MSAA"),
-                QVariant::fromValue(mixxx::preferences::MultiSamplingMode::Four));
-        multiSamplingComboBox->addItem(tr("8x MSAA"),
-                QVariant::fromValue(mixxx::preferences::MultiSamplingMode::Eight));
-        multiSamplingComboBox->addItem(tr("16x MSAA"),
-                QVariant::fromValue(mixxx::preferences::MultiSamplingMode::Sixteen));
-
-        m_multiSampling = m_pConfig->getValue<mixxx::preferences::MultiSamplingMode>(
-                ConfigKey(kPreferencesGroup, kMultiSamplingKey),
-                mixxx::preferences::MultiSamplingMode::Four);
-        int multiSamplingIndex = multiSamplingComboBox->findData(
-                QVariant::fromValue((m_multiSampling)));
-        if (multiSamplingIndex != -1) {
-            multiSamplingComboBox->setCurrentIndex(multiSamplingIndex);
-        } else {
-            multiSamplingComboBox->setCurrentIndex(0); // Disabled
-            m_pConfig->setValue(ConfigKey(kPreferencesGroup, kMultiSamplingKey),
-                    mixxx::preferences::MultiSamplingMode::Disabled);
-        }
-    } else
-#endif
-    {
-#ifdef MIXXX_USE_QML
-        m_multiSampling = mixxx::preferences::MultiSamplingMode::Disabled;
-#endif
-        multiSamplingLabel->hide();
-        multiSamplingComboBox->hide();
-    }
-
     // Tooltip configuration
     connect(buttonGroupTooltips,
             QOverload<QAbstractButton*>::of(&QButtonGroup::buttonClicked),
@@ -366,12 +328,6 @@ void DlgPrefInterface::slotResetToDefaults() {
     comboBoxScreensaver->setCurrentIndex(comboBoxScreensaver->findData(
             QVariant::fromValue(mixxx::preferences::ScreenSaver::On)));
 
-#ifdef MIXXX_USE_QML
-    multiSamplingComboBox->setCurrentIndex(
-            multiSamplingComboBox->findData(QVariant::fromValue(
-                    mixxx::preferences::MultiSamplingMode::Four))); // 4x MSAA
-#endif
-
 #ifdef Q_OS_IOS
     // Tooltips off everywhere.
     radioButtonTooltipsOff->setChecked(true);
@@ -495,26 +451,11 @@ void DlgPrefInterface::slotApply() {
         m_pScreensaverManager->setStatus(screensaverComboBoxState);
     }
 
-#ifdef MIXXX_USE_QML
-    mixxx::preferences::MultiSamplingMode multiSampling =
-            multiSamplingComboBox->currentData()
-                    .value<mixxx::preferences::MultiSamplingMode>();
-    m_pConfig->setValue<mixxx::preferences::MultiSamplingMode>(
-            ConfigKey(kPreferencesGroup, kMultiSamplingKey), multiSampling);
-#endif
-
-    if (locale != m_localeOnUpdate || scaleFactor != m_dScaleFactor
-#ifdef MIXXX_USE_QML
-            || multiSampling != m_multiSampling
-#endif
-    ) {
+    if (locale != m_localeOnUpdate || scaleFactor != m_dScaleFactor) {
         notifyRebootNecessary();
         // hack to prevent showing the notification when pressing "Okay" after "Apply"
         m_localeOnUpdate = locale;
         m_dScaleFactor = scaleFactor;
-#ifdef MIXXX_USE_QML
-        m_multiSampling = multiSampling;
-#endif
     }
 
     // load skin/scheme if necessary

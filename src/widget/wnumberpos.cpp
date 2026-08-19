@@ -1,7 +1,5 @@
 #include "widget/wnumberpos.h"
 
-#include <QMouseEvent>
-
 #include "control/controlproxy.h"
 #include "moc_wnumberpos.cpp"
 #include "util/duration.h"
@@ -28,24 +26,6 @@ WNumberPos::WNumberPos(const QString& group, QWidget* parent)
     m_pTimeFormat->connectValueChanged(
             this, &WNumberPos::slotSetTimeFormat);
     slotSetTimeFormat(m_pTimeFormat->get());
-}
-
-void WNumberPos::mousePressEvent(QMouseEvent* pEvent) {
-    bool leftClick = pEvent->buttons() & Qt::LeftButton;
-
-    if (leftClick) {
-        // Cycle through display modes
-        if (m_displayMode == TrackTime::DisplayMode::ELAPSED) {
-            m_displayMode = TrackTime::DisplayMode::REMAINING;
-        } else if (m_displayMode == TrackTime::DisplayMode::REMAINING) {
-            m_displayMode = TrackTime::DisplayMode::ELAPSED_AND_REMAINING;
-        } else if (m_displayMode == TrackTime::DisplayMode::ELAPSED_AND_REMAINING) {
-            m_displayMode = TrackTime::DisplayMode::ELAPSED;
-        }
-
-        m_pShowTrackTimeRemaining->set(static_cast<double>(m_displayMode));
-        slotSetTimeElapsed(m_dOldTimeElapsed);
-    }
 }
 
 // Reimplementing WNumber::setValue

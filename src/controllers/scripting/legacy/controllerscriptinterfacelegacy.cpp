@@ -8,6 +8,7 @@
 #include "moc_controllerscriptinterfacelegacy.cpp"
 #include "util/fpclassify.h"
 #include "util/make_const_iterator.h"
+#include "util/math.h"
 #include "util/time.h"
 
 #define SCRATCH_DEBUG_OUTPUT false
@@ -21,6 +22,45 @@ constexpr int kScratchTimerMs = 1;
 constexpr double kAlphaBetaDt = kScratchTimerMs / 1000.0;
 // stop ramping at a rate which doesn't produce any audible output anymore
 constexpr double kBrakeRampToRate = 0.01;
+
+// Bite DJ vinyl brake. [BiteDJ],vinyl_brake holds the brake time in seconds:
+// how long a platter thrown at normal (1x) speed takes to run out. 0 switches
+// the brake off and restores stock Mixxx's near-instant alpha-beta ramp.
+//
+// Read fresh on each jog release rather than held as a proxy, so the setting
+// applies to the very next throw and a build without the CO (stock Mixxx, where
+// SystemSettings never runs) simply reads 0 and keeps stock behaviour.
+const ConfigKey kVinylBrakeKey(QStringLiteral("[BiteDJ]"), QStringLiteral("vinyl_brake"));
+// Don't coast a wheel that was released within this much of where it was headed
+// anyway - below it the brake would only add an inaudible run-out to what is
+// really just a nudge.
+constexpr double kVinylBrakeMinRate = 0.05;
+// A platter is slowed by two kinds of drag at once, and the brake needs both.
+// Air/bearing drag grows with speed (kVinylBrakeDrag, per second), so a hard
+// throw sheds speed hardest up front and how hard the DJ spun the wheel is
+// audible in how sharply it drops away. Slipmat/spindle friction is constant
+// (kVinylBrakeFriction, rate per second) and is what actually brings the
+// platter to a stand: speed-proportional drag alone only ever *approaches* the
+// target, so the last stretch of a pure decay is an inaudible crawl and the
+// run-out reads as a snap-back to anyone listening.
+//
+// kVinylBrakeDragRatio is how much bigger the speed-proportional part is than
+// the constant part at a 1x throw. Solving d' = -(k1*d + k2) for the time to
+// reach the target from a distance of 1.0 gives ln(1 + ratio) / k1, so scaling
+// both by that log makes the configured brake time the run-out of a 1x throw
+// exactly, with the deceleration still varying ~4x from throw to standstill.
+constexpr double kVinylBrakeDragRatio = 3.0;
+const double kVinylBrakeDragScale = log(1.0 + kVinylBrakeDragRatio);
+// Clamp the configured time so a stray config value can't leave a deck coasting
+// for minutes with no way back except touching the wheel again.
+constexpr double kVinylBrakeMaxSeconds = 10.0;
+// Most a single tick may advance the coast. Stepping on the clock is what keeps
+// a coalescing 1ms timer from stretching the run-out, but taken literally one
+// stalled tick could also swallow a whole short brake and silently hand the
+// deck straight back - the failure the brake is most often accused of. Capping
+// the step spends a late tick on running slightly long instead, which is the
+// far better way to be wrong here.
+constexpr double kVinylBrakeMaxTickSeconds = 0.02;
 } // namespace
 
 ControllerScriptInterfaceLegacy::ControllerScriptInterfaceLegacy(
@@ -38,6 +78,11 @@ ControllerScriptInterfaceLegacy::ControllerScriptInterfaceLegacy(
     m_brakeActive.resize(kDecks);
     m_spinbackActive.resize(kDecks);
     m_softStartActive.resize(kDecks);
+    m_vinylBrakeRate.resize(kDecks);
+    m_vinylBrakeDrag.resize(kDecks);
+    m_vinylBrakeFriction.resize(kDecks);
+    m_vinylBrakeTick.resize(kDecks);
+    m_vinylBrakeActive.resize(kDecks);
     // Initialize arrays used for testing and pointers
     for (int i = 0; i < kDecks; ++i) {
         m_dx[i] = 0.0;
@@ -46,6 +91,10 @@ ControllerScriptInterfaceLegacy::ControllerScriptInterfaceLegacy(
         m_brakeActive[i] = false;
         m_spinbackActive[i] = false;
         m_softStartActive[i] = false;
+        m_vinylBrakeRate[i] = 0.0;
+        m_vinylBrakeDrag[i] = 0.0;
+        m_vinylBrakeFriction[i] = 0.0;
+        m_vinylBrakeActive[i] = false;
     }
 }
 
@@ -683,6 +732,11 @@ void ControllerScriptInterfaceLegacy::scratchEnable(int deck,
     m_ramp[deck] = false;
     m_rampFactor[deck] = 0.001;
     m_brakeActive[deck] = false;
+    // Touching the wheel again takes the platter back off the vinyl brake. The
+    // coast leaves scratch2_enable set, so the ramp handling below picks the
+    // current coast rate up as the filter's initial velocity and the grab is
+    // seamless.
+    m_vinylBrakeActive[deck] = false;
 
     // PlayerManager::groupForDeck is 0-indexed.
     QString group = PlayerManager::groupForDeck(deck - 1);
@@ -744,6 +798,38 @@ void ControllerScriptInterfaceLegacy::scratchProcess(int timerId) {
     const int deck = m_scratchTimers[timerId];
     // PlayerManager::groupForDeck is 0-indexed.
     const QString group = PlayerManager::groupForDeck(deck - 1);
+    // Bite DJ: a thrown jog wheel coasts on its own decay rather than through
+    // the filter, so it sheds speed in proportion to the speed it still has and
+    // runs out over the configured brake time.
+    if (m_vinylBrakeActive[deck] && vinylBrakeProcess(deck, timerId, group)) {
+        return;
+    }
+
+    // A cue press hands the deck back to normal playback by clearing
+    // scratch2_enable (CueControl::endScratching).
+    ControlObjectScript* pScratch2Enable =
+            getControlObjectScript(group, "scratch2_enable");
+    if (pScratch2Enable != nullptr && !pScratch2Enable->toBool()) {
+        if (m_ramp[deck] || m_brakeActive[deck] || m_spinbackActive[deck] ||
+                m_softStartActive[deck]) {
+            // Nothing is left listening to a platter that has been let go of,
+            // so give up the run-out rather than play it out to a deck that is
+            // no longer taking it - and, in the case of a brake, rather than
+            // stop a deck at the end of a slow-down the cue has overruled.
+            m_ramp[deck] = false;
+            m_brakeActive[deck] = false;
+            m_spinbackActive[deck] = false;
+            m_softStartActive[deck] = false;
+            stopScratchTimer(timerId);
+            m_dx[deck] = 0.0;
+            return;
+        }
+        // The wheel is still under the DJ's hand, though, and that outranks the
+        // cue: take the deck straight back, so juggling cues mid-scratch does
+        // not leave the platter dead until it is released and grabbed again.
+        pScratch2Enable->set(1);
+    }
+
     AlphaBetaFilter* filter = m_scratchFilters[deck];
     if (!filter) {
         qCWarning(m_logger) << "Scratch filter pointer is null on deck" << deck;
@@ -823,8 +909,6 @@ void ControllerScriptInterfaceLegacy::scratchProcess(int timerId) {
         }
 
         // Clear scratch2_enable to end scratching.
-        ControlObjectScript* pScratch2Enable =
-                getControlObjectScript(group, "scratch2_enable");
         if (pScratch2Enable == nullptr) {
             return; // abort and maybe it'll work on the next pass
         }
@@ -864,7 +948,119 @@ void ControllerScriptInterfaceLegacy::scratchDisable(int deck, bool ramp) {
     }
 
     m_lastMovement[deck] = mixxx::Time::elapsed();
+
+    // Bite DJ: the stock ramp pulls the platter onto m_rampTo in a fraction of a
+    // second, which kills a throw before it can be heard. When the vinyl brake
+    // is configured, coast there at its deceleration instead - a backwards throw
+    // becomes a backspin, a forwards one a run-out, and both last as long as the
+    // brake time says. A playing deck still ends up at its play rate, it just
+    // takes the scenic route, so releasing mid-scratch keeps working.
+    if (ramp && startVinylBrake(deck, group)) {
+        return;
+    }
+
     m_ramp[deck] = true; // Activate the ramping in scratchProcess()
+}
+
+bool ControllerScriptInterfaceLegacy::startVinylBrake(int deck, const QString& group) {
+    const double brakeSeconds = ControlObject::get(kVinylBrakeKey);
+    // Also rejects NaN, which would otherwise make every step NaN.
+    if (!(brakeSeconds > 0.0)) {
+        return false;
+    }
+
+    ControlObjectScript* pScratch2 = getControlObjectScript(group, "scratch2");
+    if (pScratch2 == nullptr) {
+        return false;
+    }
+
+    const double rate = pScratch2->get();
+    if (fabs(rate - m_rampTo[deck]) < kVinylBrakeMinRate) {
+        return false;
+    }
+
+    m_vinylBrakeRate[deck] = rate;
+    // Split the configured time between the two kinds of drag (see the
+    // constants above): the speed-proportional part shapes the throw, the
+    // constant part guarantees the platter arrives.
+    const double seconds = math_min(brakeSeconds, kVinylBrakeMaxSeconds);
+    m_vinylBrakeDrag[deck] = kVinylBrakeDragScale / seconds;
+    m_vinylBrakeFriction[deck] = m_vinylBrakeDrag[deck] / kVinylBrakeDragRatio;
+    // Coast on the clock rather than on a tick count. The 1ms scratch timer is
+    // a request, not a promise - on a loaded appliance it coalesces, and a coast
+    // measured in ticks then runs however much longer than the setting says.
+    m_vinylBrakeTick[deck].start();
+    m_vinylBrakeActive[deck] = true;
+    return true;
+}
+
+bool ControllerScriptInterfaceLegacy::vinylBrakeProcess(
+        int deck, int timerId, const QString& group) {
+    ControlObjectScript* pScratch2 = getControlObjectScript(group, "scratch2");
+    ControlObjectScript* pScratch2Enable =
+            getControlObjectScript(group, "scratch2_enable");
+    if (pScratch2 == nullptr || pScratch2Enable == nullptr) {
+        // Abort the coast rather than the tick: without the control there is no
+        // way to drive or to end it, and leaving the flag set would strand the
+        // deck in a brake that never finishes.
+        m_vinylBrakeActive[deck] = false;
+        return false;
+    }
+
+    // A cue press takes the deck off the scratch outright
+    // (CueControl::endScratching), so that it plays from the cue at the track's
+    // own speed instead of at whatever is left of the run-out. The platter is
+    // no longer ours to coast: drop it here rather than spend the rest of the
+    // brake time writing a rate nothing is reading and holding the timer open.
+    if (!pScratch2Enable->toBool()) {
+        endVinylBrake(deck, timerId);
+        return true;
+    }
+
+    // Ticks that arrive after lift-off (a stray edge from the wheel settling)
+    // must not feed back into the coast.
+    m_intervalAccumulator[deck] = 0;
+
+    const double dt = math_clamp(m_vinylBrakeTick[deck].restart().toDoubleSeconds(),
+            0.0,
+            kVinylBrakeMaxTickSeconds);
+
+    // Where the platter is headed is the deck's business for as long as the
+    // coast lasts, not the release's: a deck that starts playing part way
+    // through a run-out is carried back up to its play rate rather than dragged
+    // on down to the standstill it was headed for when the wheel was let go -
+    // and one that is stopped mid-coast spins down instead of chasing a rate
+    // nothing is playing at.
+    const double target = isDeckPlaying(group) ? getDeckRate(group) : 0.0;
+    const double remaining = m_vinylBrakeRate[deck] - target;
+    // Speed-proportional drag plus constant friction, so the platter sheds
+    // speed fastest while it is turning fastest but still keeps closing on the
+    // target at an audible rate all the way in.
+    const double step =
+            (m_vinylBrakeDrag[deck] * fabs(remaining) + m_vinylBrakeFriction[deck]) * dt;
+    // The constant part carries the platter over the finish line, so the coast
+    // ends where it should - on the target - rather than at whatever margin a
+    // never-quite-arriving decay had to be cut off at.
+    const bool done = !isTrackLoaded(group) || fabs(remaining) <= step;
+    const double rate = done ? target : target + remaining - copysign(step, remaining);
+
+    m_vinylBrakeRate[deck] = rate;
+    pScratch2->set(rate);
+    if (!done) {
+        return true;
+    }
+
+    // Hand the deck back exactly as the alpha-beta ramp does when it lands.
+    pScratch2Enable->set(0);
+    endVinylBrake(deck, timerId);
+    return true;
+}
+
+void ControllerScriptInterfaceLegacy::endVinylBrake(int deck, int timerId) {
+    m_vinylBrakeActive[deck] = false;
+    m_ramp[deck] = false;
+    stopScratchTimer(timerId);
+    m_dx[deck] = 0.0;
 }
 
 bool ControllerScriptInterfaceLegacy::isScratching(int deck) {
@@ -885,6 +1081,9 @@ void ControllerScriptInterfaceLegacy::brake(int deck, bool activate, double fact
              << ", factor:" << factor << ", rate:" << rate;
     // PlayerManager::groupForDeck is 0-indexed.
     const QString group = PlayerManager::groupForDeck(deck - 1);
+    // A script-driven brake takes the deck over from any vinyl-brake coast that
+    // a jog release left running.
+    m_vinylBrakeActive[deck] = false;
     // enable/disable scratch2 mode
     ControlObjectScript* pScratch2Enable = getControlObjectScript(group, "scratch2_enable");
     if (pScratch2Enable != nullptr) {
@@ -971,9 +1170,27 @@ void ControllerScriptInterfaceLegacy::softStart(int deck, bool activate, double 
     // PlayerManager::groupForDeck is 0-indexed.
     const QString group = PlayerManager::groupForDeck(deck - 1);
 
+    // A script-driven soft start takes the deck over from any vinyl-brake coast
+    // that a jog release left running.
+    m_vinylBrakeActive[deck] = false;
+
     // kill timer when both enabling or disabling
     int timerId = m_scratchTimers.key(deck);
     stopScratchTimer(timerId);
+
+    // Bite DJ: start the deck *before* taking the scratch, not after (which is
+    // where stock Mixxx does it, further down). Starting a deck now takes it off
+    // whatever scratch is driving it - a play or a pause out-ranks a run-out,
+    // see EngineBuffer::slotControlPlayRequest - so a soft start that enabled
+    // scratch2 first would have its own play write pull the platter out from
+    // under it, and scratchProcess would find the flag cleared on its next tick
+    // and abandon the ramp.
+    if (activate) {
+        ControlObjectScript* pPlay = getControlObjectScript(group, "play");
+        if (pPlay != nullptr) {
+            pPlay->set(1.0);
+        }
+    }
 
     // enable/disable scratch2 mode
     ControlObjectScript* pScratch2Enable = getControlObjectScript(group, "scratch2_enable");
@@ -1003,14 +1220,9 @@ void ControllerScriptInterfaceLegacy::softStart(int deck, bool activate, double 
         }
     }
 
-    // setup timer, start playing and set scratch2
+    // setup timer and set scratch2 (the deck was started above)
     timerId = startTimer(kScratchTimerMs);
     m_scratchTimers[timerId] = deck;
-
-    ControlObjectScript* pPlay = getControlObjectScript(group, "play");
-    if (pPlay != nullptr) {
-        pPlay->set(1.0);
-    }
 
     ControlObjectScript* pScratch2 = getControlObjectScript(group, "scratch2");
     if (pScratch2 != nullptr) {

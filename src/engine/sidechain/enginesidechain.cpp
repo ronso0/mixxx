@@ -15,10 +15,20 @@
 #include "moc_enginesidechain.cpp"
 #include "util/counter.h"
 #include "util/event.h"
+#include "util/rtscheduling.h"
 #include "util/sample.h"
 #include "util/trace.h"
 
 #define SIDECHAIN_BUFFER_SIZE 65536
+
+namespace {
+// How long the thread sleeps before looking at the FIFO again. Nothing wakes
+// it early (see run()), so this is the whole of its scheduling: the FIFO holds
+// about 0.74 s of stereo audio at 44.1 kHz, which leaves an order of magnitude
+// of headroom over this interval before a sample could be dropped, while
+// costing ten wake-ups a second on an appliance that is doing nothing.
+constexpr unsigned long kDrainIntervalMs = 100;
+} // namespace
 
 EngineSideChain::EngineSideChain(
         UserSettingsPointer pConfig,
@@ -28,13 +38,16 @@ EngineSideChain::EngineSideChain(
           m_sampleFifo(SIDECHAIN_BUFFER_SIZE),
           m_pWorkBuffer(SampleUtil::alloc(SIDECHAIN_BUFFER_SIZE)),
           m_pSidechainMix(sidechainMix) {
-    // We use HighPriority to prevent starvation by lower-priority processes (Qt
-    // main thread, analysis, etc.). This used to be LowPriority but that is not
-    // a suitable choice since we do semi-realtime tasks
-    // in the sidechain thread. To get reliable timing, it's important
-    // that this work be prioritized over the GUI and non-realtime tasks. See
-    // discussion on issue #7272 and https://bugs.launchpad.net/mixxx/1.11/+bug/1194543.
-    start(QThread::HighPriority);
+    // Bite DJ: the lowest priority Qt offers, not the HighPriority upstream
+    // uses (see issue #7272). Nothing this thread does has a deadline — it
+    // exists so that the audio callback does not have to encode and write a
+    // recording — and on this appliance it writes to a USB stick that can stall
+    // for as long as it likes, so it must never be able to take CPU from the
+    // engine. run() goes further and puts it in SCHED_IDLE, which is what
+    // actually enforces that on Linux; this is here because it must not be
+    // InheritPriority, which would hand a thread doing blocking file I/O the
+    // SCHED_FIFO 49 policy of the thread that started it.
+    start(QThread::IdlePriority);
 }
 
 EngineSideChain::~EngineSideChain() {
@@ -81,14 +94,22 @@ void EngineSideChain::writeSamples(const CSAMPLE* pBuffer, int iFrames) {
     const int numSamplesWritten = m_sampleFifo.write(pBuffer, numSamples);
 
     if (numSamplesWritten != numSamples) {
+        // Dropped, never blocked: this runs in the audio callback, and a
+        // recording missing a buffer is always better than the engine missing
+        // its deadline. This FIFO is also the hard ceiling on what the sidechain
+        // can hold in memory — SIDECHAIN_BUFFER_SIZE samples, 256 KiB, fixed at
+        // construction — no matter how far behind the encoder or the device it
+        // writes to has fallen.
         Counter("EngineSideChain::writeSamples buffer overrun").increment();
     }
 
-    if (m_sampleFifo.writeAvailable() < SIDECHAIN_BUFFER_SIZE / 5) {
-        // Signal to the sidechain that samples are available.
-        Trace wakeup("EngineSideChain::writeSamples wake up");
-        m_waitForSamples.wakeAll();
-    }
+    // Deliberately no wake-up from here: the sidechain polls instead (see
+    // run()). QWaitCondition::wakeAll() takes the condition's own mutex, which
+    // the sidechain thread holds for a moment either side of its sleep — from
+    // here that is a lock the real-time callback can block on, held by a
+    // SCHED_IDLE thread that may not be scheduled again for a while. The
+    // callback's entire interaction with the sidechain is the wait-free FIFO
+    // write above.
 }
 
 void EngineSideChain::run() {
@@ -98,21 +119,45 @@ void EngineSideChain::run() {
     QThread::currentThread()->setObjectName(QString("EngineSideChain %1").arg(++id));
     static const QString tag("EngineSideChain");
     Event::start(tag);
+
+    // Everything below this line is work the audio callback handed off so that
+    // it would not have to do it: encoding, writing the recording to a USB
+    // stick, broadcasting. None of it has a deadline, and all of it can block
+    // on a device for an unbounded time, so it runs in the weakest scheduling
+    // class there is — only ever on a CPU nothing else wants. That also puts
+    // its writes in the idle I/O class, behind the reads a deck is doing from
+    // whatever stick its track came from.
+    mixxx::demoteCurrentThreadToIdle("EngineSideChain");
+
     while (!m_bStopThread) {
-        // Sleep until samples are available.
+        // Sleep until there is plausibly something to do. Timed rather than
+        // woken by the callback: see writeSamples(). The destructor still wakes
+        // us so that shutdown does not wait out the interval.
         m_waitLock.lock();
 
         Event::end(tag);
-        m_waitForSamples.wait(&m_waitLock);
+        m_waitForSamples.wait(&m_waitLock, kDrainIntervalMs);
         m_waitLock.unlock();
         Event::start(tag);
+
+        // Take a copy of the worker list instead of holding the lock across
+        // process(): that call encodes and writes to disk, and on a stalled USB
+        // stick it can sit in an uninterruptible write for as long as the device
+        // takes. Whoever wanted this lock meanwhile — the GUI thread registering
+        // a worker — would be stuck behind that write, i.e. a frozen UI. Workers
+        // are only ever removed by the destructor, which joins this thread
+        // before touching the list, so the copy cannot outlive its entries.
+        QList<SideChainWorker*> workers;
+        {
+            MMutexLocker locker(&m_workerLock);
+            workers = m_workers;
+        }
 
         int samples_read;
         while ((samples_read = m_sampleFifo.read(m_pWorkBuffer,
                                                  SIDECHAIN_BUFFER_SIZE))) {
             Trace process("EngineSideChain::process");
-            MMutexLocker locker(&m_workerLock);
-            foreach (SideChainWorker* pWorker, m_workers) {
+            for (SideChainWorker* pWorker : std::as_const(workers)) {
                 pWorker->process(m_pWorkBuffer, samples_read);
             }
         }

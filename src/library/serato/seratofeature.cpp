@@ -1,7 +1,9 @@
 #include "library/serato/seratofeature.h"
 
 #include <QBuffer>
+#include <QDir>
 #include <QMap>
+#include <QSet>
 #include <QStandardPaths>
 #include <QTextCodec>
 #include <QtConcurrentRun>
@@ -19,6 +21,7 @@
 #include "util/assert.h"
 #include "util/db/dbconnectionpooled.h"
 #include "util/db/dbconnectionpooler.h"
+#include "util/usbdevice.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarytextbrowser.h"
 
@@ -93,6 +96,45 @@ const QString kSeratoPlaylistsTable = QStringLiteral("serato_playlists");
 const QString kSeratoPlaylistTracksTable = QStringLiteral("serato_playlist_tracks");
 
 constexpr int kHeaderSize = 2 * sizeof(quint32);
+
+// Consecutive empty background enumerations required before a database entry
+// is removed from the sidebar.
+constexpr int kBgEmptyScansBeforeRemoval = 3;
+
+// Remove all rows previously imported from this database (keyed by the
+// _Serato_ directory path bound as serato_db on every row) so a re-parse —
+// device re-plugged, or a different drive mounted under a reused name —
+// starts clean instead of stacking duplicate INSERTs.
+void clearDatabaseRows(const QSqlDatabase& database, const QString& databasePath) {
+    QSqlQuery deletePlaylistTracksQuery(database);
+    deletePlaylistTracksQuery.prepare(
+            "DELETE FROM " + kSeratoPlaylistTracksTable +
+            " WHERE playlist_id IN (SELECT id FROM " + kSeratoPlaylistsTable +
+            " WHERE serato_db=:serato_db)");
+    deletePlaylistTracksQuery.bindValue(":serato_db", databasePath);
+    if (!deletePlaylistTracksQuery.exec()) {
+        LOG_FAILED_QUERY(deletePlaylistTracksQuery)
+                << "databasePath:" << databasePath;
+    }
+
+    QSqlQuery deletePlaylistsQuery(database);
+    deletePlaylistsQuery.prepare(
+            "DELETE FROM " + kSeratoPlaylistsTable + " WHERE serato_db=:serato_db");
+    deletePlaylistsQuery.bindValue(":serato_db", databasePath);
+    if (!deletePlaylistsQuery.exec()) {
+        LOG_FAILED_QUERY(deletePlaylistsQuery)
+                << "databasePath:" << databasePath;
+    }
+
+    QSqlQuery deleteTracksQuery(database);
+    deleteTracksQuery.prepare(
+            "DELETE FROM " + kSeratoLibraryTable + " WHERE serato_db=:serato_db");
+    deleteTracksQuery.bindValue(":serato_db", databasePath);
+    if (!deleteTracksQuery.exec()) {
+        LOG_FAILED_QUERY(deleteTracksQuery)
+                << "databasePath:" << databasePath;
+    }
+}
 
 int createPlaylist(const QSqlDatabase& database, const QString& name, const QString& databasePath) {
     QSqlQuery query(database);
@@ -487,6 +529,8 @@ QString parseDatabase(mixxx::DbConnectionPoolPtr dbConnectionPool, TreeItem* dat
 
     ScopedTransaction transaction(database);
 
+    clearDatabaseRows(database, databaseDir.path());
+
     QSqlQuery query(database);
     query.prepare(
             "INSERT INTO " +
@@ -699,8 +743,11 @@ QList<TreeItem*> findSeratoDatabases() {
     databaseLocations.append(
             mediaDir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot));
 
-    // Add folders under /media/$USER to devices.
-    if (mediaDir.cd(userName)) {
+    // Add folders under /media/$USER to devices. When USER is unset,
+    // cd("") is a no-op that "succeeds" in place, which would re-list
+    // /media itself and duplicate every device — skip the per-user roots
+    // in that case (same guard as browsefeature/rekordboxfeature).
+    if (!userName.isEmpty() && mediaDir.cd(userName)) {
         databaseLocations.append(
                 mediaDir.entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot));
     }
@@ -907,14 +954,51 @@ SeratoFeature::SeratoFeature(
             &QFutureWatcher<QString>::finished,
             this,
             &SeratoFeature::onTracksFound);
+    // Bite DJ: drop a database from the sidebar the moment its drive is
+    // unmounted (in-skin Eject, physical yank, external unmount), rather than
+    // waiting for the background poll to notice it has gone.
+    connect(pLibrary,
+            &Library::mountEjected,
+            this,
+            &SeratoFeature::ejectDevice);
 
     // initialize the model
     m_pSidebarModel->setRootItem(TreeItem::newRoot(this));
+
+    // Background polling: surface mounted Serato databases and pre-parse
+    // them without requiring a user tap. Required now that the sidebar
+    // entry is hidden while no database is present — there is no root item
+    // to tap to trigger the first scan. Mirrors RekordboxFeature.
+    connect(&m_bgDatabasesFutureWatcher,
+            &QFutureWatcher<QList<TreeItem*>>::finished,
+            this,
+            &SeratoFeature::onBackgroundSeratoDatabasesFound);
+    connect(&m_bgTracksFutureWatcher,
+            &QFutureWatcher<QString>::finished,
+            this,
+            &SeratoFeature::onBackgroundTracksFound);
+    m_bgPollTimer.setInterval(5000);
+    m_bgPollTimer.setSingleShot(false);
+    connect(&m_bgPollTimer,
+            &QTimer::timeout,
+            this,
+            &SeratoFeature::onBackgroundPollTick);
+    m_bgPollTimer.start();
+    // The sidebar entry stays hidden until a database is found, so don't sit
+    // on a full poll interval before surfacing a drive that is already
+    // mounted at startup — kick the first enumeration immediately.
+    QTimer::singleShot(0, this, &SeratoFeature::onBackgroundPollTick);
 }
 
 SeratoFeature::~SeratoFeature() {
+    // Stop the timer first so no new background work is queued, then drain
+    // all four futures before dropping the tables — a still-running
+    // parseDatabase() would otherwise write into tables about to be dropped.
+    m_bgPollTimer.stop();
     m_databasesFuture.waitForFinished();
     m_tracksFuture.waitForFinished();
+    m_bgDatabasesFuture.waitForFinished();
+    m_bgTracksFuture.waitForFinished();
 
     // Drop temporary Serato database tables on shutdown
     QSqlDatabase database = m_pTrackCollection->database();
@@ -1056,6 +1140,10 @@ void SeratoFeature::activateChild(const QModelIndex& index) {
         qDebug() << "Activate Serato Playlist: " << playlist;
         emit saveModelState();
         m_pSeratoPlaylistModel->setPlaylist(playlist);
+        // Playlist names are filesystem paths — the database file for the
+        // device-level playlist, the .crate file for a crate — so they double
+        // as the location tying this view to its (removable) drive.
+        m_pSeratoPlaylistModel->setBackingLocation(playlist);
         emit showTrackModel(m_pSeratoPlaylistModel);
     }
 }
@@ -1064,60 +1152,250 @@ void SeratoFeature::onSeratoDatabasesFound() {
     const QList<TreeItem*> result = m_databasesFuture.result();
     auto foundDatabases = std::vector<std::unique_ptr<TreeItem>>(result.cbegin(), result.cend());
 
+    mergeFoundDatabasesIntoSidebar(std::move(foundDatabases), /*isBackgroundScan=*/false);
+
+    // calls a slot in the sidebarmodel such that 'isLoading' is removed from the feature title.
+    m_title = tr("Serato");
+    emit featureLoadingFinished(this);
+}
+
+void SeratoFeature::mergeFoundDatabasesIntoSidebar(
+        std::vector<std::unique_ptr<TreeItem>> foundDatabases,
+        bool isBackgroundScan) {
     clearLastRightClickedIndex();
 
     TreeItem* root = m_pSidebarModel->getRootItem();
-    QSqlDatabase database = m_pTrackCollection->database();
 
     if (foundDatabases.size() == 0) {
         // No Serato databases found
+
+        if (isBackgroundScan &&
+                ++m_bgConsecutiveEmptyScans < kBgEmptyScansBeforeRemoval) {
+            // Background poll: a single empty enumeration is often a transient
+            // hiccup right after a (re)mount. Wait for several consecutive
+            // empty scans before removing, so the database isn't needlessly
+            // re-parsed when it reappears on the next tick.
+            return;
+        }
+
+        // Nothing is mounted any more, so no staged database can still be
+        // waiting for its crates either.
+        const QStringList staged = stagedDatabaseLabels();
+        for (const QString& label : staged) {
+            dropStagedDatabase(label);
+        }
 
         if (root->childRows() > 0) {
             // Devices have since been unmounted
             m_pSidebarModel->removeRows(0, root->childRows());
         }
-    } else {
-        for (int databaseIndex = 0; databaseIndex < root->childRows(); databaseIndex++) {
-            TreeItem* child = root->child(databaseIndex);
-            bool removeChild = true;
+        m_bgConsecutiveEmptyScans = 0;
+        emit requestSidebarVisibility(this, false);
+        return;
+    }
 
-            for (const auto& pDatabaseFound : foundDatabases) {
-                if (pDatabaseFound->getLabel() == child->getLabel()) {
-                    removeChild = false;
-                    break;
-                }
-            }
-            if (removeChild) {
-                // Device has since been unmounted, cleanup DB
-                m_pSidebarModel->removeRows(databaseIndex, 1);
-            }
-        }
+    m_bgConsecutiveEmptyScans = 0;
 
-        std::vector<std::unique_ptr<TreeItem>> childrenToAdd;
+    // Iterate backwards so removing a row doesn't shift an unvisited database
+    // into the slot the loop has already passed.
+    for (int databaseIndex = root->childRows() - 1; databaseIndex >= 0; databaseIndex--) {
+        TreeItem* child = root->child(databaseIndex);
+        bool removeChild = true;
 
-        for (auto&& pDatabaseFound : foundDatabases) {
-            bool addNewChild = true;
-            for (int databaseIndex = 0; databaseIndex < root->childRows(); databaseIndex++) {
-                TreeItem* child = root->child(databaseIndex);
-                if (pDatabaseFound->getLabel() == child->getLabel()) {
-                    // This database already exists in the TreeModel, don't add or parse is again
-                    addNewChild = false;
-                    break;
-                }
-            }
-            if (addNewChild) {
-                childrenToAdd.push_back(std::move(pDatabaseFound));
+        for (const auto& pDatabaseFound : foundDatabases) {
+            if (pDatabaseFound->getLabel() == child->getLabel()) {
+                removeChild = false;
+                break;
             }
         }
-
-        if (!childrenToAdd.empty()) {
-            m_pSidebarModel->insertTreeItemRows(std::move(childrenToAdd), 0);
+        if (removeChild) {
+            // Device has since been unmounted, cleanup DB
+            m_pSidebarModel->removeRows(databaseIndex, 1);
         }
     }
 
-    // calls a slot in the sidebarmodel such that 'isLoading' is removed from the feature title.
-    m_title = tr("Serato");
-    emit featureLoadingFinished(this);
+    if (root->childRows() == 0) {
+        // Every parsed database went away; the staged ones aren't shown yet,
+        // so the feature has nothing left to display.
+        emit requestSidebarVisibility(this, false);
+    }
+
+    // Forget databases that disappeared again before their parse finished.
+    const QStringList staged = stagedDatabaseLabels();
+    for (const QString& label : staged) {
+        bool stillMounted = false;
+        for (const auto& pDatabaseFound : foundDatabases) {
+            if (pDatabaseFound->getLabel() == label) {
+                stillMounted = true;
+                break;
+            }
+        }
+        if (!stillMounted) {
+            dropStagedDatabase(label);
+        }
+    }
+
+    for (auto&& pDatabaseFound : foundDatabases) {
+        const QString label = pDatabaseFound->getLabel();
+        if (findDatabaseByLabel(label) || findStagedDatabase(label)) {
+            // Already shown, or already staged for parsing — don't add or
+            // parse it again.
+            continue;
+        }
+        // Bite DJ: a newly found database is staged here rather than inserted
+        // into the sidebar. Its crates only exist once parseDatabase() has
+        // run, and a device row that can't be expanded is confusing, so the
+        // row is added by promoteCompletedDrives() once the whole drive is
+        // parsed.
+        StagedDatabase stagedDatabase;
+        stagedDatabase.driveKey = driveKeyOfDatabase(pDatabaseFound.get());
+        stagedDatabase.pItem = std::move(pDatabaseFound);
+        m_stagedDatabases.push_back(std::move(stagedDatabase));
+    }
+
+    // A database dropped above may have been the last unparsed volume holding
+    // its drive's siblings back.
+    promoteCompletedDrives();
+    pumpBackgroundParseQueue();
+}
+
+QString SeratoFeature::driveKeyOfDatabase(const TreeItem* pDatabase) const {
+    // The label is the mount point the _Serato_ directory was found under
+    // (or the Music folder for a local library).
+    const QString mountPoint = pDatabase->getLabel();
+    // Volumes of one physical drive share a USB device node, which is what
+    // holds them together until the last of them has been parsed. A volume
+    // that doesn't resolve to one (the local Music library, or sysfs not
+    // telling us) is its own group, keyed by its path so it can't collide.
+    const QString usbDeviceNode = mixxx::usbDeviceNodeForMountPoint(mountPoint);
+    return usbDeviceNode.isEmpty() ? QDir::cleanPath(mountPoint) : usbDeviceNode;
+}
+
+SeratoFeature::StagedDatabase* SeratoFeature::findStagedDatabase(const QString& label) {
+    for (auto& stagedDatabase : m_stagedDatabases) {
+        if (stagedDatabase.pItem->getLabel() == label) {
+            return &stagedDatabase;
+        }
+    }
+    return nullptr;
+}
+
+QStringList SeratoFeature::stagedDatabaseLabels() const {
+    QStringList labels;
+    labels.reserve(static_cast<int>(m_stagedDatabases.size()));
+    for (const auto& stagedDatabase : m_stagedDatabases) {
+        labels.append(stagedDatabase.pItem->getLabel());
+    }
+    return labels;
+}
+
+std::unique_ptr<TreeItem> SeratoFeature::takeStagedDatabase(const QString& label) {
+    for (auto it = m_stagedDatabases.begin(); it != m_stagedDatabases.end(); ++it) {
+        if (it->pItem->getLabel() == label) {
+            std::unique_ptr<TreeItem> pDatabase = std::move(it->pItem);
+            m_stagedDatabases.erase(it);
+            return pDatabase;
+        }
+    }
+    return nullptr;
+}
+
+void SeratoFeature::dropStagedDatabase(const QString& label) {
+    if (m_bgParseInFlight && m_bgParseLabel == label) {
+        // A worker thread is writing into this item right now, so it has to
+        // outlive the parse. onBackgroundTracksFound() discards it instead of
+        // inserting it into the sidebar.
+        m_bgParseAbandoned = true;
+        return;
+    }
+    takeStagedDatabase(label);
+}
+
+void SeratoFeature::promoteCompletedDrives() {
+    // A drive with several volumes (e.g. a Serato partition plus a second data
+    // partition) mounts as one sidebar row per volume. Showing the first
+    // volume as soon as it is parsed would leave its siblings appearing late,
+    // so hold every volume back until the whole drive is done.
+    QSet<QString> incompleteDrives;
+    for (const auto& stagedDatabase : m_stagedDatabases) {
+        if (!stagedDatabase.parsed) {
+            incompleteDrives.insert(stagedDatabase.driveKey);
+        }
+    }
+
+    std::vector<std::unique_ptr<TreeItem>> childrenToAdd;
+    for (auto it = m_stagedDatabases.begin(); it != m_stagedDatabases.end();) {
+        if (incompleteDrives.contains(it->driveKey)) {
+            ++it;
+            continue;
+        }
+        childrenToAdd.push_back(std::move(it->pItem));
+        it = m_stagedDatabases.erase(it);
+    }
+
+    if (childrenToAdd.empty()) {
+        return;
+    }
+
+    // Surface the feature's root row (no-op if already visible) BEFORE
+    // inserting, so the row insertion has a live parent index in the sidebar
+    // to attach to.
+    emit requestSidebarVisibility(this, true);
+
+    m_pSidebarModel->insertTreeItemRows(
+            std::move(childrenToAdd), m_pSidebarModel->getRootItem()->childRows());
+}
+
+void SeratoFeature::ejectDevice(const QString& mountPoint) {
+    // Runs on the GUI thread (Library::mountEjected is emitted from
+    // SystemSettings, same thread), so it is safe to mutate the sidebar
+    // model directly here.
+    TreeItem* root = m_pSidebarModel->getRootItem();
+    if (!root) {
+        return;
+    }
+
+    // findSeratoDatabases() labels each entry with the device's mount path
+    // (trailing slash removed), so match the ejected mount point on the
+    // label. Normalise both so a trailing slash still matches.
+    const QString wanted = QDir::cleanPath(mountPoint);
+
+    // The database may still be staged — parsing, waiting for a sibling volume
+    // on the same drive, or queued behind another parse — in which case it has
+    // no sidebar row to remove yet.
+    const QStringList staged = stagedDatabaseLabels();
+    for (const QString& label : staged) {
+        if (QDir::cleanPath(label) == wanted) {
+            dropStagedDatabase(label);
+            // This may have been the last unparsed volume of its drive.
+            promoteCompletedDrives();
+            m_bgConsecutiveEmptyScans = 0;
+            return;
+        }
+    }
+
+    for (int databaseIndex = 0; databaseIndex < root->childRows(); ++databaseIndex) {
+        TreeItem* child = root->child(databaseIndex);
+        if (!child || QDir::cleanPath(child->getLabel()) != wanted) {
+            continue;
+        }
+
+        // A right-clicked index cached against the old row layout would dangle
+        // once we remove a row; clear it as mergeFoundDatabasesIntoSidebar() does.
+        clearLastRightClickedIndex();
+
+        m_pSidebarModel->removeRows(databaseIndex, 1);
+
+        if (root->childRows() == 0) {
+            // That was the last Serato database; retire the sidebar entry.
+            emit requestSidebarVisibility(this, false);
+        }
+
+        // This may have been the last database; reset the poll's empty-scan
+        // guard so a stale count doesn't linger into the next enumeration.
+        m_bgConsecutiveEmptyScans = 0;
+        return;
+    }
 }
 
 void SeratoFeature::onTracksFound() {
@@ -1129,5 +1407,121 @@ void SeratoFeature::onTracksFound() {
     qDebug() << "Show Serato Database Playlist: " << databasePlaylist;
     emit saveModelState();
     m_pSeratoPlaylistModel->setPlaylist(databasePlaylist);
+    m_pSeratoPlaylistModel->setBackingLocation(databasePlaylist);
     emit showTrackModel(m_pSeratoPlaylistModel);
+
+    // A background queue that yielded to this foreground parse may have
+    // stalled — kick it forward now that the foreground slot is free.
+    pumpBackgroundParseQueue();
+}
+
+void SeratoFeature::onBackgroundPollTick() {
+    // Yield to any foreground or already-running background scan.
+    if (m_databasesFutureWatcher.isRunning()) {
+        return;
+    }
+    if (m_bgDatabasesFutureWatcher.isRunning()) {
+        return;
+    }
+    m_bgDatabasesFuture = QtConcurrent::run(findSeratoDatabases);
+    m_bgDatabasesFutureWatcher.setFuture(m_bgDatabasesFuture);
+}
+
+void SeratoFeature::onBackgroundSeratoDatabasesFound() {
+    const QList<TreeItem*> result = m_bgDatabasesFuture.result();
+    auto foundDatabases = std::vector<std::unique_ptr<TreeItem>>(
+            result.cbegin(), result.cend());
+
+    mergeFoundDatabasesIntoSidebar(std::move(foundDatabases), /*isBackgroundScan=*/true);
+}
+
+void SeratoFeature::onBackgroundTracksFound() {
+    try {
+        (void)m_bgTracksFuture.result();
+    } catch (const std::exception& e) {
+        // Show the database anyway, with whatever crates the parse got
+        // through: discarding it here would only have the next poll tick
+        // rediscover it and fail again, forever.
+        qWarning() << "Background Serato parse failed:" << e.what();
+    }
+    m_bgParseInFlight = false;
+
+    const QString label = m_bgParseLabel;
+    m_bgParseLabel.clear();
+
+    if (m_bgParseAbandoned) {
+        // The drive went away mid-parse; don't show a row for a device that
+        // is gone.
+        m_bgParseAbandoned = false;
+        takeStagedDatabase(label);
+    } else if (StagedDatabase* pStagedDatabase = findStagedDatabase(label)) {
+        pStagedDatabase->parsed = true;
+    }
+
+    // The database enters the sidebar only now, with its crates attached —
+    // and only once every other volume of the same drive is parsed too.
+    promoteCompletedDrives();
+    m_pSidebarModel->triggerRepaint();
+
+    pumpBackgroundParseQueue();
+}
+
+void SeratoFeature::pumpBackgroundParseQueue() {
+    if (m_bgParseInFlight) {
+        return;
+    }
+    if (m_tracksFutureWatcher.isRunning()) {
+        // Yield to a user-driven parse so we don't double-up SQL writers
+        // for the same database.
+        return;
+    }
+    bool skippedUnparseable = false;
+    for (auto& stagedDatabase : m_stagedDatabases) {
+        if (stagedDatabase.parsed) {
+            continue;
+        }
+        TreeItem* item = stagedDatabase.pItem.get();
+        const QString label = item->getLabel();
+        QList<QVariant> data = item->getData().toList();
+        if (data.size() < 2 || data[1].toBool()) {
+            // Not a parseable database row; it would never gain crates, so
+            // count it as done rather than blocking its drive forever.
+            stagedDatabase.parsed = true;
+            skippedUnparseable = true;
+            continue;
+        }
+        // Flip the flag BEFORE kick-off to mirror activateChild() — by the
+        // time the database reaches the sidebar it is a plain playlist row
+        // pointing at the device's "all tracks" playlist.
+        data[1] = QVariant(true);
+        item->setData(QVariant(data));
+
+        m_bgTracksFuture = QtConcurrent::run(parseDatabase,
+                static_cast<Library*>(parent())->dbConnectionPool(),
+                item);
+        m_bgTracksFutureWatcher.setFuture(m_bgTracksFuture);
+        m_bgParseInFlight = true;
+        m_bgParseLabel = label;
+        return;
+    }
+
+    if (skippedUnparseable) {
+        // Nothing left to parse, and a drive may have been waiting on one of
+        // the rows just written off.
+        promoteCompletedDrives();
+    }
+}
+
+TreeItem* SeratoFeature::findDatabaseByLabel(const QString& label) const {
+    TreeItem* root = m_pSidebarModel->getRootItem();
+    if (!root) {
+        return nullptr;
+    }
+    for (int i = 0; i < root->childRows(); ++i) {
+        TreeItem* child = root->child(i);
+        if (child && child->getLabel() == label) {
+            return child;
+        }
+    }
+    return nullptr;
 }

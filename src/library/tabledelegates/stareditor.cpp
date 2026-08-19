@@ -98,6 +98,22 @@ bool StarEditor::eventFilter(QObject* obj, QEvent* event) {
         break;
     }
     case QEvent::MouseButtonRelease: {
+        // Bite DJ: a touchscreen has no hover, so the MouseMove below — which
+        // is what picks the star under the pointer on a desktop — never runs
+        // for a tap, and the editor would commit the rating it opened with.
+        // Take the star under the release instead. On a mouse it is the same
+        // star the hover already picked, and a press that leaves the cell (the
+        // start of a row drag) releases outside it and still changes nothing.
+        QMouseEvent* pReleaseEvent = static_cast<QMouseEvent*>(event);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        const int releasePosition = static_cast<int>(pReleaseEvent->position().x());
+#else
+        const int releasePosition = pReleaseEvent->x();
+#endif
+        const int star = m_starRating.starAtPosition(releasePosition, m_styleOption.rect);
+        if (star > StarRating::kInvalidStarCount) {
+            m_starRating.setStarCount(star);
+        }
         emit editingFinished();
         break;
     }

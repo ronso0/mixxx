@@ -29,6 +29,14 @@ class StarDelegate : public TableItemDelegate {
     void setModelData(QWidget* editor, QAbstractItemModel* model,
                       const QModelIndex& index) const;
 
+    // Bite DJ: sets the rating from a tap on the cell. The editor above is
+    // opened by hovering (cellEntered), which a touchscreen never does, so
+    // without this the stars are unreachable on the appliance.
+    bool editorEvent(QEvent* pEvent,
+            QAbstractItemModel* pModel,
+            const QStyleOptionViewItem& option,
+            const QModelIndex& index) override;
+
   private slots:
     void commitAndCloseEditor();
     void cellEntered(const QModelIndex& index);

@@ -85,7 +85,9 @@ void LibraryExporter::beginEnginePrimeExport(
             pJobThread,
             &EnginePrimeExportJob::slotCancel);
 
-    pJobThread->start();
+    // Explicit priority so the job doesn't inherit the main thread's
+    // SCHED_FIFO policy (see main.cpp).
+    pJobThread->start(QThread::LowPriority);
 }
 
 } // namespace mixxx

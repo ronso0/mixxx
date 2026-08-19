@@ -15,6 +15,7 @@ class ControllerLearningEventFilter;
 class MappingInfoEnumerator;
 class LegacyControllerMapping;
 class ControllerEnumerator;
+class SoftTakeoverIndicator;
 
 /// Function to sort controllers by name
 bool controllerCompare(Controller *a, Controller *b);
@@ -78,6 +79,7 @@ class ControllerManager : public QObject {
 
     UserSettingsPointer m_pConfig;
     ControllerLearningEventFilter* m_pControllerLearningEventFilter;
+    std::unique_ptr<SoftTakeoverIndicator> m_pSoftTakeoverIndicator;
     QTimer m_pollTimer;
     mutable QMutex m_mutex;
     QList<ControllerEnumerator*> m_enumerators;

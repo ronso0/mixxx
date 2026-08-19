@@ -85,6 +85,14 @@ class LibraryFeature : public QObject {
         return false;
     }
 
+    // Bite DJ: whether the feature's root item should appear in the sidebar
+    // as soon as it is registered. Features that are only meaningful while a
+    // removable device is attached (Rekordbox, Serato) return false and later
+    // emit requestSidebarVisibility(this, true) when a device is detected.
+    virtual bool isSidebarVisibleByDefault() const {
+        return true;
+    }
+
   protected:
     QStringList getPlaylistFiles() const {
         return getPlaylistFiles(QFileDialog::ExistingFiles);
@@ -150,6 +158,11 @@ class LibraryFeature : public QObject {
     void featureLoadingFinished(LibraryFeature*s);
     // emit this signal to select pFeature
     void featureSelect(LibraryFeature* pFeature, const QModelIndex& index);
+    // Bite DJ: emit this signal to show or hide the feature's root item in
+    // the sidebar (see isSidebarVisibleByDefault). Showing must be requested
+    // BEFORE inserting rows into the feature's sidebar child model — row
+    // change notifications from hidden features are not forwarded to views.
+    void requestSidebarVisibility(LibraryFeature* pFeature, bool visible);
     // emit this signal to enable/disable the cover art widget
     void enableCoverArtDisplay(bool);
     void trackSelected(TrackPointer pTrack);

@@ -18,7 +18,9 @@
 class AnalysisFeature;
 class BrowseFeature;
 class ControlObject;
+class ControlPushButton;
 class CrateFeature;
+class LibraryColumnControl;
 class LibraryControl;
 class LibraryFeature;
 class LibraryTableModel;
@@ -126,6 +128,7 @@ class Library: public QObject {
   signals:
     void showTrackModel(QAbstractItemModel* model, bool restoreState = true);
     void switchToView(const QString& view);
+    void sidebarLeafItemActivated(const QString& title);
     void loadTrack(TrackPointer pTrack);
     void loadTrackToPlayer(TrackPointer pTrack, const QString& group, bool play = false);
     void restoreSearch(const QString&);
@@ -150,9 +153,43 @@ class Library: public QObject {
 
     void onTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);
 
+    // Bite DJ: forwarded from SystemSettings::mountEjected (wired in
+    // CoreServices). Features backed by removable media (Rekordbox) connect to
+    // this to drop a device the instant its filesystem is unmounted, rather
+    // than waiting on their own background poll.
+    void mountEjected(const QString& mountPoint);
+
+    // Bite DJ: the metadata overrides stored on the drives have been wiped
+    // (Settings -> General -> Clear -> Meta). Features that mirror a drive's
+    // own library into a table of their own connect to this to put the ratings
+    // they scanned back to what the drive exported.
+    void metaOverridesCleared();
+
   private slots:
+      /// Bite DJ: close the track view when the drive it is reading from goes
+      /// away, and hand focus back to the sidebar browser. Connected to this
+      /// object's own mountEjected signal, before the features connect to it.
+      void slotMountEjected(const QString& mountPoint);
       void onPlayerManagerTrackAnalyzerProgress(TrackId trackId, AnalyzerProgress analyzerProgress);
       void onPlayerManagerTrackAnalyzerIdle();
+      void slotKeyNotationChanged(double value);
+      void slotClearCachedWaveforms(double value);
+      /// Bite DJ: forget which tracks have been played this session, clearing
+      /// the 'played' tint from every library view. Bound to
+      /// [Library],reset_played_tracks (Settings -> General -> Played).
+      void slotResetPlayedTracks(double value);
+      /// Bite DJ: delete the cues this unit stored on every connected USB
+      /// drive, handing the tracks back to whatever rekordbox exported for
+      /// them, and take those cues off the tracks that are still loaded so the
+      /// decks stop showing them. Bound to [Library],clear_cue_overrides
+      /// (Settings -> General -> Clear -> Cues).
+      void slotClearCueOverrides(double value);
+      /// Bite DJ: delete the track metadata (star ratings) this unit stored on
+      /// every connected USB drive, handing the tracks back to the ratings
+      /// their source library exported, and put those ratings back on the
+      /// tracks that are still loaded. Bound to [Library],clear_meta_overrides
+      /// (Settings -> General -> Clear -> Meta).
+      void slotClearMetaOverrides(double value);
 
   private:
     const UserSettingsPointer m_pConfig;
@@ -164,6 +201,7 @@ class Library: public QObject {
 
     parented_ptr<SidebarModel> m_pSidebarModel;
     parented_ptr<LibraryControl> m_pLibraryControl;
+    parented_ptr<LibraryColumnControl> m_pLibraryColumnControl;
 
     QList<LibraryFeature*> m_features;
     const static QString m_sTrackViewName;
@@ -178,4 +216,8 @@ class Library: public QObject {
     int m_iTrackTableRowHeight;
     bool m_editMetadataSelectedClick;
     QScopedPointer<ControlObject> m_pKeyNotation;
+    QScopedPointer<ControlPushButton> m_pClearCachedWaveforms;
+    QScopedPointer<ControlPushButton> m_pResetPlayedTracks;
+    QScopedPointer<ControlPushButton> m_pClearCueOverrides;
+    QScopedPointer<ControlPushButton> m_pClearMetaOverrides;
 };

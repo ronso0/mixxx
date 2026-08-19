@@ -584,3 +584,40 @@ TEST_F(CueControlTest, OutroCue_SetStartEnd_ClearStartEnd) {
 
     EXPECT_EQ(nullptr, pTrack->findCueByType(mixxx::CueType::Outro));
 }
+
+TEST_F(CueControlTest, CuePressTakesTheDeckOffAScratch) {
+    // Bite DJ: with the vinyl brake set, a released jog wheel goes on
+    // scratching the deck for as long as the configured run-out lasts. A cue is
+    // an instruction to be at its position playing at the track's own speed, so
+    // pressing one hands the rate straight back to the deck instead of sounding
+    // out the rest of the coast - which would play the cue slow, backwards, or
+    // (once the run-out has arrived) not at all.
+    TrackPointer pTrack = createTestTrack();
+    pTrack->setMainCuePosition(mixxx::audio::FramePos(100));
+    loadTrack(pTrack);
+
+    ControlProxy scratch2(m_sGroup1, "scratch2");
+    ControlProxy scratch2Enable(m_sGroup1, "scratch2_enable");
+    ControlProxy hotcueSet(m_sGroup1, "hotcue_1_set");
+    ControlProxy hotcueActivate(m_sGroup1, "hotcue_1_activate");
+    ControlProxy cue(m_sGroup1, "cue_default");
+
+    setCurrentFramePos(mixxx::audio::FramePos(500));
+    hotcueSet.set(1);
+    hotcueSet.set(0);
+
+    scratch2Enable.set(1);
+    scratch2.set(-2.0);
+    hotcueActivate.set(1);
+    EXPECT_DOUBLE_EQ(0.0, scratch2Enable.get());
+    EXPECT_DOUBLE_EQ(0.0, scratch2.get());
+    hotcueActivate.set(0);
+
+    // The main cue button as well.
+    scratch2Enable.set(1);
+    scratch2.set(-2.0);
+    cue.set(1);
+    EXPECT_DOUBLE_EQ(0.0, scratch2Enable.get());
+    EXPECT_DOUBLE_EQ(0.0, scratch2.get());
+    cue.set(0);
+}

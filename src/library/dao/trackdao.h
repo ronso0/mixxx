@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "library/dao/dao.h"
+#include "library/dao/fsanalysiscache.h"
 #include "library/relocatedtrack.h"
 #include "preferences/usersettings.h"
 #include "track/globaltrackcache.h"
@@ -200,6 +201,7 @@ class TrackDAO : public QObject, public virtual DAO, public virtual GlobalTrackC
     LibraryHashDAO& m_libraryHashDao;
 
     const UserSettingsPointer m_pConfig;
+    mutable FsAnalysisCache m_fsAnalysisCache;
 
     std::unique_ptr<QSqlQuery> m_pQueryTrackLocationInsert;
     std::unique_ptr<QSqlQuery> m_pQueryTrackLocationSelect;

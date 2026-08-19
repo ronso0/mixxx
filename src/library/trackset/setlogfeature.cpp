@@ -1,9 +1,12 @@
 #include "library/trackset/setlogfeature.h"
 
 #include <QDateTime>
+#include <QDir>
 #include <QMenu>
+#include <QMessageBox>
 #include <QSqlTableModel>
 
+#include "library/dao/fshistorystore.h"
 #include "library/library.h"
 #include "library/library_prefs.h"
 #include "library/playlisttablemodel.h"
@@ -11,16 +14,74 @@
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "library/treeitem.h"
+#include "library/treeitemmodel.h"
 #include "mixer/playerinfo.h"
 #include "moc_setlogfeature.cpp"
+#include "preferences/systemsettings.h"
 #include "track/track.h"
+#include "track/trackref.h"
 #include "util/make_const_iterator.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wtracktableview.h"
 
 namespace {
-constexpr int kNumToplevelHistoryEntries = 5;
+
+/// Sidebar payloads of the nodes that are not playlists. They deliberately do
+/// not parse as an integer, which is how BasePlaylistFeature's helpers tell
+/// them apart from a playlist id (see the class comment).
+const QString kLocalNodeData = QStringLiteral("bitedj:history:local");
+const QString kVolumeNodePrefix = QStringLiteral("bitedj:history:drive:");
+const QString kSessionNodePrefix = QStringLiteral("bitedj:history:session:");
+/// Neither a mount point nor a session name can contain a newline.
+const QChar kSessionNodeSeparator = QLatin1Char('\n');
+
+/// Backstop for a drive being plugged in; an eject is reported to us directly.
+constexpr int kUsbPollIntervalMillis = 5000;
+
+const QString kCurrentSessionIcon =
+        QStringLiteral(":/images/library/ic_library_history_current.svg");
+const QString kDriveIcon = QStringLiteral(":/images/library/ic_library_computer.svg");
+
+QString volumeNodeData(const QString& mountRoot) {
+    return kVolumeNodePrefix + mountRoot;
+}
+
+QString sessionNodeData(const QString& mountRoot, const QString& sessionName) {
+    return kSessionNodePrefix + mountRoot + kSessionNodeSeparator + sessionName;
+}
+
+bool parseVolumeNodeData(const QVariant& data, QString* pMountRoot) {
+    const QString text = data.toString();
+    if (!text.startsWith(kVolumeNodePrefix)) {
+        return false;
+    }
+    *pMountRoot = text.mid(kVolumeNodePrefix.size());
+    return !pMountRoot->isEmpty();
+}
+
+bool parseSessionNodeData(const QVariant& data, QString* pMountRoot, QString* pSessionName) {
+    const QString text = data.toString();
+    if (!text.startsWith(kSessionNodePrefix)) {
+        return false;
+    }
+    const QString payload = text.mid(kSessionNodePrefix.size());
+    const int separator = payload.indexOf(kSessionNodeSeparator);
+    if (separator <= 0) {
+        return false;
+    }
+    *pMountRoot = payload.left(separator);
+    *pSessionName = payload.mid(separator + 1);
+    return !pSessionName->isEmpty();
+}
+
+/// What a drive is called in the sidebar: the name the automounter gave its
+/// mount point, which is the volume label the DJ wrote on the stick.
+QString volumeLabel(const QString& mountRoot) {
+    const QString name = QDir(mountRoot).dirName();
+    return name.isEmpty() ? mountRoot : name;
+}
+
 } // namespace
 
 using namespace mixxx::library::prefs;
@@ -41,7 +102,7 @@ SetlogFeature::SetlogFeature(
                   QStringLiteral("SetlogCountsDurations"),
                   /*keep hidden tracks*/ true),
           m_currentPlaylistId(kInvalidPlaylistId),
-          m_yearNodeId(kInvalidPlaylistId),
+          m_driveViewPlaylistId(kInvalidPlaylistId),
           m_pLibrary(pLibrary),
           m_pConfig(pConfig) {
     // remove unneeded entries
@@ -58,12 +119,18 @@ SetlogFeature::SetlogFeature(
     }
     m_playlistDao.deletePlaylists(plsToDelete);
 
-    // Create empty placeholder playlist for YEAR items
-    m_yearNodeId = m_playlistDao.createUniquePlaylist(&placeholderName,
+    // Create the empty placeholder playlist the drive sessions are shown
+    // through. It is refilled from a drive's own store on every activation and
+    // deleted again on shutdown, so nothing of a stick's history is left behind
+    // in this unit's library.
+    m_driveViewPlaylistId = m_playlistDao.createUniquePlaylist(&placeholderName,
             PlaylistDAO::PLHT_UNKNOWN);
-    DEBUG_ASSERT(m_yearNodeId != kInvalidPlaylistId);
-    // just to be safe
-    m_playlistDao.setPlaylistLocked(m_yearNodeId, true);
+    DEBUG_ASSERT(m_driveViewPlaylistId != kInvalidPlaylistId);
+    // The view onto a drive session is read-only: it is a record of what was
+    // played, and edits to it would have nowhere to go.
+    m_playlistDao.setPlaylistLocked(m_driveViewPlaylistId, true);
+
+    m_usbMountPoints = SystemSettings::usbMountPoints();
 
     //construct child model
     m_pSidebarModel->setRootItem(TreeItem::newRoot(this));
@@ -105,6 +172,38 @@ SetlogFeature::SetlogFeature(
             this,
             &SetlogFeature::slotDeleteAllUnlockedChildPlaylists);
 
+    m_pStartNewDriveSessionAction = new QAction(tr("Start new session"), this);
+    connect(m_pStartNewDriveSessionAction,
+            &QAction::triggered,
+            this,
+            &SetlogFeature::slotStartNewDriveSession);
+
+    m_pDeleteDriveHistoryAction = new QAction(tr("Delete all sessions on this drive"), this);
+    connect(m_pDeleteDriveHistoryAction,
+            &QAction::triggered,
+            this,
+            &SetlogFeature::slotDeleteDriveHistory);
+
+    m_pDeleteDriveSessionAction = new QAction(tr("Delete session"), this);
+    connect(m_pDeleteDriveSessionAction,
+            &QAction::triggered,
+            this,
+            &SetlogFeature::slotDeletePlaylist);
+
+    // A drive that goes away takes its node with it right away; one that
+    // arrives is picked up by the poll below.
+    connect(pLibrary,
+            &Library::mountEjected,
+            this,
+            &SetlogFeature::slotMountEjected);
+    m_usbPollTimer.setInterval(kUsbPollIntervalMillis);
+    m_usbPollTimer.setSingleShot(false);
+    connect(&m_usbPollTimer,
+            &QTimer::timeout,
+            this,
+            &SetlogFeature::slotRefreshUsbVolumes);
+    m_usbPollTimer.start();
+
     // initialized in a new generic slot(get new history playlist purpose)
     slotGetNewPlaylist();
 }
@@ -114,7 +213,7 @@ SetlogFeature::~SetlogFeature() {
     // incl. potentially empty current playlist
     deleteAllUnlockedPlaylistsWithFewerTracks();
     // Delete the placeholder
-    m_playlistDao.deletePlaylist(m_yearNodeId);
+    m_playlistDao.deletePlaylist(m_driveViewPlaylistId);
 }
 
 QVariant SetlogFeature::title() {
@@ -147,17 +246,48 @@ void SetlogFeature::slotDeletePlaylist() {
     if (!m_lastRightClickedIndex.isValid()) {
         return;
     }
-    int playlistId = playlistIdFromIndex(m_lastRightClickedIndex);
-    if (playlistId == m_currentPlaylistId) {
-        // the current setlog must not be deleted
+    TreeItem* pItem = static_cast<TreeItem*>(m_lastRightClickedIndex.internalPointer());
+    if (!pItem) {
         return;
-    } else if (playlistId == m_yearNodeId) {
-        // this is a YEAR node
-        slotDeleteAllUnlockedChildPlaylists();
-    } else {
-        // regular setlog, call the base implementation
-        BasePlaylistFeature::slotDeletePlaylist();
     }
+
+    QString mountRoot;
+    QString sessionName;
+    if (parseSessionNodeData(pItem->getData(), &mountRoot, &sessionName)) {
+        // A session on a drive: it lives in that drive's store, not in a
+        // playlist table.
+        QMessageBox::StandardButton btn = QMessageBox::question(nullptr,
+                tr("Confirm Deletion"),
+                //: %1 is the session name, %2 the drive it was played from
+                tr("Do you really want to delete the session <b>%1</b> "
+                   "on <b>%2</b>?")
+                        .arg(sessionName, volumeLabel(mountRoot)),
+                QMessageBox::Yes | QMessageBox::No,
+                QMessageBox::No);
+        if (btn != QMessageBox::Yes) {
+            return;
+        }
+        if (!FsHistoryStore::deleteSession(mountRoot, sessionName)) {
+            return;
+        }
+        if (m_currentSessionByMount.value(mountRoot) == sessionName) {
+            m_currentSessionByMount.remove(mountRoot);
+        }
+        if (m_shownMountRoot == mountRoot && m_shownSessionName == sessionName) {
+            showDriveSession(mountRoot, QString(), QModelIndex());
+        }
+        constructChildModel(kInvalidPlaylistId);
+        return;
+    }
+
+    int playlistId = playlistIdFromIndex(m_lastRightClickedIndex);
+    if (playlistId == kInvalidPlaylistId || playlistId == m_currentPlaylistId) {
+        // the current setlog must not be deleted, and neither a volume nor the
+        // "This Unit" node is a playlist
+        return;
+    }
+    // regular setlog, call the base implementation
+    BasePlaylistFeature::slotDeletePlaylist();
 }
 
 void SetlogFeature::onRightClick(const QPoint& globalPos) {
@@ -175,20 +305,35 @@ void SetlogFeature::onRightClickChild(const QPoint& globalPos, const QModelIndex
     //Save the model index so we can get it in the action slots...
     m_lastRightClickedIndex = index;
 
-    int playlistId = playlistIdFromIndex(index);
-    // not a real entry
-    if (playlistId == kInvalidPlaylistId) {
+    TreeItem* pItem = static_cast<TreeItem*>(index.internalPointer());
+    if (!pItem) {
         return;
     }
+    const QVariant itemData = pItem->getData();
 
     QMenu menu(m_pSidebarWidget);
-    if (playlistId == m_yearNodeId) {
-        // this is a YEAR item
+
+    QString mountRoot;
+    QString sessionName;
+    if (parseSessionNodeData(itemData, &mountRoot, &sessionName)) {
+        // A session stored on a drive. It has no playlist behind it, so the
+        // playlist actions (rename, lock, Auto DJ, export) do not apply.
+        menu.addAction(m_pDeleteDriveSessionAction);
+    } else if (parseVolumeNodeData(itemData, &mountRoot)) {
+        menu.addAction(m_pStartNewDriveSessionAction);
+        menu.addSeparator();
+        menu.addAction(m_pDeleteDriveHistoryAction);
+    } else if (itemData.toString() == kLocalNodeData) {
         menu.addAction(m_pLockAllChildPlaylists);
         menu.addAction(m_pUnlockAllChildPlaylists);
         menu.addSeparator();
         menu.addAction(m_pDeleteAllChildPlaylists);
     } else {
+        int playlistId = playlistIdFromIndex(index);
+        // not a real entry
+        if (playlistId == kInvalidPlaylistId) {
+            return;
+        }
         // this is a playlist
         bool locked = m_playlistDao.isPlaylistLocked(playlistId);
         m_pDeletePlaylistAction->setEnabled(!locked);
@@ -227,7 +372,10 @@ void SetlogFeature::onRightClickChild(const QPoint& globalPos, const QModelIndex
 /// Purpose: When inserting or removing playlists,
 /// we require the sidebar model not to reset.
 /// This method queries the database and does dynamic insertion
-/// Use a custom model in the history for grouping by year
+///
+/// The top level is the drives: one node per mounted USB volume, holding the
+/// sessions that drive carries, plus a fixed "This Unit" node holding the
+/// setlog playlists of tracks that were not played off a removable drive.
 /// @param selectedId row which should be selected
 QModelIndex SetlogFeature::constructChildModel(int selectedId) {
     // qDebug() << "SetlogFeature::constructChildModel() selected:" << selectedId;
@@ -273,17 +421,38 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
     QSqlRecord record = playlistTableModel.record();
     int nameColumn = record.indexOf("name");
     int idColumn = record.indexOf("id");
-    int createdColumn = record.indexOf("date_created");
     int countColumn = record.indexOf("count");
     int durationColumn = record.indexOf("durationSeconds");
 
-    // Nice to have: restore previous expanded/collapsed state of YEAR items
     clearChildModel();
-    QMap<int, TreeItem*> groups;
     std::vector<std::unique_ptr<TreeItem>> itemList;
-    // Generous estimate (number of years the db is used ;))
-    itemList.reserve(kNumToplevelHistoryEntries + 15);
+    itemList.reserve(m_usbMountPoints.size() + 1);
 
+    // The drives, newest session first under each of them.
+    for (const QString& mountRoot : std::as_const(m_usbMountPoints)) {
+        auto pVolumeItem = std::make_unique<TreeItem>(
+                volumeLabel(mountRoot), volumeNodeData(mountRoot));
+        pVolumeItem->setIcon(QIcon(kDriveIcon));
+
+        QList<FsHistorySession> sessions;
+        if (FsHistoryStore::readSessions(mountRoot, &sessions)) {
+            const QString currentSession = m_currentSessionByMount.value(mountRoot);
+            for (const FsHistorySession& session : std::as_const(sessions)) {
+                TreeItem* pSessionItem = pVolumeItem->appendChild(
+                        createPlaylistLabel(session.name,
+                                session.trackCount,
+                                session.durationSeconds),
+                        sessionNodeData(mountRoot, session.name));
+                if (session.name == currentSession) {
+                    pSessionItem->setIcon(QIcon(kCurrentSessionIcon));
+                }
+            }
+        }
+        itemList.push_back(std::move(pVolumeItem));
+    }
+
+    // Everything this unit logged for itself.
+    auto pLocalItem = std::make_unique<TreeItem>(tr("This Unit"), kLocalNodeData);
     for (int row = 0; row < playlistTableModel.rowCount(); ++row) {
         int id =
                 playlistTableModel
@@ -293,10 +462,6 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
                 playlistTableModel
                         .data(playlistTableModel.index(row, nameColumn))
                         .toString();
-        QDateTime dateCreated =
-                playlistTableModel
-                        .data(playlistTableModel.index(row, createdColumn))
-                        .toDateTime();
         int count = playlistTableModel
                             .data(playlistTableModel.index(row, countColumn))
                             .toInt();
@@ -304,42 +469,13 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
                 playlistTableModel
                         .data(playlistTableModel.index(row, durationColumn))
                         .toInt();
-        QString label = createPlaylistLabel(name, count, duration);
 
-        // Create the TreeItem whose parent is the invisible root item.
-        // Show only [kNumToplevelHistoryEntries] recent playlists at the top level
-        // before grouping them by year.
-        if (row >= kNumToplevelHistoryEntries) {
-            // group by year
-            int yearCreated = dateCreated.date().year();
-
-            auto i = groups.find(yearCreated);
-            TreeItem* pGroupItem;
-            if (i != groups.end() && i.key() == yearCreated) {
-                // get YEAR item the playlist will sorted into
-                pGroupItem = i.value();
-            } else {
-                // create YEAR item the playlist will sorted into
-                // store id of empty placeholder playlist
-                auto pNewGroupItem = std::make_unique<TreeItem>(
-                        QString::number(yearCreated), m_yearNodeId);
-                pGroupItem = pNewGroupItem.get();
-                groups.insert(yearCreated, pGroupItem);
-                itemList.push_back(std::move(pNewGroupItem));
-            }
-
-            TreeItem* pItem = pGroupItem->appendChild(label, id);
-            pItem->setBold(m_playlistIdsOfSelectedTrack.contains(id));
-            decorateChild(pItem, id);
-        } else {
-            // add most recent top-level playlist
-            auto pItem = std::make_unique<TreeItem>(label, id);
-            pItem->setBold(m_playlistIdsOfSelectedTrack.contains(id));
-            decorateChild(pItem.get(), id);
-
-            itemList.push_back(std::move(pItem));
-        }
+        TreeItem* pItem = pLocalItem->appendChild(
+                createPlaylistLabel(name, count, duration), id);
+        pItem->setBold(m_playlistIdsOfSelectedTrack.contains(id));
+        decorateChild(pItem, id);
     }
+    itemList.push_back(std::move(pLocalItem));
 
     // Append all the newly created TreeItems in a dynamic way to the childmodel
     m_pSidebarModel->insertTreeItemRows(std::move(itemList), 0);
@@ -349,12 +485,283 @@ QModelIndex SetlogFeature::constructChildModel(int selectedId) {
 
 void SetlogFeature::decorateChild(TreeItem* item, int playlistId) {
     if (playlistId == m_currentPlaylistId) {
-        item->setIcon(QIcon(":/images/library/ic_library_history_current.svg"));
+        item->setIcon(QIcon(kCurrentSessionIcon));
     } else if (m_playlistDao.isPlaylistLocked(playlistId)) {
         item->setIcon(QIcon(":/images/library/ic_library_locked.svg"));
     } else {
         item->setIcon(QIcon());
     }
+}
+
+QModelIndex SetlogFeature::indexOfItemData(const QVariant& data) {
+    QModelIndexList results = m_pSidebarModel->match(
+            m_pSidebarModel->getRootIndex(),
+            TreeItemModel::kDataRole,
+            data,
+            1,
+            Qt::MatchWrap | Qt::MatchExactly | Qt::MatchRecursive);
+    if (!results.isEmpty()) {
+        return results.front();
+    }
+    return QModelIndex();
+}
+
+QModelIndex SetlogFeature::indexOfVolumeNode(const QString& mountRoot) {
+    return indexOfItemData(volumeNodeData(mountRoot));
+}
+
+QString SetlogFeature::mountRootForLocation(const QString& trackLocation) const {
+    if (trackLocation.isEmpty()) {
+        return QString();
+    }
+    const QString cleaned = QDir::cleanPath(trackLocation);
+    for (const QString& mountRoot : m_usbMountPoints) {
+        if (cleaned.startsWith(mountRoot + QLatin1Char('/'))) {
+            return mountRoot;
+        }
+    }
+    return QString();
+}
+
+QString SetlogFeature::currentSessionOnDrive(const QString& mountRoot) {
+    const auto it = m_currentSessionByMount.constFind(mountRoot);
+    if (it != m_currentSessionByMount.constEnd()) {
+        return it.value();
+    }
+    // First track off this drive since it was plugged in: that is where one set
+    // ends and the next begins.
+    const QString sessionName = FsHistoryStore::newSessionName(mountRoot);
+    if (sessionName.isEmpty()) {
+        // Unavailable or write-protected. Nothing to log to, and nothing worth
+        // saying about it on every track change.
+        return QString();
+    }
+    m_currentSessionByMount.insert(mountRoot, sessionName);
+    return sessionName;
+}
+
+void SetlogFeature::logTrackToDrive(const QString& mountRoot, const TrackPointer& pTrack) {
+    const QString sessionName = currentSessionOnDrive(mountRoot);
+    if (sessionName.isEmpty()) {
+        return;
+    }
+    if (!FsHistoryStore::appendTrack(mountRoot,
+                sessionName,
+                pTrack->getLocation(),
+                static_cast<int>(pTrack->getDuration()))) {
+        return;
+    }
+
+    updateDriveSessionItem(mountRoot, sessionName);
+
+    if (m_shownMountRoot != mountRoot || m_shownSessionName != sessionName) {
+        return;
+    }
+    // The session on screen just grew. Keep the selection the DJ may be working
+    // with (see the same dance in the local branch of slotPlayingTrackChanged).
+    const TrackId trackId = pTrack->getId();
+    if (!trackId.isValid()) {
+        return;
+    }
+    WTrackTableView* pView = m_pLibraryWidget
+            ? dynamic_cast<WTrackTableView*>(m_pLibraryWidget->getActiveView())
+            : nullptr;
+    if (pView) {
+        const QList<TrackId> trackIds = pView->getSelectedTrackIds();
+        m_playlistDao.appendTrackToPlaylist(trackId, m_driveViewPlaylistId);
+        pView->setSelectedTracks(trackIds);
+    } else {
+        m_playlistDao.appendTrackToPlaylist(trackId, m_driveViewPlaylistId);
+    }
+}
+
+void SetlogFeature::updateDriveSessionItem(
+        const QString& mountRoot, const QString& sessionName) {
+    const QModelIndex volumeIndex = indexOfVolumeNode(mountRoot);
+    if (!volumeIndex.isValid()) {
+        return;
+    }
+    TreeItem* pVolumeItem = m_pSidebarModel->getItem(volumeIndex);
+    if (!pVolumeItem) {
+        return;
+    }
+
+    FsHistorySession session;
+    if (!FsHistoryStore::readSessionSummary(mountRoot, sessionName, &session)) {
+        return;
+    }
+    const QString label = createPlaylistLabel(
+            session.name, session.trackCount, session.durationSeconds);
+    const QString itemData = sessionNodeData(mountRoot, sessionName);
+
+    const QList<TreeItem*> sessionItems = pVolumeItem->children();
+    for (TreeItem* pSessionItem : sessionItems) {
+        if (pSessionItem->getData().toString() != itemData) {
+            continue;
+        }
+        pSessionItem->setLabel(label);
+        m_pSidebarModel->triggerRepaint();
+        return;
+    }
+
+    // The session's first track: give it a row of its own rather than rebuilding
+    // the tree, which would collapse whatever the DJ is browsing.
+    auto pSessionItem = std::make_unique<TreeItem>(label, itemData);
+    pSessionItem->setIcon(QIcon(kCurrentSessionIcon));
+    std::vector<std::unique_ptr<TreeItem>> rows;
+    rows.push_back(std::move(pSessionItem));
+    m_pSidebarModel->insertTreeItemRows(std::move(rows), 0, volumeIndex);
+}
+
+void SetlogFeature::showDriveSession(const QString& mountRoot,
+        const QString& sessionName,
+        const QModelIndex& index) {
+    if (index.isValid()) {
+        m_lastClickedIndex = index;
+        m_lastRightClickedIndex = QModelIndex();
+    }
+
+    QList<TrackId> trackIds;
+    if (!sessionName.isEmpty()) {
+        QStringList locations;
+        if (FsHistoryStore::readSessionTracks(mountRoot, sessionName, &locations)) {
+            trackIds.reserve(locations.size());
+            for (const QString& location : std::as_const(locations)) {
+                // The stored paths are relative to the drive, so they resolve
+                // here even when the stick was played on another unit. A track
+                // that is no longer on it simply drops out of the view.
+                const TrackPointer pTrack =
+                        m_pLibrary->trackCollectionManager()->getOrAddTrack(
+                                TrackRef::fromFilePath(location));
+                if (pTrack && pTrack->getId().isValid()) {
+                    trackIds.append(pTrack->getId());
+                }
+            }
+        }
+    }
+
+    fillDriveViewPlaylist(trackIds);
+    m_shownMountRoot = mountRoot;
+    m_shownSessionName = sessionName;
+
+    emit saveModelState();
+    m_pPlaylistTableModel->selectPlaylist(m_driveViewPlaylistId);
+    emit showTrackModel(m_pPlaylistTableModel);
+    emit enableCoverArtDisplay(true);
+}
+
+void SetlogFeature::fillDriveViewPlaylist(const QList<TrackId>& trackIds) {
+    if (m_driveViewPlaylistId == kInvalidPlaylistId) {
+        return;
+    }
+    const int maxPosition = m_playlistDao.getMaxPosition(m_driveViewPlaylistId);
+    if (maxPosition > 0) {
+        QList<int> positions;
+        positions.reserve(maxPosition);
+        for (int position = 1; position <= maxPosition; ++position) {
+            positions.append(position);
+        }
+        m_playlistDao.removeTracksFromPlaylist(m_driveViewPlaylistId, positions);
+    }
+    if (!trackIds.isEmpty()) {
+        m_playlistDao.appendTracksToPlaylist(trackIds, m_driveViewPlaylistId);
+    }
+}
+
+void SetlogFeature::slotRefreshUsbVolumes() {
+    const QStringList mountPoints = SystemSettings::usbMountPoints();
+    if (mountPoints == m_usbMountPoints) {
+        return;
+    }
+    m_usbMountPoints = mountPoints;
+
+    // A drive that went away ends its session; plugging it back in starts a new
+    // one rather than continuing the set it was pulled out of.
+    for (auto it = m_currentSessionByMount.begin();
+            it != m_currentSessionByMount.end();) {
+        if (mountPoints.contains(it.key())) {
+            ++it;
+        } else {
+            it = m_currentSessionByMount.erase(it);
+        }
+    }
+    if (!m_shownMountRoot.isEmpty() && !mountPoints.contains(m_shownMountRoot)) {
+        forgetShownDriveSession();
+    }
+
+    constructChildModel(kInvalidPlaylistId);
+}
+
+void SetlogFeature::forgetShownDriveSession() {
+    m_shownMountRoot.clear();
+    m_shownSessionName.clear();
+    // Empty the view as well. Library::slotMountEjected only dismisses a view
+    // that is reading the dead mount directly (a browse listing), and a session
+    // is shown through a playlist, so the rows would otherwise sit there naming
+    // files that are no longer on the box.
+    fillDriveViewPlaylist({});
+}
+
+void SetlogFeature::slotMountEjected(const QString& mountPoint) {
+    const QString cleaned = QDir::cleanPath(mountPoint);
+    m_currentSessionByMount.remove(cleaned);
+    if (m_shownMountRoot == cleaned) {
+        forgetShownDriveSession();
+    }
+    if (m_usbMountPoints.removeAll(cleaned) > 0) {
+        constructChildModel(kInvalidPlaylistId);
+    }
+}
+
+void SetlogFeature::slotStartNewDriveSession() {
+    if (!m_lastRightClickedIndex.isValid()) {
+        return;
+    }
+    TreeItem* pItem = static_cast<TreeItem*>(m_lastRightClickedIndex.internalPointer());
+    QString mountRoot;
+    if (!pItem || !parseVolumeNodeData(pItem->getData(), &mountRoot)) {
+        return;
+    }
+    // Forgetting the drive's session is all it takes: the next track played off
+    // it opens a new one. Nothing is written to the stick until then, so a set
+    // that never happens leaves no empty session behind.
+    if (m_currentSessionByMount.remove(mountRoot) > 0) {
+        constructChildModel(kInvalidPlaylistId);
+    }
+}
+
+void SetlogFeature::slotDeleteDriveHistory() {
+    if (!m_lastRightClickedIndex.isValid()) {
+        return;
+    }
+    TreeItem* pItem = static_cast<TreeItem*>(m_lastRightClickedIndex.internalPointer());
+    QString mountRoot;
+    if (!pItem || !parseVolumeNodeData(pItem->getData(), &mountRoot)) {
+        return;
+    }
+
+    QMessageBox::StandardButton btn = QMessageBox::warning(nullptr,
+            tr("Confirm Deletion"),
+            //: %1 is the name of the drive
+            //: <b> + </b> are used to make the text in between bold in the popup
+            //: <br> is a linebreak
+            tr("Do you really want to delete the whole history stored on "
+               "<b>%1</b>?<br><br>")
+                    .arg(volumeLabel(mountRoot)),
+            QMessageBox::Ok | QMessageBox::Cancel,
+            QMessageBox::Cancel);
+    if (btn != QMessageBox::Ok) {
+        return;
+    }
+
+    if (!FsHistoryStore::clearFilesystemHistory(mountRoot)) {
+        return;
+    }
+    m_currentSessionByMount.remove(mountRoot);
+    if (m_shownMountRoot == mountRoot) {
+        showDriveSession(mountRoot, QString(), QModelIndex());
+    }
+    constructChildModel(kInvalidPlaylistId);
 }
 
 /// Invoked on startup to create new current playlist and by "Finish current and start new"
@@ -516,13 +923,13 @@ void SetlogFeature::lockOrUnlockAllChildPlaylists(bool lock) {
     if (!item) {
         return;
     }
-    const QList<TreeItem*> yearChildren = item->children();
-    if (yearChildren.isEmpty()) {
+    const QList<TreeItem*> children = item->children();
+    if (children.isEmpty()) {
         return;
     }
 
     QSet<int> ids;
-    for (const auto& pChild : yearChildren) {
+    for (const auto& pChild : children) {
         bool ok = false;
         int childId = pChild->getData().toInt(&ok);
         if (ok && childId != kInvalidPlaylistId) {
@@ -540,19 +947,19 @@ void SetlogFeature::slotDeleteAllUnlockedChildPlaylists() {
     if (!item) {
         return;
     }
-    const QList<TreeItem*> yearChildren = item->children();
-    if (yearChildren.isEmpty()) {
+    const QList<TreeItem*> children = item->children();
+    if (children.isEmpty()) {
         return;
     }
-    QString year = m_lastRightClickedIndex.data().toString();
+    QString parentName = m_lastRightClickedIndex.data().toString();
 
     QMessageBox::StandardButton btn = QMessageBox::question(nullptr,
             tr("Confirm Deletion"),
-            //: %1 is the year
+            //: %1 is the name of the parent sidebar item
             //: <b> + </b> are used to make the text in between bold in the popup
             //: <br> is a linebreak
             tr("Do you really want to delete all unlocked playlist from <b>%1</b>?<br><br>")
-                    .arg(year),
+                    .arg(parentName),
             QMessageBox::Yes | QMessageBox::No,
             QMessageBox::No);
     if (btn != QMessageBox::Yes) {
@@ -561,7 +968,7 @@ void SetlogFeature::slotDeleteAllUnlockedChildPlaylists() {
 
     QStringList ids;
     int count = 0;
-    for (const auto& pChild : yearChildren) {
+    for (const auto& pChild : children) {
         bool ok = false;
         int childId = pChild->getData().toInt(&ok);
         if (ok && childId != kInvalidPlaylistId) {
@@ -573,17 +980,17 @@ void SetlogFeature::slotDeleteAllUnlockedChildPlaylists() {
     btn = QMessageBox::warning(nullptr,
             tr("Confirm Deletion"),
             //: %1 is the number of playlists to be deleted
-            //: %2 is the year
+            //: %2 is the name of the parent sidebar item
             //: <b> + </b> are used to make the text in between bold in the popup
             //: <br> is a linebreak
             tr("Deleting %1 playlists from <b>%2</b>.<br><br>")
-                    .arg(QString::number(count), year),
+                    .arg(QString::number(count), parentName),
             QMessageBox::Ok | QMessageBox::Cancel,
             QMessageBox::Cancel);
     if (btn != QMessageBox::Ok) {
         return;
     }
-    qDebug() << "History: deleting all unlocked playlists of" << year;
+    qDebug() << "History: deleting all unlocked playlists of" << parentName;
     m_playlistDao.deleteUnlockedPlaylists(std::move(ids));
 }
 
@@ -627,6 +1034,15 @@ void SetlogFeature::slotPlayingTrackChanged(TrackPointer currentPlayingTrack) {
     // If the track is not present in the recent tracks list, mark it
     // played and update its playcount.
     currentPlayingTrack->updatePlayCounter();
+
+    // A track played off a drive belongs to that drive's history, which lives
+    // on the drive itself — no library id needed, because the store keys on the
+    // path relative to the mount root.
+    const QString mountRoot = mountRootForLocation(currentPlayingTrack->getLocation());
+    if (!mountRoot.isEmpty()) {
+        logTrackToDrive(mountRoot, currentPlayingTrack);
+        return;
+    }
 
     // We can only add tracks that are Mixxx library tracks, not external
     // sources.
@@ -672,15 +1088,18 @@ void SetlogFeature::slotPlaylistTableChanged(int playlistId) {
     }
 
     // save currently selected History sidebar item (if any)
-    int selectedYearIndexRow = -1;
     int selectedPlaylistId = kInvalidPlaylistId;
+    QVariant selectedItemData;
     bool rootWasSelected = false;
     if (isChildIndexSelectedInSidebar(m_lastClickedIndex)) {
-        // a child index was selected (actual playlist or YEAR item)
         int lastClickedPlaylistId = playlistIdFromIndex(m_lastClickedIndex);
-        if (lastClickedPlaylistId == m_yearNodeId) {
-            // a YEAR item was selected
-            selectedYearIndexRow = m_lastClickedIndex.row();
+        if (lastClickedPlaylistId == kInvalidPlaylistId) {
+            // A drive, one of its sessions or the "This Unit" node: not a
+            // playlist, so it is restored by its payload instead of by id.
+            TreeItem* pItem = static_cast<TreeItem*>(m_lastClickedIndex.internalPointer());
+            if (pItem) {
+                selectedItemData = pItem->getData();
+            }
         } else if (playlistId == lastClickedPlaylistId &&
                 type == PlaylistDAO::PLHT_UNKNOWN) {
             // selected playlist was deleted, find a sibling.
@@ -705,15 +1124,15 @@ void SetlogFeature::slotPlaylistTableChanged(int playlistId) {
 
     QModelIndex newIndex = constructChildModel(selectedPlaylistId);
 
-    // restore selection
-    if (selectedYearIndexRow != -1) {
-        // if row is valid this means newIndex is invalid anyway
-        newIndex = m_pSidebarModel->index(selectedYearIndexRow, 0);
-        if (!newIndex.isValid()) {
-            // seems like we deleted the oldest (bottom) YEAR node while it was
-            // selected. Try to pick the row above
-            newIndex = m_pSidebarModel->index(selectedYearIndexRow - 1, 0);
+    if (selectedItemData.isValid()) {
+        // Re-select the drive item that was selected, without re-reading its
+        // session: nothing about it changed, only the playlists below it did.
+        newIndex = indexOfItemData(selectedItemData);
+        if (newIndex.isValid()) {
+            m_lastClickedIndex = newIndex;
+            emit featureSelect(this, newIndex);
         }
+        return;
     }
     if (newIndex.isValid()) {
         emit featureSelect(this, newIndex);
@@ -746,7 +1165,7 @@ void SetlogFeature::slotPlaylistTableRenamed(int playlistId, const QString& newN
 }
 
 void SetlogFeature::activate() {
-    // The root item was clicked, so activate the current playlist.
+    // The root item was clicked, so activate the current playlist of this unit.
     m_lastClickedIndex = m_pSidebarModel->getRootIndex();
     m_lastRightClickedIndex = QModelIndex();
     activatePlaylist(m_currentPlaylistId);
@@ -754,6 +1173,48 @@ void SetlogFeature::activate() {
 
 void SetlogFeature::activateChild(const QModelIndex& index) {
     // qDebug() << "SetlogFeature::activateChild()" << index;
+    TreeItem* pItem = static_cast<TreeItem*>(index.internalPointer());
+    if (!pItem) {
+        return;
+    }
+    const QVariant itemData = pItem->getData();
+
+    QString mountRoot;
+    QString sessionName;
+    if (parseSessionNodeData(itemData, &mountRoot, &sessionName)) {
+        showDriveSession(mountRoot, sessionName, index);
+        return;
+    }
+    if (parseVolumeNodeData(itemData, &mountRoot)) {
+        // A drive shows its most recent session, or an empty view when it
+        // carries no history yet.
+        QList<FsHistorySession> sessions;
+        if (FsHistoryStore::readSessions(mountRoot, &sessions) && !sessions.isEmpty()) {
+            showDriveSession(mountRoot, sessions.first().name, index);
+        } else {
+            showDriveSession(mountRoot, QString(), index);
+        }
+        return;
+    }
+
+    m_shownMountRoot.clear();
+    m_shownSessionName.clear();
+
+    if (itemData.toString() == kLocalNodeData) {
+        // Same as clicking the root used to do: show what this unit is logging
+        // right now.
+        m_lastClickedIndex = index;
+        m_lastRightClickedIndex = QModelIndex();
+        if (m_currentPlaylistId == kInvalidPlaylistId) {
+            return;
+        }
+        emit saveModelState();
+        m_pPlaylistTableModel->selectPlaylist(m_currentPlaylistId);
+        emit showTrackModel(m_pPlaylistTableModel);
+        emit enableCoverArtDisplay(true);
+        return;
+    }
+
     int playlistId = playlistIdFromIndex(index);
     if (playlistId == kInvalidPlaylistId) {
         // may happen during initialization
@@ -764,13 +1225,7 @@ void SetlogFeature::activateChild(const QModelIndex& index) {
     emit saveModelState();
     m_pPlaylistTableModel->selectPlaylist(playlistId);
     emit showTrackModel(m_pPlaylistTableModel);
-    if (playlistId == m_yearNodeId) {
-        // Disable search and cover art for YEAR items
-        emit disableSearch();
-        emit enableCoverArtDisplay(false);
-    } else {
-        emit enableCoverArtDisplay(true);
-    }
+    emit enableCoverArtDisplay(true);
 }
 
 void SetlogFeature::activatePlaylist(int playlistId) {
@@ -782,24 +1237,18 @@ void SetlogFeature::activatePlaylist(int playlistId) {
     VERIFY_OR_DEBUG_ASSERT(index.isValid()) {
         return;
     }
+    m_shownMountRoot.clear();
+    m_shownSessionName.clear();
     emit saveModelState();
     m_pPlaylistTableModel->selectPlaylist(playlistId);
     emit showTrackModel(m_pPlaylistTableModel);
-    // Update sidebar selection only if this is a child, incl. current playlist
-    // and YEAR nodes.
+    // Update sidebar selection only if this is a child, incl. current playlist.
     // indexFromPlaylistId() can't be used because, in case the root item was
     // selected, that would switch to the 'current' child.
     if (m_lastClickedIndex != m_pSidebarModel->getRootIndex()) {
         m_lastClickedIndex = index;
         m_lastRightClickedIndex = QModelIndex();
         emit featureSelect(this, index);
-
-        if (playlistId == m_yearNodeId) {
-            // Disable search and cover art for YEAR items
-            emit disableSearch();
-            emit enableCoverArtDisplay(false);
-            return;
-        }
     }
     emit enableCoverArtDisplay(true);
 }

@@ -2,6 +2,7 @@
 
 #include <QBasicTimer>
 #include <QModelIndex>
+#include <QStringList>
 #include <QTreeView>
 
 #include "library/library_decl.h"
@@ -24,9 +25,14 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void focusInEvent(QFocusEvent* event) override;
     void timerEvent(QTimerEvent* event) override;
     void toggleSelectedItem();
+    void activateSelectedLeaf();
     bool isLeafNodeSelected();
     bool isChildIndexSelected(const QModelIndex& index);
     bool isFeatureRootIndexSelected(LibraryFeature* pFeature);
+
+    // Bite DJ: hide top-level feature rows whose title() matches one of the
+    // listed strings. Called from LegacySkinParser after the model is bound.
+    void setHiddenFeatures(const QStringList& titles);
 
   public slots:
     void selectIndex(const QModelIndex&);
@@ -37,6 +43,7 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void rightClicked(const QPoint&, const QModelIndex&);
     void renameItem(const QModelIndex&);
     void deleteItem(const QModelIndex&);
+    void leafItemActivated(const QString& title);
     FocusWidget setLibraryFocus(FocusWidget newFocus);
 
   protected:
@@ -45,7 +52,9 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
   private:
     void focusSelectedIndex();
     QModelIndex selectedIndex();
+    void applyHiddenFeatures();
 
     QBasicTimer m_expandTimer;
     QModelIndex m_hoverIndex;
+    QStringList m_hiddenFeatureTitles;
 };

@@ -20,6 +20,7 @@ AnalyzerWaveform::AnalyzerWaveform(
         UserSettingsPointer pConfig,
         const QSqlDatabase& dbConnection)
         : m_analysisDao(pConfig),
+          m_fsAnalysisCache(pConfig),
           m_waveformData(nullptr),
           m_waveformSummaryData(nullptr),
           m_stride(0, 0),
@@ -101,9 +102,18 @@ bool AnalyzerWaveform::shouldAnalyze(TrackPointer tio) const {
     bool missingWaveform = pTrackWaveform.isNull();
     bool missingWavesummary = pTrackWaveformSummary.isNull();
 
-    if (trackId.isValid() && (missingWaveform || missingWavesummary)) {
-        QList<AnalysisDao::AnalysisInfo> analyses =
-                m_analysisDao.getAnalysesForTrack(trackId);
+    // When the per-filesystem cache is enabled, waveforms are keyed by the track's
+    // location on its own filesystem rather than by the home-DB analysisId, so a
+    // valid library trackId is not required.
+    const bool fsCacheEnabled = m_fsAnalysisCache.isEnabled();
+    // In the default (home) mode the cache can be disabled entirely, in which case
+    // we never read stored waveforms and always re-analyze.
+    const bool homeCacheEnabled = !fsCacheEnabled && m_fsAnalysisCache.isHomeCacheEnabled();
+    if ((fsCacheEnabled || (homeCacheEnabled && trackId.isValid())) &&
+            (missingWaveform || missingWavesummary)) {
+        QList<AnalysisDao::AnalysisInfo> analyses = fsCacheEnabled
+                ? m_fsAnalysisCache.getAnalysesForTrack(tio->getLocation())
+                : m_analysisDao.getAnalysesForTrack(trackId);
 
         QListIterator<AnalysisDao::AnalysisInfo> it(analyses);
         while (it.hasNext()) {
@@ -294,10 +304,17 @@ void AnalyzerWaveform::storeResults(TrackPointer tio) {
     // waveforms (i.e. if the config setting was disabled in a previous scan)
     // and then it is not called. The other analyzers have signals which control
     // the update of their data.
-    m_analysisDao.saveTrackAnalyses(
-            tio->getId(),
-            m_waveform,
-            m_waveformSummary);
+    if (m_fsAnalysisCache.isEnabled()) {
+        m_fsAnalysisCache.saveTrackAnalyses(
+                tio->getLocation(),
+                m_waveform,
+                m_waveformSummary);
+    } else if (m_fsAnalysisCache.isHomeCacheEnabled()) {
+        m_analysisDao.saveTrackAnalyses(
+                tio->getId(),
+                m_waveform,
+                m_waveformSummary);
+    }
 
     kLogger.debug() << "Waveform generation for track" << tio->getId() << "done"
                     << m_timer.elapsed().debugSecondsWithUnit();

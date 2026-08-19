@@ -8,6 +8,7 @@
 #include <QtDebug>
 
 #include "moc_errordialoghandler.cpp"
+#include "notifications/notifications.h"
 #include "util/assert.h"
 #include "util/compatibility/qmutex.h"
 #include "util/versionstore.h"
@@ -152,6 +153,29 @@ void ErrorDialogHandler::errorDialog(ErrorDialogProperties* pProps) {
         return;
     }
 
+    // Bite DJ: route simple acknowledgement-only warnings/info to the
+    // in-skin notification strip instead of popping a modal dialog. Anything
+    // that needs user input (custom buttons, question dialogs) or that must
+    // halt the app (DLG_FATAL/DLG_CRITICAL with shouldQuit) keeps the legacy
+    // dialog path. Falls through if Notifications hasn't been constructed yet.
+    const bool isInlineCandidate =
+            (props->m_type == DLG_WARNING || props->m_type == DLG_INFO) &&
+            props->m_buttons.isEmpty() &&
+            !props->m_shouldQuit;
+    if (isInlineCandidate) {
+        if (Notifications* pNotifications = Notifications::tryInstance()) {
+            const auto severity = props->m_type == DLG_WARNING
+                    ? Notifications::Severity::Warning
+                    : Notifications::Severity::Info;
+            QString text = props->m_text;
+            if (!props->m_infoText.isEmpty()) {
+                text.append(QStringLiteral(" — ")).append(props->m_infoText);
+            }
+            pNotifications->publish(text, severity);
+            return;
+        }
+    }
+
     QMessageBox* pMsgBox = new QMessageBox();
     pMsgBox->setIcon(props->m_icon);
     pMsgBox->setWindowTitle(props->m_title);
@@ -175,7 +199,7 @@ void ErrorDialogHandler::errorDialog(ErrorDialogProperties* pProps) {
             int dialogWidth = kEstimatedShowDetailedDialogWidth;
             int dialogHeight = kEstimatedShowDetailedDialogHeight;
 
-            // Limit dialog size to screen size, for the case of devices with very small display - like Raspberry Pi.
+            // Limit dialog size to screen size
             if (dialogWidth > pScreen->geometry().width() - 2 * kMinimumDialogMargin) {
                 dialogWidth = pScreen->geometry().width() - 2 * kMinimumDialogMargin;
             }

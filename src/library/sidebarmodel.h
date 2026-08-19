@@ -50,6 +50,10 @@ class SidebarModel : public QAbstractItemModel {
     void clear(const QModelIndex& index);
     void paste(const QModelIndex& index);
   public slots:
+    // Bite DJ: dynamically show/hide a registered feature's root item.
+    // Connected to LibraryFeature::requestSidebarVisibility. Showing inserts
+    // the row at the feature's original registration position.
+    void setFeatureVisible(LibraryFeature* pFeature, bool visible);
     void pressed(const QModelIndex& index);
     void clicked(const QModelIndex& index);
     void doubleClicked(const QModelIndex& index);
@@ -88,7 +92,18 @@ class SidebarModel : public QAbstractItemModel {
     QModelIndex translateSourceIndex(const QModelIndex& parent);
     QModelIndex translateIndex(const QModelIndex& index, const QAbstractItemModel* model);
     void featureRenamed(LibraryFeature*);
+    LibraryFeature* featureForModel(const QAbstractItemModel* pModel) const;
+    bool shouldSuppressChildModelSignals(int* pSuppressionCounter);
+    // Features currently visible in the sidebar, in registration order.
+    // Everywhere a QModelIndex row of a top-level item is mapped to a
+    // feature, it indexes into this list.
     QList<LibraryFeature*> m_sFeatures;
+    // All registered features in registration order, including hidden ones.
+    QList<LibraryFeature*> m_allFeatures;
+    // Depth counters pairing suppressed begin*/end* forwarding of row
+    // change signals coming from hidden features' child models.
+    int m_suppressedInserts = 0;
+    int m_suppressedRemoves = 0;
     unsigned int m_iDefaultSelectedIndex; /** Index of the item in the sidebar model to select at startup. */
 
     QTimer* const m_pressedUntilClickedTimer;

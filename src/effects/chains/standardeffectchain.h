@@ -16,4 +16,8 @@ class StandardEffectChain : public EffectChain {
     static QString formatEffectChainGroup(const int iChainNumber);
     static QString formatEffectSlotGroup(const int iChainSlotNumber,
             const int iEffectSlotNumber);
+
+    bool remembersUserParameters() const override {
+        return true;
+    }
 };

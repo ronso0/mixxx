@@ -48,6 +48,7 @@ class RecordingManager : public QObject {
     void slotIsRecording(bool recording, bool error);
     void slotBytesRecorded(int);
     void slotDurationRecorded(quint64);
+    void slotFreeSpaceAvailable(qint64 bytesAvailable);
     void slotSetRecording(bool recording);
     void slotToggleRecording(double value);
 
@@ -63,7 +64,6 @@ class RecordingManager : public QObject {
 
     quint64 getFileSplitSize();
     unsigned int getFileSplitSeconds();
-    qint64 getFreeSpace();
 
     UserSettingsPointer m_pConfig;
     QString m_recordingDir;
@@ -75,8 +75,9 @@ class RecordingManager : public QObject {
     QString m_recordingLocation;
 
     bool m_bRecording;
+    // Whether the low-disk-space warning has already been shown for the
+    // current squeeze; cleared once there is room again.
     bool m_dfSilence;
-    qint64 m_dfCounter;
 
     // will be a very large number
     quint64 m_iNumberOfBytesRecorded;

@@ -3,8 +3,13 @@
 #include <QDir>
 
 #include "control/control.h"
+#include "moc_settingsmanager.cpp"
 #include "preferences/upgrade.h"
 #include "util/assert.h"
+
+namespace {
+constexpr int kAutoSaveDelayMs = 1000;
+} // namespace
 
 SettingsManager::SettingsManager(const QString& settingsPath)
         : m_bShouldRescanLibrary(false) {
@@ -25,6 +30,26 @@ SettingsManager::SettingsManager(const QString& settingsPath)
 
     ControlDoublePrivate::setUserConfig(m_pSettings);
 
+    m_autoSaveTimer.setSingleShot(true);
+    m_autoSaveTimer.setInterval(kAutoSaveDelayMs);
+    connect(&m_autoSaveTimer,
+            &QTimer::timeout,
+            this,
+            [this] {
+                save();
+            });
+    // The dirty callback fires from whichever thread changed the config
+    // (GUI, controller, ...); hop to this object's thread before touching
+    // the timer.
+    m_pSettings->setDirtyCallback([this] {
+        QMetaObject::invokeMethod(
+                this,
+                [this] {
+                    slotSettingsDirty();
+                },
+                Qt::QueuedConnection);
+    });
+
 #ifdef __BROADCAST__
     m_pBroadcastSettings = BroadcastSettingsPointer(
                                new BroadcastSettings(m_pSettings));
@@ -32,5 +57,14 @@ SettingsManager::SettingsManager(const QString& settingsPath)
 }
 
 SettingsManager::~SettingsManager() {
+    // The callback captures this; drop it before we go away. Takes the
+    // config's write lock, so no thread is mid-invocation afterwards.
+    m_pSettings->setDirtyCallback(nullptr);
     ControlDoublePrivate::setUserConfig(UserSettingsPointer());
+}
+
+void SettingsManager::slotSettingsDirty() {
+    if (!m_autoSaveTimer.isActive()) {
+        m_autoSaveTimer.start();
+    }
 }

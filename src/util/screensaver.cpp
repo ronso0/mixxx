@@ -36,7 +36,7 @@ https://github.com/awjackson/bsnes-classic/blob/038e2e051ffc8abe7c56a3bf27e3016c
 #  include <X11/extensions/scrnsaver.h>
 #endif
 
-#if defined(__LINUX__) || (defined(HAVE_XSCREENSAVER_SUSPEND) && HAVE_XSCREENSAVER_SUSPEND)
+#if defined(HAVE_XSCREENSAVER_SUSPEND) && HAVE_XSCREENSAVER_SUSPEND
 #  define None XNone
 #  define Window XWindow
 #  include <X11/Xlib.h>
@@ -173,17 +173,7 @@ bool ScreenSaverHelper::s_sendActivity = true;
 
 void ScreenSaverHelper::triggerUserActivity()
 {
-    const char* name = ":0.0";
-    Display *display;
-    if (getenv("DISPLAY")) {
-        name=getenv("DISPLAY");
-    }
-    display=XOpenDisplay(name);
-    if (display != nullptr) {
-        XResetScreenSaver(display);
-        XCloseDisplay(display);
-    }
-    return;
+    // idle inhibition is handled via the org.freedesktop.ScreenSaver DBus interface.
 }
 // Disabling the method with DBus since it seems to be failing on several systems.
 #if 0

@@ -227,7 +227,7 @@ void WMainMenuBar::initialize() {
             this,
             [this, pViewAutoHideMenuBar]() {
                 bool autoHide = m_pConfig->getValue<bool>(
-                        ConfigKey("[Config]", "hide_menubar"), false);
+                        ConfigKey("[Config]", "hide_menubar"), true);
                 pViewAutoHideMenuBar->setChecked(autoHide);
             });
     pViewMenu->addAction(pViewAutoHideMenuBar);
@@ -844,7 +844,9 @@ void WMainMenuBar::hideMenuBar() {
     if (isNativeMenuBar()) {
         return;
     }
-    if (m_pConfig->getValue<bool>(ConfigKey("[Config]", "hide_menubar"), false)) {
+    // Bite DJ: hide_menubar defaults to enabled so the bar auto-hides on
+    // first start without any prior configuration.
+    if (m_pConfig->getValue<bool>(ConfigKey("[Config]", "hide_menubar"), true)) {
         // don't use setHidden(true) because Alt hotkeys wouldn't work anymore
         setFixedHeight(0);
     }

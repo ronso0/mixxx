@@ -124,6 +124,29 @@ class TrackModel {
     // Gets the track ID of the track at the given QModelIndex
     virtual TrackId getTrackId(const QModelIndex& index) const = 0;
 
+    /// Verify that the file backing the track at `index` still exists before a
+    /// load is attempted. Filesystem-backed models (the Computer/USB browser)
+    /// override this to flag the row in the missing-track colour and refuse the
+    /// load when the file is gone — e.g. the USB drive was pulled — so the DJ
+    /// can't keep tapping a dead entry. Returns true when the file is present
+    /// and the load may proceed. Default: always loadable; SQL-backed models
+    /// track missing files via the database (fs_deleted) instead.
+    virtual bool verifyTrackFileExists(const QModelIndex& index) {
+        Q_UNUSED(index);
+        return true;
+    }
+
+    /// Bite DJ: a filesystem path this model's contents are read from, for
+    /// models that are tied to one location on disk — a browsed directory, an
+    /// external playlist that lives on a USB drive. Empty for models that
+    /// aren't (the internal library, crates, Auto DJ). The library uses this to
+    /// close the current view when the drive backing it is ejected, so the
+    /// returned path only has to be *somewhere under* the mount point; it need
+    /// not be the mount root itself.
+    virtual QString backingLocation() const {
+        return QString();
+    }
+
     virtual CoverInfo getCoverInfo(const QModelIndex& index) const = 0;
 
     // Gets the rows of the track in the current result set. Returns an

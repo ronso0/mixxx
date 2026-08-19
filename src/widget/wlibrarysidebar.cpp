@@ -4,10 +4,13 @@
 #include <QUrl>
 #include <QtDebug>
 
+#include "control/controlobject.h"
 #include "library/sidebarmodel.h"
 #include "moc_wlibrarysidebar.cpp"
+#include "preferences/configobject.h"
 #include "util/defs.h"
 #include "util/dnd.h"
+#include "widget/touchscrollfilter.h"
 
 constexpr int expand_time = 250;
 
@@ -28,6 +31,31 @@ WLibrarySidebar::WLibrarySidebar(QWidget* parent)
     header()->setStretchLastSection(false);
     header()->setSectionResizeMode(QHeaderView::ResizeToContents);
     header()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    // Same as in the track table: press and drag scrolls the tree.
+    TouchScrollFilter::install(this);
+}
+
+void WLibrarySidebar::setHiddenFeatures(const QStringList& titles) {
+    m_hiddenFeatureTitles = titles;
+    if (model()) {
+        applyHiddenFeatures();
+    }
+}
+
+void WLibrarySidebar::applyHiddenFeatures() {
+    if (m_hiddenFeatureTitles.isEmpty() || !model()) {
+        return;
+    }
+    const QModelIndex root;
+    const int rows = model()->rowCount(root);
+    for (int row = 0; row < rows; ++row) {
+        const QString title = model()->index(row, 0, root)
+                                      .data(Qt::DisplayRole)
+                                      .toString();
+        if (m_hiddenFeatureTitles.contains(title, Qt::CaseInsensitive)) {
+            setRowHidden(row, root, true);
+        }
+    }
 }
 
 void WLibrarySidebar::contextMenuEvent(QContextMenuEvent *event) {
@@ -186,6 +214,22 @@ void WLibrarySidebar::toggleSelectedItem() {
     }
 }
 
+// Mirrors the leaf-tap branch of mousePressEvent for callers that don't have
+// a click position (e.g. controller wheel-press routed through LibraryControl).
+// Emits leafItemActivated so the LibraryBreadcrumb updates, and collapses the
+// sidebar via [Sidebar],sidebar_visible. Skips non-leaves and AutoDJ-style
+// feature roots that own children — same gate as mousePressEvent.
+void WLibrarySidebar::activateSelectedLeaf() {
+    QModelIndex idx = selectedIndex();
+    if (!idx.isValid() || idx.model()->hasChildren(idx)) {
+        return;
+    }
+    emit leafItemActivated(idx.data(Qt::DisplayRole).toString());
+    ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
+                               QStringLiteral("sidebar_visible")),
+            0);
+}
+
 bool WLibrarySidebar::isLeafNodeSelected() {
     QModelIndex index = selectedIndex();
     if (index.isValid()) {
@@ -340,6 +384,21 @@ void WLibrarySidebar::mousePressEvent(QMouseEvent* event) {
         return;
     }
     QTreeView::mousePressEvent(event);
+
+    // Touch ergonomics: tapping a leaf row collapses the sidebar so the
+    // library view fills the screen. A "leaf" is any row with no children
+    // OR a feature root that owns its own track table (e.g. AutoDJ).
+    QModelIndex idx = indexAt(event->pos());
+    if (!idx.isValid()) {
+        return;
+    }
+    bool leaf = !idx.model()->hasChildren(idx);
+    if (leaf) {
+        emit leafItemActivated(idx.data(Qt::DisplayRole).toString());
+        ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
+                                   QStringLiteral("sidebar_visible")),
+                0);
+    }
 }
 
 void WLibrarySidebar::focusInEvent(QFocusEvent* event) {

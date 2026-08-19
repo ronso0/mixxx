@@ -11,7 +11,10 @@
 #include "waveform/waveform.h"
 
 const double WaveformWidgetRenderer::s_waveformMinZoom = 1.0;
-const double WaveformWidgetRenderer::s_waveformMaxZoom = 10.0;
+// Sized so max zoom-out fits >= 64 measures (256 beats) on screen: at the
+// 480px-wide skin design floor the waveform strip is ~354px, and with the
+// 441Hz visual sample rate a 120 BPM track needs zoom ~160 to show 128s.
+const double WaveformWidgetRenderer::s_waveformMaxZoom = 160.0;
 const double WaveformWidgetRenderer::s_waveformDefaultZoom = 3.0;
 const double WaveformWidgetRenderer::s_defaultPlayMarkerPosition = 0.5;
 

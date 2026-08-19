@@ -1093,6 +1093,12 @@ TEST_F(HotcueControlTest, CueLoopWithSavedLoopToggles) {
 }
 
 TEST_F(HotcueControlTest, SavedLoopToggleDoesNotSeek) {
+    // Covers the stock saved-loop behaviour, which is no longer the default:
+    // [Controls],HotcueActivatePlays makes an activate jump into the loop
+    // instead of arming it where the playhead sits. See
+    // HotcueControlTest.ActivateWhilePlayingJumpsIntoSavedLoop.
+    m_pConfig->set(ConfigKey("[Controls]", "HotcueActivatePlays"), ConfigValue(0));
+
     // Setup fake track with 120 bpm and calculate loop size
     TrackPointer pTrack = loadTestTrackWithBpm(120.0);
 
@@ -1158,6 +1164,12 @@ TEST_F(HotcueControlTest, SavedLoopToggleDoesNotSeek) {
 }
 
 TEST_F(HotcueControlTest, SavedLoopActivate) {
+    // Covers the stock saved-loop behaviour, which is no longer the default:
+    // [Controls],HotcueActivatePlays makes an activate jump into the loop
+    // instead of arming it where the playhead sits. See
+    // HotcueControlTest.ActivateWhilePlayingJumpsIntoSavedLoop.
+    m_pConfig->set(ConfigKey("[Controls]", "HotcueActivatePlays"), ConfigValue(0));
+
     m_pQuantizeEnabled->set(0);
     // Setup fake track with 120 bpm and calculate loop size
     TrackPointer pTrack = loadTestTrackWithBpm(120.0);
@@ -1523,4 +1535,185 @@ TEST_F(HotcueControlTest, SavedLoopUseLoopInOutWhileActive) {
     EXPECT_DOUBLE_EQ(static_cast<double>(HotcueControl::Status::Active), m_pHotcue1Status->get());
     EXPECT_FRAMEPOS_EQ_CONTROL(mixxx::audio::kStartFramePos, m_pHotcue1Position);
     EXPECT_FRAMEPOS_EQ_CONTROL(loopEndPosition, m_pHotcue1EndPosition);
+}
+
+// [Controls],HotcueActivatePlays (default on): pressing a hotcue on a paused
+// deck jumps to the cue and keeps playing, rather than previewing it for as
+// long as the button is held and seeking back on release.
+TEST_F(HotcueControlTest, ActivatePlaysFromCue) {
+    TrackPointer pTrack = loadTestTrackWithBpm(120.0);
+
+    const auto cuePosition = mixxx::audio::FramePos(8 * getBeatLengthFrames(pTrack));
+    setCurrentFramePosition(cuePosition);
+    ProcessBuffer();
+
+    m_pHotcue1SetCue->set(1);
+    m_pHotcue1SetCue->set(0);
+    EXPECT_DOUBLE_EQ(static_cast<double>(HotcueControl::Status::Set), m_pHotcue1Status->get());
+
+    // Rewind and stop, so the press below happens on a paused deck.
+    setCurrentFramePosition(mixxx::audio::kStartFramePos);
+    m_pPlay->set(0);
+    ProcessBuffer();
+    EXPECT_FRAMEPOS_EQ(mixxx::audio::kStartFramePos, currentFramePosition());
+
+    m_pHotcue1Activate->set(1);
+    ProcessBuffer();
+    EXPECT_TRUE(m_pPlay->toBool());
+    EXPECT_LE(cuePosition, currentFramePosition());
+
+    // Releasing must not stop the deck or seek it back to the cue.
+    m_pHotcue1Activate->set(0);
+    ProcessBuffer();
+    EXPECT_TRUE(m_pPlay->toBool());
+    EXPECT_LT(cuePosition, currentFramePosition());
+}
+
+// The same press on a saved loop jumps into the loop and enables it, instead
+// of arming it wherever the playhead happens to be.
+TEST_F(HotcueControlTest, ActivatePlaysSavedLoop) {
+    TrackPointer pTrack = loadTestTrackWithBpm(120.0);
+
+    const auto loopStartPosition = mixxx::audio::FramePos(8 * getBeatLengthFrames(pTrack));
+    setCurrentFramePosition(loopStartPosition);
+    ProcessBuffer();
+
+    m_pBeatloopSize->set(4);
+    m_pBeatloopActivate->set(1);
+    m_pBeatloopActivate->set(0);
+    ProcessBuffer();
+
+    m_pHotcue1SetLoop->set(1);
+    m_pHotcue1SetLoop->set(0);
+    EXPECT_FRAMEPOS_EQ_CONTROL(loopStartPosition, m_pHotcue1Position);
+    EXPECT_TRUE(mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
+            m_pHotcue1EndPosition->get())
+                        .isValid());
+
+    // Rewind well before the loop and stop.
+    setCurrentFramePosition(mixxx::audio::kStartFramePos);
+    m_pLoopEnabled->set(0);
+    m_pPlay->set(0);
+    ProcessBuffer();
+
+    m_pHotcue1Activate->set(1);
+    ProcessBuffer();
+    m_pHotcue1Activate->set(0);
+    ProcessBuffer();
+
+    EXPECT_TRUE(m_pPlay->toBool());
+    EXPECT_TRUE(m_pLoopEnabled->toBool());
+    EXPECT_DOUBLE_EQ(static_cast<double>(HotcueControl::Status::Active), m_pHotcue1Status->get());
+    // Playing inside the loop, not still back at the start of the track.
+    EXPECT_LE(loopStartPosition, currentFramePosition());
+    EXPECT_FRAMEPOS_EQ_CONTROL(loopStartPosition, m_pLoopStartPosition);
+}
+
+// Pressing a saved loop while the deck is already playing jumps into the loop
+// as well. LoopingControl::setLoop only seeks when the playhead is already
+// past the loop end, so without this the loop would be armed wherever the
+// deck happened to be and only take effect when playback reached it.
+TEST_F(HotcueControlTest, ActivateWhilePlayingJumpsIntoSavedLoop) {
+    TrackPointer pTrack = loadTestTrackWithBpm(120.0);
+
+    const auto loopStartPosition = mixxx::audio::FramePos(16 * getBeatLengthFrames(pTrack));
+    setCurrentFramePosition(loopStartPosition);
+    ProcessBuffer();
+
+    m_pBeatloopSize->set(4);
+    m_pBeatloopActivate->set(1);
+    m_pBeatloopActivate->set(0);
+    ProcessBuffer();
+
+    m_pHotcue1SetLoop->set(1);
+    m_pHotcue1SetLoop->set(0);
+    EXPECT_FRAMEPOS_EQ_CONTROL(loopStartPosition, m_pHotcue1Position);
+
+    // Rewind well before the loop and play on normally.
+    m_pLoopEnabled->set(0);
+    setCurrentFramePosition(mixxx::audio::kStartFramePos);
+    m_pPlay->set(1);
+    ProcessBuffer();
+    EXPECT_GT(loopStartPosition, currentFramePosition());
+
+    m_pHotcue1Activate->set(1);
+    ProcessBuffer();
+    m_pHotcue1Activate->set(0);
+    ProcessBuffer();
+
+    EXPECT_TRUE(m_pPlay->toBool());
+    EXPECT_TRUE(m_pLoopEnabled->toBool());
+    EXPECT_LE(loopStartPosition, currentFramePosition());
+    EXPECT_FRAMEPOS_EQ_CONTROL(loopStartPosition, m_pLoopStartPosition);
+}
+
+// Pressing the loop again while it is the active saved loop toggles it off
+// rather than seeking back to its start, so a re-press releases the loop.
+TEST_F(HotcueControlTest, ActivateAgainReleasesActiveSavedLoop) {
+    TrackPointer pTrack = loadTestTrackWithBpm(120.0);
+
+    const auto loopStartPosition = mixxx::audio::FramePos(8 * getBeatLengthFrames(pTrack));
+    setCurrentFramePosition(loopStartPosition);
+    ProcessBuffer();
+
+    m_pBeatloopSize->set(4);
+    m_pBeatloopActivate->set(1);
+    m_pBeatloopActivate->set(0);
+    ProcessBuffer();
+
+    m_pHotcue1SetLoop->set(1);
+    m_pHotcue1SetLoop->set(0);
+
+    m_pLoopEnabled->set(0);
+    setCurrentFramePosition(mixxx::audio::kStartFramePos);
+    m_pPlay->set(1);
+    ProcessBuffer();
+
+    // First press: jump in and loop.
+    m_pHotcue1Activate->set(1);
+    ProcessBuffer();
+    m_pHotcue1Activate->set(0);
+    ProcessBuffer();
+    ASSERT_TRUE(m_pLoopEnabled->toBool());
+    ASSERT_DOUBLE_EQ(
+            static_cast<double>(HotcueControl::Status::Active), m_pHotcue1Status->get());
+
+    // Second press: let the track run on.
+    m_pHotcue1Activate->set(1);
+    ProcessBuffer();
+    m_pHotcue1Activate->set(0);
+    ProcessBuffer();
+    EXPECT_FALSE(m_pLoopEnabled->toBool());
+    EXPECT_TRUE(m_pPlay->toBool());
+}
+
+// The stock preview-while-held behaviour stays available behind the
+// preference, so mappings that rely on it can opt back in.
+TEST_F(HotcueControlTest, ActivatePreviewsWhenPreferenceIsOff) {
+    m_pConfig->set(ConfigKey("[Controls]", "HotcueActivatePlays"), ConfigValue(0));
+
+    TrackPointer pTrack = loadTestTrackWithBpm(120.0);
+
+    const auto cuePosition = mixxx::audio::FramePos(8 * getBeatLengthFrames(pTrack));
+    setCurrentFramePosition(cuePosition);
+    ProcessBuffer();
+
+    m_pHotcue1SetCue->set(1);
+    m_pHotcue1SetCue->set(0);
+
+    setCurrentFramePosition(mixxx::audio::kStartFramePos);
+    m_pPlay->set(0);
+    ProcessBuffer();
+
+    // Held: previews from the cue.
+    m_pHotcue1Activate->set(1);
+    ProcessBuffer();
+    EXPECT_TRUE(m_pPlay->toBool());
+    EXPECT_LE(cuePosition, currentFramePosition());
+
+    // Released: stops and seeks back to the cue.
+    m_pHotcue1Activate->set(0);
+    ProcessBuffer();
+    EXPECT_FALSE(m_pPlay->toBool());
+    EXPECT_FRAMEPOS_EQ(cuePosition, currentFramePosition());
 }

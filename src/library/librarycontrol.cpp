@@ -1,6 +1,7 @@
 #include "library/librarycontrol.h"
 
 #include <QApplication>
+#include <QEvent>
 #include <QKeyEvent>
 #include <QModelIndex>
 #include <QWindow>
@@ -13,7 +14,6 @@
 #include "library/libraryview.h"
 #include "mixer/playermanager.h"
 #include "moc_librarycontrol.cpp"
-#include "util/cmdlineargs.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wsearchlineedit.h"
@@ -21,6 +21,19 @@
 
 namespace {
 const QString kAppGroup = QStringLiteral("[App]");
+
+// Bite DJ: MIDI-triggered LoadSelectedTrack* push-buttons fire globally and
+// can clobber a playing deck if the user is on Play/Sampler/Settings when a
+// controller button is pressed. Skin defines [Tab],library via the
+// <SingletonContainer trigger="[Tab],library"> wrapper — that CO is 1 only
+// while the library page is visible. Soft contract: if the CO doesn't exist
+// (stock skin), allow loads through so vanilla Mixxx behaves as before.
+bool bitedj_isLibraryPageActive() {
+    ControlObject* pCo = ControlObject::getControl(
+            ConfigKey(QStringLiteral("[Tab]"), QStringLiteral("library")),
+            ControlFlag::NoWarnIfMissing);
+    return !pCo || pCo->get() > 0.0;
+}
 } // namespace
 
 LoadToGroupController::LoadToGroupController(LibraryControl* pParent, const QString& group)
@@ -82,9 +95,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pMoveUp = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveUp"));
     m_pMoveDown = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveDown"));
     m_pMoveVertical = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "MoveVertical"), false);
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pMoveUp.get(),
                 &ControlPushButton::valueChanged,
@@ -104,9 +114,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pScrollUp = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "ScrollUp"));
     m_pScrollDown = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "ScrollDown"));
     m_pScrollVertical = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "ScrollVertical"), false);
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pScrollUp.get(),
                 &ControlPushButton::valueChanged,
@@ -126,9 +133,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pMoveLeft = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveLeft"));
     m_pMoveRight = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveRight"));
     m_pMoveHorizontal = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "MoveHorizontal"), false);
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pMoveLeft.get(),
                 &ControlPushButton::valueChanged,
@@ -149,9 +153,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pMoveFocusForward = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveFocusForward"));
     m_pMoveFocusBackward = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "MoveFocusBackward"));
     m_pMoveFocus = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "MoveFocus"), false);
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pMoveFocusForward.get(),
                 &ControlPushButton::valueChanged,
@@ -173,9 +174,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pMoveTrackDown = std::make_unique<ControlPushButton>(
             ConfigKey("[Library]", "MoveTrackDown"));
     m_pMoveTrack = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "MoveTrack"), false);
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pMoveTrackUp.get(),
                 &ControlPushButton::valueChanged,
@@ -195,9 +193,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pFocusedWidgetCO = std::make_unique<ControlPushButton>(
             ConfigKey("[Library]", "focused_widget"));
     m_pFocusedWidgetCO->setStates(static_cast<int>(FocusWidget::Count));
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         m_pFocusedWidgetCO->connectValueChangeRequest(
                 this,
@@ -222,9 +217,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pRefocusPrevWidgetCO = std::make_unique<ControlPushButton>(
             ConfigKey("[Library]", "refocus_prev_widget"));
     m_pRefocusPrevWidgetCO->setButtonMode(ControlPushButton::TRIGGER);
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         m_pRefocusPrevWidgetCO->connectValueChangeRequest(this,
                 &LibraryControl::refocusPrevLibraryWidget);
@@ -232,9 +224,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
 
     // Control to "goto" the currently selected item in focused widget (context dependent)
     m_pGoToItem = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "GoToItem"));
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pGoToItem.get(),
                 &ControlPushButton::valueChanged,
@@ -246,9 +235,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pAutoDjAddTop = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "AutoDjAddTop"));
     m_pAutoDjAddTop->addAlias(ConfigKey(
             QStringLiteral("[Playlist]"), QStringLiteral("AutoDjAddTop")));
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pAutoDjAddTop.get(),
                 &ControlPushButton::valueChanged,
@@ -260,9 +246,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
             ConfigKey("[Library]", "AutoDjAddBottom"));
     m_pAutoDjAddBottom->addAlias(ConfigKey(
             QStringLiteral("[Playlist]"), QStringLiteral("AutoDjAddBottom")));
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pAutoDjAddBottom.get(),
                 &ControlPushButton::valueChanged,
@@ -272,9 +255,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
 
     m_pAutoDjAddReplace = std::make_unique<ControlPushButton>(
             ConfigKey("[Library]", "AutoDjAddReplace"));
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pAutoDjAddReplace.get(),
                 &ControlPushButton::valueChanged,
@@ -289,9 +269,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
     m_pSortColumnToggle = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "sort_column_toggle"), false);
     m_pSortFocusedColumn = std::make_unique<ControlPushButton>(
             ConfigKey("[Library]", "sort_focused_column"));
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         connect(m_pSortColumn.get(),
                 &ControlEncoder::valueChanged,
@@ -483,9 +460,6 @@ LibraryControl::LibraryControl(Library* pLibrary)
             this,
             &LibraryControl::slotLoadSelectedIntoFirstStopped);
 
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
     {
         QApplication* app = qApp;
         // Update controls if any widget in any Mixxx window gets or loses focus
@@ -552,6 +526,7 @@ void LibraryControl::slotNumPreviewDecksChanged(double v) {
 
 void LibraryControl::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
     if (m_pSidebarWidget) {
+        m_pSidebarWidget->removeEventFilter(this);
         disconnect(m_pSidebarWidget, nullptr, this, nullptr);
     }
     m_pSidebarWidget = pSidebarWidget;
@@ -559,11 +534,17 @@ void LibraryControl::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
             &WLibrarySidebar::destroyed,
             this,
             &LibraryControl::sidebarWidgetDeleted);
+    // Auto-focus the sidebar whenever it becomes visible (Browse tab opened,
+    // or [Sidebar],sidebar_visible flipped back to 1). Without this, the
+    // first MIDI up/down event sent through emitKeyEvent() lands on whatever
+    // happened to be focused before — usually nothing — and gets dropped.
+    m_pSidebarWidget->installEventFilter(this);
 }
 
 void LibraryControl::bindLibraryWidget(WLibrary* pLibraryWidget, KeyboardEventFilter* pKeyboard) {
     Q_UNUSED(pKeyboard);
     if (m_pLibraryWidget) {
+        m_pLibraryWidget->removeEventFilter(this);
         disconnect(m_pLibraryWidget, nullptr, this, nullptr);
     }
     m_pLibraryWidget = pLibraryWidget;
@@ -571,6 +552,23 @@ void LibraryControl::bindLibraryWidget(WLibrary* pLibraryWidget, KeyboardEventFi
             &WLibrary::destroyed,
             this,
             &LibraryControl::libraryWidgetDeleted);
+    // Mirror of the sidebar filter: focus the active track view as soon as
+    // it is shown, e.g. after a sidebar leaf-tap collapses sidebar_visible
+    // to 0 or when the Browse tab is opened with the sidebar already hidden.
+    m_pLibraryWidget->installEventFilter(this);
+}
+
+bool LibraryControl::eventFilter(QObject* watched, QEvent* event) {
+    if (event->type() == QEvent::Show) {
+        if (watched == m_pSidebarWidget) {
+            m_pSidebarWidget->setFocus();
+        } else if (watched == m_pLibraryWidget) {
+            if (LibraryView* pView = m_pLibraryWidget->getActiveView()) {
+                pView->setFocus();
+            }
+        }
+    }
+    return QObject::eventFilter(watched, event);
 }
 
 void LibraryControl::bindSearchboxWidget(WSearchLineEdit* pSearchbox) {
@@ -601,7 +599,7 @@ void LibraryControl::slotUpdateTrackMenuControl(bool visible) {
 }
 
 void LibraryControl::slotLoadSelectedTrackToGroup(const QString& group, bool play) {
-    if (!m_pLibraryWidget) {
+    if (!m_pLibraryWidget || !bitedj_isLibraryPageActive()) {
         return;
     }
 
@@ -612,7 +610,7 @@ void LibraryControl::slotLoadSelectedTrackToGroup(const QString& group, bool pla
 }
 
 void LibraryControl::slotLoadSelectedIntoFirstStopped(double v) {
-    if (!m_pLibraryWidget || v <= 0) {
+    if (!m_pLibraryWidget || v <= 0 || !bitedj_isLibraryPageActive()) {
         return;
     }
 
@@ -797,6 +795,20 @@ void LibraryControl::slotMoveFocusBackward(double v) {
 }
 
 void LibraryControl::slotMoveFocus(double v) {
+    // Backward focus and other contexts (dialogs, search box) keep stock
+    // Tab/BackTab semantics.
+    if (v > 0) {
+        if (m_focusedWidget == FocusWidget::Sidebar) {
+            slotGoToItem(1);
+            return;
+        }
+        if (m_focusedWidget == FocusWidget::TracksTable) {
+            ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
+                                       QStringLiteral("sidebar_visible")),
+                    1);
+            return;
+        }
+    }
     // Don't use Key_Tab + ShiftModifier for moving focus backwards!
     // This would indeed move the focus, though it has a significant side-effect
     // compared to pressing Shift + Tab on a real keyboard:
@@ -1022,6 +1034,15 @@ void LibraryControl::slotGoToItem(double v) {
         // expanding those root items via controllers is considered dispensable
         // because the subfeatures' actions can't be accessed by controllers anyway.
         if (m_pSidebarWidget->isLeafNodeSelected()) {
+            // Mirror WLibrarySidebar::mousePressEvent's leaf-tap path: emit
+            // leafItemActivated (drives the LibraryBreadcrumb) and collapse
+            // the sidebar so the tracks table fills the screen. The skin's
+            // visibility binding flips the wrappers, fires QEvent::Show on
+            // the library widget, and the eventFilter in this class focuses
+            // the active view. activateSelectedLeaf is a no-op on stock
+            // skins/feature-roots, so the explicit setLibraryFocus call
+            // below remains the fallback path.
+            m_pSidebarWidget->activateSelectedLeaf();
             setLibraryFocus(FocusWidget::TracksTable);
         } else {
             // Otherwise toggle the sidebar item expanded state

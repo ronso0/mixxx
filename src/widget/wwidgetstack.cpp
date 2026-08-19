@@ -41,6 +41,13 @@ WWidgetStack::WWidgetStack(QWidget* pParent,
           m_prevControl(prevConfigKey, this, ControlFlag::AllowInvalidKey),
           m_currentPageControl(
                   currentPageConfigKey, this, ControlFlag::AllowInvalidKey) {
+    // A bare QStackedWidget ignores a QSS background-color unless it is flagged
+    // as styled. Without an opaque background, swapping pages briefly exposes
+    // the cleared backing store (white) before the parent repaints, which reads
+    // as a flash on slow/embedded compositors. With this set, a skin can give
+    // the stack a background that fills any region exposed during the swap.
+    // Stacks with no background rule stay transparent, so this is a no-op there.
+    setAttribute(Qt::WA_StyledBackground, true);
     m_nextControl.connectValueChanged(this, &WWidgetStack::onNextControlChanged);
     m_prevControl.connectValueChanged(this, &WWidgetStack::onPrevControlChanged);
     m_currentPageControl.connectValueChanged(this, &WWidgetStack::onCurrentPageControlChanged);

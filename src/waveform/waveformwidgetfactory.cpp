@@ -14,6 +14,7 @@
 #include <QWidget>
 #include <QWindow>
 
+#include "control/controlobject.h"
 #include "moc_waveformwidgetfactory.cpp"
 #include "util/cmdlineargs.h"
 #include "util/math.h"
@@ -135,6 +136,7 @@ WaveformWidgetFactory::WaveformWidgetFactory()
           m_defaultZoom(WaveformWidgetRenderer::s_waveformDefaultZoom),
           m_zoomSync(true),
           m_overviewNormalized(false),
+          m_applyEqToWaveform(true),
           m_untilMarkShowBeats(false),
           m_untilMarkShowTime(false),
           m_untilMarkAlign(Qt::AlignVCenter),
@@ -409,6 +411,19 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
         setWidgetType(autoChooseWidgetType(), &m_configType);
     }
 
+    if (!m_pCOWaveformType) {
+        m_pCOWaveformType.reset(new ControlObject(
+                ConfigKey(QStringLiteral("[Waveform]"),
+                        QStringLiteral("waveform_type"))));
+        m_pCOWaveformType->set(static_cast<int>(m_configType));
+        connect(m_pCOWaveformType.data(),
+                &ControlObject::valueChanged,
+                this,
+                &WaveformWidgetFactory::slotSetWidgetTypeFromControl);
+    } else {
+        m_pCOWaveformType->set(static_cast<int>(m_configType));
+    }
+
     for (int i = 0; i < FilterCount; i++) {
         double visualGain = m_config->getValueString(
                 ConfigKey("[Waveform]","VisualGain_" + QString::number(i))).toDouble(&ok);
@@ -419,6 +434,24 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
             m_config->set(ConfigKey("[Waveform]","VisualGain_" + QString::number(i)),
                           QString::number(m_visualGain[i]));
         }
+    }
+
+    m_applyEqToWaveform = m_config->getValue(
+            ConfigKey("[Waveform]", "ApplyEqToWaveform"), m_applyEqToWaveform);
+
+    if (!m_pCOApplyEqToWaveform) {
+        m_pCOApplyEqToWaveform.reset(new ControlObject(
+                ConfigKey(QStringLiteral("[Waveform]"),
+                        QStringLiteral("apply_eq_to_waveform"))));
+        m_pCOApplyEqToWaveform->set(m_applyEqToWaveform ? 1.0 : 0.0);
+        connect(m_pCOApplyEqToWaveform.data(),
+                &ControlObject::valueChanged,
+                this,
+                [this](double value) {
+                    setApplyEqToWaveform(value > 0.0);
+                });
+    } else {
+        m_pCOApplyEqToWaveform->set(m_applyEqToWaveform ? 1.0 : 0.0);
     }
 
     int overviewNormalized = m_config->getValueString(ConfigKey("[Waveform]","OverviewNormalized")).toInt(&ok);
@@ -615,6 +648,15 @@ bool WaveformWidgetFactory::widgetTypeSupportsUntilMark() const {
     return false;
 }
 
+void WaveformWidgetFactory::slotSetWidgetTypeFromControl(double value) {
+    auto type = static_cast<WaveformWidgetType::Type>(static_cast<int>(value));
+    int handleIndex = findHandleIndexFromType(type);
+    if (handleIndex < 0) {
+        return;
+    }
+    setWidgetTypeFromHandle(handleIndex);
+}
+
 bool WaveformWidgetFactory::setWidgetTypeFromConfig() {
     int empty = findHandleIndexFromType(WaveformWidgetType::EmptyWaveform);
     int desired = findHandleIndexFromType(m_configType);
@@ -737,6 +779,20 @@ void WaveformWidgetFactory::setOverviewNormalized(bool normalize) {
         m_config->set(ConfigKey("[Waveform]","OverviewNormalized"), ConfigValue(m_overviewNormalized));
     }
     emit overviewNormalizeChanged();
+}
+
+void WaveformWidgetFactory::setApplyEqToWaveform(bool apply) {
+    m_applyEqToWaveform = apply;
+    if (m_config) {
+        m_config->set(ConfigKey("[Waveform]", "ApplyEqToWaveform"),
+                ConfigValue(m_applyEqToWaveform));
+    }
+    // Keep the skin-facing control in sync when toggled from elsewhere (e.g. the
+    // desktop preferences checkbox). Writing an equal value is a no-op, so this
+    // does not loop with the control's own valueChanged handler.
+    if (m_pCOApplyEqToWaveform) {
+        m_pCOApplyEqToWaveform->set(m_applyEqToWaveform ? 1.0 : 0.0);
+    }
 }
 
 void WaveformWidgetFactory::setPlayMarkerPosition(double position) {

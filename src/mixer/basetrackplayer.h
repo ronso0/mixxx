@@ -136,6 +136,10 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     void loadTrack(TrackPointer pTrack);
     TrackPointer unloadTrack();
 
+    /// Surface a load failure to the user (notification strip, or modal
+    /// fallback), deduplicated by the previous failed track id.
+    void notifyLoadFailed(const TrackPointer& pTrack, const QString& reason);
+
     void connectLoadedTrack();
     void disconnectLoadedTrack();
 

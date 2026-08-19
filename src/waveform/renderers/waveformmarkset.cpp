@@ -31,8 +31,25 @@ void WaveformMarkSet::setup(const QString& group, const QDomNode& node,
             hasDefaultMark = true;
             defaultChild = child;
         } else if (child.nodeName() == "Mark") {
+            // A mark may name a hotcue slot instead of a position control, so
+            // that a skin can lay out individual hotcues (rather than taking
+            // all of them from a single DefaultMark) and still get the cue's
+            // own color, its label, and its saved-loop range.
+            bool hasHotCue = false;
+            int hotCue = context.selectInt(child, QStringLiteral("Hotcue"), &hasHotCue);
+            if (hasHotCue) {
+                hotCue -= 1; // the skin counts hotcues from 1
+                if (hotCue < mixxx::kFirstHotCueIndex || hotCue >= NUM_HOT_CUES) {
+                    qWarning() << "WaveformMarkSet::setup - hotcue index out of range:"
+                               << hotCue + 1;
+                    child = child.nextSibling();
+                    continue;
+                }
+            } else {
+                hotCue = Cue::kNoHotCue;
+            }
             WaveformMarkPointer pMark(new WaveformMark(
-                    group, child, context, --priority, signalColors));
+                    group, child, context, --priority, signalColors, hotCue));
             if (pMark->isValid()) {
                 // guarantee uniqueness even if there is a misdesigned skin
                 QString item = pMark->getItem();

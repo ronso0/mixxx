@@ -4,8 +4,8 @@
 #include <QString>
 #include <QStringList>
 #include <QStyle>
-#include <QTextCodec>
 #include <QThread>
+#include <QThreadPool>
 #include <QtDebug>
 #include <QtGlobal>
 #include <cstdio>
@@ -16,9 +16,6 @@
 #include "coreservices.h"
 #include "errordialoghandler.h"
 #include "mixxxapplication.h"
-#ifdef MIXXX_USE_QML
-#include "qml/qmlapplication.h"
-#endif
 #include "mixxxmainwindow.h"
 #if defined(__WINDOWS__)
 #include "nativeeventhandlerwin.h"
@@ -27,6 +24,7 @@
 #include "util/cmdlineargs.h"
 #include "util/console.h"
 #include "util/logging.h"
+#include "util/rtscheduling.h"
 #include "util/sandbox.h"
 #include "util/versionstore.h"
 
@@ -57,12 +55,6 @@ int runMixxx(MixxxApplication* pApp, const CmdlineArgs& args) {
     const auto pCoreServices = std::make_shared<mixxx::CoreServices>(args, pApp);
 
     int exitCode;
-#ifdef MIXXX_USE_QML
-    if (args.isQml()) {
-        mixxx::qml::QmlApplication qmlApplication(pApp, pCoreServices);
-        exitCode = pApp->exec();
-    } else
-#endif
     {
         // This scope ensures that `MixxxMainWindow` is destroyed *before*
         // CoreServices is shut down. Otherwise a debug assertion complaining about
@@ -169,33 +161,40 @@ void applyStyleOverride(CmdlineArgs* pArgs) {
 int main(int argc, char * argv[]) {
     Console console;
 
+    // Lock pages against reclaim as they are touched (on-fault) so the audio
+    // callback never major-faults library text or heap back in from storage
+    // under memory pressure. Must happen before threads spawn and the heap
+    // grows; a failure (missing memlock rlimit) is logged and non-fatal.
+    mixxx::lockAllMemory();
+
+    // Put the main (GUI) thread on the real-time priority ladder, one step
+    // below controller input (see util/rtscheduling.h) so taps and deck
+    // rendering are never starved by SCHED_OTHER background work (analysis,
+    // library scanning), while jog/scratch input and the audio engine can
+    // still preempt painting. CAUTION: pthreads default to
+    // PTHREAD_INHERIT_SCHED, so any thread spawned from here without an
+    // explicit policy silently becomes SCHED_FIFO 49 too. QThread::start()
+    // only sets an explicit policy (SCHED_OTHER) when given a priority other
+    // than InheritPriority — every start() of a worker doing real work must
+    // therefore pass one, and the global thread pool (QtConcurrent: cover
+    // art, Rekordbox/Serato parsing) is capped below.
+    mixxx::promoteCurrentThreadToRealtime(mixxx::kRtPrioMainThread, "Main");
+    QThreadPool::globalInstance()->setThreadPriority(QThread::NormalPriority);
+
     // These need to be set early on (not sure how early) in order to trigger
     // logic in the OS X appstore support patch from QTBUG-16549.
     QCoreApplication::setOrganizationDomain("mixxx.org");
 
-    // High DPI scaling is always enabled in Qt6.
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // This needs to be set before initializing the QApplication.
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
 #ifdef MIXXX_USE_QOPENGL
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif
 
-    // workaround for https://bugreports.qt.io/browse/QTBUG-84363
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && QT_VERSION < QT_VERSION_CHECK(5, 15, 1)
-    qputenv("QV4_FORCE_INTERPRETER", QByteArrayLiteral("1"));
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     // Follow whatever factor the user has selected in the system settings
     // By default the value is always rounded to the nearest int.
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(
             Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-#endif
 
 #ifdef __LINUX__
-    // Needed by Wayland compositors to set proper app_id and window icon
     QGuiApplication::setDesktopFileName(QStringLiteral("org.mixxx.Mixxx"));
 #endif
 

@@ -19,6 +19,7 @@
 #include "mixer/basetrackplayer.h"
 #include "mixer/playermanager.h"
 #include "moc_legacyskinparser.cpp"
+#include "skin/highcontrast.h"
 #include "skin/legacy/colorschemeparser.h"
 #include "skin/legacy/launchimage.h"
 #include "skin/legacy/skincontext.h"
@@ -73,6 +74,13 @@
 #include "widget/wspinnyglsl.h"
 #include "widget/wsplitter.h"
 #include "widget/wstarrating.h"
+#include "widget/waudiodevicelist.h"
+#include "widget/wcontrollerlist.h"
+#include "widget/wsamplerdrive.h"
+#include "widget/wusblist.h"
+#include "widget/wversionlabel.h"
+#include "widget/wnotificationstrip.h"
+#include "widget/wsofttakeoverindicator.h"
 #include "widget/wstatuslight.h"
 #include "widget/wtime.h"
 #include "widget/wtrackproperty.h"
@@ -550,6 +558,18 @@ QList<QWidget*> LegacySkinParser::parseNode(const QDomElement& node) {
         result = wrapWidget(parseVuMeter(node));
     } else if (nodeName == "StatusLight") {
         result = wrapWidget(parseStandardWidget<WStatusLight>(node));
+    } else if (nodeName == "SoftTakeoverIndicator") {
+        result = wrapWidget(parseStandardWidget<WSoftTakeoverIndicator>(node));
+    } else if (nodeName == "NotificationStrip") {
+        result = wrapWidget(parseStandardWidget<WNotificationStrip>(node));
+    } else if (nodeName == "AudioDeviceList") {
+        result = wrapWidget(parseStandardWidget<WAudioDeviceList>(node));
+    } else if (nodeName == "ControllerList") {
+        result = wrapWidget(parseStandardWidget<WControllerList>(node));
+    } else if (nodeName == "SamplerDrive") {
+        result = wrapWidget(parseStandardWidget<WSamplerDrive>(node));
+    } else if (nodeName == "UsbList") {
+        result = wrapWidget(parseStandardWidget<WUsbList>(node));
     } else if (nodeName == "Display") {
         result = wrapWidget(parseStandardWidget<WDisplay>(node));
     } else if (nodeName == "BeatSpinBox") {
@@ -567,6 +587,8 @@ QList<QWidget*> LegacySkinParser::parseNode(const QDomElement& node) {
         result = wrapWidget(parseLabelWidget<WNumberDb>(node));
     } else if (nodeName == "Label") {
         result = wrapWidget(parseLabelWidget<WLabel>(node));
+    } else if (nodeName == "VersionLabel") {
+        result = wrapWidget(parseLabelWidget<WVersionLabel>(node));
     } else if (nodeName == "Knob") {
         result = wrapWidget(parseStandardWidget<WKnob>(node));
     } else if (nodeName == "KnobComposed") {
@@ -615,6 +637,8 @@ QList<QWidget*> LegacySkinParser::parseNode(const QDomElement& node) {
         result = wrapWidget(parseSplitter(node));
     } else if (nodeName == "LibrarySidebar") {
         result = wrapWidget(parseLibrarySidebar(node));
+    } else if (nodeName == "LibraryBreadcrumb") {
+        result = wrapWidget(parseLibraryBreadcrumb(node));
     } else if (nodeName == "Library") {
         result = wrapWidget(parseLibrary(node));
     } else if (nodeName == "Key") {
@@ -978,11 +1002,6 @@ void LegacySkinParser::setupLabelWidget(const QDomElement& element, WLabel* pLab
 }
 
 QWidget* LegacySkinParser::parseOverview(const QDomElement& node) {
-#ifdef MIXXX_USE_QML
-    if (CmdlineArgs::Instance().isQml()) {
-        return nullptr;
-    }
-#endif
     QString group = lookupNodeGroup(node);
     BaseTrackPlayer* pPlayer = m_pPlayerManager->getPlayer(group);
     if (!pPlayer) {
@@ -1021,11 +1040,6 @@ QWidget* LegacySkinParser::parseOverview(const QDomElement& node) {
 }
 
 QWidget* LegacySkinParser::parseVisual(const QDomElement& node) {
-#ifdef MIXXX_USE_QML
-    if (CmdlineArgs::Instance().isQml()) {
-        return nullptr;
-    }
-#endif
     QString group = lookupNodeGroup(node);
     BaseTrackPlayer* pPlayer = m_pPlayerManager->getPlayer(group);
     if (!pPlayer) {
@@ -1035,6 +1049,7 @@ QWidget* LegacySkinParser::parseVisual(const QDomElement& node) {
 
     WWaveformViewer* viewer = new WWaveformViewer(group, m_pConfig, m_pParent);
     viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    viewer->setSeekDisabled(m_pContext->selectBool(node, "DisableSeek", false));
     WaveformWidgetFactory* pFactory = WaveformWidgetFactory::instance();
     pFactory->setWaveformWidget(viewer, node, *m_pContext);
 
@@ -1314,11 +1329,6 @@ QWidget* LegacySkinParser::parseRecordingDuration(const QDomElement& node) {
 }
 
 QWidget* LegacySkinParser::parseSpinny(const QDomElement& node) {
-#ifdef MIXXX_USE_QML
-    if (CmdlineArgs::Instance().isQml()) {
-        return nullptr;
-    }
-#endif
     if (CmdlineArgs::Instance().getSafeMode()) {
         WLabel* dummy = new WLabel(m_pParent);
         //: Shown when Mixxx is running in safe mode.
@@ -1392,11 +1402,6 @@ QWidget* LegacySkinParser::parseSpinny(const QDomElement& node) {
 }
 
 QWidget* LegacySkinParser::parseVuMeter(const QDomElement& node) {
-#ifdef MIXXX_USE_QML
-    if (CmdlineArgs::Instance().isQml()) {
-        return nullptr;
-    }
-#endif
     auto* pWaveformWidgetFactory = WaveformWidgetFactory::instance();
     if (CmdlineArgs::Instance().getUseLegacyVuMeter() ||
             (!pWaveformWidgetFactory->isOpenGlAvailable() &&
@@ -1602,11 +1607,39 @@ QWidget* LegacySkinParser::parseLibrary(const QDomElement& node) {
     return pLibraryWidget;
 }
 
+QWidget* LegacySkinParser::parseLibraryBreadcrumb(const QDomElement& node) {
+    WLabel* pLabel = new WLabel(m_pParent);
+    setupLabelWidget(node, pLabel);
+    connect(m_pLibrary,
+            &Library::sidebarLeafItemActivated,
+            pLabel,
+            &WLabel::setText);
+    return pLabel;
+}
+
 QWidget* LegacySkinParser::parseLibrarySidebar(const QDomElement& node) {
     WLibrarySidebar* pLibrarySidebar = new WLibrarySidebar(m_pParent);
     pLibrarySidebar->installEventFilter(m_pKeyboard);
     pLibrarySidebar->installEventFilter(m_pControllerManager->getControllerLearningEventFilter());
     m_pLibrary->bindSidebarWidget(pLibrarySidebar);
+
+    // Bite DJ: <HiddenFeatures>Tracks,Auto DJ,...</HiddenFeatures> hides
+    // top-level sidebar rows by feature title. Match is case-insensitive
+    // against LibraryFeature::title(); unknown titles are ignored silently.
+    QString hiddenFeatures;
+    if (m_pContext->hasNodeSelectString(node, "HiddenFeatures", &hiddenFeatures) &&
+            !hiddenFeatures.isEmpty()) {
+        QStringList titles;
+        const auto parts = hiddenFeatures.split(QChar(','), Qt::SkipEmptyParts);
+        for (const QString& part : parts) {
+            const QString trimmed = part.trimmed();
+            if (!trimmed.isEmpty()) {
+                titles << trimmed;
+            }
+        }
+        pLibrarySidebar->setHiddenFeatures(titles);
+    }
+
     commonWidgetSetup(node, pLibrarySidebar, false);
     return pLibrarySidebar;
 }
@@ -2236,7 +2269,12 @@ QString LegacySkinParser::getStyleFromNode(const QDomNode& node) {
     // selectors to use WWidgetGroup directly.
     style = style.replace("QGroupBox", "WWidgetGroup");
 
-    return style;
+    // Bite DJ: the single place every skin-declared stylesheet is read, so it
+    // is where daylight mode inverts them. Must stay ahead of getLibraryStyle's
+    // legacy colour hack, which composes onto this string with colours that
+    // have already been through WSkinColor (and so are already inverted) —
+    // inverting the composed result would undo them.
+    return HighContrast::mapStyleSheet(style);
 }
 
 void LegacySkinParser::commonWidgetSetup(const QDomNode& node,
@@ -2289,6 +2327,13 @@ void LegacySkinParser::setupWidget(const QDomNode& node,
         setupPosition(node, pWidget);
     }
     setupSize(node, pWidget);
+
+    // Bite DJ: <MouseTransparent>true</MouseTransparent> lets decorative
+    // overlays (e.g. SYNC/MASTER badges stacked on a WOverview) pass mouse
+    // events through to the widget below in a stacked layout.
+    if (m_pContext->selectBool(node, "MouseTransparent", false)) {
+        pWidget->setAttribute(Qt::WA_TransparentForMouseEvents);
+    }
 
     QString style = getStyleFromNode(node);
     // Check if we should apply legacy library styling to this node.

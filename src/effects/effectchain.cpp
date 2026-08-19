@@ -8,6 +8,7 @@
 #include "effects/effectsmessenger.h"
 #include "effects/presets/effectchainpreset.h"
 #include "effects/presets/effectchainpresetmanager.h"
+#include "effects/presets/effectpreset.h"
 #include "engine/effects/engineeffectchain.h"
 #include "moc_effectchain.cpp"
 #include "util/sample.h"
@@ -208,6 +209,13 @@ void EffectChain::loadChainPreset(EffectChainPresetPointer pChainPreset) {
             presetSlotIndex < validPresetSlotCount;
             presetSlotIndex++) {
         m_effectSlots[presetSlotIndex]->loadEffectFromPreset(effectPresets[presetSlotIndex]);
+        // Bite DJ fork: restore per-manifest cache after the current
+        // effect is loaded (unloadEffect inside loadEffectFromPreset
+        // doesn't touch the cache, but applying after keeps intent clear).
+        if (remembersUserParameters() && effectPresets[presetSlotIndex]) {
+            m_effectSlots[presetSlotIndex]->setRememberedPresets(
+                    effectPresets[presetSlotIndex]->rememberedPresets());
+        }
     }
 
     setMixMode(pChainPreset->mixMode());

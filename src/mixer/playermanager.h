@@ -213,6 +213,11 @@ class PlayerManager : public PlayerManagerInterface {
   private slots:
     void slotAnalyzeTrack(TrackPointer track);
 
+    // When a player begins loading a new track, abort the still-running
+    // analysis of the track it replaces so a worker is freed to analyze the new
+    // track right away. Connected to BaseTrackPlayer::loadingTrack.
+    void slotCancelReplacedTrackAnalysis(TrackPointer pNewTrack, TrackPointer pOldTrack);
+
     void onTrackAnalysisProgress(TrackId trackId, AnalyzerProgress analyzerProgress);
     void onTrackAnalysisFinished();
 
@@ -240,6 +245,10 @@ class PlayerManager : public PlayerManagerInterface {
 
   private:
     TrackPointer lookupTrack(QString location);
+    // True if any deck/sampler/preview deck currently holds the given track.
+    // Used to avoid cancelling analysis of a replaced track that is still
+    // loaded elsewhere (e.g. a cloned deck).
+    bool isTrackLoadedInAnyPlayer(TrackId trackId) const;
     // Must hold m_mutex before calling this method. Internal method that
     // creates a new deck.
     void addDeckInner();

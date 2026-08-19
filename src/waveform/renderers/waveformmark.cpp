@@ -154,8 +154,16 @@ WaveformMark::WaveformMark(const QString& group,
     m_align = decodeAlignmentFlags(markAlign, Qt::AlignBottom | Qt::AlignHCenter);
 
     // Hotcue text is set by the cue's label in the database, not by the skin.
+    // A skin may still name the slot itself (A-H, and so on); that prefix is
+    // kept apart from m_text precisely because the label overwrites m_text
+    // whenever the cue changes.
     if (hotCue == Cue::kNoHotCue) {
         m_text = context.selectString(node, "Text");
+    } else if (!context.selectString(node, "Hotcue").isEmpty()) {
+        // Only a mark that names its own slot may name itself. Marks generated
+        // from a DefaultMark share one node between every hotcue, so their
+        // <Text> can't stand for any one of them and the number is used.
+        m_hotcuePrefix = context.selectString(node, "Text");
     }
 
     m_pixmapPath = context.selectString(node, "Pixmap");
@@ -369,7 +377,7 @@ QImage WaveformMark::generateImage(float devicePixelRatio) {
         if (!label.isEmpty()) {
             label.prepend(": ");
         }
-        label.prepend(QString::number(getHotCue() + 1));
+        label.prepend(hotcueLabelPrefix());
     }
 
     const bool useIcon = m_iconPath != "";

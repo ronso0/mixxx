@@ -21,7 +21,14 @@ class VinylControlManager;
 class TrackCollectionManager;
 class Library;
 class SkinControls;
+class SamplerDrive;
 class ControlPushButton;
+class RateRangeControl;
+class Notifications;
+class AudioDeviceSettings;
+class ControllerSettings;
+class SystemSettings;
+class HighContrast;
 
 namespace mixxx {
 
@@ -145,6 +152,15 @@ class CoreServices : public QObject {
 
     std::unique_ptr<SkinControls> m_pSkinControls;
     std::unique_ptr<ControlPushButton> m_pTouchShift;
+    std::unique_ptr<RateRangeControl> m_pRateRangeControl;
+    std::unique_ptr<Notifications> m_pNotifications;
+    std::unique_ptr<AudioDeviceSettings> m_pAudioDeviceSettings;
+    std::unique_ptr<ControllerSettings> m_pControllerSettings;
+    std::unique_ptr<SystemSettings> m_pSystemSettings;
+    // Constructed after SystemSettings, which is what it enumerates and watches
+    // removable drives through.
+    std::unique_ptr<SamplerDrive> m_pSamplerDrive;
+    std::unique_ptr<HighContrast> m_pHighContrast;
 
     Timer m_runtime_timer;
     const CmdlineArgs& m_cmdlineArgs;

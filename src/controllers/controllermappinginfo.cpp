@@ -3,11 +3,13 @@
 #include "util/xml.h"
 
 MappingInfo::MappingInfo()
-        : m_valid(false) {
+        : m_valid(false),
+          m_hidden(false) {
 }
 
 MappingInfo::MappingInfo(const QString& mapping_path)
-        : m_valid(false) {
+        : m_valid(false),
+          m_hidden(false) {
     // Parse <info> header section from a controller description XML file
     // Contents parsed by xml path:
     // info.name        Mapping name, used for drop down menus in dialogs
@@ -63,6 +65,17 @@ MappingInfo::MappingInfo(const QString& mapping_path)
     QDomElement dom_wiki = info.firstChildElement("wiki");
     if (!dom_wiki.isNull()) {
         m_wikilink = dom_wiki.text();
+    }
+
+    // Bite DJ: optional <hidden>true</hidden> hides the mapping (and its
+    // matching device) from the in-skin Devices picker. Accept "true"/"1"
+    // case-insensitively; everything else (missing element, "false", "0",
+    // empty) leaves m_hidden at its default false. No-op on stock Mixxx
+    // builds since DlgPrefControllers does not consult this field.
+    QDomElement dom_hidden = info.firstChildElement("hidden");
+    if (!dom_hidden.isNull()) {
+        const QString text = dom_hidden.text().trimmed().toLower();
+        m_hidden = (text == QLatin1String("true") || text == QLatin1String("1"));
     }
 
     QDomElement devices = info.firstChildElement("devices");

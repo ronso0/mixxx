@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -79,6 +80,18 @@ class AnalyzerThread : public WorkerThread {
     // worker thread, yet.
     bool submitNextTrack(const AnalyzerTrack& nextTrack);
 
+    // Cooperatively aborts the analysis of the track identified by trackId if
+    // (and only if) it is the one currently being analyzed. Unlike stop() this
+    // leaves the worker thread alive and ready to pick up the next track. The
+    // request is ignored if the worker has already moved on to another track,
+    // so a stale request can never cancel the wrong track.
+    //
+    // Used to free the audio file descriptor on a USB volume being ejected and
+    // to drop the analysis of a track that has just been replaced on a deck.
+    //
+    // May be called from any thread except the worker thread itself.
+    void cancelTrack(TrackId trackId);
+
   signals:
     // Use a single signal for progress updates to ensure that all signals
     // are queued and received in the same order as emitted from the internal
@@ -112,6 +125,13 @@ class AnalyzerThread : public WorkerThread {
     // for this purpose, which will become available in C++20.
     rigtorp::SPSCQueue<AnalyzerTrack> m_nextTrack;
 
+    // Raw value of the TrackId whose in-progress analysis should be aborted, or
+    // -1 (kNoCancelTrackId) when no cancellation is pending. Written by the host
+    // via cancelTrack(), read by the worker between analysis chunks. Only the
+    // track whose id matches is cancelled; the value is cleared by the worker
+    // once it moves on to a different track.
+    std::atomic<int> m_cancelTrackId;
+
     /////////////////////////////////////////////////////////////////////////
     // Thread local: Only used in the constructor/destructor and within
     // run() by the worker thread.
@@ -133,6 +153,10 @@ class AnalyzerThread : public WorkerThread {
     };
     AnalysisResult analyzeAudioSource(
             const mixxx::AudioSourcePointer& audioSource);
+
+    // True if a cancellation has been requested (via cancelTrack) that targets
+    // the track currently being analyzed. Checked from the worker thread.
+    bool isCurrentTrackCancelled() const;
 
     // Blocks the worker thread until a next track becomes available
     TrackPointer receiveNextTrack();

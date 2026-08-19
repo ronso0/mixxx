@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QScopedPointer>
 #include <QSurfaceFormat>
 #include <QVector>
 #include <vector>
@@ -9,13 +10,18 @@
 #include "skin/legacy/skincontext.h"
 #include "util/performancetimer.h"
 #include "util/singleton.h"
+// VSyncThread must be a complete type here: it appears as a signal argument
+// (renderSpinnies/renderVuMeters), so moc instantiates its QMetaType. A mere
+// forward declaration trips GCC's -Wsfinae-incomplete when a later translation
+// unit completes the type after the metatype's completeness probe ran on it.
+#include "waveform/vsyncthread.h"
 #include "waveform/widgets/waveformwidgettype.h"
 
+class ControlObject;
 class WVuMeterLegacy;
 class WVuMeterBase;
 class WWaveformViewer;
 class WaveformWidgetAbstract;
-class VSyncThread;
 class GuiTick;
 class VisualsManager;
 
@@ -148,6 +154,11 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     void setOverviewNormalized(bool normalize);
     int isOverviewNormalized() const { return m_overviewNormalized;}
 
+    void setApplyEqToWaveform(bool apply);
+    bool isEqAppliedToWaveform() const {
+        return m_applyEqToWaveform;
+    }
+
     const QVector<WaveformWidgetAbstractHandle>& getAvailableTypes() const {
         return m_waveformWidgetHandles;
     }
@@ -191,6 +202,7 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     void swap();
     void swapAndRender();
     void slotFrameSwapped();
+    void slotSetWidgetTypeFromControl(double value);
 
   private:
     void renderSelf();
@@ -217,6 +229,9 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
 
     UserSettingsPointer m_config;
 
+    QScopedPointer<ControlObject> m_pCOWaveformType;
+    QScopedPointer<ControlObject> m_pCOApplyEqToWaveform;
+
     bool m_skipRender;
     int m_frameRate;
     int m_endOfTrackWarningTime;
@@ -224,6 +239,7 @@ class WaveformWidgetFactory : public QObject, public Singleton<WaveformWidgetFac
     bool m_zoomSync;
     double m_visualGain[FilterCount];
     bool m_overviewNormalized;
+    bool m_applyEqToWaveform;
 
     bool m_untilMarkShowBeats;
     bool m_untilMarkShowTime;

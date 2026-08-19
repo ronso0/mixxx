@@ -34,6 +34,10 @@ mixxx::Logger kLogger("AnalyzerThread");
 // continuous feedback.
 const mixxx::Duration kBusyProgressInhibitDuration = mixxx::Duration::fromMillis(60);
 
+// Sentinel for m_cancelTrackId meaning "no cancellation pending". Valid track
+// ids are always >= 0 (see DbId::isValidValue).
+constexpr int kNoCancelTrackId = -1;
+
 void deleteAnalyzerThread(AnalyzerThread* plainPtr) {
     if (plainPtr) {
         plainPtr->deleteAfterFinished();
@@ -82,6 +86,7 @@ AnalyzerThread::AnalyzerThread(
           m_pConfig(pConfig),
           m_modeFlags(modeFlags),
           m_nextTrack(2), // minimum capacity
+          m_cancelTrackId(kNoCancelTrackId),
           m_sampleBuffer(mixxx::kAnalysisSamplesPerChunk),
           m_emittedState(AnalyzerThreadState::Void) {
     std::call_once(registerMetaTypesOnceFlag, registerMetaTypesOnce);
@@ -200,12 +205,36 @@ bool AnalyzerThread::submitNextTrack(const AnalyzerTrack& nextTrack) {
     return false;
 }
 
+void AnalyzerThread::cancelTrack(TrackId trackId) {
+    if (!trackId.isValid()) {
+        return;
+    }
+    m_cancelTrackId.store(trackId.toVariant().toInt());
+    // The worker is typically busy analyzing rather than asleep, but wake it
+    // anyway in case the request races with the thread falling idle.
+    wake();
+}
+
+bool AnalyzerThread::isCurrentTrackCancelled() const {
+    const int cancelTrackId = m_cancelTrackId.load();
+    return cancelTrackId != kNoCancelTrackId &&
+            m_currentTrack.has_value() &&
+            m_currentTrack->getTrack()->getId().toVariant().toInt() == cancelTrackId;
+}
+
 WorkerThread::TryFetchWorkItemsResult AnalyzerThread::tryFetchWorkItems() {
     DEBUG_ASSERT(!m_currentTrack.has_value());
     AnalyzerTrack* pFront = m_nextTrack.front();
     if (pFront) {
         m_currentTrack = *pFront;
         m_nextTrack.pop();
+        // Discard a cancellation request left over from a previous track so it
+        // can never abort this freshly dequeued one (unless it explicitly
+        // targets it, e.g. it was cancelled while still queued).
+        if (m_cancelTrackId.load() !=
+                m_currentTrack->getTrack()->getId().toVariant().toInt()) {
+            m_cancelTrackId.store(kNoCancelTrackId);
+        }
         kLogger.debug()
                 << "Dequeued next track"
                 << m_currentTrack->getTrack()->getId();
@@ -233,7 +262,7 @@ AnalyzerThread::AnalysisResult AnalyzerThread::analyzeAudioSource(
     mixxx::IndexRange remainingFrameRange = audioSource->frameIndexRange();
     while (!remainingFrameRange.empty()) {
         sleepWhileSuspended();
-        if (isStopping()) {
+        if (isStopping() || isCurrentTrackCancelled()) {
             return AnalysisResult::Cancelled;
         }
 
@@ -289,7 +318,7 @@ AnalyzerThread::AnalysisResult AnalyzerThread::analyzeAudioSource(
         }
 
         sleepWhileSuspended();
-        if (isStopping()) {
+        if (isStopping() || isCurrentTrackCancelled()) {
             return AnalysisResult::Cancelled;
         }
 

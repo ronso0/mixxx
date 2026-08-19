@@ -1,8 +1,11 @@
 #pragma once
 #include <QDomElement>
+#include <QHash>
 
 #include "effects/defs.h"
 #include "effects/presets/effectparameterpreset.h"
+
+class EffectSlot;
 
 /// EffectPreset is a read-only snapshot of the state of an effect that can be
 /// serialized to/deserialized from XML. It is used by EffectChainPreset to
@@ -13,6 +16,13 @@ class EffectPreset {
     EffectPreset();
     EffectPreset(const QDomElement& element);
     EffectPreset(const EffectSlotPointer pEffectSlot);
+    /// Bite DJ fork: raw-pointer overload used to snapshot an EffectSlot
+    /// from inside its own member functions (e.g. when caching the outgoing
+    /// effect during a switch). `includeRememberedPresets` controls whether
+    /// the slot's per-manifest cache is copied into this snapshot — only
+    /// the outermost serialization snapshot wants that, never a cache entry.
+    EffectPreset(const EffectSlot* pEffectSlot,
+            bool includeRememberedPresets);
     EffectPreset(const EffectManifestPointer pManifest);
 
     const QDomElement toXml(QDomDocument* doc) const;
@@ -37,6 +47,13 @@ class EffectPreset {
         return m_effectParameterPresets;
     }
 
+    /// Bite DJ fork: presets the EffectSlot was carrying for previously-
+    /// visited effects, keyed by manifest id. Lets the BeatFX picker
+    /// restore knob/metaknob state when the user returns to an effect.
+    const QHash<QString, EffectPresetPointer>& rememberedPresets() const {
+        return m_rememberedPresets;
+    }
+
     /// updates all of the parameters of `this` with the parameters
     /// of `preset`.
     /// The operation is not symmetric:
@@ -52,4 +69,7 @@ class EffectPreset {
     double m_dMetaParameter;
 
     QList<EffectParameterPreset> m_effectParameterPresets;
+
+    // Bite DJ fork: per-manifest cache (see rememberedPresets()).
+    QHash<QString, EffectPresetPointer> m_rememberedPresets;
 };

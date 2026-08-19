@@ -201,11 +201,8 @@ class EngineBuffer : public EngineObject {
     }
 
     constexpr static KeylockEngine defaultKeylockEngine() {
-#ifdef __RUBBERBAND__
-        return KeylockEngine::RubberBandFaster;
-#else
+        // Default to SoundTouch even when RubberBand is available.
         return KeylockEngine::SoundTouch;
-#endif
     }
 
     // Request that the EngineBuffer load a track. Since the process is

@@ -1,5 +1,7 @@
+#include <QPalette>
 #include <QResizeEvent>
 
+#include "skin/highcontrast.h"
 #include "widget/openglwindow.h"
 #include "widget/tooltipqopengl.h"
 #include "widget/wglwidget.h"
@@ -42,6 +44,17 @@ void WGLWidget::showEvent(QShowEvent* event) {
         m_pContainerWidget = createWindowContainer(m_pOpenGLWindow, this);
         m_pContainerWidget->resize(size());
         m_pContainerWidget->show();
+        // The container's autofilled background is what shows for the frames
+        // between the embedded GL window being (re-)mapped and its first
+        // swapped buffer — e.g. every time a tab switch re-shows a waveform.
+        // The default palette Window role is near-white, which reads as a
+        // white flash before the first GL frame paints. Fill it with black so
+        // the gap matches the surrounding skin instead of flashing white.
+        // In daylight mode the waveform's own background is inverted to white,
+        // so the gap has to follow it or the flash just changes colour.
+        QPalette palette = m_pContainerWidget->palette();
+        palette.setColor(QPalette::Window, HighContrast::mapColor(Qt::black));
+        m_pContainerWidget->setPalette(palette);
         m_pContainerWidget->setAutoFillBackground(true);
     }
     QWidget::showEvent(event);

@@ -189,6 +189,11 @@ void CueControl::createControls() {
     m_pVinylControlEnabled = std::make_unique<ControlProxy>(m_group, "vinylcontrol_enabled");
     m_pVinylControlMode = std::make_unique<ControlProxy>(m_group, "vinylcontrol_mode");
 
+    // RateControl is added to the EngineBuffer before CueControl, so these
+    // exist by now.
+    m_pScratch2 = std::make_unique<ControlProxy>(m_group, "scratch2");
+    m_pScratch2Enable = std::make_unique<ControlProxy>(m_group, "scratch2_enable");
+
     m_pHotcueFocus = std::make_unique<ControlObject>(ConfigKey(m_group, "hotcue_focus"));
     setHotcueFocusIndex(Cue::kNoHotCue);
     m_pHotcueFocusColorPrev = std::make_unique<ControlPushButton>(
@@ -978,6 +983,7 @@ void CueControl::hotcueGoto(HotcueControl* pControl, double value) {
     if (value <= 0) {
         return;
     }
+    endScratching();
     const mixxx::audio::FramePos position = pControl->getPosition();
     if (position.isValid()) {
         seekAbs(position);
@@ -988,6 +994,7 @@ void CueControl::hotcueGotoAndStop(HotcueControl* pControl, double value) {
     if (value <= 0) {
         return;
     }
+    endScratching();
 
     const mixxx::audio::FramePos position = pControl->getPosition();
     if (!position.isValid()) {
@@ -1007,6 +1014,7 @@ void CueControl::hotcueGotoAndPlay(HotcueControl* pControl, double value) {
     if (value <= 0) {
         return;
     }
+    endScratching();
     const mixxx::audio::FramePos position = pControl->getPosition();
     if (position.isValid()) {
         seekAbs(position);
@@ -1027,6 +1035,7 @@ void CueControl::hotcueGotoAndLoop(HotcueControl* pControl, double value) {
     if (value == 0) {
         return;
     }
+    endScratching();
     CuePointer pCue = pControl->getCue();
     if (!pCue) {
         return;
@@ -1063,6 +1072,7 @@ void CueControl::hotcueCueLoop(HotcueControl* pControl, double value) {
     if (value == 0) {
         return;
     }
+    endScratching();
 
     CuePointer pCue = pControl->getCue();
 
@@ -1113,6 +1123,7 @@ void CueControl::hotcueActivate(HotcueControl* pControl, double value, HotcueSet
     CuePointer pCue = pControl->getCue();
     if (value > 0) {
         // pressed
+        endScratching();
         if (pCue && pCue->getPosition().isValid() &&
                 pCue->getType() != mixxx::CueType::Invalid) {
             if (m_pPlay->toBool() && m_currentlyPreviewingIndex == Cue::kNoHotCue) {
@@ -1121,18 +1132,44 @@ void CueControl::hotcueActivate(HotcueControl* pControl, double value, HotcueSet
                 case mixxx::CueType::HotCue:
                     hotcueGoto(pControl, value);
                     break;
-                case mixxx::CueType::Loop:
-                    if (m_pCurrentSavedLoopControl != pControl) {
+                case mixxx::CueType::Loop: {
+                    const bool loopActive = m_pCurrentSavedLoopControl == pControl &&
+                            pControl->getStatus() == HotcueControl::Status::Active;
+                    if (getHotcueActivatePlaysPreference()) {
+                        if (loopActive) {
+                            // Pressing the running loop again releases it and
+                            // plays on, as it does on a CDJ.
+                            Cue::StartAndEndPositions pos = pCue->getStartAndEndPosition();
+                            setLoop(pos.startPosition, pos.endPosition, false);
+                        } else {
+                            // Jump into the loop rather than arming it where
+                            // the playhead happens to be: setLoop() only seeks
+                            // when already past the loop end, so an untouched
+                            // activate would play on until the loop came round.
+                            // This has to cover a loop that was the current
+                            // saved loop but is no longer running, or every
+                            // press after the first would merely re-arm it.
+                            hotcueGotoAndLoop(pControl, value);
+                        }
+                    } else if (m_pCurrentSavedLoopControl != pControl) {
                         setCurrentSavedLoopControlAndActivate(pControl);
                     } else {
-                        bool loopActive = pControl->getStatus() ==
-                                HotcueControl::Status::Active;
                         Cue::StartAndEndPositions pos = pCue->getStartAndEndPosition();
                         setLoop(pos.startPosition, pos.endPosition, !loopActive);
                     }
-                    break;
+                } break;
                 default:
                     DEBUG_ASSERT(!"Invalid CueType!");
+                }
+            } else if (getHotcueActivatePlaysPreference()) {
+                // Pressed during pause or preview. Rather than previewing for
+                // as long as the button is held, jump to the cue and play on
+                // from there. Both of these end any preview in progress and
+                // latch play, so the matching release below is a no-op.
+                if (pCue->getType() == mixxx::CueType::Loop) {
+                    hotcueGotoAndLoop(pControl, value);
+                } else {
+                    hotcueGotoAndPlay(pControl, value);
                 }
             } else {
                 // pressed during pause or preview
@@ -1153,6 +1190,9 @@ void CueControl::hotcueActivate(HotcueControl* pControl, double value, HotcueSet
 void CueControl::hotcueActivatePreview(HotcueControl* pControl, double value) {
     CuePointer pCue = pControl->getCue();
     int index = pControl->getHotcueIndex();
+    // Both the press and the release move the deck, so both have to take it
+    // off any scratch first.
+    endScratching();
     if (value > 0) {
         if (m_currentlyPreviewingIndex != index) {
             pControl->cachePreviewingStartState();
@@ -1327,6 +1367,7 @@ void CueControl::cueGoto(double value) {
     if (value <= 0) {
         return;
     }
+    endScratching();
 
     auto lock = lockMutex(&m_trackMutex);
     // Seek to cue point
@@ -1348,6 +1389,7 @@ void CueControl::cueGotoAndPlay(double value) {
     if (value <= 0) {
         return;
     }
+    endScratching();
 
     cueGoto(value);
     auto lock = lockMutex(&m_trackMutex);
@@ -1367,6 +1409,7 @@ void CueControl::cueGotoAndStop(double value) {
     if (value <= 0) {
         return;
     }
+    endScratching();
 
     if (m_currentlyPreviewingIndex == Cue::kNoHotCue) {
         m_pPlay->set(0.0);
@@ -1389,6 +1432,7 @@ void CueControl::cuePreview(double value) {
     if (!mainCuePosition.isValid()) {
         return;
     }
+    endScratching();
 
     if (value > 0) {
         if (m_currentlyPreviewingIndex == kMainCueIndex) {
@@ -1422,6 +1466,7 @@ void CueControl::cueCDJ(double value) {
     if (!mainCuePosition.isValid()) {
         return;
     }
+    endScratching();
 
     if (value > 0) {
         if (m_currentlyPreviewingIndex == kMainCueIndex) {
@@ -1487,6 +1532,7 @@ void CueControl::cueDenon(double value) {
     if (!mainCuePosition.isValid()) {
         return;
     }
+    endScratching();
 
     if (value > 0) {
         if (m_currentlyPreviewingIndex == kMainCueIndex) {
@@ -1528,6 +1574,7 @@ void CueControl::cuePlay(double value) {
     if (!mainCuePosition.isValid()) {
         return;
     }
+    endScratching();
 
     // pressed
     if (value > 0) {
@@ -2224,6 +2271,31 @@ CueControl::TrackAt CueControl::getTrackAt() const {
     return TrackAt::ElseWhere;
 }
 
+void CueControl::endScratching() {
+    // Bite DJ: a cue is an instruction to be *here*, playing. Anything still
+    // scratching the deck would otherwise own its rate instead - and with the
+    // vinyl brake set, a released jog wheel keeps scratching for as long as
+    // [BiteDJ],vinyl_brake says, so the cue would play slow, backwards, or
+    // (once the run-out has arrived at a standstill) not at all. Clearing
+    // scratch2_enable hands the rate straight back to the deck, whatever the
+    // brake time and whether or not the brake is even on.
+    //
+    // A platter still under the DJ's hand takes itself back: the scratch timer
+    // re-asserts scratch2_enable on its next tick (see
+    // ControllerScriptInterfaceLegacy::scratchProcess), so juggling a cue
+    // mid-scratch keeps working. A platter that has been let go of instead
+    // abandons its run-out there and then, which is what makes the cue
+    // immediate.
+    VERIFY_OR_DEBUG_ASSERT(m_pScratch2Enable->valid() && m_pScratch2->valid()) {
+        return;
+    }
+    if (!m_pScratch2Enable->toBool()) {
+        return;
+    }
+    m_pScratch2->set(0.0);
+    m_pScratch2Enable->set(0.0);
+}
+
 mixxx::audio::FramePos CueControl::getQuantizedCurrentPosition() {
     FrameInfo info = frameInfo();
 
@@ -2301,6 +2373,11 @@ bool CueControl::isTrackAtIntroCue() {
 
 SeekOnLoadMode CueControl::getSeekOnLoadPreference() {
     return getConfig()->getValue(ConfigKey("[Controls]", "CueRecall"), SeekOnLoadMode::IntroStart);
+}
+
+bool CueControl::getHotcueActivatePlaysPreference() {
+    return getConfig()->getValue(
+            ConfigKey("[Controls]", "HotcueActivatePlays"), true);
 }
 
 void CueControl::hotcueFocusColorPrev(double value) {

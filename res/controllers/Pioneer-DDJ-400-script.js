@@ -111,7 +111,7 @@ PioneerDDJ400.beta = PioneerDDJ400.alpha/32;
 PioneerDDJ400.fastSeekScale = 150;
 PioneerDDJ400.bendScale = 0.8;
 
-PioneerDDJ400.tempoRanges = [0.06, 0.10, 0.16, 0.25];
+PioneerDDJ400.tempoRanges = [0.06, 0.10, 0.25, 0.50, 1.00];
 
 PioneerDDJ400.shiftButtonDown = [false, false];
 
@@ -193,13 +193,50 @@ PioneerDDJ400.init = function() {
     engine.makeConnection("[Channel1]", "loop_enabled", PioneerDDJ400.loopToggle);
     engine.makeConnection("[Channel2]", "loop_enabled", PioneerDDJ400.loopToggle);
 
+    engine.makeConnection("[Channel1]", "loop_start_position", PioneerDDJ400.loopInPending);
+    engine.makeConnection("[Channel2]", "loop_start_position", PioneerDDJ400.loopInPending);
+    engine.makeConnection("[Channel1]", "loop_end_position", PioneerDDJ400.loopInPending);
+    engine.makeConnection("[Channel2]", "loop_end_position", PioneerDDJ400.loopInPending);
+
     for (let i = 1; i <= 3; i++) {
         engine.makeConnection("[EffectRack1_EffectUnit1_Effect" + i +"]", "enabled", PioneerDDJ400.toggleFxLight);
     }
-    engine.makeConnection("[EffectRack1_EffectUnit1]", "focused_effect", PioneerDDJ400.toggleFxLight);
+
+    // Bite DJ: jog mode is chosen in the in-skin General settings tab via the
+    // [BiteDJ],vinyl_mode CO (1 = Vinyl/scratch, 0 = CDJ/pitch-bend). Subscribe
+    // so the choice applies live, and trigger() once to seed the current value.
+    // On an unpatched Mixxx the CO does not exist, makeConnection returns nothing,
+    // and we keep the hard-coded default above.
+    const vinylModeConnection = engine.makeConnection(
+        "[BiteDJ]", "vinyl_mode", PioneerDDJ400.setVinylMode);
+    if (vinylModeConnection) {
+        vinylModeConnection.trigger();
+    }
 
     // query the controller for current control positions on startup
     midi.sendSysexMsg([0xF0, 0x00, 0x40, 0x05, 0x00, 0x00, 0x02, 0x06, 0x00, 0x03, 0x01, 0xf7], 12);
+};
+
+//
+// Waveform zoom
+//
+
+PioneerDDJ400.waveformZoom = function(midichan, control, value, status, group) {
+    if (value === 0x7f) {
+        script.triggerControl(group, "waveform_zoom_up", 100);
+    } else {
+        script.triggerControl(group, "waveform_zoom_down", 100);
+    }
+};
+
+// BROWSE rotate: zoom the waveform while the play screen ([Tab],current == 0)
+// is active, otherwise scroll the library as usual.
+PioneerDDJ400.browseRotate = function(midichan, control, value, status) {
+    if (engine.getValue("[Tab]", "current") === 0) {
+        PioneerDDJ400.waveformZoom(midichan, control, value, status, "[Channel1]");
+    } else {
+        engine.setValue("[Library]", "MoveVertical", value > 0x40 ? value - 0x80 : value);
+    }
 };
 
 //
@@ -231,9 +268,11 @@ PioneerDDJ400.toggleFxLight = function(_value, _group, _control) {
     PioneerDDJ400.toggleLight(PioneerDDJ400.lights.shiftBeatFx, enabled);
 };
 
+// Bite DJ skin only renders one effect slot (Effect1), so all BEAT FX
+// controls operate on it directly rather than on Mixxx's per-chain
+// "focused_effect" slot-cycling mechanism.
 PioneerDDJ400.focusedFxGroup = function() {
-    const focusedFx = engine.getValue("[EffectRack1_EffectUnit1]", "focused_effect");
-    return "[EffectRack1_EffectUnit1_Effect" + focusedFx + "]";
+    return "[EffectRack1_EffectUnit1_Effect1]";
 };
 
 PioneerDDJ400.beatFxLevelDepthRotate = function(_channel, _control, value) {
@@ -246,32 +285,65 @@ PioneerDDJ400.beatFxLevelDepthRotate = function(_channel, _control, value) {
     }
 };
 
-PioneerDDJ400.changeFocusedEffectBy = function(numberOfSteps) {
-    let focusedEffect = engine.getValue("[EffectRack1_EffectUnit1]", "focused_effect");
+// Bite DJ skin only renders one effect slot (Effect1), so the BEAT
+// LEFT/RIGHT buttons step through the on-screen bucket grid of the
+// loaded Beats-typed parameter instead of switching focused slot.
+// Order matches the row template's reading order
+// (⅛ → ¼ → ½ → 1 → 2 → 4), values are raw rate-in-cycles-per-beat.
+PioneerDDJ400.beatFxBuckets = [8, 4, 2, 1, 0.5, 0.25];
 
-    // Convert to zero-based index
-    focusedEffect -= 1;
+PioneerDDJ400.findBeatsParameter = function(group) {
+    for (let i = 1; i <= 16; i++) {
+        if (engine.getValue(group, "parameter" + i + "_loaded") !== 1) {
+            continue;
+        }
+        if (engine.getValue(group, "parameter" + i + "_units") === 1) {
+            return i;
+        }
+    }
+    return -1;
+};
 
-    // Standard Euclidean modulo by use of two plain modulos
-    const numberOfEffectsPerEffectUnit = 3;
-    focusedEffect = (((focusedEffect + numberOfSteps) % numberOfEffectsPerEffectUnit) + numberOfEffectsPerEffectUnit) % numberOfEffectsPerEffectUnit;
+PioneerDDJ400.stepBeatFxBucket = function(direction) {
+    const group = "[EffectRack1_EffectUnit1_Effect1]";
+    const paramIndex = PioneerDDJ400.findBeatsParameter(group);
+    if (paramIndex === -1) { return; }
 
-    // Convert back to one-based index
-    focusedEffect += 1;
+    const buckets = PioneerDDJ400.beatFxBuckets;
+    const valueKey = "parameter" + paramIndex + "_value";
+    const current = engine.getValue(group, valueKey);
 
-    engine.setValue("[EffectRack1_EffectUnit1]", "focused_effect", focusedEffect);
+    // Snap to nearest bucket, then step. Off-bucket values (rare —
+    // bucket presses are the only writes — but possible via a MIDI
+    // mapping that pokes a raw value) round to the closest match.
+    let closest = 0;
+    let bestDist = Math.abs(buckets[0] - current);
+    for (let i = 1; i < buckets.length; i++) {
+        const dist = Math.abs(buckets[i] - current);
+        if (dist < bestDist) {
+            bestDist = dist;
+            closest = i;
+        }
+    }
+
+    let next = closest + direction;
+    if (next < 0) { next = 0; }
+    if (next >= buckets.length) { next = buckets.length - 1; }
+    if (next === closest) { return; }
+
+    engine.setValue(group, valueKey, buckets[next]);
 };
 
 PioneerDDJ400.beatFxLeftPressed = function(_channel, _control, value) {
     if (value === 0) { return; }
 
-    PioneerDDJ400.changeFocusedEffectBy(-1);
+    PioneerDDJ400.stepBeatFxBucket(-1);
 };
 
 PioneerDDJ400.beatFxRightPressed = function(_channel, _control, value) {
     if (value === 0) { return; }
 
-    PioneerDDJ400.changeFocusedEffectBy(1);
+    PioneerDDJ400.stepBeatFxBucket(1);
 };
 
 PioneerDDJ400.beatFxSelectPressed = function(_channel, _control, value) {
@@ -309,13 +381,17 @@ PioneerDDJ400.beatFxOnOffShiftPressed = function(_channel, _control, value) {
 PioneerDDJ400.beatFxChannel = function(_channel, control, value, _status, group) {
     if (value === 0x00) { return; }
 
-    const enableChannel1 = control === 0x10 ? 1 : 0,
-        enableChannel2 = control === 0x11 ? 1 : 0,
-        enableMaster = control === 0x14 ? 1 : 0;
+    // MASTER routes the FX to both decks so that both DECK ASSIGN buttons in the
+    // FX pane stay highlighted. We enable the individual channels rather than
+    // group_[Master]_enable so the on-screen buttons (bound to the per-channel
+    // enables) reflect the selection.
+    const master = control === 0x14,
+        enableChannel1 = control === 0x10 || master ? 1 : 0,
+        enableChannel2 = control === 0x11 || master ? 1 : 0;
 
     engine.setValue(group, "group_[Channel1]_enable", enableChannel1);
     engine.setValue(group, "group_[Channel2]_enable", enableChannel2);
-    engine.setValue(group, "group_[Master]_enable", enableMaster);
+    engine.setValue(group, "group_[Master]_enable", 0);
 };
 
 //
@@ -397,11 +473,52 @@ PioneerDDJ400.loopToggle = function(value, group, control) {
     PioneerDDJ400.setReloopLight(status, value ? 0x7F : 0x00);
 
     if (value) {
+        PioneerDDJ400.stopLoopInPendingBlink(status, group);
         PioneerDDJ400.startLoopLightsBlink(channel, control, status, group);
     } else {
         PioneerDDJ400.stopLoopLightsBlink(group, control, status);
         PioneerDDJ400.loopAdjustIn[channel] = false;
         PioneerDDJ400.loopAdjustOut[channel] = false;
+    }
+};
+
+// loop_enabled stays 0 until OUT is pressed, so we watch the position COs.
+PioneerDDJ400.loopInPending = function(_value, group) {
+    const status = group === "[Channel1]" ? 0x90 : 0x91;
+
+    if (engine.getValue(group, "loop_enabled") > 0) {
+        return;
+    }
+
+    const inSet = engine.getValue(group, "loop_start_position") >= 0;
+    const outSet = engine.getValue(group, "loop_end_position") >= 0;
+
+    if (inSet && !outSet) {
+        PioneerDDJ400.startLoopInPendingBlink(status, group);
+    } else {
+        PioneerDDJ400.stopLoopInPendingBlink(status, group);
+    }
+};
+
+PioneerDDJ400.startLoopInPendingBlink = function(status, group) {
+    PioneerDDJ400.stopLoopInPendingBlink(status, group);
+
+    let blink = 0x7F;
+    PioneerDDJ400.timers[group] = PioneerDDJ400.timers[group] || {};
+    PioneerDDJ400.timers[group]["loopInPending"] = engine.beginTimer(500, () => {
+        blink = 0x7F - blink;
+        midi.sendShortMsg(status, 0x10, blink);
+        midi.sendShortMsg(status, 0x4C, blink);
+    });
+};
+
+PioneerDDJ400.stopLoopInPendingBlink = function(status, group) {
+    PioneerDDJ400.timers[group] = PioneerDDJ400.timers[group] || {};
+    if (PioneerDDJ400.timers[group]["loopInPending"] !== undefined) {
+        engine.stopTimer(PioneerDDJ400.timers[group]["loopInPending"]);
+        PioneerDDJ400.timers[group]["loopInPending"] = undefined;
+        midi.sendShortMsg(status, 0x10, 0x7F);
+        midi.sendShortMsg(status, 0x4C, 0x7F);
     }
 };
 
@@ -492,6 +609,12 @@ PioneerDDJ400.jogTurn = function(channel, _control, value, _status, group) {
 PioneerDDJ400.jogSearch = function(_channel, _control, value, _status, group) {
     const newVal = (value - 64) * PioneerDDJ400.fastSeekScale;
     engine.setValue(group, "jog", newVal);
+};
+
+// Connection callback for [BiteDJ],vinyl_mode. Maps the CO (1 = Vinyl,
+// 0 = CDJ) onto the boolean jogTouch() checks before enabling scratching.
+PioneerDDJ400.setVinylMode = function(value) {
+    PioneerDDJ400.vinylMode = value !== 0;
 };
 
 PioneerDDJ400.jogTouch = function(channel, _control, value) {

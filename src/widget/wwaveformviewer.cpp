@@ -22,6 +22,7 @@ WWaveformViewer::WWaveformViewer(
           m_zoomZoneWidth(20),
           m_bScratching(false),
           m_bBending(false),
+          m_bSeekDisabled(false),
           m_pCueMenuPopup(make_parented<WCueMenuPopup>(pConfig, this)),
           m_waveformWidget(nullptr) {
     setMouseTracking(true);
@@ -81,6 +82,10 @@ void WWaveformViewer::mousePressEvent(QMouseEvent* event) {
         return;
     }
 
+    if (m_bSeekDisabled) {
+        return;
+    }
+
     m_mouseAnchor = event->pos();
 
     if (event->button() == Qt::LeftButton) {
@@ -132,6 +137,10 @@ void WWaveformViewer::mouseMoveEvent(QMouseEvent* event) {
         return;
     }
 
+    if (m_bSeekDisabled) {
+        return;
+    }
+
     // Only send signals for mouse moving if the left button is pressed
     if (m_bScratching) {
         int eventPosValue = m_waveformWidget->getOrientation() == Qt::Horizontal ?
@@ -178,6 +187,9 @@ void WWaveformViewer::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void WWaveformViewer::mouseReleaseEvent(QMouseEvent* /*event*/) {
+    if (m_bSeekDisabled) {
+        return;
+    }
     if (m_bScratching) {
         m_pScratchPositionEnable->set(0.0);
         m_bScratching = false;

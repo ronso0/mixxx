@@ -4,7 +4,6 @@
 #include <QDir>
 #include <QMessageBox>
 #include <QMutex>
-#include <QStorageInfo>
 
 #include "control/controlpushbutton.h"
 #include "engine/enginemixer.h"
@@ -23,6 +22,7 @@ RecordingManager::RecordingManager(UserSettingsPointer pConfig, EngineMixer* pEn
           m_recordingFile(""),
           m_recordingLocation(""),
           m_bRecording(false),
+          m_dfSilence(false),
           m_iNumberOfBytesRecorded(0),
           m_iNumberOfBytesRecordedSplit(0),
           m_split_size(0),
@@ -57,6 +57,10 @@ RecordingManager::RecordingManager(UserSettingsPointer pConfig, EngineMixer* pEn
                 &EngineRecord::durationRecorded,
                 this,
                 &RecordingManager::slotDurationRecorded);
+        connect(pEngineRecord,
+                &EngineRecord::freeSpaceAvailable,
+                this,
+                &RecordingManager::slotFreeSpaceAvailable);
         pSidechain->addSideChainWorker(pEngineRecord);
     }
 }
@@ -87,17 +91,6 @@ void RecordingManager::slotToggleRecording(double value) {
     }
 }
 
-qint64 RecordingManager::getFreeSpace() {
-    // returns the free space on the recording location in bytes
-    // return -1 if the free space could not be determined
-    qint64 rv = -1;
-    QStorageInfo storage(m_recordingDir);
-    if (storage.isValid()) {
-        rv = storage.bytesAvailable();
-    }
-    return rv;
-}
-
 void RecordingManager::startRecording() {
     QString encodingType = m_pConfig->getValueString(
             ConfigKey(RECORDING_PREF_KEY, "Encoding"));
@@ -110,7 +103,6 @@ void RecordingManager::startRecording() {
     m_iNumberOfBytesRecorded = 0;
     m_secondsRecorded=0;
     m_dfSilence = false;
-    m_dfCounter=0;
     m_split_size = getFileSplitSize();
     m_split_time = getFileSplitSeconds();
     if (m_split_time < INT_MAX) {
@@ -229,24 +221,14 @@ void RecordingManager::slotBytesRecorded(int bytes) {
         splitContinueRecording();
     }
     emit bytesRecorded(m_iNumberOfBytesRecorded);
+}
 
-    // check for free space
-
-    // we only check every 1 MB of data to minimize syscalls
-    m_dfCounter -= bytes;
-
-    if (m_dfCounter > 0) {
-        return;
-    }
-
-    qint64 dfree = getFreeSpace();
-    // reset counter
-    m_dfCounter = 1024 * 1024;
-    if (dfree == -1) {
-        qDebug() << "can't determine free space";
-        return;
-    }
-    if (dfree > MIN_DISK_FREE) {
+// The free space itself is measured by EngineRecord on the sidechain thread —
+// asking the filesystem is a blocking call, and the volume being recorded to is
+// a stick that can stop answering at any moment. All that is left here is
+// deciding what to say about the answer.
+void RecordingManager::slotFreeSpaceAvailable(qint64 bytesAvailable) {
+    if (bytesAvailable > MIN_DISK_FREE) {
         m_dfSilence = false;
     } else if (m_dfSilence != true) {
         // suppress further warnings until the situation has cleared

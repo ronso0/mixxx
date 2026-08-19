@@ -43,9 +43,13 @@ WBeatSpinBox::WBeatSpinBox(QWidget* parent,
 }
 
 void WBeatSpinBox::setup(const QDomNode& node, const SkinContext& context) {
-    Q_UNUSED(node);
     m_scaleFactor = context.getScaleFactor();
     qobject_cast<WBeatLineEdit*>(lineEdit())->setScaleFactor(m_scaleFactor);
+    if (context.selectBool(node, "ReadOnly", false)) {
+        setReadOnly(true);
+        setFocusPolicy(Qt::NoFocus);
+        lineEdit()->setFocusPolicy(Qt::NoFocus);
+    }
 }
 
 void WBeatSpinBox::stepBy(int steps) {

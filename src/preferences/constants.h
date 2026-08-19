@@ -30,15 +30,6 @@ enum class ScreenSaver {
 };
 Q_ENUM_NS(ScreenSaver);
 
-enum class MultiSamplingMode {
-    Disabled = 0,
-    Two = 2,
-    Four = 4,
-    Eight = 8,
-    Sixteen = 16
-};
-Q_ENUM_NS(MultiSamplingMode);
-
 } // namespace constants
 } // namespace preferences
 } // namespace mixxx

@@ -53,9 +53,6 @@ CmdlineArgs::CmdlineArgs()
           m_controllerDebug(false),
           m_controllerAbortOnWarning(false),
           m_developer(false),
-#ifdef MIXXX_USE_QML
-          m_qml(false),
-#endif
           m_safeMode(false),
           m_useLegacyVuMeter(false),
           m_useLegacySpinny(false),
@@ -272,13 +269,6 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
                             : QString());
     parser.addOption(developer);
 
-#ifdef MIXXX_USE_QML
-    const QCommandLineOption qml(QStringLiteral("qml"),
-            forUserFeedback ? QCoreApplication::translate("CmdlineArgs",
-                                      "Loads experimental QML GUI instead of legacy QWidget skin")
-                            : QString());
-    parser.addOption(qml);
-#endif
     const QCommandLineOption safeMode(QStringLiteral("safe-mode"),
             forUserFeedback ? QCoreApplication::translate("CmdlineArgs",
                                       "Enables safe-mode. Disables OpenGL waveforms, and "
@@ -439,9 +429,6 @@ bool CmdlineArgs::parse(const QStringList& arguments, CmdlineArgs::ParseMode mod
     m_controllerDebug = parser.isSet(controllerDebug) || parser.isSet(controllerDebugDeprecated);
     m_controllerAbortOnWarning = parser.isSet(controllerAbortOnWarning);
     m_developer = parser.isSet(developer);
-#ifdef MIXXX_USE_QML
-    m_qml = parser.isSet(qml);
-#endif
     m_safeMode = parser.isSet(safeMode) || parser.isSet(safeModeDeprecated);
     m_debugAssertBreak = parser.isSet(debugAssertBreak) || parser.isSet(debugAssertBreakDeprecated);
 

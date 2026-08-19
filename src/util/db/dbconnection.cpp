@@ -7,6 +7,7 @@
 
 #include "util/db/dbconnection.h"
 
+#include "track/keyutils.h"
 #include "util/db/sqllikewildcards.h"
 #include "util/logger.h"
 #include "util/assert.h"
@@ -230,6 +231,40 @@ void sqliteLikeUtf8(sqlite3_context* context,
     return;
 }
 
+// Bite DJ: SQLite scalar mapping a free-form key text (e.g. "9A", "Dbm",
+// "1d") to its circle-of-fifths order under the requested notation. Used by
+// ColumnCache::slotSetKeySortOrder for external library track caches
+// (Rekordbox, Serato, iTunes) that store only `key TEXT` and have no
+// `key_id` column — referencing a non-existent `key_id` in the ORDER BY
+// would fail the query and hide every row in the view. Routing through
+// KeyUtils::guessKeyFromText gives us musical (chromatic) ordering across
+// all spelling variants, not the alphabetic ordering that places "10A"
+// before "2A". Unparseable text returns NULL so it sorts to the end.
+void sqliteKeyTextSortOrder(sqlite3_context* context,
+        int argc,
+        sqlite3_value** argv) {
+    VERIFY_OR_DEBUG_ASSERT(argc == 2) {
+        sqlite3_result_null(context);
+        return;
+    }
+    const auto* pKeyText = sqlite3_value_text(argv[0]);
+    if (!pKeyText) {
+        sqlite3_result_null(context);
+        return;
+    }
+    const QString keyText = QString::fromUtf8(
+            reinterpret_cast<const char*>(pKeyText));
+    const auto key = KeyUtils::guessKeyFromText(keyText);
+    if (key == mixxx::track::io::key::INVALID) {
+        sqlite3_result_null(context);
+        return;
+    }
+    const auto notation = KeyUtils::keyNotationFromNumericValue(
+            static_cast<double>(sqlite3_value_int(argv[1])));
+    sqlite3_result_int64(context,
+            KeyUtils::keyToCircleOfFifthsOrder(key, notation));
+}
+
 #endif // __SQLITE3__
 
 bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator) {
@@ -302,6 +337,22 @@ bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator
     VERIFY_OR_DEBUG_ASSERT(result == SQLITE_OK) {
         kLogger.warning()
                 << "Failed to install custom 3-arg LIKE function for SQLite3:"
+                << result;
+    }
+
+    // Bite DJ: see sqliteKeyTextSortOrder.
+    result = sqlite3_create_function(
+            handle,
+            "key_text_sort_order",
+            2,
+            SQLITE_UTF8 | SQLITE_DETERMINISTIC,
+            nullptr,
+            sqliteKeyTextSortOrder,
+            nullptr,
+            nullptr);
+    VERIFY_OR_DEBUG_ASSERT(result == SQLITE_OK) {
+        kLogger.warning()
+                << "Failed to install key_text_sort_order function for SQLite3:"
                 << result;
     }
 #else

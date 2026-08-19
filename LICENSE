@@ -1,19 +1,21 @@
-Mixxx 2.5.6, Digital DJ'ing software.
+BiteDJ 1.0, based on Mixxx 2.5.6
+Embedded Digital DJ'ing software.
+Copyright (C) 2026 Deckshark
 Copyright (C) 2001-2026 Mixxx Development Team
 
-Mixxx is free software; you can redistribute it and/or modify
+BiteDJ is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
 (at your option) any later version. The full text of the GNU
 General Public License, version 2 can be found below. The licenses
-of software libraries distributed together with Mixxx can be found
+of software libraries distributed together with BiteDJ can be found
 below as well.
 
-Mixxx is distributed in the hope that it will be useful,
+BiteDJ is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-This distribution of Mixxx may include skins that are licensed under a
+This distribution of BiteDJ may include skins that are licensed under a
 Creative Commons license. Full licensing information is available
 individually for each skin, located in their "skin.xml" file.
 
@@ -29,7 +31,7 @@ available at http://www.steinberg.net/en/company/developer.html .
 
 On Windows you may receive a copy of the Microsoft Visual Studio runtime
 libraries. These are distributed only for the purpose of allowing
-Mixxx to run as per the license agreement for Visual Studio and
+BiteDJ to run as per the license agreement for Visual Studio and
 are copyright of Microsoft.
 
 
@@ -316,7 +318,7 @@ POSSIBILITY OF SUCH DAMAGES.
 13. In addition, as a special exception, you are granted the additional
 right to distribute this Program subject to the Mac App Store Product
 Usage Rules [3] and Licensed Application End User License Agreement [2],
-if the source code is made available on the Mixxx Website under the
+if the source code is made available on the BiteDJ Website under the
 terms of the GPL.
 
 		     END OF TERMS AND CONDITIONS

@@ -1,7 +1,6 @@
 #include "waveform/visualplayposition.h"
 
 #include "moc_visualplayposition.cpp"
-#include "util/cmdlineargs.h"
 #include "util/math.h"
 #include "waveform/vsyncthread.h"
 
@@ -59,18 +58,8 @@ void VisualPlayPosition::set(
 double VisualPlayPosition::calcOffsetAtNextVSync(
         VSyncThread* pVSyncThread, const VisualPlayPositionData& data) {
     if (data.m_audioBufferMicroS != 0.0) {
-        int refToVSync;
-        int syncIntervalTimeMicros;
-#ifdef MIXXX_USE_QML
-        if (CmdlineArgs::Instance().isQml()) {
-            refToVSync = 0;
-            syncIntervalTimeMicros = 0;
-        } else
-#endif
-        {
-            refToVSync = pVSyncThread->fromTimerToNextSyncMicros(data.m_referenceTime);
-            syncIntervalTimeMicros = pVSyncThread->getSyncIntervalTimeMicros();
-        }
+        int refToVSync = pVSyncThread->fromTimerToNextSyncMicros(data.m_referenceTime);
+        int syncIntervalTimeMicros = pVSyncThread->getSyncIntervalTimeMicros();
         // The positive offset is limited to the audio buffer + 2 x waveform sync interval
         // This should be sufficient to compensate jitter, but does not continue
         // in case of underflows.

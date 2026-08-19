@@ -1,6 +1,9 @@
 #include "widget/whotcuebutton.h"
 
 #include <QMouseEvent>
+#include <QPaintEvent>
+#include <QPainter>
+#include <algorithm>
 
 #include "mixer/playerinfo.h"
 #include "moc_whotcuebutton.cpp"
@@ -9,6 +12,30 @@
 
 namespace {
 constexpr int kDefaultDimBrightThreshold = 127;
+
+// Clear badge geometry, in unscaled skin pixels.
+constexpr int kClearBadgeSize = 16;
+constexpr int kClearBadgeMargin = 3;
+// How far past the glyph the tap target reaches on each side.
+constexpr int kClearBadgeTouchSlop = 5;
+
+// The badge is only ever drawn on top of the cue's own colour, which may be
+// anything from black to white, so it carries its own disc rather than trusting
+// the pad underneath. The fill is opaque, not alpha-blended: over the default
+// hotcue orange a translucent black reads as brown and takes the red down with
+// it, and the whole point of the disc is that the contrast is the same whatever
+// colour the DJ gave the cue. The rim is what keeps it visible on a cue that is
+// itself near-black.
+//
+// Painted here rather than declared in QSS, so neither daylight-mode hook sees
+// them - which is right: the colour they sit on is itself deliberately never
+// inverted, so a badge that flipped with the mode would be the one thing on the
+// pad fighting its background.
+const QColor kClearBadgeBack(0x14, 0x14, 0x14);
+const QColor kClearBadgeBackPressed(0x3a, 0x3a, 0x3a);
+const QColor kClearBadgeRim(0xff, 0xff, 0xff, 60);
+const QColor kClearBadgeGlyph(0xff, 0x51, 0x47);
+const QColor kClearBadgeGlyphPressed(0xff, 0x8f, 0x84);
 } // namespace
 
 WHotcueButton::WHotcueButton(const QString& group, QWidget* pParent)
@@ -20,7 +47,9 @@ WHotcueButton::WHotcueButton(const QString& group, QWidget* pParent)
           m_cueColorDimThreshold(kDefaultDimBrightThreshold),
           m_bCueColorDimmed(false),
           m_bCueColorIsLight(false),
-          m_bCueColorIsDark(false) {
+          m_bCueColorIsDark(false),
+          m_bClearBadge(false),
+          m_bClearBadgePressed(false) {
 }
 
 void WHotcueButton::setup(const QDomNode& node, const SkinContext& context) {
@@ -46,10 +75,7 @@ void WHotcueButton::setup(const QDomNode& node, const SkinContext& context) {
 
     m_hoverCueColor = context.selectBool(node, QStringLiteral("Hover"), false);
 
-    m_pCueMenuPopup = make_parented<WCueMenuPopup>(context.getConfig(), this);
-    ColorPaletteSettings colorPaletteSettings(context.getConfig());
-    auto colorPalette = colorPaletteSettings.getHotcueColorPalette();
-    m_pCueMenuPopup->setColorPalette(colorPalette);
+    m_pConfig = context.getConfig();
 
     setFocusPolicy(Qt::NoFocus);
 
@@ -66,6 +92,17 @@ void WHotcueButton::setup(const QDomNode& node, const SkinContext& context) {
             ControlFlag::NoAssertIfMissing);
     m_pCoType->connectValueChanged(this, &WHotcueButton::slotTypeChanged);
     slotTypeChanged(m_pCoType->get());
+
+    // Opt-in corner badge that clears the slot. Right-click is the only stock
+    // way to delete a cue and a touch-only device never produces one, so a pad
+    // grid otherwise has no way to free a slot at all.
+    m_bClearBadge = context.selectBool(node, QStringLiteral("ClearBadge"), false);
+    if (m_bClearBadge) {
+        m_pCoClear = make_parented<ControlProxy>(
+                getClearConfigKey(),
+                this,
+                ControlFlag::NoAssertIfMissing);
+    }
 
     auto* pLeftConnection = new ControlParameterWidgetConnection(
             this,
@@ -88,6 +125,58 @@ void WHotcueButton::setup(const QDomNode& node, const SkinContext& context) {
     if (!con.isNull()) {
         SKIN_WARNING(node, context, QStringLiteral("Additional Connections are not allowed"));
     }
+}
+
+bool WHotcueButton::clearBadgeVisible() {
+    if (!m_bClearBadge || !readDisplayValue()) {
+        return false;
+    }
+    // Don't crowd out the label on a pad too small to carry both.
+    const QRect badge = clearBadgeRect();
+    return width() >= badge.width() * 3 && height() >= badge.height() * 2;
+}
+
+QRect WHotcueButton::clearBadgeRect() {
+    const int size = static_cast<int>(kClearBadgeSize * scaleFactor());
+    const int margin = static_cast<int>(kClearBadgeMargin * scaleFactor());
+    return QRect(width() - size - margin, margin, size, size);
+}
+
+QRect WHotcueButton::clearBadgeHitRect() {
+    const int slop = static_cast<int>(kClearBadgeTouchSlop * scaleFactor());
+    return clearBadgeRect().adjusted(-slop, -slop, slop, slop).intersected(rect());
+}
+
+void WHotcueButton::cancelClearBadgePress() {
+    if (m_bClearBadgePressed) {
+        m_bClearBadgePressed = false;
+        update();
+    }
+}
+
+void WHotcueButton::paintEvent(QPaintEvent* e) {
+    WPushButton::paintEvent(e);
+
+    if (!clearBadgeVisible()) {
+        return;
+    }
+
+    const QRectF badge(clearBadgeRect());
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing, true);
+
+    p.setPen(QPen(kClearBadgeRim, 1.0));
+    p.setBrush(m_bClearBadgePressed ? kClearBadgeBackPressed : kClearBadgeBack);
+    p.drawEllipse(badge.adjusted(0.5, 0.5, -0.5, -0.5));
+
+    const qreal inset = badge.width() * 0.3;
+    const QRectF glyph = badge.adjusted(inset, inset, -inset, -inset);
+    QPen pen(m_bClearBadgePressed ? kClearBadgeGlyphPressed : kClearBadgeGlyph);
+    pen.setWidthF(std::max(1.5, badge.width() / 9.0));
+    pen.setCapStyle(Qt::RoundCap);
+    p.setPen(pen);
+    p.drawLine(glyph.topLeft(), glyph.bottomRight());
+    p.drawLine(glyph.topRight(), glyph.bottomLeft());
 }
 
 void WHotcueButton::mousePressEvent(QMouseEvent* e) {
@@ -121,10 +210,22 @@ void WHotcueButton::mousePressEvent(QMouseEvent* e) {
                 pTrack->removeCue(pHotCue);
                 return;
             }
-            m_pCueMenuPopup->setTrackCueGroup(pTrack, pHotCue, m_group);
+            WCueMenuPopup* pPopup = cueMenuPopup();
+            pPopup->setTrackCueGroup(pTrack, pHotCue, m_group);
             // use the bottom left corner as starting point for popup
-            m_pCueMenuPopup->popup(mapToGlobal(QPoint(0, height())));
+            pPopup->popup(mapToGlobal(QPoint(0, height())));
         }
+        return;
+    }
+
+    if (e->button() == Qt::LeftButton && clearBadgeVisible() &&
+            clearBadgeHitRect().contains(e->pos())) {
+        // The badge is its own tap target inside the pad. Swallow the press so
+        // the cue doesn't fire underneath it, and hold the action until the
+        // release: a finger that lands on the badge by mistake can slide off
+        // to cancel, which matters for something that deletes a cue mid-set.
+        m_bClearBadgePressed = true;
+        update();
         return;
     }
 
@@ -138,7 +239,42 @@ void WHotcueButton::mouseReleaseEvent(QMouseEvent* e) {
         // Don't handle stray release events
         return;
     }
+
+    if (m_bClearBadgePressed) {
+        m_bClearBadgePressed = false;
+        const bool onBadge = clearBadgeVisible() &&
+                clearBadgeHitRect().contains(e->pos());
+        update();
+        if (onBadge && m_pCoClear) {
+            // hotcue_N_clear is a push button, edge triggered on > 0.
+            m_pCoClear->set(1.0);
+            m_pCoClear->set(0.0);
+        }
+        // Never fall through to the base class: it would emit the activate
+        // release for a press it never saw.
+        return;
+    }
+
     WPushButton::mouseReleaseEvent(e);
+}
+
+bool WHotcueButton::event(QEvent* e) {
+    // WPushButton unsticks its own pressed state on these; the badge's is
+    // separate and would otherwise stay lit with no release coming.
+    if (e->type() == QEvent::Leave || e->type() == QEvent::WindowDeactivate) {
+        cancelClearBadgePress();
+    }
+    return WPushButton::event(e);
+}
+
+WCueMenuPopup* WHotcueButton::cueMenuPopup() {
+    if (!m_pCueMenuPopup) {
+        m_pCueMenuPopup = make_parented<WCueMenuPopup>(m_pConfig, this);
+        ColorPaletteSettings colorPaletteSettings(m_pConfig);
+        m_pCueMenuPopup->setColorPalette(
+                colorPaletteSettings.getHotcueColorPalette());
+    }
+    return m_pCueMenuPopup;
 }
 
 ConfigKey WHotcueButton::createConfigKey(const QString& name) {

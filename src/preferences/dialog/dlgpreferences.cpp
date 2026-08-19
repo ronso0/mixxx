@@ -511,6 +511,22 @@ DlgPreferencePage* DlgPreferences::currentPage() {
 
 void DlgPreferences::removePageWidget(DlgPreferencePage* pWidget) {
     pagesWidget->removeWidget(pWidget->parentWidget()->parentWidget());
+    // Bite DJ: keep m_allPages in sync with the QStackedWidget. Without this,
+    // a hotplug-driven destroy/recreate of DlgPrefController children (via
+    // DlgPrefControllers::rescanControllers on ControllerManager::devicesChanged)
+    // leaves dangling DlgPreferencePage* + QTreeWidgetItem* entries in
+    // m_allPages. The next Apply/OK click calls pendingConfigValidOnAllPages,
+    // which dereferences the stale vtable and crashes. Stock Mixxx assumes the
+    // controller list is fixed for Mixxx's lifetime (see the comment on
+    // ControllerManager::updateControllerList) and only invokes
+    // removePageWidget during ~DlgPreferences teardown, so this prune is a
+    // no-op on the stock call path.
+    for (auto it = m_allPages.begin(); it != m_allPages.end(); ++it) {
+        if (it->pDlg == pWidget) {
+            m_allPages.erase(it);
+            break;
+        }
+    }
 }
 
 void DlgPreferences::expandTreeItem(QTreeWidgetItem* pItem) {

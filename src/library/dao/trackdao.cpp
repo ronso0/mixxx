@@ -14,6 +14,8 @@
 #include "library/coverartutils.h"
 #include "library/dao/analysisdao.h"
 #include "library/dao/cuedao.h"
+#include "library/dao/fscueoverridestore.h"
+#include "library/dao/fsmetaoverridestore.h"
 #include "library/dao/libraryhashdao.h"
 #include "library/dao/playlistdao.h"
 #include "library/library_prefs.h"
@@ -88,6 +90,7 @@ TrackDAO::TrackDAO(CueDAO& cueDao,
           m_analysisDao(analysisDao),
           m_libraryHashDao(libraryHashDao),
           m_pConfig(pConfig),
+          m_fsAnalysisCache(pConfig),
           m_trackLocationIdColumn(UndefinedRecordIndex),
           m_queryLibraryIdColumn(UndefinedRecordIndex),
           m_queryLibraryMixxxDeletedColumn(UndefinedRecordIndex) {
@@ -820,10 +823,17 @@ TrackId TrackDAO::addTracksAddTrack(const TrackPointer& pTrack, bool unremove) {
         pTrack->initId(trackId);
         pTrack->setDateAdded(trackDateAdded);
 
-        m_analysisDao.saveTrackAnalyses(
-                trackId,
-                pTrack->getWaveform(),
-                pTrack->getWaveformSummary());
+        if (m_fsAnalysisCache.isEnabled()) {
+            m_fsAnalysisCache.saveTrackAnalyses(
+                    pTrack->getLocation(),
+                    pTrack->getWaveform(),
+                    pTrack->getWaveformSummary());
+        } else if (m_fsAnalysisCache.isHomeCacheEnabled()) {
+            m_analysisDao.saveTrackAnalyses(
+                    trackId,
+                    pTrack->getWaveform(),
+                    pTrack->getWaveformSummary());
+        }
         m_cueDao.saveTrackCues(
                 trackId,
                 pTrack->getCuePoints());
@@ -1537,6 +1547,17 @@ TrackPointer TrackDAO::getTrackById(TrackId trackId) const {
 
     // Populate track cues from the cues table.
     pTrack->setCuePoints(m_cueDao.getCuesForTrack(trackId));
+
+    // Cues the DJ set on this unit live on the drive the track came from, so
+    // that they follow the stick rather than this box's library. Apply them
+    // before marking the track clean: they are the same cues the cues table
+    // holds in the ordinary case, and an override that differs is written back
+    // by flushIfChanged() on the next save anyway.
+    FsCueOverrideStore::applyOverrides(pTrack.get());
+    // Same rule for the star rating: an edit made on this unit lives on the
+    // drive the track came from, so it travels with the stick rather than
+    // staying in this box's library.
+    FsMetaOverrideStore::applyOverrides(pTrack.get());
     pTrack->markClean();
 
     // Synchronize the track's metadata with the corresponding source
@@ -1724,13 +1745,30 @@ bool TrackDAO::updateTrack(const Track& track) const {
     // kLogger.debug() << "Update track took : " <<
     // time.elapsed().formatMillisWithUnit() << "Now updating cues";
     // time.start();
-    m_analysisDao.saveTrackAnalyses(
-            trackId,
-            track.getWaveform(),
-            track.getWaveformSummary());
+    if (m_fsAnalysisCache.isEnabled()) {
+        m_fsAnalysisCache.saveTrackAnalyses(
+                track.getLocation(),
+                track.getWaveform(),
+                track.getWaveformSummary());
+    } else if (m_fsAnalysisCache.isHomeCacheEnabled()) {
+        m_analysisDao.saveTrackAnalyses(
+                trackId,
+                track.getWaveform(),
+                track.getWaveformSummary());
+    }
     m_cueDao.saveTrackCues(
             trackId, track.getCuePoints());
     transaction.commit();
+
+    // Mirror hot cues and memory cues onto the track's own drive, but only if
+    // the DJ actually changed them since the track was loaded — an unchanged
+    // track never touches the drive, which keeps the save that lands mid-eject
+    // (the queued cache eviction the unmount pumps for) from reopening a file
+    // on the volume being ejected.
+    FsCueOverrideStore::flushIfChanged(track);
+    // The star rating rides along on the same terms: written out only when the
+    // DJ changed it, so an untouched track still costs the drive nothing.
+    FsMetaOverrideStore::flushIfChanged(track);
 
     // kLogger.debug() << "Update track in database took: " <<
     // time.elapsed().formatMillisWithUnit(); time.start();

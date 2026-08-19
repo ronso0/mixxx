@@ -1,5 +1,6 @@
 #include "controllers/softtakeover.h"
 #include "control/controlpotmeter.h"
+#include "controllers/softtakeoverindicator.h"
 #include "util/math.h"
 #include "util/time.h"
 
@@ -50,12 +51,16 @@ bool SoftTakeoverCtrl::ignore(ControlObject* control, double newParameter) {
     if (control == nullptr) {
         return false;
     }
-    bool ignore = false;
     SoftTakeover* pSt = m_softTakeoverHash.value(control);
-    if (pSt) {
-        ignore = pSt->ignore(control, newParameter);
+    if (!pSt) {
+        return false;
     }
-    return ignore;
+    const double currentParameter = control->getParameter();
+    const bool ignored = pSt->ignore(control, newParameter);
+    if (auto* pIndicator = SoftTakeoverIndicator::tryInstance()) {
+        pIndicator->publish(control, currentParameter, newParameter, ignored);
+    }
+    return ignored;
 }
 
 void SoftTakeoverCtrl::ignoreNext(ControlObject* control) {

@@ -10,6 +10,7 @@
 
 #include "moc_wlibrarytableview.cpp"
 #include "util/math.h"
+#include "widget/touchscrollfilter.h"
 
 class QFocusEvent;
 
@@ -53,6 +54,10 @@ WLibraryTableView::WLibraryTableView(QWidget* parent,
             &QScrollBar::valueChanged,
             this,
             &WLibraryTableView::scrollValueChanged);
+
+    // Browsing on the touch screen is done by dragging the track list up and
+    // down, not by dragging tracks out of it.
+    TouchScrollFilter::install(this);
 
     setTabKeyNavigation(false);
 }

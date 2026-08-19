@@ -30,6 +30,7 @@ WTrackProperty::WTrackProperty(
           m_pLibrary(pLibrary),
           m_isMainDeck(isMainDeck),
           m_propertyIsWritable(false),
+          m_disableActions(false),
           m_pSelectedClickTimer(nullptr),
           m_bSelected(false),
           m_pEditor(nullptr) {
@@ -42,6 +43,15 @@ WTrackProperty::~WTrackProperty() {
 
 void WTrackProperty::setup(const QDomNode& node, const SkinContext& context) {
     WLabel::setup(node, context);
+
+    // Bite DJ fork: parse before any early-returns below so the flag holds
+    // even for non-writable properties (e.g. `info`, where setup() returns
+    // before the bottom). Disables single-click select/edit, double-click
+    // track menu, right-click context menu, drag-out and drop-in.
+    m_disableActions = context.selectBool(node, "DisableActions", false);
+    if (m_disableActions) {
+        setAcceptDrops(false);
+    }
 
     QString property = context.selectString(node, "Property");
     if (property.isEmpty()) {
@@ -119,6 +129,10 @@ const QString WTrackProperty::getPropertyStringFromTrack(QString& property) cons
 }
 
 void WTrackProperty::mousePressEvent(QMouseEvent* pEvent) {
+    if (m_disableActions) {
+        pEvent->ignore();
+        return;
+    }
     DragAndDropHelper::mousePressed(pEvent);
 
     // Check if there's another open editor. If yes, close it
@@ -179,12 +193,20 @@ void WTrackProperty::mousePressEvent(QMouseEvent* pEvent) {
 }
 
 void WTrackProperty::mouseMoveEvent(QMouseEvent* pEvent) {
+    if (m_disableActions) {
+        pEvent->ignore();
+        return;
+    }
     if (m_pCurrentTrack && DragAndDropHelper::mouseMoveInitiatesDrag(pEvent)) {
         DragAndDropHelper::dragTrack(m_pCurrentTrack, this, m_group);
     }
 }
 
 void WTrackProperty::mouseDoubleClickEvent(QMouseEvent* pEvent) {
+    if (m_disableActions) {
+        pEvent->ignore();
+        return;
+    }
     Q_UNUSED(pEvent);
     if (!m_pCurrentTrack) {
         return;
@@ -204,6 +226,10 @@ void WTrackProperty::dropEvent(QDropEvent* pEvent) {
 }
 
 void WTrackProperty::contextMenuEvent(QContextMenuEvent* pEvent) {
+    if (m_disableActions) {
+        pEvent->ignore();
+        return;
+    }
     pEvent->accept();
     if (m_pCurrentTrack) {
         ensureTrackMenuIsCreated();

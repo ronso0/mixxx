@@ -1,15 +1,10 @@
 #include "mixxxmainwindow.h"
 
-#include <QCheckBox>
 #include <QCloseEvent>
 #include <QDebug>
 #include <QFileDialog>
 #include <QOpenGLContext>
 #include <QUrl>
-
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QGLFormat>
-#endif
 
 #ifdef __LINUX__
 #include <QDBusConnection>
@@ -41,7 +36,9 @@
 #include "library/trackcollectionmanager.h"
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
+#include "notifications/notifications.h"
 #include "recording/recordingmanager.h"
+#include "skin/highcontrast.h"
 #include "skin/legacy/launchimage.h"
 #include "skin/skinloader.h"
 #include "soundio/soundmanager.h"
@@ -85,7 +82,11 @@ inline bool supportsGlobalMenu() {
 #endif
 
 const ConfigKey kHideMenuBarConfigKey = ConfigKey("[Config]", "hide_menubar");
-const ConfigKey kMenuBarHintConfigKey = ConfigKey("[Config]", "show_menubar_hint");
+
+// Bite DJ: how long the daylight-mode switch waits before rebuilding the skin,
+// so the sticky "Switching display mode..." paints before the GUI thread goes
+// away for the duration of the rebuild. Same value as the audio Apply's delay.
+constexpr int kHighContrastPaintDelayMs = 300;
 } // namespace
 
 MixxxMainWindow::MixxxMainWindow(std::shared_ptr<mixxx::CoreServices> pCoreServices)
@@ -143,13 +144,7 @@ MixxxMainWindow::MixxxMainWindow(std::shared_ptr<mixxx::CoreServices> pCoreServi
 
 #ifdef MIXXX_USE_QOPENGL
 void MixxxMainWindow::initializeQOpenGL() {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // Qt 6 will nno longer crash if no GL is available and
-    // QGLFormat::hasOpenGL() has been removed.
-    if (!CmdlineArgs::Instance().getSafeMode() && QGLFormat::hasOpenGL()) {
-#else
     if (!CmdlineArgs::Instance().getSafeMode()) {
-#endif
         QOpenGLContext context;
         context.setFormat(WaveformWidgetFactory::getSurfaceFormat(m_pCoreServices->getSettings()));
         if (context.create()) {
@@ -178,13 +173,14 @@ void MixxxMainWindow::initialize() {
 
     UserSettingsPointer pConfig = m_pCoreServices->getSettings();
 
-    // Set the visibility of tooltips, default "1" = ON
-    m_toolTipsCfg = pConfig->getValue(
-            ConfigKey("[Controls]", "Tooltips"),
-            mixxx::preferences::Tooltips::On);
+    // Bite DJ: tooltips are globally disabled regardless of the
+    // [Controls],Tooltips setting; the unit is touch-only and tooltips just
+    // get in the way. MixxxApplication::notify() swallows QEvent::ToolTip
+    // app-wide; this keeps the QOpenGL tooltip path (which calls
+    // QToolTip::showText() directly, bypassing event delivery) in line.
+    m_toolTipsCfg = mixxx::preferences::Tooltips::Off;
 #ifdef MIXXX_USE_QOPENGL
-    ToolTipQOpenGL::singleton().setActive(
-            m_toolTipsCfg == mixxx::preferences::Tooltips::On);
+    ToolTipQOpenGL::singleton().setActive(false);
 #endif
 
 #ifdef __ENGINEPRIME__
@@ -311,6 +307,15 @@ void MixxxMainWindow::initialize() {
             this,
             &MixxxMainWindow::rebootMixxxView,
             Qt::DirectConnection);
+    // Bite DJ: daylight mode inverts colours as the skin is parsed — the
+    // waveform renderers, knob images and skin colours all take theirs at
+    // construction — so the switch is a skin reload rather than a repaint.
+    if (HighContrast* pHighContrast = HighContrast::tryInstance()) {
+        connect(pHighContrast,
+                &HighContrast::enabledChanged,
+                this,
+                &MixxxMainWindow::slotHighContrastChanged);
+    }
 #ifndef __APPLE__
     connect(m_pPrefDlg,
             &DlgPreferences::menuBarAutoHideChanged,
@@ -341,32 +346,31 @@ void MixxxMainWindow::initialize() {
     }
 
     // Sound hardware setup
-    // Try to open configured devices. If that fails, display dialogs
-    // that allow to either retry, reconfigure devices or exit.
+    // Try to open configured devices. If that fails, the dialog helpers below
+    // publish a warning to the in-skin NotificationStrip and let startup
+    // continue without audio; the user reconfigures via Settings → Audio.
     bool retryClicked;
+    SoundDeviceStatus setupResult = SoundDeviceStatus::Ok;
     do {
         retryClicked = false;
-        SoundDeviceStatus result = m_pCoreServices->getSoundManager()->setupDevices();
-        if (result == SoundDeviceStatus::ErrorDeviceCount ||
-                result == SoundDeviceStatus::ErrorExcessiveOutputChannel) {
+        setupResult = m_pCoreServices->getSoundManager()->setupDevices();
+        if (setupResult == SoundDeviceStatus::ErrorDeviceCount ||
+                setupResult == SoundDeviceStatus::ErrorExcessiveOutputChannel) {
             if (soundDeviceBusyDlg(&retryClicked) != QDialog::Accepted) {
                 exit(0);
             }
-        } else if (result != SoundDeviceStatus::Ok) {
-            if (soundDeviceErrorMsgDlg(result, &retryClicked) !=
+        } else if (setupResult != SoundDeviceStatus::Ok) {
+            if (soundDeviceErrorMsgDlg(setupResult, &retryClicked) !=
                     QDialog::Accepted) {
                 exit(0);
             }
         }
     } while (retryClicked);
 
-    // Test for at least one output device. If none, display another dialog
-    // that says "mixxx will barely work with no outs".
-    // In case of persisting errors, the user has already received a message
-    // above. So we can just check the output count here.
+    // Test for at least one output device. The Bite DJ replacement for the
+    // legacy noOutputDlg modal is a single notification that returns Accepted
+    // with continueClicked=true, so this loop fires once at most.
     while (m_pCoreServices->getSoundManager()->getConfig().getOutputs().count() == 0) {
-        // Exit when we press the Exit button in the noSoundDlg dialog
-        // only call it if result != OK
         bool continueClicked = false;
         if (noOutputDlg(&continueClicked) != QDialog::Accepted) {
             exit(0);
@@ -376,9 +380,19 @@ void MixxxMainWindow::initialize() {
         }
     }
 
-    // The user has either reconfigured devices or accepted no outputs,
-    // so it's now safe to write the new config to disk.
-    m_pCoreServices->getSoundManager()->getConfig().writeToDisk();
+    // Bite DJ: do not write sounddevices.xml on startup. Stock Mixxx writes
+    // unconditionally here so an "accept no outputs" run through the legacy
+    // Reconfigure modal persists. The Bite DJ UI replaces that modal with the
+    // in-skin Audio settings sub-page, and SoundManager::setConfig() already
+    // writes on its own success when the user reconfigures from there. A
+    // startup write is therefore redundant on the working path, and actively
+    // destructive on the missing-device path: SoundManagerConfig::readFromDisk
+    // silently drops <SoundDevice> entries whose name doesn't match any
+    // currently-present device (soundmanagerconfig.cpp:124), and the resulting
+    // empty config still returns SoundDeviceStatus::Ok from setupDevices, so
+    // any gate keyed on setupResult would still clobber the saved routing for
+    // an unplugged device. Skipping the write entirely keeps the last-known-
+    // good file on disk until the user explicitly picks a device.
 
     // this has to be after the OpenGL widgets are created or depending on a
     // million different variables the first waveform may be horribly
@@ -386,18 +400,10 @@ void MixxxMainWindow::initialize() {
     setCentralWidget(m_pCentralWidget);
 
 #ifndef __APPLE__
-    // Ask for permission to auto-hide the menu bar if applicable.
-#ifdef __LINUX__
-    // This makes no sense when starting in windowed mode with a global menu,
-    // we'll ask when going fullscreen.
-    if (!m_supportsGlobalMenuBar || isFullScreen()) {
-        alwaysHideMenuBarDlg();
-        slotUpdateMenuBarAltKeyConnection();
-    }
-#else
-    alwaysHideMenuBarDlg();
+    // Bite DJ: the menu bar auto-hides by default (hide_menubar defaults
+    // to enabled) and we never ask for permission via the legacy
+    // "Allow Mixxx to hide the menu bar?" dialog.
     slotUpdateMenuBarAltKeyConnection();
-#endif
 #endif
 
     // Show the menubar after the launch image is replaced by the skin widget,
@@ -557,97 +563,17 @@ void MixxxMainWindow::initializeWindow() {
     slotUpdateWindowTitle(TrackPointer());
 }
 
-#ifndef __APPLE__
-void MixxxMainWindow::alwaysHideMenuBarDlg() {
-    // Don't show the dialog if the user unchecked "Ask me again"
-    if (!m_pCoreServices->getSettings()->getValue<bool>(
-                kMenuBarHintConfigKey, true)) {
-        return;
-    }
-    QString title = tr("Allow Mixxx to hide the menu bar?");
-    //: Always show the menu bar?
-    QString hideBtnLabel = tr("Hide");
-    QString showBtnLabel = tr("Always show");
-    //: Keep formatting tags <b> (bold text) and <br> (linebreak).
-    //: %1 is the placeholder for the 'Always show' button label
-    QString desc = tr(
-            "The Mixxx menu bar is hidden and can be toggled with a single press "
-            "of the <b>Alt</b> key.<br><br>"
-            "Click <b>%1</b> to agree.<br><br>"
-            "Click <b>%2</b> to disable that, for example if you don't use Mixxx "
-            "with a keyboard.<br><br>"
-            "You can change this setting any time in Preferences -> Interface."
-            "<br>") // line break for some extra margin to the checkbox
-                           .arg(hideBtnLabel, showBtnLabel);
-
-    QMessageBox msg;
-    msg.setIcon(QMessageBox::Question);
-    msg.setWindowTitle(title);
-    msg.setText(desc);
-    QCheckBox askAgainCheckBox;
-    askAgainCheckBox.setText(tr("Ask me again"));
-    askAgainCheckBox.setCheckState(Qt::Checked);
-    msg.setCheckBox(&askAgainCheckBox);
-    QPushButton* pHideBtn = msg.addButton(hideBtnLabel, QMessageBox::AcceptRole);
-    QPushButton* pShowBtn = msg.addButton(showBtnLabel, QMessageBox::RejectRole);
-    msg.setDefaultButton(pShowBtn);
-    msg.exec();
-
-    m_pCoreServices->getSettings()->setValue(
-            kMenuBarHintConfigKey,
-            askAgainCheckBox.checkState() == Qt::Checked ? 1 : 0);
-
-    m_pCoreServices->getSettings()->setValue(
-            kHideMenuBarConfigKey,
-            msg.clickedButton() == pHideBtn ? 1 : 0);
-}
-#endif
-
 QDialog::DialogCode MixxxMainWindow::soundDeviceErrorDlg(
-        const QString &title, const QString &text, bool* retryClicked) {
-    QMessageBox msgBox;
-    msgBox.setIcon(QMessageBox::Warning);
-    msgBox.setWindowTitle(title);
-    msgBox.setText(text);
-
-    QPushButton* retryButton =
-            msgBox.addButton(tr("Retry"), QMessageBox::ActionRole);
-    QPushButton* reconfigureButton =
-            msgBox.addButton(tr("Reconfigure"), QMessageBox::ActionRole);
-    QPushButton* wikiButton =
-            msgBox.addButton(tr("Help"), QMessageBox::ActionRole);
-    QPushButton* exitButton =
-            msgBox.addButton(tr("Exit"), QMessageBox::ActionRole);
-
-    while (true)
-    {
-        msgBox.exec();
-
-        if (msgBox.clickedButton() == retryButton) {
-            m_pCoreServices->getSoundManager()->clearAndQueryDevices();
-            *retryClicked = true;
-            return QDialog::Accepted;
-        } else if (msgBox.clickedButton() == wikiButton) {
-            mixxx::DesktopHelper::openUrl(QUrl(MIXXX_WIKI_TROUBLESHOOTING_SOUND_URL));
-            wikiButton->setEnabled(false);
-        } else if (msgBox.clickedButton() == reconfigureButton) {
-            msgBox.hide();
-
-            m_pCoreServices->getSoundManager()->clearAndQueryDevices();
-            // This way of opening the dialog allows us to use it synchronously
-            m_pPrefDlg->setWindowModality(Qt::ApplicationModal);
-            // Open preferences, sound hardware page is selected (default on first call)
-            m_pPrefDlg->exec();
-            if (m_pPrefDlg->result() == QDialog::Accepted) {
-                return QDialog::Accepted;
-            }
-
-            msgBox.show();
-        } else if (msgBox.clickedButton() == exitButton) {
-            // Will finally quit Mixxx
-            return QDialog::Rejected;
-        }
+        const QString& title, const QString& text, bool* retryClicked) {
+    *retryClicked = false;
+    if (Notifications* pNotifications = Notifications::tryInstance()) {
+        pNotifications->publish(
+                title + tr(" — open Settings → Audio to reconfigure"),
+                Notifications::Severity::Warning);
+    } else {
+        qWarning() << "soundDeviceErrorDlg:" << title << "—" << text;
     }
+    return QDialog::Accepted;
 }
 
 QDialog::DialogCode MixxxMainWindow::soundDeviceBusyDlg(bool* retryClicked) {
@@ -704,56 +630,19 @@ QDialog::DialogCode MixxxMainWindow::soundDeviceErrorMsgDlg(
 }
 
 QDialog::DialogCode MixxxMainWindow::noOutputDlg(bool* continueClicked) {
-    QMessageBox msgBox;
-    msgBox.setIcon(QMessageBox::Warning);
-    msgBox.setWindowTitle(tr("No Output Devices"));
-    msgBox.setText(
-            "<html>" + tr("Mixxx was configured without any output sound devices. "
-            "Audio processing will be disabled without a configured output device.") +
-            "<ul>"
-                "<li>" +
-                    tr("<b>Continue</b> without any outputs.") +
-                "</li>"
-                "<li>" +
-                    tr("<b>Reconfigure</b> Mixxx's sound device settings.") +
-                "</li>"
-                "<li>" +
-                    tr("<b>Exit</b> Mixxx.") +
-                "</li>"
-            "</ul></html>"
-    );
-
-    QPushButton* continueButton =
-            msgBox.addButton(tr("Continue"), QMessageBox::ActionRole);
-    QPushButton* reconfigureButton =
-            msgBox.addButton(tr("Reconfigure"), QMessageBox::ActionRole);
-    QPushButton* exitButton =
-            msgBox.addButton(tr("Exit"), QMessageBox::ActionRole);
-
-    while (true)
-    {
-        msgBox.exec();
-
-        if (msgBox.clickedButton() == continueButton) {
-            *continueClicked = true;
-            return QDialog::Accepted;
-        } else if (msgBox.clickedButton() == reconfigureButton) {
-            msgBox.hide();
-
-            // This way of opening the dialog allows us to use it synchronously
-            m_pPrefDlg->setWindowModality(Qt::ApplicationModal);
-            m_pPrefDlg->exec();
-            if (m_pPrefDlg->result() == QDialog::Accepted) {
-                return QDialog::Accepted;
-            }
-
-            msgBox.show();
-
-        } else if (msgBox.clickedButton() == exitButton) {
-            // Will finally quit Mixxx
-            return QDialog::Rejected;
-        }
+    // Bite DJ: in-skin replacement for the legacy 3-button modal
+    // (Continue / Reconfigure / Exit). Always sets continueClicked so the
+    // mainwindow startup loop exits after one iteration, and publishes a
+    // warning that points the user at the Audio settings sub-page.
+    *continueClicked = true;
+    if (Notifications* pNotifications = Notifications::tryInstance()) {
+        pNotifications->publish(
+                tr("No audio output. Open Settings → Audio to pick a device."),
+                Notifications::Severity::Warning);
+    } else {
+        qWarning() << "noOutputDlg: no Notifications instance yet";
     }
+    return QDialog::Accepted;
 }
 
 void MixxxMainWindow::slotUpdateWindowTitle(TrackPointer pTrack) {
@@ -974,7 +863,9 @@ void MixxxMainWindow::slotUpdateMenuBarAltKeyConnection() {
         return;
     }
 
-    if (m_pCoreServices->getSettings()->getValue<bool>(kHideMenuBarConfigKey, false)) {
+    // Bite DJ: auto-hide is the default; the config key only persists an
+    // explicit opt-out via View > Auto-hide menu bar.
+    if (m_pCoreServices->getSettings()->getValue<bool>(kHideMenuBarConfigKey, true)) {
         // with Qt::UniqueConnection we don't need to check whether we're already connected
         connect(m_pCoreServices->getKeyboardEventFilter().get(),
                 &KeyboardEventFilter::altPressedWithoutKeys,
@@ -1215,11 +1106,36 @@ void MixxxMainWindow::slotShowKeywheel(bool toggle) {
 }
 
 void MixxxMainWindow::slotTooltipModeChanged(mixxx::preferences::Tooltips tt) {
-    m_toolTipsCfg = tt;
+    // Bite DJ: tooltips stay globally disabled, ignore preference changes.
+    Q_UNUSED(tt);
+    m_toolTipsCfg = mixxx::preferences::Tooltips::Off;
 #ifdef MIXXX_USE_QOPENGL
-    ToolTipQOpenGL::singleton().setActive(
-            m_toolTipsCfg == mixxx::preferences::Tooltips::On);
+    ToolTipQOpenGL::singleton().setActive(false);
 #endif
+}
+
+void MixxxMainWindow::slotHighContrastChanged(bool enabled) {
+    Q_UNUSED(enabled);
+    // Never reboot from inside the toggle's own event handling: the tap is
+    // still being delivered to a WPushButton that rebootMixxxView() is about
+    // to delete. Deferring also lets the sticky message paint first — the
+    // rebuild re-creates every widget and every waveform, which blocks the GUI
+    // thread long enough to read as a freeze. Same busy/paint-delay handshake
+    // the audio Apply uses; busy additionally swallows taps queued during the
+    // rebuild instead of replaying them into the new widget tree.
+    if (auto* pNotifications = Notifications::tryInstance()) {
+        pNotifications->publishSticky(tr("Switching display mode..."),
+                Notifications::Severity::Info);
+        pNotifications->setBusy(true);
+    }
+    QTimer::singleShot(kHighContrastPaintDelayMs, this, [this]() {
+        rebootMixxxView();
+        if (auto* pNotifications = Notifications::tryInstance()) {
+            pNotifications->setBusy(false);
+            pNotifications->publish(tr("Display mode applied"),
+                    Notifications::Severity::Info);
+        }
+    });
 }
 
 void MixxxMainWindow::rebootMixxxView() {
@@ -1372,17 +1288,7 @@ bool MixxxMainWindow::eventFilter(QObject* obj, QEvent* event) {
 #endif
 
 #ifndef __APPLE__
-#ifdef __LINUX__
-            // Only show the dialog if we are able to have the menubar in the
-            // main window, only then we're able to hide it.
-            if (!m_supportsGlobalMenuBar || isFullScreenNow)
-#endif
-            {
-                if (!m_inRebootMixxxView) {
-                    alwaysHideMenuBarDlg();
-                }
-                slotUpdateMenuBarAltKeyConnection();
-            }
+            slotUpdateMenuBarAltKeyConnection();
 #endif
 
             // This will toggle the Fullscreen checkbox and hide the menubar if
@@ -1445,56 +1351,14 @@ void MixxxMainWindow::checkDirectRendering() {
 }
 
 bool MixxxMainWindow::confirmExit() {
-    bool playing(false);
-    bool playingSampler(false);
-    auto pPlayerManager = m_pCoreServices->getPlayerManager();
-    int deckCount = pPlayerManager->numberOfDecks();
-    int samplerCount = pPlayerManager->numberOfSamplers();
-    for (int i = 0; i < deckCount; ++i) {
-        if (ControlObject::toBool(
-                    ConfigKey(PlayerManager::groupForDeck(i), "play"))) {
-            playing = true;
-            break;
-        }
-    }
-    for (int i = 0; i < samplerCount; ++i) {
-        if (ControlObject::toBool(
-                    ConfigKey(PlayerManager::groupForSampler(i), "play"))) {
-            playingSampler = true;
-            break;
-        }
-    }
-    if (playing) {
-        QMessageBox::StandardButton btn = QMessageBox::question(this,
-            tr("Confirm Exit"),
-            tr("A deck is currently playing. Exit Mixxx?"),
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-        if (btn == QMessageBox::No) {
-            return false;
-        }
-    } else if (playingSampler) {
-        QMessageBox::StandardButton btn = QMessageBox::question(this,
-            tr("Confirm Exit"),
-            tr("A sampler is currently playing. Exit Mixxx?"),
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-        if (btn == QMessageBox::No) {
-            return false;
-        }
-    }
+    // Bite DJ: dialog boxes are suppressed app-wide (MixxxApplication::
+    // notify() auto-rejects every QDialog except DlgPreferences), so the
+    // legacy "deck is playing" and "preferences still open" confirmations
+    // would deadlock the close request. Exit unconditionally; the kiosk
+    // session manager owns the window lifecycle.
     if (m_pPrefDlg && m_pPrefDlg->isVisible()) {
-        QMessageBox::StandardButton btn = QMessageBox::question(
-            this, tr("Confirm Exit"),
-            tr("The preferences window is still open.") + "<br>" +
-            tr("Discard any changes and exit Mixxx?"),
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-        if (btn == QMessageBox::No) {
-            return false;
-        }
-        else {
-            m_pPrefDlg->close();
-        }
+        m_pPrefDlg->close();
     }
-
     return true;
 }
 

@@ -26,6 +26,10 @@ class WWaveformViewer : public WWidget, public TrackDropTarget {
     }
     void setup(const QDomNode& node, const SkinContext& context);
 
+    void setSeekDisabled(bool disabled) {
+        m_bSeekDisabled = disabled;
+    }
+
     bool handleDragAndDropEventFromWindow(QEvent* pEvent) override;
 
     void dragEnterEvent(QDragEnterEvent *event) override;
@@ -75,6 +79,7 @@ class WWaveformViewer : public WWidget, public TrackDropTarget {
     parented_ptr<ControlProxy> m_pPassthroughEnabled;
     bool m_bScratching;
     bool m_bBending;
+    bool m_bSeekDisabled;
     QPoint m_mouseAnchor;
     parented_ptr<WCueMenuPopup> m_pCueMenuPopup;
     WaveformMarkPointer m_pHoveredMark;

@@ -1,5 +1,6 @@
 #include "mixxxapplication.h"
 
+#include <QDialog>
 #include <QThreadPool>
 #include <QTouchEvent>
 #include <QtDebug>
@@ -7,7 +8,6 @@
 
 #include "audio/frame.h"
 #include "audio/types.h"
-#include "control/controlproxy.h"
 #include "library/relocatedtrack.h"
 #include "library/trackset/crate/crateid.h"
 #include "moc_mixxxapplication.cpp"
@@ -60,25 +60,6 @@ Q_IMPORT_PLUGIN(QGifPlugin)
 
 namespace {
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-/// This class allows to change the button of a mouse event on the fly.
-/// This is required because we want to change the behaviour of Qts mouse
-/// buttony synthesizer without duplicate all the code.
-class QMouseEventEditable : public QMouseEvent {
-  public:
-    void setButton(Qt::MouseButton button) {
-        b = button;
-    }
-#if QT_VERSION <= QT_VERSION_CHECK(5, 12, 4) && defined(__APPLE__)
-    // We also use this class to modify erroneous mouseState. See
-    // MixxxApplication::notify(...) for details.
-    void setButtons(Qt::MouseButtons mouseState) {
-        this->mouseState = mouseState;
-    }
-#endif
-};
-#endif
-
 // kEventNotifyExecTimeWarningThreshold defines the threshold duration for event
 // processing warnings. If the processing time of an event exceeds this duration
 // in developer mode, a warning will be logged. This is used to identify
@@ -89,12 +70,23 @@ class QMouseEventEditable : public QMouseEvent {
 // reasonable threshold.
 constexpr int kDefaultEventNotifyExecTimeWarningThreshold = 10;
 
+// Bite DJ: the preferences dialog is the one dialog we keep, so the
+// engine can still be tuned on the unit. Any dialog spawned from within
+// it (file pickers, mapping prompts, ...) is exempt as well, otherwise
+// those workflows would silently cancel themselves.
+bool belongsToPreferencesDialog(const QWidget* pWidget) {
+    for (const QWidget* p = pWidget; p; p = p->parentWidget()) {
+        if (p->inherits("DlgPreferences")) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // anonymous namespace
 
 MixxxApplication::MixxxApplication(int& argc, char** argv)
         : QApplication(argc, argv),
-          m_rightPressedButtons(0),
-          m_pTouchShift(nullptr),
           m_isDeveloper(CmdlineArgs::Instance().getDeveloper()),
           m_eventNotifyExecTimeWarningThreshold(
                   mixxx::Duration::fromMillis(kDefaultEventNotifyExecTimeWarningThreshold)) {
@@ -131,9 +123,6 @@ void MixxxApplication::registerMetaTypes() {
 
     // Sound devices
     qRegisterMetaType<SoundDeviceId>();
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QMetaType::registerComparators<SoundDeviceId>();
-#endif
 
     // Library Scanner
     qRegisterMetaType<RelocatedTrack>();
@@ -156,55 +145,28 @@ void MixxxApplication::setNotifyWarningThreshold(int threshold) {
 }
 
 bool MixxxApplication::notify(QObject* pTarget, QEvent* pEvent) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // All touch events are translated into two simultaneous events: one for
-    // the target QWidgetWindow and one for the target QWidget.
-    // A second touch becomes a mouse move without additional press and release
-    // events.
+    // Bite DJ: kiosk-style UI. The unit is touch-only, so tooltips and
+    // modal dialog boxes are suppressed application-wide; all interaction
+    // that stock Mixxx routes through dialogs is handled by in-skin pages
+    // and the NotificationStrip instead. Sole exception: DlgPreferences
+    // (and its child dialogs), kept for tuning the engine.
     switch (pEvent->type()) {
-    case QEvent::MouseButtonPress: {
-        QMouseEventEditable* pMouseEvent =
-                static_cast<QMouseEventEditable*>(pEvent); // clazy:exclude=wrong-qevent-cast
-        if (pMouseEvent->source() == Qt::MouseEventSynthesizedByQt &&
-                pMouseEvent->button() == Qt::LeftButton &&
-                touchIsRightButton()) {
-            // Assert the assumption that QT synthesizes only one click at a time
-            // = two events (see above)
-            VERIFY_OR_DEBUG_ASSERT(m_rightPressedButtons < 2) {
-                break;
+    case QEvent::ToolTip:
+        // Swallow every tooltip event before it reaches any widget.
+        return true;
+    case QEvent::Show:
+        if (auto* pDialog = qobject_cast<QDialog*>(pTarget)) {
+            if (!belongsToPreferencesDialog(pDialog)) {
+                // Dismiss as soon as the event loop spins again: a queued
+                // reject() also quits a modal exec() loop right after it starts,
+                // and callers get the safe "cancelled" result.
+                QMetaObject::invokeMethod(pDialog, &QDialog::reject, Qt::QueuedConnection);
             }
-            pMouseEvent->setButton(Qt::RightButton);
-            m_rightPressedButtons++;
-        }
-#if QT_VERSION <= QT_VERSION_CHECK(5, 12, 4) && defined(__APPLE__)
-        if (pMouseEvent->button() == Qt::RightButton && pMouseEvent->buttons() == Qt::LeftButton) {
-            // Workaround for a bug in Qt 5.12 qnsview_mouse.mm, where the wrong value is
-            // assigned to the event's mouseState for simulated rightbutton press events
-            // (using ctrl+leftbotton), which results in a missing release event for that
-            // press event.
-            //
-            // Fixed in Qt 5.12.5. See
-            // https://github.com/qt/qtbase/commit/9a47768b46f5e5eed407b70dfa9183fa1d21e242
-            pMouseEvent->setButtons(Qt::RightButton);
-        }
-#endif
-        break;
-    }
-    case QEvent::MouseButtonRelease: {
-        QMouseEventEditable* pMouseEvent =
-                static_cast<QMouseEventEditable*>(pEvent); // clazy:exclude=wrong-qevent-cast
-        if (pMouseEvent->source() == Qt::MouseEventSynthesizedByQt &&
-                pMouseEvent->button() == Qt::LeftButton &&
-                m_rightPressedButtons > 0) {
-            pMouseEvent->setButton(Qt::RightButton);
-            m_rightPressedButtons--;
         }
         break;
-    }
     default:
         break;
     }
-#endif
 
     PerformanceTimer time;
 
@@ -242,12 +204,3 @@ bool MixxxApplication::notify(QObject* pTarget, QEvent* pEvent) {
     return ret;
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-bool MixxxApplication::touchIsRightButton() {
-    if (!m_pTouchShift) {
-        m_pTouchShift = new ControlProxy(
-                "[Controls]", "touch_shift", this);
-    }
-    return m_pTouchShift->toBool();
-}
-#endif

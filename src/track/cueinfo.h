@@ -32,6 +32,22 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(CueFlags);
 /// Hot cues are sequentially indexed starting with kFirstHotCueIndex (inclusive)
 static constexpr int kFirstHotCueIndex = 0;
 
+/// The hotcue slots are split into two banks so that rekordbox hot cues and
+/// rekordbox memory cues keep separate identities instead of being flattened
+/// into one run of slots. Both banks are addressed through the ordinary
+/// `hotcue_N_*` controls, so the engine treats them identically; only the
+/// importer and the skin care which bank a cue lives in.
+///
+/// Hot cue bank: rekordbox pads A-H, and the eight pads a controller maps.
+static constexpr int kHotCueBankStart = kFirstHotCueIndex;
+static constexpr int kHotCueBankSize = 8;
+
+/// Memory cue bank: chronological, the first of which also becomes the main
+/// cue. Starts clear of the hot cue bank so that growing one never shifts the
+/// other.
+static constexpr int kMemoryCueBankStart = 16;
+static constexpr int kMemoryCueBankSize = 8;
+
 // DTO for Cue information without dependencies on the actual Track object
 class CueInfo {
   public:

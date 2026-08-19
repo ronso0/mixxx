@@ -22,7 +22,11 @@ QMetaProperty propertyFromWidget(const QWidget* pWidget, const QString& name) {
         return QMetaProperty();
     }
     const int id = meta->indexOfProperty(name.toLatin1().constData());
-    VERIFY_OR_DEBUG_ASSERT(id >= 0) {
+    // Bite DJ fork: a missing Q_PROPERTY is not an error. `BindProperty`
+    // falls back to QWidget::setProperty (dynamic property) so skins can drive
+    // QSS attribute selectors (e.g. `#Sampler[loaded="1"]`) without forcing
+    // every targeted widget class to declare a matching Q_PROPERTY.
+    if (id < 0) {
         return QMetaProperty();
     }
     return meta->property(id);
@@ -131,16 +135,40 @@ ControlWidgetPropertyConnection::ControlWidgetPropertyConnection(
 
 QString ControlWidgetPropertyConnection::toDebugString() const {
     const ConfigKey& key = getKey();
+    const QWidget* pWidget = m_pWidget->toQWidget();
+    const QString value = m_property.isValid()
+            ? m_property.read(pWidget).toString()
+            : pWidget->property(m_propertyName.toLatin1().constData()).toString();
     return QString("%1,%2 Parameter: %3 Property: %4 Value: %5")
             .arg(key.group,
                     key.item,
                     QString::number(m_pControl->getParameter()),
                     m_propertyName,
-                    m_property.read(m_pWidget->toQWidget()).toString());
+                    value);
 }
 
 void ControlWidgetPropertyConnection::slotControlValueChanged(double v) {
     const double parameter = getControlParameterForValue(v);
+    QWidget* pWidget = m_pWidget->toQWidget();
+
+    // Bite DJ fork: dynamic-property path when no Q_PROPERTY of this name is
+    // declared on the widget. Writes as int so QSS attribute selectors like
+    // `[loaded="1"]` match. Avoids the QMetaProperty assert cascade and keeps
+    // skin styling on widgets that don't (and shouldn't have to) declare every
+    // bindable flag as Q_PROPERTY.
+    if (!m_property.isValid()) {
+        const QVariant vParameter(static_cast<int>(parameter));
+        if (m_propertyValue == vParameter) {
+            return;
+        }
+        m_propertyValue = vParameter;
+        pWidget->setProperty(m_propertyName.toLatin1().constData(), vParameter);
+        pWidget->style()->unpolish(pWidget);
+        pWidget->style()->polish(pWidget);
+        pWidget->update();
+        return;
+    }
+
     QVariant vParameter;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (m_property.metaType().id() == QMetaType::Bool) {
@@ -166,7 +194,6 @@ void ControlWidgetPropertyConnection::slotControlValueChanged(double v) {
         return;
     }
 
-    QWidget* pWidget = m_pWidget->toQWidget();
     if (!m_property.write(pWidget, vParameter)) {
         const ConfigKey& key = getKey();
         qWarning() << "Property" << m_propertyName

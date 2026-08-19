@@ -150,6 +150,10 @@ class BaseSignalPathTest : public MixxxTest, SoundSourceProviderRegistration {
 
     void addDeck(EngineDeck* pDeck) {
         ControlObject::set(ConfigKey(pDeck->getGroup(), "main_mix"), 1.0);
+        // Decks default to a fully-down level fader (see EngineMixer::addChannel),
+        // so explicitly raise the volume here. The signal-path golden buffers and
+        // sync leader selection assume the deck is audible in the main mix.
+        ControlObject::set(ConfigKey(pDeck->getGroup(), "volume"), 1.0);
         ControlObject::set(ConfigKey(pDeck->getGroup(), "rate_dir"), kDefaultRateDir);
         ControlObject::set(ConfigKey(pDeck->getGroup(), "rateRange"), kDefaultRateRange);
         m_pNumDecks->set(m_pNumDecks->get() + 1);

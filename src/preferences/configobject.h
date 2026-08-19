@@ -7,6 +7,8 @@
 #include <QMetaType>
 #include <QReadWriteLock>
 #include <QString>
+#include <atomic>
+#include <functional>
 #include <type_traits>
 
 #include "util/assert.h"
@@ -136,6 +138,10 @@ template <class ValueType> class ConfigObject {
     ~ConfigObject();
 
     // Sets the value v for key k, over-writing pre-existing values.
+    // Silently ignored for keys the config file is the authority for (the
+    // [BiteDJ],usb_drive_path_<N> USB port provisioning; see
+    // isFileAuthoritativeKey in configobject.cpp), which Mixxx must never
+    // modify or drop.
     void set(const ConfigKey& k, const ValueType& v);
 
     // Returns the ValueType entry for k. If k is not present, returns
@@ -146,6 +152,7 @@ template <class ValueType> class ConfigObject {
     bool exists(const ConfigKey& key) const;
 
     // Removes key from ConfigObject. Returns whether key was present.
+    // Refused (returns false) for file-authoritative keys, as set() is.
     bool remove(const ConfigKey& key);
 
     // Returns the string value associated with key. If key is not present,
@@ -190,6 +197,12 @@ template <class ValueType> class ConfigObject {
     void reopen(const QString& file);
     bool save();
 
+    // Invoked on the first change after a save (or after the callback is
+    // installed, if changes are already pending). May be called from any
+    // thread, while m_valuesLock is held for writing: the callback must be
+    // cheap, thread-safe and must not call back into this ConfigObject.
+    void setDirtyCallback(std::function<void()> callback);
+
     static QString computeResourcePath();
 
     // Returns the resource path -- the path where controller presets, skins,
@@ -218,6 +231,26 @@ template <class ValueType> class ConfigObject {
     // Loads and parses the configuration file. Returns false if the file could
     // not be opened; otherwise true.
     bool parse();
+
+  private:
+    // set() without the file-authoritative-key guard. Only parse() may use
+    // this: loading the file is how those keys are supposed to arrive.
+    void setUnchecked(const ConfigKey& k, const ValueType& v);
+
+    // Reads the current on-disk file and returns only its file-authoritative
+    // entries (empty if the file is absent or unreadable). Does no locking, so
+    // it must be called with m_valuesLock released.
+    QMap<ConfigKey, ValueType> parseFileAuthoritativeKeys() const;
+
+    // Requires m_valuesLock held for writing.
+    void markDirtyLocked() {
+        if (!m_dirty.exchange(true) && m_dirtyCallback) {
+            m_dirtyCallback();
+        }
+    }
+
+    std::atomic<bool> m_dirty{false};
+    std::function<void()> m_dirtyCallback;
 };
 
 // Specialization must be declared before the first use that would cause

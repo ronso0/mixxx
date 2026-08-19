@@ -44,6 +44,37 @@ EffectKnobParameterSlot::EffectKnobParameterSlot(
             this,
             &EffectKnobParameterSlot::slotLinkInverseChanged);
 
+    // Bite DJ fork additions: read-only manifest metadata for skins.
+    m_pControlUnits = new ControlObject(
+            ConfigKey(m_group, itemPrefix + QString("_units")));
+    m_pControlUnits->setReadOnly();
+    m_pControlMin = new ControlObject(
+            ConfigKey(m_group, itemPrefix + QString("_min")));
+    m_pControlMin->setReadOnly();
+    m_pControlMax = new ControlObject(
+            ConfigKey(m_group, itemPrefix + QString("_max")));
+    m_pControlMax->setReadOnly();
+    m_pControlDefault = new ControlObject(
+            ConfigKey(m_group, itemPrefix + QString("_default")));
+    m_pControlDefault->setReadOnly();
+
+    // Bite DJ fork addition: raw-value alias for the knob, mirrored
+    // bidirectionally. Plain ControlObject (no behaviour) so writes
+    // through a skin Connection's setParameter() land directly as raw
+    // values; the alias->knob slot then forwards via the knob's set()
+    // which the knob's behaviour clamps to the parameter's range.
+    m_bMirroringValueAlias = false;
+    m_pControlValueAlias = new ControlObject(
+            ConfigKey(m_group, itemPrefix + QString("_value")));
+    connect(m_pControlValue,
+            &ControlObject::valueChanged,
+            this,
+            &EffectKnobParameterSlot::slotKnobValueMirror);
+    connect(m_pControlValueAlias,
+            &ControlObject::valueChanged,
+            this,
+            &EffectKnobParameterSlot::slotValueAliasFromSkin);
+
     m_pMetaknobSoftTakeover = new SoftTakeover();
 
     clear();
@@ -54,6 +85,11 @@ EffectKnobParameterSlot::~EffectKnobParameterSlot() {
     // m_pControlLoaded and m_pControlType are deleted by ~EffectParameterSlotBase
     delete m_pControlLinkType;
     delete m_pControlLinkInverse;
+    delete m_pControlUnits;
+    delete m_pControlMin;
+    delete m_pControlMax;
+    delete m_pControlDefault;
+    delete m_pControlValueAlias;
     delete m_pMetaknobSoftTakeover;
 }
 
@@ -81,6 +117,22 @@ void EffectKnobParameterSlot::loadParameter(EffectParameterPointer pEffectParame
         // Default loaded parameters to loaded and unlinked
         m_pControlLoaded->forceSet(1.0);
 
+        // Bite DJ fork additions: publish manifest metadata.
+        m_pControlUnits->forceSet(
+                static_cast<double>(m_pManifestParameter->unitsHint()));
+        m_pControlMin->forceSet(m_pManifestParameter->getMinimum());
+        m_pControlMax->forceSet(m_pManifestParameter->getMaximum());
+        m_pControlDefault->forceSet(m_pManifestParameter->getDefault());
+
+        // Bite DJ fork addition: seed the raw-value alias from the
+        // current knob value. forceSet skips behaviour and the
+        // valueChanged signal, so we set m_bMirroringValueAlias to
+        // suppress the alias->knob slot just in case forceSet still
+        // emits.
+        m_bMirroringValueAlias = true;
+        m_pControlValueAlias->forceSet(m_pEffectParameter->getValue());
+        m_bMirroringValueAlias = false;
+
         m_pControlLinkType->set(
                 static_cast<double>(pEffectParameter->linkType()));
         m_pControlLinkInverse->set(
@@ -104,6 +156,14 @@ void EffectKnobParameterSlot::clear() {
             static_cast<double>(EffectManifestParameter::LinkType::None));
     m_pMetaknobSoftTakeover->setThreshold(SoftTakeover::kDefaultTakeoverThreshold);
     m_pControlLinkInverse->set(0.0);
+    m_pControlUnits->forceSet(
+            static_cast<double>(EffectManifestParameter::UnitsHint::Unknown));
+    m_pControlMin->forceSet(0.0);
+    m_pControlMax->forceSet(1.0);
+    m_pControlDefault->forceSet(0.0);
+    m_bMirroringValueAlias = true;
+    m_pControlValueAlias->forceSet(0.0);
+    m_bMirroringValueAlias = false;
     emit updated();
 }
 
@@ -238,4 +298,44 @@ void EffectKnobParameterSlot::syncSofttakeover() {
 
 double EffectKnobParameterSlot::getValueParameter() const {
     return m_pControlValue->getParameter();
+}
+
+void EffectKnobParameterSlot::slotKnobValueMirror(double v) {
+    if (m_bMirroringValueAlias) {
+        return;
+    }
+    m_bMirroringValueAlias = true;
+    m_pControlValueAlias->set(v);
+    m_bMirroringValueAlias = false;
+}
+
+void EffectKnobParameterSlot::slotValueAliasFromSkin(double v) {
+    if (m_bMirroringValueAlias) {
+        return;
+    }
+    m_bMirroringValueAlias = true;
+    // m_pControlValue is a ControlEffectKnob; its behaviour clamps v
+    // to the parameter's manifest range before storing.
+    m_pControlValue->set(v);
+    // Reflect the actual (possibly clamped) knob value back into the
+    // alias so the skin sees the truth — without this, an out-of-range
+    // write (e.g. 8 on Echo's [0, 2] delay_time) would leave the alias
+    // at 8 while the knob stored 2, and the bucket's highlight binding
+    // would never match. forceSet bypasses behaviour and emits
+    // valueChanged, which re-enters this slot — the guard above bails.
+    double clamped = m_pControlValue->get();
+    if (clamped != v) {
+        m_pControlValueAlias->forceSet(clamped);
+    }
+    // Push to the audio engine ourselves: m_pControlValue->set(v)
+    // passes the ControlObject as the sender, and
+    // ControlObject::privateValueChanged filters out self-originated
+    // changes, so the valueChanged → slotValueChanged →
+    // EffectParameter::setValue → updateEngineState chain never fires
+    // for alias writes. Other ControlProxy listeners (the on-screen
+    // knob, the bucket highlights) still get the signal because their
+    // sender pointer differs, so the UI looks right but the audio
+    // thread keeps using the stale value.
+    slotValueChanged(clamped);
+    m_bMirroringValueAlias = false;
 }

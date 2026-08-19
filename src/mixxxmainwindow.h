@@ -88,6 +88,8 @@ class MixxxMainWindow : public QMainWindow {
 
   private slots:
     void slotTooltipModeChanged(mixxx::preferences::Tooltips tt);
+    /// Bite DJ: daylight mode changed — rebuild the skin with the new palette.
+    void slotHighContrastChanged(bool enabled);
 
   signals:
     void skinLoaded();
@@ -110,9 +112,6 @@ class MixxxMainWindow : public QMainWindow {
     void tryParseAndSetDefaultStyleSheet();
 
     bool confirmExit();
-#ifndef __APPLE__
-    void alwaysHideMenuBarDlg();
-#endif
 
     QDialog::DialogCode soundDeviceErrorDlg(
             const QString &title, const QString &text, bool* retryClicked);

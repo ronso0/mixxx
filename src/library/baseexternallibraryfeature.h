@@ -8,6 +8,12 @@
 #include "library/dao/playlistdao.h"
 #include "library/libraryfeature.h"
 #include "util/parented_ptr.h"
+// WLibrarySidebar must be a complete type here: the QPointer member below and
+// the bindSidebarWidget() slot cause moc to register WLibrarySidebar* as a
+// metatype. Completing the type before moc runs avoids GCC's
+// -Wsfinae-incomplete (a hard error under -Werror), which fires when the type
+// is only forward-declared at the metatype check but completed later in the TU.
+#include "widget/wlibrarysidebar.h"
 
 class BaseSqlTableModel;
 class TrackCollection;

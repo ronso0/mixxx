@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMenu>
+#include <QPointer>
 
 #include "util/parented_ptr.h"
 #include "widget/wmenucheckbox.h"
@@ -58,5 +59,9 @@ class WSearchRelatedTracksMenu : public QMenu {
             const QString& actionTextPrefix,
             const QString& elidableTextSuffix) const;
 
-    parented_ptr<QWidgetAction> m_pSearchAction;
+    // QPointer (not parented_ptr) because the enclosing WTrackMenu calls
+    // QMenu::clear() on every aboutToShow, which deletes the previously held
+    // QWidgetAction out from under us. QPointer auto-nulls in that case;
+    // parented_ptr would be left dangling and segfault on next reassign.
+    QPointer<QWidgetAction> m_pSearchAction;
 };

@@ -71,7 +71,10 @@ class ControlPotmeter : public ControlObject {
             bool bTrack = false,
             bool bPersist = false,
             double defaultValue = 0.0);
-    ~ControlPotmeter() override = default;
+    // Defined out-of-line in the .cpp on purpose: an inline (defaulted)
+    // destructor triggers a GCC -Warray-bounds false positive when inlined
+    // into callers under -O3 on aarch64 (GCC 14).
+    ~ControlPotmeter() override;
 
     // Sets the step count of the associated PushButtons.
     void setStepCount(int count);

@@ -72,6 +72,13 @@ class EffectChain : public QObject {
 
     virtual void loadChainPreset(EffectChainPresetPointer pPreset);
 
+    /// Bite DJ fork: when true, EffectSlots in this chain cache per-effect
+    /// user parameters across in-skin effect switches and across launches.
+    /// Default false preserves stock behavior for EQ/QuickEffect/Output chains.
+    virtual bool remembersUserParameters() const {
+        return false;
+    }
+
     bool isEmpty();
 
     bool isEmptyPlaceholderPresetLoaded();

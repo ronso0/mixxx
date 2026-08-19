@@ -4,6 +4,7 @@
 #include <QContextMenuEvent>
 #include <QWidgetAction>
 
+#include "library/librarycolumncontrol.h"
 #include "library/trackmodel.h"
 #include "moc_wtracktableviewheader.cpp"
 #include "util/math.h"
@@ -78,8 +79,13 @@ QString HeaderViewState::saveState() const {
     int size = m_view_state.ByteSize();
 #endif
     QByteArray array(size, '\0');
-    m_view_state.SerializeToArray(array.data(), size);
-    return QString(array.toBase64());
+    if(m_view_state.SerializeToArray(array.data(), size)) {
+        return QString(array.toBase64());
+    } else {
+        qWarning() << "Could not serialze m_view_state to QByteArray of size "
+                   << array.size();
+        return "";
+    }
 }
 
 void HeaderViewState::restoreState(WTrackTableViewHeader* pHeaders) {
@@ -130,11 +136,48 @@ WTrackTableViewHeader::WTrackTableViewHeader(Qt::Orientation orientation,
         QWidget* pParent)
         : QHeaderView(orientation, pParent),
           m_menu(tr("Show or hide columns."), this) {
+    if (auto* pColumnControl = LibraryColumnControl::tryInstance()) {
+        pColumnControl->registerHeader(this);
+        // Whenever Qt re-initializes this header's sections (model reset,
+        // column count change — the moments hidden-section state can be
+        // dropped), re-assert the managed layout. The appliance has no
+        // header context menu and a fixed window, so nothing else would
+        // ever repair a stray unhidden column.
+        connect(this,
+                &QHeaderView::sectionCountChanged,
+                this,
+                &WTrackTableViewHeader::slotReapplyColumnControl);
+    }
+}
+
+WTrackTableViewHeader::~WTrackTableViewHeader() {
+    if (auto* pColumnControl = LibraryColumnControl::tryInstance()) {
+        pColumnControl->unregisterHeader(this);
+    }
 }
 
 void WTrackTableViewHeader::contextMenuEvent(QContextMenuEvent* pEvent) {
+    // Bite DJ fork: column visibility is owned by LibraryColumnControl
+    // via mixxx.cfg + the in-skin settings page. The legacy right-click
+    // menu would be a confusing second source of truth (and unreachable
+    // on a touch-only device anyway), so swallow the event without
+    // showing it.
+    if (LibraryColumnControl::tryInstance()) {
+        pEvent->accept();
+        return;
+    }
     pEvent->accept();
     m_menu.popup(pEvent->globalPos());
+}
+
+void WTrackTableViewHeader::resizeEvent(QResizeEvent* pEvent) {
+    QHeaderView::resizeEvent(pEvent);
+    // Re-distribute column widths proportionally when the header's available
+    // width changes (e.g. parent table viewport resizes). No-op against
+    // stock Mixxx where LibraryColumnControl is never instantiated.
+    if (auto* pColumnControl = LibraryColumnControl::tryInstance()) {
+        pColumnControl->applyTo(this);
+    }
 }
 
 void WTrackTableViewHeader::setModel(QAbstractItemModel* pModel) {
@@ -176,6 +219,33 @@ void WTrackTableViewHeader::setModel(QAbstractItemModel* pModel) {
     setCascadingSectionResizes(false);
 
     setMinimumSectionSize(WTTVH_MINIMUM_SECTION_SIZE);
+
+    // Bite DJ fork: skip building the visibility-toggle menu entirely
+    // when LibraryColumnControl is active. The menu is suppressed in
+    // contextMenuEvent above, so any work to build it would be wasted —
+    // and the legacy "all columns hidden" safety net at the bottom is
+    // already provided by LibraryColumnControl::slotVisibilityChanged.
+    if (LibraryColumnControl::tryInstance()) {
+        // Re-assert the managed layout after every repopulation of the model
+        // (BaseSqlTableModel::select() runs on rescans, search changes and
+        // playlist switches that reuse this model, and signals rows — not a
+        // reset). If anything drops the header's hidden-section state along
+        // the way, internal columns (e.g. the external playlists' untitled
+        // track_id — a bare column of numeric ids) and managed-hidden columns
+        // (e.g. the skinless grey preview button column) would reappear with
+        // no user-reachable way to hide them again.
+        connect(pModel,
+                &QAbstractItemModel::rowsInserted,
+                this,
+                &WTrackTableViewHeader::slotReapplyColumnControl,
+                Qt::UniqueConnection);
+        connect(pModel,
+                &QAbstractItemModel::modelReset,
+                this,
+                &WTrackTableViewHeader::slotReapplyColumnControl,
+                Qt::UniqueConnection);
+        return;
+    }
 
     // Create a checkbox for each column.
     // We want to keep the menu open after un/ticking a box because that allows
@@ -241,6 +311,16 @@ void WTrackTableViewHeader::saveHeaderState() {
     if (!pTrackModel) {
         return;
     }
+    // Bite DJ fork: when LibraryColumnControl is active, skip the
+    // per-model protobuf entirely. Visibility and widths are owned by
+    // mixxx.cfg via [Library],ColumnVisible_*/ColumnWeight_*; writing the
+    // protobuf would just snapshot pixel widths from a transient
+    // header.width() and re-apply that stale layout on next launch before
+    // our control overrides it. Tradeoff: per-model sort indicator and
+    // column order are no longer persisted across launches.
+    if (LibraryColumnControl::tryInstance()) {
+        return;
+    }
     // Convert the QByteArray to a Base64 string and save it.
     HeaderViewState view_state(*this);
     pTrackModel->setModelSetting("header_state_pb", view_state.saveState());
@@ -251,6 +331,23 @@ void WTrackTableViewHeader::restoreHeaderState() {
     TrackModel* pTrackModel = getTrackModel();
 
     if (!pTrackModel) {
+        return;
+    }
+
+    // Bite DJ fork: LibraryColumnControl is the sole source of truth for
+    // visibility and widths. Skip the per-model protobuf restore — see
+    // saveHeaderState above for the why. Pre-hide hidden-by-default
+    // columns we don't manage (e.g. composer, bitrate) so the table isn't
+    // cluttered on first show; managed hidden-by-default columns
+    // (TimesPlayed, Year) get their final visibility from applyTo below.
+    if (auto* pColumnControl = LibraryColumnControl::tryInstance()) {
+        loadDefaultHeaderState();
+        for (int i = 0; i < count(); ++i) {
+            if (pTrackModel->isColumnHiddenByDefault(i)) {
+                setSectionHidden(i, true);
+            }
+        }
+        pColumnControl->applyTo(this);
         return;
     }
 
@@ -288,8 +385,32 @@ bool WTrackTableViewHeader::hasPersistedHeaderState() {
     if (!pTrackModel) {
         return false;
     }
+    // Bite DJ fork: LibraryColumnControl always has authoritative state
+    // in mixxx.cfg, so report "persisted" to short-circuit the first-run
+    // hidden-by-default loop in WTrackTableView::setTrackTableModel —
+    // restoreHeaderState already handled hidden-by-default columns above.
+    if (LibraryColumnControl::tryInstance()) {
+        return true;
+    }
     const QString headerStateString = pTrackModel->getModelSetting("header_state_pb");
     return !headerStateString.isNull();
+}
+
+void WTrackTableViewHeader::slotReapplyColumnControl() {
+    auto* pColumnControl = LibraryColumnControl::tryInstance();
+    TrackModel* pTrackModel = getTrackModel();
+    if (!pColumnControl || !pTrackModel) {
+        return;
+    }
+    // Mirrors the column-control branch of restoreHeaderState: pre-hide the
+    // hidden-by-default columns we don't manage, then let the control apply
+    // visibility, internal-column hiding and flex widths.
+    for (int i = 0; i < count(); ++i) {
+        if (pTrackModel->isColumnHiddenByDefault(i)) {
+            setSectionHidden(i, true);
+        }
+    }
+    pColumnControl->applyTo(this);
 }
 
 void WTrackTableViewHeader::clearActions() {

@@ -157,11 +157,13 @@ class Beats : private std::enable_shared_from_this<Beats> {
             mixxx::audio::FramePos lastMarkerPosition,
             mixxx::Bpm lastMarkerBpm,
             mixxx::audio::SampleRate sampleRate,
-            const QString& subVersion)
+            const QString& subVersion,
+            std::vector<mixxx::audio::FramePos> downbeatAnchors = {})
             : m_markers(std::move(markers)),
               m_lastMarkerPosition(lastMarkerPosition),
               m_lastMarkerBpm(lastMarkerBpm),
               m_sampleRate(sampleRate),
+              m_downbeatAnchors(std::move(downbeatAnchors)),
               m_subVersion(subVersion) {
         DEBUG_ASSERT(m_lastMarkerPosition.isValid());
         DEBUG_ASSERT(!m_lastMarkerPosition.isFractional());
@@ -249,12 +251,14 @@ class Beats : private std::enable_shared_from_this<Beats> {
             audio::SampleRate sampleRate,
             audio::FramePos position,
             Bpm bpm,
-            const QString& subVersion = QString());
+            const QString& subVersion = QString(),
+            std::vector<audio::FramePos> downbeatAnchors = {});
 
     static mixxx::BeatsPointer fromBeatPositions(
             audio::SampleRate sampleRate,
             const QVector<audio::FramePos>& beatPositions,
-            const QString& subVersion = QString());
+            const QString& subVersion = QString(),
+            std::vector<audio::FramePos> downbeatAnchors = {});
 
     static mixxx::BeatsPointer fromBeatMarkers(
             audio::SampleRate sampleRate,
@@ -385,6 +389,17 @@ class Beats : private std::enable_shared_from_this<Beats> {
         return m_lastMarkerBpm;
     }
 
+    const std::vector<mixxx::audio::FramePos>& getDownbeatAnchors() const {
+        return m_downbeatAnchors;
+    }
+
+    /// Return the downbeat anchor that bar counts should be measured from at
+    /// `position`. Picks the most-recent anchor <= position; if `position` is
+    /// before the first anchor, returns the first anchor (so bars count
+    /// backward to a future drop). With no anchors, falls back to
+    /// `getLastMarkerPosition()`.
+    mixxx::audio::FramePos downbeatAnchorAt(audio::FramePos position) const;
+
     ////////////////////////////////////////////////////////////////////////////
     // Beat mutations
     ////////////////////////////////////////////////////////////////////////////
@@ -433,6 +448,9 @@ class Beats : private std::enable_shared_from_this<Beats> {
     mixxx::audio::FramePos m_lastMarkerPosition;
     mixxx::Bpm m_lastMarkerBpm;
     mixxx::audio::SampleRate m_sampleRate;
+    /// Frame positions (sorted ascending) where drops were detected. Used by
+    /// the beat renderer to re-anchor bar counts mid-track.
+    std::vector<mixxx::audio::FramePos> m_downbeatAnchors;
 
     // The sub-version of this beatgrid.
     const QString m_subVersion;

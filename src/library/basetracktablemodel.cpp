@@ -1,17 +1,16 @@
 #include "library/basetracktablemodel.h"
 
-#include <QBuffer>
-#include <QGuiApplication>
+#include <QFileInfo>
 #include <QMimeData>
-#include <QScreen>
 
-#include "library/coverartcache.h"
+#include "control/controlproxy.h"
 #include "library/dao/trackschema.h"
+#include "library/library_prefs.h"
+#include "library/playedtracks.h"
 #include "library/starrating.h"
 #include "library/tabledelegates/bpmdelegate.h"
 #include "library/tabledelegates/checkboxdelegate.h"
 #include "library/tabledelegates/colordelegate.h"
-#include "library/tabledelegates/coverartdelegate.h"
 #include "library/tabledelegates/defaultdelegate.h"
 #include "library/tabledelegates/locationdelegate.h"
 #include "library/tabledelegates/multilineeditdelegate.h"
@@ -34,9 +33,6 @@
 namespace {
 
 const mixxx::Logger kLogger("BaseTrackTableModel");
-
-constexpr double kRelativeHeightOfCoverartToolTip =
-        0.165; // Height of the image for the cover art tooltip (Relative to the available screen size)
 
 constexpr int kReplayGainPrecision = 2;
 
@@ -114,13 +110,31 @@ BaseTrackTableModel::BaseTrackTableModel(
             &PlayerInfo::trackChanged,
             this,
             &BaseTrackTableModel::slotTrackChanged);
-    CoverArtCache* pCache = CoverArtCache::instance();
-    if (pCache) {
-        connect(pCache,
-                &CoverArtCache::coverFound,
-                this,
-                &BaseTrackTableModel::slotCoverFound);
-    }
+    // Bite DJ: repaint when a track starts playing (or the session is reset
+    // from Settings) so its row picks up / drops the 'played' colour.
+    connect(&PlayedTracks::instance(),
+            &PlayedTracks::playedTracksChanged,
+            this,
+            &BaseTrackTableModel::slotPlayedTracksChanged);
+    // Bite DJ: no CoverArtCache::coverFound connection — cover art is never
+    // shown in the library here, so there's nothing to repaint when one loads.
+    // Bite DJ: repaint the Key column when [Library],key_notation changes
+    // at runtime (skin toggles Lancelot/Traditional). m_columnCache here only
+    // holds this model's table columns (e.g. ID/PREVIEW/COVERART for the
+    // library), not Key — so we listen to the CO directly via our own proxy
+    // and use the virtual fieldIndex(), which routes through m_trackSource's
+    // ColumnCache. By the time data() runs, KeyUtils::s_notation has already
+    // been refreshed by Library::slotKeyNotationChanged.
+    auto* pKeyNotationProxy = new ControlProxy(
+            mixxx::library::prefs::kKeyNotationConfigKey, this);
+    pKeyNotationProxy->connectValueChanged(this, [this](double) {
+        const int keyCol = fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_KEY);
+        const int rows = rowCount();
+        if (keyCol < 0 || rows <= 0) {
+            return;
+        }
+        emit dataChanged(index(0, keyCol), index(rows - 1, keyCol));
+    });
 }
 
 void BaseTrackTableModel::initTableColumnsAndHeaderProperties(
@@ -289,6 +303,8 @@ bool BaseTrackTableModel::isColumnHiddenByDefault(
     return column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_ALBUMARTIST) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_BPM_LOCK) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_BITRATE) ||
+            // Bite DJ: cover art is never shown in the library (see delegateForColumn)
+            column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_CHANNELS) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COMPOSER) ||
             column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_FILETYPE) ||
@@ -341,22 +357,52 @@ QAbstractItemDelegate* BaseTrackTableModel::delegateForColumn(
         return new LocationDelegate(pTableView);
     } else if (index == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR)) {
         return new ColorDelegate(pTableView);
-    } else if (index == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART)) {
-        auto* pCoverArtDelegate =
-                new CoverArtDelegate(pTableView);
-        // WLibraryTableView -> CoverArtDelegate
-        connect(pTableView,
-                &WLibraryTableView::onlyCachedCoverArt,
-                pCoverArtDelegate,
-                &CoverArtDelegate::slotInhibitLazyLoading);
-        // CoverArtDelegate -> BaseTrackTableModel
-        connect(pCoverArtDelegate,
-                &CoverArtDelegate::rowsChanged,
-                this,
-                &BaseTrackTableModel::slotRefreshCoverRows);
-        return pCoverArtDelegate;
     }
+    // Bite DJ: the cover-art column is intentionally not handled here. We never
+    // show cover art in the library on this appliance, so it gets no
+    // CoverArtDelegate — that delegate lazy-loads covers from disk as rows scroll
+    // into view, which on a (possibly pulled) USB drive means slow, repeated
+    // TagLib reads and a stutter. The column is hidden by default
+    // (isColumnHiddenByDefault) and falls through to the plain DefaultDelegate.
     return new DefaultDelegate(pTableView);
+}
+
+bool BaseTrackTableModel::verifyTrackFileExists(const QModelIndex& index) {
+    const QString location = getTrackLocation(index);
+    if (location.isEmpty()) {
+        // Nothing to check against; let the normal load path handle it.
+        return true;
+    }
+    // Already known missing: refuse immediately without touching the
+    // filesystem. A stat() on a pulled USB mount can block, and this runs on
+    // every re-tap of a dead entry. The flag is cleared on the next model
+    // repopulation (clearMissingTrackFlags() from select()), so a re-inserted
+    // drive / rescan re-enables loading.
+    if (m_missingTrackLocations.contains(location)) {
+        return false;
+    }
+    if (QFileInfo::exists(location)) {
+        return true;
+    }
+    // First time we've seen it missing: flag the row in the 'missing' colour,
+    // then allow this one load to proceed. BaseTrackPlayerImpl::slotLoadTrack
+    // re-checks existence, raises the single "could not be found" notification
+    // and keeps the deck's current track. Subsequent taps are blocked above.
+    m_missingTrackLocations.insert(location);
+    const int row = index.row();
+    // Repaint the whole row so the 'missing' colour covers all visible columns.
+    emit dataChanged(index.sibling(row, 0),
+            index.sibling(row, columnCount() - 1),
+            {Qt::ForegroundRole});
+    return true;
+}
+
+void BaseTrackTableModel::clearMissingTrackFlags() {
+    // Called when the model is repopulated (e.g. a rescan after a USB was
+    // re-inserted). Drop the in-memory missing flags so verifyTrackFileExists()
+    // re-checks the filesystem on the next load attempt instead of refusing
+    // outright. The repaint is implicit in the surrounding model reset.
+    m_missingTrackLocations.clear();
 }
 
 QVariant BaseTrackTableModel::data(
@@ -388,6 +434,19 @@ QVariant BaseTrackTableModel::data(
         // Note: this is not helpful in Tracks -> Missing, so override it with
         // the regular track color (WTrackTableView { color: #xxx; }) like this:
         // #DlgMissing WTrackTableView { qproperty-trackMissingColor: #xxx; }
+
+        // Tracks discovered missing at load time (USB pulled, DB's fs_deleted
+        // not yet updated by a rescan). Checked before the fs_deleted column so
+        // a freshly-pulled drive colours immediately. getTrackLocation() reads
+        // the location column straight from the row cache — it must NOT be
+        // getTrackId(), which the external models override to import the track.
+        // See verifyTrackFileExists().
+        if (!m_missingTrackLocations.isEmpty()) {
+            const QString location = getTrackLocation(index);
+            if (!location.isEmpty() && m_missingTrackLocations.contains(location)) {
+                return QVariant::fromValue(m_trackMissingColor);
+            }
+        }
         auto missingRaw = rawSiblingValue(
                 index,
                 ColumnCache::COLUMN_TRACKLOCATIONSTABLE_FSDELETED);
@@ -396,14 +455,17 @@ QVariant BaseTrackTableModel::data(
                 missingRaw.toBool()) {
             return QVariant::fromValue(m_trackMissingColor);
         }
+        // Bite DJ: custom text color for tracks played in *this* session.
+        // Stock reads the library's `played` column here; we consult the
+        // session registry instead so the colour also works in the Rekordbox /
+        // Serato views (no such column) and so a power-yanked appliance doesn't
+        // boot with the whole of last night's set still flagged. Same
+        // location-keyed lookup as the missing-file branch above, and skipped
+        // outright until something has actually played. See PlayedTracks.
         if (s_bApplyPlayedTrackColor) {
-            // Custom text color for played tracks
-            auto playedRaw = rawSiblingValue(
-                    index,
-                    ColumnCache::COLUMN_LIBRARYTABLE_PLAYED);
-            if (!playedRaw.isNull() &&
-                    playedRaw.canConvert<bool>() &&
-                    playedRaw.toBool()) {
+            const PlayedTracks& playedTracks = PlayedTracks::instance();
+            if (!playedTracks.isEmpty() &&
+                    playedTracks.isPlayed(getTrackLocation(index))) {
                 // TODO Maybe adjust color for bright track colors?
                 // Here or in DefaultDelegate
                 return QVariant::fromValue(m_trackPlayedColor);
@@ -494,48 +556,6 @@ bool BaseTrackTableModel::setData(
     return setTrackValueForColumn(pTrack, column, value, role);
 }
 
-QVariant BaseTrackTableModel::composeCoverArtToolTipHtml(
-        const QModelIndex& index) const {
-    // Determine height of the cover art image depending on the screen size
-    // Assuming that the view is on whatever Qt considers the primary screen.
-    QGuiApplication* app = static_cast<QGuiApplication*>(QCoreApplication::instance());
-    VERIFY_OR_DEBUG_ASSERT(app) {
-        qWarning() << "Unable to get application's QGuiApplication instance, "
-                      "cannot determine primary screen";
-        return QVariant();
-    }
-    QScreen* pViewScreen = app->primaryScreen();
-
-    unsigned int absoluteHeightOfCoverartToolTip = static_cast<int>(
-            pViewScreen->availableGeometry().height() *
-            kRelativeHeightOfCoverartToolTip);
-    const auto coverInfo = getCoverInfo(index);
-    if (!coverInfo.hasImage()) {
-        return QPixmap();
-    }
-    m_toolTipIndex = index;
-    QPixmap pixmap = CoverArtCache::getCachedCover(
-            coverInfo,
-            absoluteHeightOfCoverartToolTip);
-    if (pixmap.isNull()) {
-        // Cache miss -> Don't show a tooltip, refresh cache
-        // Height used for the width, in assumption that covers are squares
-        CoverArtCache::requestUncachedCover(
-                this,
-                coverInfo,
-                absoluteHeightOfCoverartToolTip);
-        //: Tooltip text on the cover art column shown when the cover is read from disk
-        return tr("Fetching image ...");
-    }
-    QByteArray data;
-    QBuffer buffer(&data);
-    pixmap.save(&buffer, "BMP"); // Binary bitmap format, without compression effort
-    QString html = QString(
-            "<img src='data:image/bmp;base64, %0'>")
-                           .arg(QString::fromLatin1(data.toBase64()));
-    return html;
-}
-
 QVariant BaseTrackTableModel::roleValue(
         const QModelIndex& index,
         QVariant&& rawValue,
@@ -550,8 +570,7 @@ QVariant BaseTrackTableModel::roleValue(
         switch (field) {
         case ColumnCache::COLUMN_LIBRARYTABLE_COLOR:
             return mixxx::RgbColor::toQString(mixxx::RgbColor::fromQVariant(rawValue));
-        case ColumnCache::COLUMN_LIBRARYTABLE_COVERART:
-            return composeCoverArtToolTipHtml(index);
+        // Bite DJ: no cover-art tooltip — cover art is never shown in the library.
         case ColumnCache::COLUMN_LIBRARYTABLE_PREVIEW:
             return QVariant();
         case ColumnCache::COLUMN_LIBRARYTABLE_RATING:
@@ -688,9 +707,9 @@ QVariant BaseTrackTableModel::roleValue(
                 if (role == Qt::ToolTipRole || role == kDataExportRole) {
                     return QString::number(bpm.value(), 'f', 4);
                 } else {
-                    // Use the locale here to make the display and editor consistent.
-                    // Custom precision, set in DlgPrefLibrary.
-                    return QLocale().toString(bpm.value(), 'f', s_bpmColumnPrecision);
+                    // Bite DJ: BPM is always shown to the user as a whole
+                    // number, so the configurable column precision is ignored.
+                    return QLocale().toString(bpm.value(), 'f', 0);
                 }
             } else {
                 return QChar('-');
@@ -721,12 +740,26 @@ QVariant BaseTrackTableModel::roleValue(
                 }
             }
         }
-        case ColumnCache::COLUMN_LIBRARYTABLE_KEY:
-            // The Key value is determined by either the KEY_ID or KEY column
-            return KeyUtils::keyFromKeyTextAndIdFields(
-                    rawValue,
-                    rawSiblingValue(
-                            index, ColumnCache::COLUMN_LIBRARYTABLE_KEY_ID));
+        case ColumnCache::COLUMN_LIBRARYTABLE_KEY: {
+            const auto keyId = rawSiblingValue(
+                    index, ColumnCache::COLUMN_LIBRARYTABLE_KEY_ID);
+            // Bite DJ: stock keyFromKeyTextAndIdFields returns the raw text
+            // verbatim when key_id is INVALID — which is the case for every
+            // track imported from Rekordbox/Serato/etc., since those carriers
+            // store only the text key (e.g. "Dbm") and not Mixxx's chromatic
+            // id. Result: the user's notation setting silently has no effect
+            // on those rows. Parse the text first and, if it resolves to a
+            // chromatic key, render it through s_notation so the column tracks
+            // the [Library],key_notation toggle.
+            if (rawValue.metaType().id() == QMetaType::QString) {
+                const auto parsed =
+                        KeyUtils::guessKeyFromText(rawValue.toString());
+                if (parsed != mixxx::track::io::key::INVALID) {
+                    return QVariant{KeyUtils::keyToString(parsed)};
+                }
+            }
+            return KeyUtils::keyFromKeyTextAndIdFields(rawValue, keyId);
+        }
         case ColumnCache::COLUMN_LIBRARYTABLE_REPLAYGAIN: {
             if (rawValue.isNull()) {
                 return QVariant();
@@ -805,10 +838,9 @@ QVariant BaseTrackTableModel::roleValue(
                     ColumnCache::COLUMN_LIBRARYTABLE_PLAYED);
             break;
         case ColumnCache::COLUMN_LIBRARYTABLE_BPM:
-            boolValue = rawSiblingValue(
-                    index,
-                    ColumnCache::COLUMN_LIBRARYTABLE_BPM_LOCK);
-            break;
+            // The BPM-lock checkbox is intentionally not shown in the BPM
+            // column to reduce UI clutter.
+            return QVariant();
         default:
             // No check state supported
             return QVariant();
@@ -900,9 +932,8 @@ Qt::ItemFlags BaseTrackTableModel::readWriteFlags(
         // Checkable cells
         itemFlags |= Qt::ItemIsUserCheckable;
     } else if (column == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_BPM)) {
-        // Always allow checking of the BPM-locked indicator
-        itemFlags |= Qt::ItemIsUserCheckable;
-        // Allow editing of BPM only if not locked
+        // The BPM-lock checkbox is not shown in the BPM column, so the cell is
+        // not user-checkable. Allow editing of BPM only if not locked.
         if (!isBpmLocked(index)) {
             itemFlags |= Qt::ItemIsEditable;
         }
@@ -973,16 +1004,18 @@ void BaseTrackTableModel::slotTrackChanged(
     }
 }
 
-void BaseTrackTableModel::slotRefreshCoverRows(
-        const QList<int>& rows) {
-    if (rows.isEmpty()) {
+void BaseTrackTableModel::slotPlayedTracksChanged() {
+    const int rows = rowCount();
+    const int columns = columnCount();
+    if (rows <= 0 || columns <= 0) {
         return;
     }
-    const int column = fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART);
-    VERIFY_OR_DEBUG_ASSERT(column >= 0) {
-        return;
-    }
-    emitDataChangedForMultipleRowsInColumn(rows, column);
+    // We don't know which rows hold the affected location(s) without scanning
+    // the whole model, so signal the full range: the view only repaints what is
+    // on screen, and this fires at most once per track change.
+    emit dataChanged(index(0, 0),
+            index(rows - 1, columns - 1),
+            {Qt::ForegroundRole});
 }
 
 void BaseTrackTableModel::slotRefreshAllRows() {
@@ -1069,18 +1102,6 @@ bool BaseTrackTableModel::updateTrackMood(
     return m_pTrackCollectionManager->updateTrackMood(pTrack, mood);
 }
 #endif // __EXTRA_METADATA__
-
-void BaseTrackTableModel::slotCoverFound(
-        const QObject* pRequester,
-        const CoverInfo& coverInfo,
-        const QPixmap& pixmap) {
-    Q_UNUSED(pixmap);
-    if (pRequester != this ||
-            getTrackLocation(m_toolTipIndex) != coverInfo.trackLocation) {
-        return;
-    }
-    emit dataChanged(m_toolTipIndex, m_toolTipIndex, {Qt::ToolTipRole});
-}
 
 QVariant BaseTrackTableModel::getFieldVariant(
         const QModelIndex& index, ColumnCache::Column column) const {

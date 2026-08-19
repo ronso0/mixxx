@@ -1,12 +1,20 @@
 #include "library/browse/browsetablemodel.h"
 
+#include <QApplication>
+#include <QColor>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QPainter>
 #include <QStringList>
+#include <QStyle>
 #include <QUrl>
 
 #include "library/browse/browsetablemodel.h"
 #include "library/browse/browsethread.h"
+#include "library/dao/trackschema.h"
+#include "library/playedtracks.h"
+#include "library/tabledelegates/defaultdelegate.h"
 #include "library/tabledelegates/previewbuttondelegate.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
@@ -19,6 +27,64 @@
 #include "widget/wlibrarytableview.h"
 
 namespace {
+
+// Colour used for a track whose file has gone missing.
+// Matches WTrackTableView::kDefaultTrackMissingColor; the Browse model is a
+// plain QStandardItemModel with no fs_deleted column, so it can't reuse the
+// SQL models' styleable trackMissingColor and carries its own constant.
+const QColor kMissingTrackColor = QColor(QStringLiteral("#ff0000"));
+
+// Colour used for a track that has already been played this session. Same role
+// as the SQL models' trackPlayedColor (see the Bite DJ skin's style.qss); like
+// the missing colour above it has to be a constant here because this model has
+// no styleable WTrackTableView property to read from.
+const QColor kPlayedTrackColor = QColor(QStringLiteral("#4aa3e0"));
+
+// Delegate that forces a flagged row's colour to render. The Bite DJ skin sets
+// `#LibraryWrapper QTableView { color: ... }`, and Qt's style-sheet palette
+// resolution clobbers the model's Qt::ForegroundRole with that colour — so a
+// normal delegate would always draw white. For flagged rows we therefore paint
+// the text ourselves; normal rows fall through to the base delegate and keep
+// the skin's styling untouched.
+class TintedTextDelegate : public DefaultDelegate {
+  public:
+    explicit TintedTextDelegate(QTableView* pTableView)
+            : DefaultDelegate(pTableView) {
+    }
+
+    void paint(QPainter* painter,
+            const QStyleOptionViewItem& option,
+            const QModelIndex& index) const override {
+        const QVariant fgData = index.data(Qt::ForegroundRole);
+        if (!fgData.canConvert<QColor>()) {
+            // Not flagged: render normally (skin's QSS colour applies).
+            DefaultDelegate::paint(painter, option, index);
+            return;
+        }
+
+        QStyleOptionViewItem opt = option;
+        initStyleOption(&opt, index);
+        const QString text = opt.text;
+        // Let the style draw the background/selection only, then overlay the
+        // text in the flagged colour so the QSS `color` can't override it.
+        opt.text.clear();
+        QStyle* pStyle = opt.widget ? opt.widget->style() : QApplication::style();
+        pStyle->drawControl(QStyle::CE_ItemViewItem, &opt, painter, opt.widget);
+
+        const QRect textRect = pStyle->subElementRect(
+                QStyle::SE_ItemViewItemText, &opt, opt.widget);
+        int alignment = static_cast<int>(opt.displayAlignment);
+        if (!(alignment & Qt::AlignVertical_Mask)) {
+            alignment |= Qt::AlignVCenter;
+        }
+        const QString elided = opt.fontMetrics.elidedText(
+                text, opt.textElideMode, textRect.width());
+        painter->save();
+        painter->setPen(fgData.value<QColor>());
+        painter->drawText(textRect, alignment, elided);
+        painter->restore();
+    }
+};
 
 /// Helper to insert values into a QList with specific indices.
 ///
@@ -63,7 +129,7 @@ BrowseTableModel::BrowseTableModel(QObject* parent,
     listAppendOrReplaceAt(&headerLabels, COLUMN_GENRE, tr("Genre"));
     listAppendOrReplaceAt(&headerLabels, COLUMN_COMPOSER, tr("Composer"));
     listAppendOrReplaceAt(&headerLabels, COLUMN_COMMENT, tr("Comment"));
-    listAppendOrReplaceAt(&headerLabels, COLUMN_DURATION, tr("Duration"));
+    listAppendOrReplaceAt(&headerLabels, COLUMN_DURATION, tr("Time"));
     listAppendOrReplaceAt(&headerLabels, COLUMN_BPM, tr("BPM"));
     listAppendOrReplaceAt(&headerLabels, COLUMN_KEY, tr("Key"));
     listAppendOrReplaceAt(&headerLabels, COLUMN_TYPE, tr("Type"));
@@ -154,6 +220,36 @@ BrowseTableModel::BrowseTableModel(QObject* parent,
     }
 
     setHorizontalHeaderLabels(headerLabels);
+
+    // Bite DJ fork: tag each column with its canonical trackschema name
+    // under TrackModel::kHeaderNameRole so LibraryColumnControl can resolve
+    // managed columns by name (the same contract BaseTrackTableModel honors
+    // via setColumnHeader). Columns with no canonical equivalent
+    // (Filename, File Modified, File Created) intentionally get no role
+    // and remain unmanaged — they fall through to the resolver's default
+    // unmanaged path and keep their natural pixel width.
+    const auto setName = [this](int column, const QString& name) {
+        setHeaderData(column, Qt::Horizontal, name, TrackModel::kHeaderNameRole);
+    };
+    setName(COLUMN_PREVIEW, LIBRARYTABLE_PREVIEW);
+    setName(COLUMN_ARTIST, LIBRARYTABLE_ARTIST);
+    setName(COLUMN_TITLE, LIBRARYTABLE_TITLE);
+    setName(COLUMN_ALBUM, LIBRARYTABLE_ALBUM);
+    setName(COLUMN_TRACK_NUMBER, LIBRARYTABLE_TRACKNUMBER);
+    setName(COLUMN_YEAR, LIBRARYTABLE_YEAR);
+    setName(COLUMN_GENRE, LIBRARYTABLE_GENRE);
+    setName(COLUMN_COMPOSER, LIBRARYTABLE_COMPOSER);
+    setName(COLUMN_COMMENT, LIBRARYTABLE_COMMENT);
+    setName(COLUMN_DURATION, LIBRARYTABLE_DURATION);
+    setName(COLUMN_BPM, LIBRARYTABLE_BPM);
+    setName(COLUMN_KEY, LIBRARYTABLE_KEY);
+    setName(COLUMN_TYPE, LIBRARYTABLE_FILETYPE);
+    setName(COLUMN_BITRATE, LIBRARYTABLE_BITRATE);
+    setName(COLUMN_NATIVELOCATION, TRACKLOCATIONSTABLE_LOCATION);
+    setName(COLUMN_ALBUMARTIST, LIBRARYTABLE_ALBUMARTIST);
+    setName(COLUMN_GROUPING, LIBRARYTABLE_GROUPING);
+    setName(COLUMN_REPLAYGAIN, LIBRARYTABLE_REPLAYGAIN);
+
     // register the QList<T> as a metatype since we use QueuedConnection below
     qRegisterMetaType<QList<QList<QStandardItem*>>>(
             "QList< QList<QStandardItem*>>");
@@ -176,6 +272,12 @@ BrowseTableModel::BrowseTableModel(QObject* parent,
             &PlayerInfo::trackChanged,
             this,
             &BrowseTableModel::trackChanged);
+    // Bite DJ: repaint filenames when a track starts playing (or the session is
+    // reset from Settings) so the 'played' colour follows.
+    connect(&PlayedTracks::instance(),
+            &PlayedTracks::playedTracksChanged,
+            this,
+            &BrowseTableModel::slotPlayedTracksChanged);
     trackChanged(m_previewDeckGroup,
             PlayerInfo::instance().getTrackInfo(m_previewDeckGroup),
             TrackPointer());
@@ -260,6 +362,62 @@ TrackId BrowseTableModel::getTrackId(const QModelIndex& index) const {
     }
 }
 
+QVariant BrowseTableModel::data(const QModelIndex& index, int role) const {
+    // Paint the row red once a load has revealed the file to be missing, so the
+    // DJ can see at a glance which entries are dead (e.g. left over after a USB
+    // drive was pulled). Other roles are unaffected.
+    // Tracks already played this session get the same treatment in blue, so a
+    // DJ scrolling a USB folder can see what is already spent. Missing wins
+    // over played: a dead file matters more than a played one.
+    if (role == Qt::ForegroundRole && index.column() != COLUMN_PREVIEW) {
+        const PlayedTracks& playedTracks = PlayedTracks::instance();
+        if (!m_missingLocations.isEmpty() || !playedTracks.isEmpty()) {
+            const QString location = getTrackLocation(index);
+            if (m_missingLocations.contains(location)) {
+                return QVariant::fromValue(kMissingTrackColor);
+            }
+            if (playedTracks.isPlayed(location)) {
+                return QVariant::fromValue(kPlayedTrackColor);
+            }
+        }
+    }
+    return QStandardItemModel::data(index, role);
+}
+
+bool BrowseTableModel::verifyTrackFileExists(const QModelIndex& index) {
+    const QString location = getTrackLocation(index);
+    if (location.isEmpty()) {
+        // Nothing to check against; let the normal load path handle it.
+        return true;
+    }
+
+    // Already known missing: refuse immediately without touching the
+    // filesystem. A stat() on a pulled USB mount can block, and this path runs
+    // on every re-tap of a dead entry, so the fast rejection keeps the browse
+    // view responsive.
+    if (m_missingLocations.contains(location)) {
+        return false;
+    }
+
+    if (QFileInfo::exists(location)) {
+        // Not flagged (checked above) and present: nothing to do. Flags are
+        // dropped when the directory listing is rebuilt (slotClear), so a
+        // re-inserted drive recovers on the next navigation/refresh.
+        return true;
+    }
+
+    // First time we've seen it missing: flag the row red, then allow this one
+    // load to proceed. BaseTrackPlayerImpl::slotLoadTrack re-checks existence,
+    // raises the single "could not be found" notification and keeps the deck's
+    // current track. Subsequent taps are blocked above — no duplicate alert.
+    m_missingLocations.insert(location);
+    const int row = index.row();
+    emit dataChanged(this->index(row, 0),
+            this->index(row, NUM_COLUMNS - 1),
+            {Qt::ForegroundRole});
+    return true;
+}
+
 QUrl BrowseTableModel::getTrackUrl(const QModelIndex& index) const {
     const QString trackLocation = getTrackLocation(index);
     DEBUG_ASSERT(trackLocation.trimmed() == trackLocation);
@@ -299,7 +457,8 @@ bool BrowseTableModel::isColumnInternal(int) {
 }
 
 bool BrowseTableModel::isColumnHiddenByDefault(int column) {
-    if (column == COLUMN_COMPOSER ||
+    if (column == COLUMN_FILENAME ||
+            column == COLUMN_COMPOSER ||
             column == COLUMN_TRACK_NUMBER ||
             column == COLUMN_YEAR ||
             column == COLUMN_GROUPING ||
@@ -358,9 +517,25 @@ QMimeData* BrowseTableModel::mimeData(const QModelIndexList& indexes) const {
     return mimeData;
 }
 
+void BrowseTableModel::slotPlayedTracksChanged() {
+    const int rows = rowCount();
+    if (rows <= 0) {
+        return;
+    }
+    // We don't know which rows hold the affected location(s) without scanning
+    // the whole listing, so signal the full range: the view only repaints what
+    // is on screen, and this fires at most once per track change.
+    emit dataChanged(index(0, 0),
+            index(rows - 1, NUM_COLUMNS - 1),
+            {Qt::ForegroundRole});
+}
+
 void BrowseTableModel::slotClear(BrowseTableModel* caller_object) {
     if (caller_object == this) {
         removeRows(0, rowCount());
+        // The row indices these locations referred to are gone; re-discover
+        // missing files lazily on the next load attempt in the new listing.
+        m_missingLocations.clear();
     }
 }
 
@@ -529,7 +704,12 @@ QAbstractItemDelegate* BrowseTableModel::delegateForColumn(const int i, QObject*
     if (PlayerInfo::instance().numPreviewDecks() > 0 && i == COLUMN_PREVIEW) {
         return new PreviewButtonDelegate(pTableView, i);
     }
-    return nullptr;
+    // Custom delegate on every text column so a flagged row renders in its
+    // missing/played colour despite the skin's QSS text colour, and so the
+    // whole row is tinted like it is in the SQL-backed views. The Filename
+    // column is hidden in the Bite DJ column layout, so tinting it alone would
+    // be invisible here. See TintedTextDelegate.
+    return new TintedTextDelegate(pTableView);
 }
 
 bool BrowseTableModel::updateTrackGenre(

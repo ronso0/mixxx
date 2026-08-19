@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QHash>
 #include <QObject>
 #include <QSharedPointer>
 #include <QString>
@@ -125,6 +126,26 @@ class EffectSlot : public QObject {
 
     void setEnabled(bool enabled);
 
+    // Bite DJ fork: switch this slot to `pManifest`, preferring the
+    // cached preset (if any) over the manifest's defaults, and snapshot
+    // the outgoing effect into the cache. No-op for chains whose
+    // remembersUserParameters() returns false (delegates to
+    // loadEffectWithDefaults). Exposed publicly so widget call sites
+    // (WEffectSelector, QML proxy) can route through the cache.
+    void switchEffectRemembering(const EffectManifestPointer pManifest);
+
+    /// Bite DJ fork: per-manifest cache of recently-edited effect state.
+    /// Populated when the user switches away from an effect and consulted
+    /// when an effect is re-selected, so BeatFX knob/metaknob values
+    /// survive the round trip. Serialized via EffectPreset to effects.xml.
+    const QHash<QString, EffectPresetPointer>& rememberedPresets() const {
+        return m_rememberedPresets;
+    }
+    void setRememberedPresets(
+            const QHash<QString, EffectPresetPointer>& presets) {
+        m_rememberedPresets = presets;
+    }
+
   public slots:
     void setMetaParameter(double v, bool force = false);
 
@@ -143,6 +164,15 @@ class EffectSlot : public QObject {
     void updateEngineState();
     void visibleEffectsListChanged();
 
+    // Bite DJ fork additions: per-effect-slot quantize/triplet proxy
+    // routing. The skin binds to a single `[group],quantize` /
+    // `[group],triplet` ConfigKey; we forward writes to whichever loaded
+    // button parameter has manifest id "quantize" / "triplet".
+    void slotQuantizeChanged(double v);
+    void slotTripletChanged(double v);
+    void slotQuantizeParameterChanged(double v);
+    void slotTripletParameterChanged(double v);
+
   private:
     QString debugString() const {
         return QString("EffectSlot(%1)").arg(m_group);
@@ -158,6 +188,11 @@ class EffectSlot : public QObject {
 
     void loadParameters();
     void unloadEffect();
+
+    // Bite DJ fork: re-bind quantize/triplet proxies after an effect's
+    // parameters have been loaded; clears them when unloaded.
+    void rebindModifierProxies();
+    void clearModifierProxies();
 
     const unsigned int m_iEffectNumber;
     QHash<EffectParameterType, unsigned int> m_iNumParameterSlots;
@@ -188,6 +223,17 @@ class EffectSlot : public QObject {
     std::unique_ptr<ControlEncoder> m_pControlEffectSelector;
     std::unique_ptr<ControlObject> m_pControlClear;
     std::unique_ptr<ControlPotmeter> m_pControlMetaParameter;
+
+    // Bite DJ fork additions: see slotQuantizeChanged docs above.
+    std::unique_ptr<ControlPushButton> m_pControlQuantize;
+    std::unique_ptr<ControlObject> m_pControlQuantizeLoaded;
+    std::unique_ptr<ControlPushButton> m_pControlTriplet;
+    std::unique_ptr<ControlObject> m_pControlTripletLoaded;
+    std::unique_ptr<ControlProxy> m_pQuantizeParameterProxy;
+    std::unique_ptr<ControlProxy> m_pTripletParameterProxy;
+
+    // Bite DJ fork: see rememberedPresets() above.
+    QHash<QString, EffectPresetPointer> m_rememberedPresets;
 
     SoftTakeover m_metaknobSoftTakeover;
 

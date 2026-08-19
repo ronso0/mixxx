@@ -1,16 +1,22 @@
 #include "controllers/scripting/legacy/controllerscriptenginelegacy.h"
 
+#include <QElapsedTimer>
 #include <QScopedPointer>
 #include <QTemporaryFile>
 #include <QThread>
 #include <QtDebug>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <memory>
+#include <numeric>
 
 #include "control/controlobject.h"
 #include "control/controlpotmeter.h"
 #include "controllers/softtakeover.h"
 #include "preferences/usersettings.h"
 #include "test/mixxxtest.h"
+#include "util/assert.h"
 #include "util/color/colorpalette.h"
 #include "util/time.h"
 
@@ -23,7 +29,9 @@ class ControllerScriptEngineLegacyTest : public MixxxTest {
     static ScopedTemporaryFile makeTemporaryFile(const QString& contents) {
         QByteArray contentsBa = contents.toLocal8Bit();
         ScopedTemporaryFile pFile = std::make_unique<QTemporaryFile>();
-        pFile->open();
+        VERIFY_OR_DEBUG_ASSERT(pFile->open()) {
+            return pFile;
+        }
         pFile->write(contentsBa);
         pFile->close();
         return pFile;
@@ -77,8 +85,14 @@ class ControllerScriptEngineLegacyTimerTest : public ControllerScriptEngineLegac
         ControllerScriptEngineLegacyTest::SetUp();
         co = std::make_unique<ControlPotmeter>(ConfigKey("[Test]", "co"), -10.0, 10.0);
         co->setParameter(0.0);
-        coTimerId = std::make_unique<ControlPotmeter>(
-                ConfigKey("[Test]", "coTimerId"), -10.0, 50.0);
+        // The upper bound must be able to hold any timer ID that
+        // QObject::startTimer() may return. Since Qt 6.8 these are no longer
+        // small sequential numbers but encode a serial number in the upper
+        // bits (e.g. 33554433), so a narrow range would silently clamp the
+        // value and make the comparisons below fail.
+        coTimerId = std::make_unique<ControlPotmeter>(ConfigKey("[Test]", "coTimerId"),
+                -10.0,
+                static_cast<double>(std::numeric_limits<int>::max()));
         coTimerId->setParameter(0.0);
         EXPECT_TRUE(evaluateAndAssert("engine.setValue('[Test]', 'co', 0.0);"));
         EXPECT_DOUBLE_EQ(0.0, co->get());
@@ -882,4 +896,388 @@ TEST_F(ControllerScriptEngineLegacyTimerTest, beginTimer_repeatedTimerThisFuncti
     processEvents();
 
     EXPECT_DOUBLE_EQ(20, coTimerId->get());
+}
+
+// Bite DJ vinyl brake: releasing a thrown jog wheel coasts the platter to its
+// target rate at the deceleration [BiteDJ],vinyl_brake configures, instead of
+// stock Mixxx's alpha-beta ramp which pulls it there in a fraction of a second.
+class ControllerScriptEngineLegacyVinylBrakeTest
+        : public ControllerScriptEngineLegacyTest {
+  protected:
+    void SetUp() override {
+        ControllerScriptEngineLegacyTest::SetUp();
+        m_pBrake = makeCo("[BiteDJ]", "vinyl_brake");
+        m_pScratch2 = makeCo(kGroup, "scratch2");
+        m_pScratch2Enable = makeCo(kGroup, "scratch2_enable");
+        m_pPlay = makeCo(kGroup, "play");
+        m_pTrackLoaded = makeCo(kGroup, "track_loaded");
+        m_pRateRatio = makeCo(kGroup, "rate_ratio");
+        m_pReverse = makeCo(kGroup, "reverse");
+        m_pTrackLoaded->set(1.0);
+    }
+
+    static std::unique_ptr<ControlObject> makeCo(
+            const QString& group, const QString& item) {
+        return std::make_unique<ControlObject>(ConfigKey(group, item));
+    }
+
+    // Grabs the platter and lets go of it again at `rate`, without letting the
+    // scratch timer run in between - so the release sees exactly this rate.
+    // The deck is already scratching when the grab happens, which is what makes
+    // scratchEnable adopt `rate` as the filter's initial velocity too: mid-throw
+    // the wheel is moving, and both the stock ramp and the brake have to start
+    // from there for the comparison between them to mean anything.
+    void throwAndRelease(double rate) {
+        m_pScratch2Enable->set(1.0);
+        m_pScratch2->set(rate);
+        EXPECT_TRUE(evaluateAndAssert(
+                "engine.scratchEnable(1, 128, 33+1/3, 1/8, 1/32);"));
+        m_pScratch2->set(rate);
+        EXPECT_TRUE(evaluateAndAssert("engine.scratchDisable(1);"));
+    }
+
+    // One observation of a coasting platter: the scratch rate, and how long
+    // after the release it was seen. The coast is driven by the clock rather
+    // than by a tick count, so time - not tick index - is what the assertions
+    // below are allowed to reason about.
+    struct CoastSample {
+        double seconds;
+        double rate;
+    };
+
+    // Runs the scratch timer to a standstill, returning the rates seen along
+    // the way, starting with the rate at the moment of release.
+    QVector<CoastSample> coast(int maxPasses = 4000) {
+        QElapsedTimer since;
+        since.start();
+        QVector<CoastSample> samples{CoastSample{0.0, m_pScratch2->get()}};
+        for (int i = 0; i < maxPasses && m_pScratch2Enable->get() != 0.0; ++i) {
+            cEngine->thread()->msleep(1);
+            processEvents();
+            const double now = m_pScratch2->get();
+            if (now != samples.constLast().rate) {
+                samples.append(CoastSample{since.nsecsElapsed() / 1e9, now});
+            }
+        }
+        return samples;
+    }
+
+    // How long a coast should take, from `distance` away from its target, at a
+    // given [BiteDJ],vinyl_brake time. Mirrors startVinylBrake(): solving
+    // d' = -(k1*d + k2) with k2 = k1/ratio gives ln(1 + ratio*d) / k1, and k1
+    // is scaled so a 1x throw takes exactly the configured time.
+    static double coastSeconds(double brakeSeconds, double distance) {
+        constexpr double kRatio = 3.0;
+        return brakeSeconds * std::log(1.0 + kRatio * distance) /
+                std::log(1.0 + kRatio);
+    }
+
+    // Checks the platter closed on `target` and got there: every sample is
+    // nearer than the one before, none overshoots, and the last one is the
+    // target itself. Arriving matters - drag proportional to speed alone only
+    // ever approaches its target, which leaves the end of the run-out an
+    // inaudible crawl, and that is what makes a brake read as a snap-back.
+    static void expectClosesOn(double target, const QVector<CoastSample>& samples) {
+        ASSERT_GT(samples.size(), 3);
+        for (int i = 1; i < samples.size(); ++i) {
+            const double before = samples[i - 1].rate - target;
+            const double after = samples[i].rate - target;
+            EXPECT_LT(std::fabs(after), std::fabs(before)) << "sample " << i;
+            EXPECT_GE(before * after, 0.0) << "sample " << i << " overshot";
+        }
+        EXPECT_DOUBLE_EQ(target, samples.constLast().rate);
+    }
+
+    // Checks the run-out lasted as long as the setting promises. The coast
+    // steps by elapsed time, so this holds however coarsely the 1ms scratch
+    // timer actually fires - it can only run over by the single tick that
+    // carries the platter across the line.
+    static void expectLasts(double expectedSeconds, const QVector<CoastSample>& samples) {
+        const double actual = samples.constLast().seconds;
+        EXPECT_GT(actual, expectedSeconds * 0.75) << "run-out cut short";
+        EXPECT_LT(actual, expectedSeconds * 1.5 + 0.05) << "run-out overran";
+    }
+
+    static constexpr const char* kGroup = "[Channel1]";
+
+    std::unique_ptr<ControlObject> m_pBrake;
+    std::unique_ptr<ControlObject> m_pScratch2;
+    std::unique_ptr<ControlObject> m_pScratch2Enable;
+    std::unique_ptr<ControlObject> m_pPlay;
+    std::unique_ptr<ControlObject> m_pTrackLoaded;
+    std::unique_ptr<ControlObject> m_pRateRatio;
+    std::unique_ptr<ControlObject> m_pReverse;
+};
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, coastsToAStandstill) {
+    // 0.2s for a 1x throw to run out; a -2.0 backspin takes a little longer,
+    // because it has further to fall.
+    m_pBrake->set(0.2);
+    throwAndRelease(-2.0);
+
+    // The release must not have touched the rate: the whole point is that the
+    // platter is still moving when the DJ's hand comes off it.
+    EXPECT_DOUBLE_EQ(-2.0, m_pScratch2->get());
+    EXPECT_DOUBLE_EQ(1.0, m_pScratch2Enable->get());
+
+    const QVector<CoastSample> samples = coast();
+    expectClosesOn(0.0, samples);
+    expectLasts(coastSeconds(0.2, 2.0), samples);
+
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2->get());
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2Enable->get());
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, harderThrowsShedSpeedHarder) {
+    // Part of the drag grows with speed, so a wheel thrown four times as hard
+    // is also slowing harder at the moment it is released, and how hard the DJ
+    // spun it stays audible.
+    m_pBrake->set(0.2);
+
+    throwAndRelease(-1.0);
+    const QVector<CoastSample> soft = coast();
+    expectClosesOn(0.0, soft);
+
+    throwAndRelease(-4.0);
+    const QVector<CoastSample> hard = coast();
+    expectClosesOn(0.0, hard);
+
+    // Four times the throw is nowhere near four times the run-out: the extra
+    // speed is mostly spent on the extra drag it brings with it.
+    EXPECT_LT(hard.constLast().seconds, soft.constLast().seconds * 2.5);
+    // But it is still longer - a bigger throw does last longer.
+    EXPECT_GT(hard.constLast().seconds, soft.constLast().seconds);
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, keepsClosingToTheEnd) {
+    // The regression this guards: with drag proportional to speed and nothing
+    // else, a run-out front-loads so hard that it is perceptually over long
+    // before the setting says, and the platter only crawls the rest of the way.
+    // Constant friction alongside the drag keeps the last half of the coast
+    // carrying a real share of the distance. A pure decay would be down to
+    // ~22% of the throw at the half-way mark, and would never arrive at all.
+    m_pBrake->set(0.3);
+    throwAndRelease(-1.0);
+
+    const QVector<CoastSample> samples = coast();
+    expectClosesOn(0.0, samples);
+
+    const double total = samples.constLast().seconds;
+    double halfwayRate = 0.0;
+    for (const CoastSample& sample : samples) {
+        if (sample.seconds <= total / 2.0) {
+            halfwayRate = sample.rate;
+        }
+    }
+    EXPECT_GT(std::fabs(halfwayRate), 0.25)
+            << "the second half of the run-out has nothing left to say";
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, coastsToThePlayRateOnAPlayingDeck) {
+    m_pBrake->set(0.2);
+    m_pPlay->set(1.0);
+    m_pRateRatio->set(1.0);
+    throwAndRelease(-2.0);
+
+    const QVector<CoastSample> samples = coast();
+    expectClosesOn(1.0, samples);
+    // The distance that matters is to the play rate, not to a standstill.
+    expectLasts(coastSeconds(0.2, 3.0), samples);
+    // A playing deck is picked back up by its own rate, not left stopped.
+    EXPECT_DOUBLE_EQ(1.0, m_pScratch2->get());
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2Enable->get());
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, brakeOffKeepsTheStockRamp) {
+    m_pBrake->set(0.0);
+    throwAndRelease(-2.0);
+
+    const QVector<CoastSample> samples = coast();
+    ASSERT_GT(samples.size(), 2);
+    // The stock ramp converges on its target and gives up once it is within
+    // 0.00001 of it, where the brake instead lands exactly on the target.
+    // Ending near zero but not on it is what says the brake stayed out of this
+    // release.
+    EXPECT_NE(0.0, samples.constLast().rate);
+    EXPECT_LT(std::fabs(samples.constLast().rate), 0.0001);
+
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2Enable->get());
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, aNudgeIsNotWorthCoasting) {
+    m_pBrake->set(0.1);
+    // Released within kVinylBrakeMinRate of where it was headed anyway, so the
+    // brake stays out of it and the stock ramp finishes the move.
+    throwAndRelease(-0.02);
+
+    const QVector<CoastSample> samples = coast();
+    // Had the brake taken this release it would have found it already inside
+    // the cutoff and snapped it onto the target in one tick; the stock ramp
+    // instead closes the gap over many.
+    EXPECT_GT(samples.size(), 3);
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2Enable->get());
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, aDeckStartedMidCoastIsPickedUp) {
+    // Let go of the platter with the deck stopped, so the run-out is headed for
+    // a standstill, then start the deck part way through it. The brake must hand
+    // the track its own speed back rather than carry on dragging it down to
+    // nothing.
+    //
+    // Note a *press* of play or pause never gets this far in the real app -
+    // EngineBuffer::slotControlPlayRequest takes the deck off the scratch
+    // outright, the way a cue press does (aCuePressEndsTheCoast). What is under
+    // test here is that the coast re-reads where it is headed on every tick
+    // rather than latching it at the release, which is also what carries it to
+    // the right place when the tempo fader is moved mid-run-out.
+    m_pBrake->set(2.0);
+    m_pRateRatio->set(1.0);
+    throwAndRelease(-2.0);
+
+    for (int i = 0; i < 20; ++i) {
+        cEngine->thread()->msleep(1);
+        processEvents();
+    }
+    const double midCoast = m_pScratch2->get();
+    ASSERT_LT(midCoast, -1.0) << "coast ended far too early";
+
+    m_pPlay->set(1.0);
+    const QVector<CoastSample> samples = coast();
+    expectClosesOn(1.0, samples);
+    EXPECT_DOUBLE_EQ(1.0, m_pScratch2->get());
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2Enable->get());
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, aStoppedDeckMidCoastSpinsDown) {
+    // The mirror image: a deck taken off play mid-run-out stops chasing a rate
+    // nothing is playing at. Same caveat as above - a pause *press* ends the
+    // coast rather than re-aiming it.
+    m_pBrake->set(2.0);
+    m_pPlay->set(1.0);
+    m_pRateRatio->set(1.0);
+    throwAndRelease(-2.0);
+
+    for (int i = 0; i < 20; ++i) {
+        cEngine->thread()->msleep(1);
+        processEvents();
+    }
+    ASSERT_LT(m_pScratch2->get(), -1.0) << "coast ended far too early";
+
+    m_pPlay->set(0.0);
+    const QVector<CoastSample> samples = coast();
+    expectClosesOn(0.0, samples);
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2Enable->get());
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, aCuePressEndsTheCoast) {
+    // CueControl::endScratching clears scratch2_enable so a cue plays from its
+    // own position at the track's speed however much run-out is left. The coast
+    // has to notice it no longer owns the deck: keep writing scratch2 and the
+    // next grab of the platter would pick a stale rate back up, and the 1ms
+    // timer would stay up for the rest of the brake time for nothing.
+    m_pBrake->set(2.0);
+    throwAndRelease(-2.0);
+
+    for (int i = 0; i < 20; ++i) {
+        cEngine->thread()->msleep(1);
+        processEvents();
+    }
+    ASSERT_LT(m_pScratch2->get(), -1.0) << "coast ended far too early";
+
+    m_pScratch2->set(0.0);
+    m_pScratch2Enable->set(0.0);
+    for (int i = 0; i < 20; ++i) {
+        cEngine->thread()->msleep(1);
+        processEvents();
+    }
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2->get()) << "the coast kept driving the deck";
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2Enable->get());
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, aHeldPlatterTakesItselfBack) {
+    // Same clearing, but with the wheel still under the DJ's hand: cueing while
+    // scratching must not leave the platter dead until it is let go of and
+    // grabbed again, so the scratch timer takes the deck straight back.
+    m_pBrake->set(2.0);
+    m_pScratch2Enable->set(1.0);
+    EXPECT_TRUE(evaluateAndAssert(
+            "engine.scratchEnable(1, 128, 33+1/3, 1/8, 1/32);"));
+
+    m_pScratch2Enable->set(0.0);
+    cEngine->thread()->msleep(5);
+    processEvents();
+
+    EXPECT_DOUBLE_EQ(1.0, m_pScratch2Enable->get());
+
+    // And a real release still gives it up.
+    EXPECT_TRUE(evaluateAndAssert("engine.scratchDisable(1, false);"));
+    for (int i = 0; i < 20; ++i) {
+        cEngine->thread()->msleep(1);
+        processEvents();
+    }
+    EXPECT_DOUBLE_EQ(0.0, m_pScratch2Enable->get());
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, grabbingThePlatterEndsTheCoast) {
+    // Long enough that 20ms of coasting cannot have taken the throw far.
+    m_pBrake->set(2.0);
+    throwAndRelease(-2.0);
+
+    for (int i = 0; i < 20; ++i) {
+        cEngine->thread()->msleep(1);
+        processEvents();
+    }
+    const double midCoast = m_pScratch2->get();
+    EXPECT_LT(midCoast, -1.0) << "coast ended far too early";
+
+    // Hand back on the wheel: scratching resumes from the coasting rate rather
+    // than from a standstill, and the brake no longer drives the deck.
+    EXPECT_TRUE(evaluateAndAssert(
+            "engine.scratchEnable(1, 128, 33+1/3, 1/8, 1/32);"));
+    EXPECT_DOUBLE_EQ(1.0, m_pScratch2Enable->get());
+
+    for (int i = 0; i < 20; ++i) {
+        cEngine->thread()->msleep(1);
+        processEvents();
+    }
+    // A held, motionless wheel is dragged towards 0 through the filter, which
+    // is far more abrupt than the two seconds of brake it was handed to.
+    EXPECT_GT(m_pScratch2->get(), midCoast + 0.5);
+}
+
+TEST_F(ControllerScriptEngineLegacyVinylBrakeTest, softStartStartsTheDeckFirst) {
+    // Starting a deck takes it off whatever scratch is driving it
+    // (EngineBuffer::slotControlPlayRequest), so a soft start has to write play
+    // before it enables scratch2 - the stock order pulls the platter out from
+    // under itself, and scratchProcess then finds the flag cleared on its next
+    // tick and abandons the ramp.
+    m_pRateRatio->set(1.0);
+
+    double enableWhenStarted = -1.0;
+    QObject::connect(m_pPlay.get(),
+            &ControlObject::valueChanged,
+            m_pPlay.get(),
+            [this, &enableWhenStarted](double value) {
+                if (value != 0.0 && enableWhenStarted < 0.0) {
+                    enableWhenStarted = m_pScratch2Enable->get();
+                }
+            });
+
+    EXPECT_TRUE(evaluateAndAssert("engine.softStart(1, true);"));
+    EXPECT_DOUBLE_EQ(1.0, m_pPlay->get());
+    EXPECT_DOUBLE_EQ(0.0, enableWhenStarted)
+            << "the scratch was taken before the deck was started";
+    EXPECT_DOUBLE_EQ(1.0, m_pScratch2Enable->get());
+
+    // And the ramp is still running a good while later, climbing from the
+    // standstill towards the deck's rate. The regression this guards is a ramp
+    // abandoned on its first tick, which leaves the platter at a standstill with
+    // the scratch given up - a soft start that never starts.
+    for (int i = 0; i < 50; ++i) {
+        cEngine->thread()->msleep(1);
+        processEvents();
+    }
+    EXPECT_DOUBLE_EQ(1.0, m_pScratch2Enable->get()) << "the soft start was abandoned";
+    EXPECT_GT(m_pScratch2->get(), 0.0);
+    EXPECT_LT(m_pScratch2->get(), 1.0) << "a soft start is a ramp, not a jump";
 }

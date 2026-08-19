@@ -124,7 +124,10 @@ TrackCollectionManager::TrackCollectionManager(
                 &TrackDAO::slotDatabaseTracksRelocated);
 
         kLogger.info() << "Starting library scanner thread";
-        m_pScanner->start();
+        // Explicit priority: a default start() inherits the main thread's
+        // SCHED_FIFO policy (see main.cpp) and a real-time scanner would
+        // starve every SCHED_OTHER thread while it churns.
+        m_pScanner->start(QThread::LowPriority);
     }
 }
 

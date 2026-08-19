@@ -11,8 +11,9 @@ namespace {
 
 QString makeTestConfigFile(const QString& path) {
     QFile test_cfg(path);
-    test_cfg.open(QIODevice::ReadWrite);
-    test_cfg.close();
+    if (test_cfg.open(QIODevice::ReadWrite)) {
+        test_cfg.close();
+    }
     return path;
 }
 
@@ -34,6 +35,8 @@ MixxxTest::ApplicationScope::ApplicationScope(int& argc, char** argv) {
     // might abort and fail the CI builds.
     mixxx::Logging::initialize(
             QString(), // No log file should be written during tests, only output to stderr
+            QString(), // ...and no fallback either
+            mixxx::kLogFileKeepCountDefault,
             logLevel,
             logLevel,
             mixxx::LogFlag::DebugAssertBreak);

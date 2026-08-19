@@ -41,9 +41,37 @@ EffectPreset::EffectPreset(const QDomElement& effectElement)
             m_effectParameterPresets.append(parameterElement);
         }
     }
+
+    // Bite DJ fork: parse <RememberedEffects> cache. Absent on stock
+    // Mixxx-written effects.xml and on first launch — silently no-op.
+    QDomElement rememberedElement =
+            XmlParse::selectElement(effectElement, EffectXml::kRememberedEffects);
+    if (!rememberedElement.isNull()) {
+        QDomNodeList rememberedList = rememberedElement.childNodes();
+        for (int i = 0; i < rememberedList.count(); ++i) {
+            QDomNode node = rememberedList.at(i);
+            if (!node.isElement()) {
+                continue;
+            }
+            QDomElement childEffect = node.toElement();
+            if (childEffect.tagName() != EffectXml::kEffect) {
+                continue;
+            }
+            auto pPreset = EffectPresetPointer::create(childEffect);
+            if (pPreset->id().isEmpty()) {
+                continue;
+            }
+            m_rememberedPresets.insert(pPreset->id(), pPreset);
+        }
+    }
 }
 
 EffectPreset::EffectPreset(const EffectSlotPointer pEffectSlot)
+        : EffectPreset(pEffectSlot.data(), /*includeRememberedPresets=*/true) {
+}
+
+EffectPreset::EffectPreset(const EffectSlot* pEffectSlot,
+        bool includeRememberedPresets)
         : m_id(pEffectSlot->id()),
           m_backendType(pEffectSlot->backendType()),
           m_dMetaParameter(pEffectSlot->getMetaParameter()) {
@@ -61,6 +89,10 @@ EffectPreset::EffectPreset(const EffectSlotPointer pEffectSlot)
         for (const auto& pParameter : hiddenParameters) {
             m_effectParameterPresets.append(EffectParameterPreset(pParameter, true));
         }
+    }
+
+    if (includeRememberedPresets) {
+        m_rememberedPresets = pEffectSlot->rememberedPresets();
     }
 }
 
@@ -100,6 +132,18 @@ const QDomElement EffectPreset::toXml(QDomDocument* doc) const {
         parametersElement.appendChild(pParameter.toXml(doc));
     }
     effectElement.appendChild(parametersElement);
+
+    // Bite DJ fork: emit cached per-manifest presets so they survive
+    // a Mixxx restart. Stock parsers skip unknown elements.
+    if (!m_rememberedPresets.isEmpty()) {
+        QDomElement rememberedElement = doc->createElement(EffectXml::kRememberedEffects);
+        for (const auto& pRemembered : std::as_const(m_rememberedPresets)) {
+            if (pRemembered) {
+                rememberedElement.appendChild(pRemembered->toXml(doc));
+            }
+        }
+        effectElement.appendChild(rememberedElement);
+    }
 
     return effectElement;
 }

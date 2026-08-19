@@ -5,6 +5,7 @@
 
 #include <QByteArray>
 #include <QDateTime>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QIODevice>
@@ -214,43 +215,85 @@ inline void writeToStdErr(
     }
 }
 
+const QString kLogFileName = QStringLiteral("mixxx.log");
+
+/// Name of the `index`-th rotated log file: 0 is the live mixxx.log, 1 is the
+/// previous run's mixxx.log.1, and so on.
+QString logFileNameForIndex(int index) {
+    return (index == 0) ? kLogFileName
+                        : QStringLiteral("mixxx.log.%1").arg(index);
+}
+
+/// Delete the rotated log files that the retention count no longer covers.
+/// Needed because the count is configurable: lowering it would otherwise
+/// strand the files written under the old, larger one forever.
+void removeLogFilesBeyondKeepCount(const QDir& logDir, int lastKeptIndex) {
+    const QStringList staleCandidates =
+            logDir.entryList({kLogFileName + QStringLiteral(".*")}, QDir::Files);
+    for (const QString& fileName : staleCandidates) {
+        bool isIndex = false;
+        const int index =
+                fileName.mid(kLogFileName.length() + 1).toInt(&isIndex);
+        if (isIndex && index > lastKeptIndex) {
+            QFile::remove(logDir.absoluteFilePath(fileName));
+        }
+    }
+}
+
 /// Rotate existing logfiles and get the file path of the log file to write to.
-/// May return an invalid/empty QString if the log directory does not exist.
-QString rotateLogFilesAndGetFilePath(const QString& logDirPath) {
+/// `keepFileCount` is the total number of log files retained, including the
+/// one about to be written; see kLogFileKeepCountDefault.
+/// May return an invalid/empty QString if the log directory is unusable.
+QString rotateLogFilesAndGetFilePath(const QString& logDirPath, int keepFileCount) {
     if (logDirPath.isEmpty()) {
         fprintf(stderr, "No log directory specified!\n");
         return QString();
     }
 
     QDir logDir(logDirPath);
-    if (!logDir.exists()) {
+    if (!logDir.exists() && !logDir.mkpath(QStringLiteral("."))) {
         fprintf(stderr,
-                "Log directory %s does not exist!\n",
+                "Log directory %s does not exist and could not be created!\n",
+                logDir.absolutePath().toLocal8Bit().constData());
+        return QString();
+    }
+    // Rotating and writing both need a writable directory. Checking up front
+    // keeps an unusable directory (the default /var/log without the rights to
+    // write it, say) recoverable by the caller's fallback, instead of failing
+    // later in open() with the log file already committed to.
+    if (!QFileInfo(logDir.absolutePath()).isWritable()) {
+        fprintf(stderr,
+                "Log directory %s is not writable!\n",
                 logDir.absolutePath().toLocal8Bit().constData());
         return QString();
     }
 
-    QString logFilePath;
-    // Rotate old logfiles.
-    for (int i = 9; i >= 0; --i) {
-        const QString logFileName = (i == 0) ? QString("mixxx.log")
-                                             : QString("mixxx.log.%1").arg(i);
-        logFilePath = logDir.absoluteFilePath(logFileName);
-        if (QFileInfo::exists(logFilePath)) {
-            QString olderLogFilePath =
-                    logDir.absoluteFilePath(QString("mixxx.log.%1").arg(i + 1));
-            // This should only happen with number 10
-            if (QFileInfo::exists(olderLogFilePath)) {
-                QFile::remove(olderLogFilePath);
-            }
-            if (!QFile::rename(logFilePath, olderLogFilePath)) {
-                fprintf(stderr,
-                        "Error rolling over logfile %s\n",
-                        logFilePath.toLocal8Bit().constData());
-            }
+    // The highest .N suffix still covered by the retention count. With the
+    // default count of 1 this is 0, i.e. nothing is rotated and the single
+    // mixxx.log is truncated when it is opened.
+    const int lastKeptIndex = (keepFileCount > 1 ? keepFileCount : 1) - 1;
+    removeLogFilesBeyondKeepCount(logDir, lastKeptIndex);
+
+    // Rotate old logfiles, oldest first so that every rename lands on a free
+    // name.
+    for (int i = lastKeptIndex - 1; i >= 0; --i) {
+        const QString logFilePath = logDir.absoluteFilePath(logFileNameForIndex(i));
+        if (!QFileInfo::exists(logFilePath)) {
+            continue;
+        }
+        const QString olderLogFilePath =
+                logDir.absoluteFilePath(logFileNameForIndex(i + 1));
+        // Only possible for the oldest file kept, which is not renamed away.
+        if (QFileInfo::exists(olderLogFilePath)) {
+            QFile::remove(olderLogFilePath);
+        }
+        if (!QFile::rename(logFilePath, olderLogFilePath)) {
+            fprintf(stderr,
+                    "Error rolling over logfile %s\n",
+                    logFilePath.toLocal8Bit().constData());
         }
     }
-    return logFilePath;
+    return logDir.absoluteFilePath(kLogFileName);
 }
 
 /// Handles writing to stderr and the log file.
@@ -283,10 +326,6 @@ namespace mixxx {
 
 namespace {
 
-bool isControllerLoggingCategory(const QString& categoryName) {
-    return categoryName.startsWith("controller.");
-}
-
 // Debug message handler which outputs to stderr and a logfile,
 // prepending the thread name, log category, and log level.
 void handleMessage(
@@ -296,48 +335,42 @@ void handleMessage(
     const char* levelName = nullptr;
     WriteFlags writeFlags = WriteFlag::None;
     bool isDebugAssert = false;
-    const QString categoryName(context.category);
     switch (type) {
+    // The configured log level governs both sinks alike: a message below it
+    // reaches neither stderr nor mixxx.log. Upstream instead forced every
+    // debug (a transitional hack it marked "remove for 2.4.0" and never did),
+    // info and warning message into the log file regardless of the level,
+    // which made --log-level a stderr-only setting and left mixxx.log the
+    // same size either way.
     case QtDebugMsg:
         levelName = "Debug";
         if (Logging::enabled(LogLevel::Debug)) {
             writeFlags |= WriteFlag::StdErr;
             writeFlags |= WriteFlag::File;
-        }
-        if (Logging::shouldFlush(LogLevel::Debug)) {
-            writeFlags |= WriteFlag::Flush;
-        }
-        // TODO: Remove the following line.
-        // Do not write debug log messages into log file if log level
-        // Debug is not enabled starting with release 2.4.0! Until then
-        // write debug messages into the log file, but skip controller I/O
-        // to avoid flooding the log file.
-        // Skip expensive string comparisons if WriteFlag::File is already set.
-        if (!writeFlags.testFlag(WriteFlag::File) && !isControllerLoggingCategory(categoryName)) {
-            writeFlags |= WriteFlag::File;
+            if (Logging::shouldFlush(LogLevel::Debug)) {
+                writeFlags |= WriteFlag::Flush;
+            }
         }
         break;
     case QtInfoMsg:
         levelName = "Info";
         if (Logging::enabled(LogLevel::Info)) {
             writeFlags |= WriteFlag::StdErr;
+            writeFlags |= WriteFlag::File;
+            if (Logging::shouldFlush(LogLevel::Info)) {
+                writeFlags |= WriteFlag::Flush;
+            }
         }
-        if (Logging::shouldFlush(LogLevel::Info)) {
-            writeFlags |= WriteFlag::Flush;
-        }
-        // Write unconditionally into log file
-        writeFlags |= WriteFlag::File;
         break;
     case QtWarningMsg:
         levelName = "Warning";
         if (Logging::enabled(LogLevel::Warning)) {
             writeFlags |= WriteFlag::StdErr;
+            writeFlags |= WriteFlag::File;
+            if (Logging::shouldFlush(LogLevel::Warning)) {
+                writeFlags |= WriteFlag::Flush;
+            }
         }
-        if (Logging::shouldFlush(LogLevel::Warning)) {
-            writeFlags |= WriteFlag::Flush;
-        }
-        // Write unconditionally into log file
-        writeFlags |= WriteFlag::File;
         break;
     case QtCriticalMsg:
         levelName = "Critical";
@@ -386,6 +419,8 @@ LogLevel Logging::s_logFlushLevel = kLogFlushLevelDefault;
 // static
 void Logging::initialize(
         const QString& logDirPath,
+        const QString& fallbackLogDirPath,
+        int logFileKeepCount,
         LogLevel logLevel,
         LogLevel logFlushLevel,
         LogFlags flags) {
@@ -398,7 +433,15 @@ void Logging::initialize(
 
     QString logFilePath;
     if (flags.testFlag(LogFlag::LogToFile)) {
-        logFilePath = rotateLogFilesAndGetFilePath(logDirPath);
+        logFilePath = rotateLogFilesAndGetFilePath(logDirPath, logFileKeepCount);
+        if (logFilePath.isEmpty() && !fallbackLogDirPath.isEmpty() &&
+                fallbackLogDirPath != logDirPath) {
+            fprintf(stderr,
+                    "Falling back to log directory %s\n",
+                    fallbackLogDirPath.toLocal8Bit().constData());
+            logFilePath = rotateLogFilesAndGetFilePath(
+                    fallbackLogDirPath, logFileKeepCount);
+        }
     }
 
     if (logFilePath.isEmpty()) {
@@ -408,7 +451,11 @@ void Logging::initialize(
         // Since the message handler is not installed yet, we can touch s_logfile
         // without the lock.
         s_logfile.setFileName(logFilePath);
-        s_logfile.open(QIODevice::WriteOnly | QIODevice::Text);
+        if (!s_logfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            fprintf(stderr,
+                    "Failed to open log file %s\n",
+                    logFilePath.toLocal8Bit().constData());
+        }
         s_logFlushLevel = logFlushLevel;
     }
 
@@ -466,6 +513,12 @@ void Logging::shutdown() {
     if (s_logfile.isOpen()) {
         s_logfile.close();
     }
+}
+
+// static
+QString Logging::logFilePath() {
+    const auto locker = lockMutex(&s_mutexLogfile);
+    return s_logfile.isOpen() ? s_logfile.fileName() : QString();
 }
 
 // static

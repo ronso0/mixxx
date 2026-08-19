@@ -5,6 +5,14 @@
 #include "util/compatibility/qmutex.h"
 #include "util/event.h"
 
+namespace {
+// Upper bound on how long the scheduler sleeps without a runWorkers() wake-up.
+// Only reached when the audio callback is not running (see run()), so it costs
+// nothing in normal operation; short enough that a track loaded with the sound
+// device down still appears promptly rather than hanging until it comes back.
+constexpr unsigned long kFallbackWakeIntervalMs = 50;
+} // namespace
+
 EngineWorkerScheduler::EngineWorkerScheduler(QObject* pParent)
         : m_bWakeScheduler(false),
           m_bQuit(false) {
@@ -56,8 +64,30 @@ void EngineWorkerScheduler::run() {
         {
             const auto lock = lockMutex(&m_mutex);
             if (!m_bQuit) {
-                // Wait for next runWorkers() call
-                m_waitCondition.wait(&m_mutex); // unlock mutex and wait
+                // Wait for the next runWorkers() call, but never indefinitely.
+                //
+                // runWorkers() is called from exactly one place —
+                // EngineMixer::process(), i.e. the audio callback — while
+                // workReady() only sets the m_bWakeScheduler atomic and does
+                // not touch this condition. So with no audio device open
+                // (device unplugged, or its ALSA card gone after a USB
+                // re-enumeration) there is no callback, nothing ever wakes
+                // this thread, and wakeIfReady() is never reached: every
+                // EngineWorker stays blocked on its own semaphore forever.
+                //
+                // The visible cost of that was CachingReaderWorker never
+                // picking up a queued newTrack(), so a track loaded while the
+                // sound device was down never finished loading — no waveform
+                // (it is the reader that emits trackLoaded), and no analysis
+                // either, since PlayerManager schedules that off
+                // BaseTrackPlayer::newTrackLoaded. The whole load path runs on
+                // the worker thread, so a wake-up is the only thing that was
+                // missing; with this fallback the load completes and the deck
+                // populates normally, it just cannot play until audio is back.
+                //
+                // While the engine is running this timeout is never reached —
+                // runWorkers() wakes us first — so the hot path is unchanged.
+                m_waitCondition.wait(&m_mutex, kFallbackWakeIntervalMs);
             }
             // copy mutex protected var to local
             quit = m_bQuit;

@@ -427,7 +427,9 @@ void DlgTagFetcher::applyCover() {
                 this,
                 &DlgTagFetcher::slotWorkerFinished);
 
-        m_pWorker->start();
+        // Explicit priority so the worker doesn't inherit the main thread's
+        // SCHED_FIFO policy (see main.cpp).
+        m_pWorker->start(QThread::LowPriority);
     }
 }
 

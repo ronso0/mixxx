@@ -98,6 +98,9 @@ class WTrackProperty : public WLabel, public TrackDropTarget {
     QString m_displayProperty;
     QString m_editProperty;
     bool m_propertyIsWritable;
+    // Bite DJ fork: when true, all mouse / drag / context-menu interactions
+    // are no-ops so the widget is purely a label. Set via <DisableActions>true.
+    bool m_disableActions;
     parented_ptr<QTimer> m_pSelectedClickTimer;
     bool m_bSelected;
     parented_ptr<WTrackPropertyEditor> m_pEditor;

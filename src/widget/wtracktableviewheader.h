@@ -10,6 +10,7 @@ class TrackModel;
 class QAction;
 class QCheckBox;
 class QContextMenuEvent;
+class QResizeEvent;
 class QWidget;
 class WTrackTableViewHeader;
 
@@ -57,9 +58,11 @@ class WTrackTableViewHeader : public QHeaderView {
     Q_OBJECT
   public:
     explicit WTrackTableViewHeader(Qt::Orientation orientation, QWidget* pParent = nullptr);
+    ~WTrackTableViewHeader() override;
 
     void contextMenuEvent(QContextMenuEvent* event) override;
     void setModel(QAbstractItemModel* model) override;
+    void resizeEvent(QResizeEvent* event) override;
 
     void saveHeaderState();
     void restoreHeaderState();
@@ -71,6 +74,7 @@ class WTrackTableViewHeader : public QHeaderView {
 
   private slots:
     void showOrHideColumn(int);
+    void slotReapplyColumnControl();
 
   private:
     int hiddenCount();

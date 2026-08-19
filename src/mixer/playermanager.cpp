@@ -30,8 +30,12 @@ const mixxx::Logger kLogger("PlayerManager");
 const QString kAppGroup = QStringLiteral("[App]");
 const QString kLegacyGroup = QStringLiteral("[Master]");
 
-// Utilize half of the available cores for adhoc analysis of tracks
-const int kNumberOfAnalyzerThreads = math_max(1, QThread::idealThreadCount() / 2);
+// Utilize half of the available cores for adhoc analysis of tracks, but
+// guarantee at least two worker threads so that two tracks loaded into the
+// decks at the same time are analyzed simultaneously instead of one after
+// the other (relevant on low-core appliances where idealThreadCount()/2
+// would otherwise collapse to a single worker).
+const int kNumberOfAnalyzerThreads = math_max(2, QThread::idealThreadCount() / 2);
 
 const QRegularExpression kDeckRegex(QStringLiteral("^\\[Channel(\\d+)\\]$"));
 const QRegularExpression kSamplerRegex(QStringLiteral("^\\[Sampler(\\d+)\\]$"));
@@ -181,25 +185,36 @@ void PlayerManager::bindToLibrary(Library* pLibrary) {
     connect(m_pTrackAnalysisScheduler.get(), &TrackAnalysisScheduler::finished,
             this, &PlayerManager::onTrackAnalysisFinished);
 
-    // Connect the player to the analyzer queue so that loaded tracks are
-    // analyzed.
-    foreach(Deck* pDeck, m_decks) {
+    // Connect the players that were created before the scheduler existed, i.e.
+    // every player added at startup. The *Inner() functions make these same
+    // connections for players added later, when the scheduler is already there.
+    // Both signals must be connected here: newTrackLoaded to analyze the new
+    // track, loadingTrack to abort the analysis of the track it replaces.
+    foreach (Deck* pDeck, m_decks) {
         connect(pDeck, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
+        connect(pDeck,
+                &BaseTrackPlayer::loadingTrack,
+                this,
+                &PlayerManager::slotCancelReplacedTrackAnalysis);
     }
 
-    // Connect the player to the analyzer queue so that loaded tracks are
-    // analyzed.
-    foreach(Sampler* pSampler, m_samplers) {
+    foreach (Sampler* pSampler, m_samplers) {
         connect(pSampler, &BaseTrackPlayer::newTrackLoaded, this, &PlayerManager::slotAnalyzeTrack);
+        connect(pSampler,
+                &BaseTrackPlayer::loadingTrack,
+                this,
+                &PlayerManager::slotCancelReplacedTrackAnalysis);
     }
 
-    // Connect the player to the analyzer queue so that loaded tracks are
-    // analyzed.
     foreach (PreviewDeck* pPreviewDeck, m_previewDecks) {
         connect(pPreviewDeck,
                 &BaseTrackPlayer::newTrackLoaded,
                 this,
                 &PlayerManager::slotAnalyzeTrack);
+        connect(pPreviewDeck,
+                &BaseTrackPlayer::loadingTrack,
+                this,
+                &PlayerManager::slotCancelReplacedTrackAnalysis);
     }
 }
 
@@ -364,6 +379,10 @@ void PlayerManager::addDeckInner() {
                 &BaseTrackPlayer::newTrackLoaded,
                 this,
                 &PlayerManager::slotAnalyzeTrack);
+        connect(pDeck,
+                &BaseTrackPlayer::loadingTrack,
+                this,
+                &PlayerManager::slotCancelReplacedTrackAnalysis);
     }
 
     m_players[handleGroup.handle()] = pDeck;
@@ -424,6 +443,10 @@ void PlayerManager::addSamplerInner() {
                 &BaseTrackPlayer::newTrackLoaded,
                 this,
                 &PlayerManager::slotAnalyzeTrack);
+        connect(pSampler,
+                &BaseTrackPlayer::loadingTrack,
+                this,
+                &PlayerManager::slotCancelReplacedTrackAnalysis);
     }
     connect(pSampler,
             &BaseTrackPlayer::trackUnloaded,
@@ -461,6 +484,10 @@ void PlayerManager::addPreviewDeckInner() {
                 &BaseTrackPlayer::newTrackLoaded,
                 this,
                 &PlayerManager::slotAnalyzeTrack);
+        connect(pPreviewDeck,
+                &BaseTrackPlayer::loadingTrack,
+                this,
+                &PlayerManager::slotCancelReplacedTrackAnalysis);
     }
 
     m_players[handleGroup.handle()] = pPreviewDeck;
@@ -741,6 +768,35 @@ void PlayerManager::slotAnalyzeTrack(TrackPointer track) {
         // before any signals from the analyzer queue arrive.
         emit trackAnalyzerProgress(track->getId(), kAnalyzerProgressUnknown);
     }
+}
+
+void PlayerManager::slotCancelReplacedTrackAnalysis(
+        TrackPointer pNewTrack, TrackPointer pOldTrack) {
+    Q_UNUSED(pNewTrack);
+    if (!m_pTrackAnalysisScheduler || !pOldTrack) {
+        return;
+    }
+    const TrackId oldTrackId = pOldTrack->getId();
+    if (!oldTrackId.isValid()) {
+        return;
+    }
+    // The replaced track may still be loaded in another player (e.g. a cloned
+    // deck); only abort its analysis if nothing else holds it. The emitting
+    // player has already swapped in the new track, so this won't see itself.
+    if (isTrackLoadedInAnyPlayer(oldTrackId)) {
+        return;
+    }
+    m_pTrackAnalysisScheduler->cancelTrack(oldTrackId);
+}
+
+bool PlayerManager::isTrackLoadedInAnyPlayer(TrackId trackId) const {
+    for (BaseTrackPlayer* pPlayer : std::as_const(m_players)) {
+        const TrackPointer pTrack = pPlayer->getLoadedTrack();
+        if (pTrack && pTrack->getId() == trackId) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void PlayerManager::slotSaveEjectedTrack(TrackPointer track) {

@@ -304,6 +304,17 @@ Select from different types of displays for the waveform, which differ primarily
       </widget>
      </item>
 
+     <item row="8" column="1" colspan="3">
+      <widget class="QCheckBox" name="applyEqToWaveformCheckBox">
+       <property name="toolTip">
+        <string>If checked, the low/mid/high EQ knobs and kill switches change the visual gain of the corresponding frequency bands in the waveforms. Uncheck to always draw the unmodified waveform.</string>
+       </property>
+       <property name="text">
+        <string>Apply EQ knobs to waveforms</string>
+       </property>
+      </widget>
+     </item>
+
      <item row="9" column="1">
       <widget class="QCheckBox" name="normalizeOverviewCheckBox">
        <property name="text">
@@ -710,6 +721,7 @@ Select from different types of displays for the waveform, which differ primarily
   <tabstop>playMarkerPositionSlider</tabstop>
   <tabstop>defaultZoomComboBox</tabstop>
   <tabstop>synchronizeZoomCheckBox</tabstop>
+  <tabstop>applyEqToWaveformCheckBox</tabstop>
   <tabstop>normalizeOverviewCheckBox</tabstop>
   <tabstop>allVisualGain</tabstop>
   <tabstop>lowVisualGain</tabstop>

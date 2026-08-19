@@ -84,7 +84,6 @@ bool FolderTreeModel::directoryHasChildren(const QString& path) const {
     // For OS X and Linux
     // http://stackoverflow.com/questions/2579948/checking-if-subfolders-exist-linux
 
-    std::string dot("."), dotdot("..");
     QByteArray byteArray = QFile::encodeName(path);
     DIR* directory = opendir(byteArray);
     int unknown_count = 0;
@@ -92,7 +91,15 @@ bool FolderTreeModel::directoryHasChildren(const QString& path) const {
     if (directory != nullptr) {
         struct dirent *entry;
         while (!has_children && ((entry = readdir(directory)) != nullptr)) {
-            if (entry->d_name != dot && entry->d_name != dotdot) {
+            // Skip '.', '..' and hidden entries. The sidebar child list
+            // (BrowseFeature::getChildDirectoryItems, QDir::Dirs without
+            // QDir::Hidden) never shows hidden directories, so counting
+            // them here would report "has children" for a folder that
+            // renders no child rows. That mismatch breaks the Bite DJ
+            // leaf test (WLibrarySidebar::isLeafNodeSelected/leaf-tap):
+            // such folders can neither be expanded visibly nor collapse
+            // the sidebar to show their tracks.
+            if (entry->d_name[0] != '.') {
                 total_count++;
                 if (entry->d_type == DT_UNKNOWN) {
                     unknown_count++;

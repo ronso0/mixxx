@@ -4,6 +4,7 @@
 #include <QFileInfo>
 #include <QMenu>
 #include <QPushButton>
+#include <QSet>
 #include <QStandardPaths>
 #include <QStringList>
 #include <memory>
@@ -29,10 +30,18 @@ const ConfigKey kQuickLinksCfgKey = ConfigKey("[Browse]", "QuickLinks");
 #if defined(__LINUX__)
 const QStringList removableDriveRootPaths() {
     QStringList paths;
+    paths.append(QStringLiteral("/media"));
+    // The per-user mount roots only make sense when we actually know the user.
+    // When USER is unset (e.g. running as a systemd service / root with no
+    // exported USER, as on the appliance) these would expand to "/media/" and
+    // "/run/media/" -- and "/media/" is just "/media" again, so every device
+    // under /media would get enumerated twice and appear duplicated in the
+    // sidebar. Only add them when USER is non-empty.
     const QString user = QString::fromLocal8Bit(qgetenv("USER"));
-    paths.append("/media");
-    paths.append(QStringLiteral("/media/") + user);
-    paths.append(QStringLiteral("/run/media/") + user);
+    if (!user.isEmpty()) {
+        paths.append(QStringLiteral("/media/") + user);
+        paths.append(QStringLiteral("/run/media/") + user);
+    }
     return paths;
 }
 #endif
@@ -138,8 +147,9 @@ BrowseFeature::BrowseFeature(
     // DEVICE_NODE contents will be rendered lazily in onLazyChildExpandation.
     pRootItem->appendChild(tr("Removable Devices"), DEVICE_NODE);
 
-    // show root directory on Linux.
-    pRootItem->appendChild(QDir::rootPath(), QDir::rootPath());
+    // Bite DJ: no root directory node. Nothing a DJ loads lives outside the
+    // removable drives (and the Quick Links below), so a "/" node offers only
+    // the appliance's own filesystem to get lost in.
 #endif
 
     // Just a word about how the TreeItem objects are used for the BrowseFeature:
@@ -395,6 +405,11 @@ std::vector<std::unique_ptr<TreeItem>> createRemovableDevices() {
         devices += QDir(path).entryInfoList(QDir::AllDirs | QDir::NoDotAndDotDot);
     }
 
+    // The root paths (/media, /media/[user], /run/media/[user]) overlap on many
+    // systems: they may be symlinked to one another or a device may be reachable
+    // through more than one of them. Track the canonical (symlink-resolved) mount
+    // point of each device so the same physical drive is only listed once.
+    QSet<QString> seenMountPoints;
     // Convert devices into a QList<TreeItem*> for display.
     for (const QFileInfo& device : std::as_const(devices)) {
         // On Linux, devices can be mounted in /media and /media/user and /run/media/[user]
@@ -403,6 +418,17 @@ std::vector<std::unique_ptr<TreeItem>> createRemovableDevices() {
         if (removableDriveRootPaths().contains(device.absoluteFilePath())) {
             continue;
         }
+        // Resolve symlinks so duplicate mount points collapse to one entry.
+        // Fall back to the absolute path if the device is unreadable (canonical
+        // path returns empty in that case).
+        QString canonicalPath = device.canonicalFilePath();
+        if (canonicalPath.isEmpty()) {
+            canonicalPath = device.absoluteFilePath();
+        }
+        if (seenMountPoints.contains(canonicalPath)) {
+            continue;
+        }
+        seenMountPoints.insert(canonicalPath);
         ret.push_back(std::make_unique<TreeItem>(
                 device.fileName(),
                 QVariant(device.filePath() + QStringLiteral("/"))));

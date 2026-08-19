@@ -364,13 +364,13 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     // Use a custom QCheckBox with fixed hover behavior.
     auto pCheckBox = make_parented<WMenuCheckBox>(tr("&Search selected"), this);
     pCheckBox->setObjectName("SearchSelectedAction");
-    m_pSearchAction = make_parented<QWidgetAction>(this);
+    m_pSearchAction = new QWidgetAction(this);
     m_pSearchAction->setDefaultWidget(pCheckBox.get());
-    addAction(m_pSearchAction.get());
+    addAction(m_pSearchAction.data());
     m_pSearchAction->setDisabled(true);
 
     // This is for Enter/Return key
-    connect(m_pSearchAction.get(),
+    connect(m_pSearchAction.data(),
             &QAction::triggered,
             this,
             &WSearchRelatedTracksMenu::combineQueriesTriggerSearch);

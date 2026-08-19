@@ -5,6 +5,7 @@
 
 #include "controllers/softtakeover.h"
 #include "util/alphabetafilter.h"
+#include "util/performancetimer.h"
 #include "util/runtimeloggingcategory.h"
 
 class ControllerScriptEngineLegacy;
@@ -97,10 +98,36 @@ class ControllerScriptInterfaceLegacy : public QObject {
     QVarLengthArray<mixxx::Duration> m_lastMovement;
     QVarLengthArray<double> m_dx, m_rampTo, m_rampFactor;
     QVarLengthArray<bool> m_ramp, m_brakeActive, m_spinbackActive, m_softStartActive;
+    // Bite DJ vinyl brake: while m_vinylBrakeActive, scratchProcess ignores the
+    // alpha-beta filter and coasts the scratch rate towards the deck's own rate
+    // (0 while it is stopped), re-read on every tick so that starting or
+    // stopping the deck mid-run-out changes where the platter is headed. It
+    // closes the distance left at m_vinylBrakeDrag per second of that distance
+    // plus a constant m_vinylBrakeFriction per second - so the platter sheds
+    // speed fastest while it is turning fastest, yet still arrives. Stepped by
+    // the time m_vinylBrakeTick has measured since the last tick rather than by
+    // a tick count, because the 1ms scratch timer coalesces under load. Its own
+    // monotonic clock rather than mixxx::Time, which tests freeze.
+    // See startVinylBrake().
+    QVarLengthArray<double> m_vinylBrakeRate, m_vinylBrakeDrag, m_vinylBrakeFriction;
+    QVarLengthArray<PerformanceTimer> m_vinylBrakeTick;
+    QVarLengthArray<bool> m_vinylBrakeActive;
     QVarLengthArray<AlphaBetaFilter*> m_scratchFilters;
     QHash<int, int> m_scratchTimers;
     /// Applies the accumulated movement to the track speed
     void scratchProcess(int timerId);
+    /// Bite DJ: arms the configurable vinyl brake for a jog wheel that was just
+    /// released, so the platter coasts to the deck's rate instead of snapping
+    /// there.
+    /// Returns false (leaving the deck to the stock ramp) when the brake is
+    /// switched off or the wheel was barely moving.
+    bool startVinylBrake(int deck, const QString& group);
+    /// Bite DJ: one vinyl-brake tick. Returns true when it owned this tick, in
+    /// which case scratchProcess must not run the alpha-beta ramp as well.
+    bool vinylBrakeProcess(int deck, int timerId, const QString& group);
+    /// Bite DJ: lets go of a coasting platter, whether it arrived at its target
+    /// or something else (a cue press) took the deck off the scratch first.
+    void endVinylBrake(int deck, int timerId);
     void stopScratchTimer(int timerId);
     bool isDeckPlaying(const QString& group);
     void stopDeck(const QString& group);

@@ -39,7 +39,9 @@ void WKey::setValue(double dValue) {
         // Render this key with the user-provided notation.
         QString keyStr = "";
         if (m_displayKey) {
-            keyStr = KeyUtils::keyToString(key);
+            const auto notation = static_cast<KeyUtils::KeyNotation>(
+                    static_cast<int>(m_keyNotation.get()));
+            keyStr = KeyUtils::keyToString(key, notation);
         }
         if (m_displayCents) {
             double diff_cents = m_engineKeyDistance.get();

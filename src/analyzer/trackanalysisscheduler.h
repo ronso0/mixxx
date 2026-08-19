@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QList>
+#include <QMutex>
+#include <QString>
 #include <deque>
 #include <memory>
 #include <set>
@@ -52,6 +54,26 @@ class TrackAnalysisScheduler : public QObject {
     // the caller must invoke resume() once.
     bool scheduleTrack(AnalyzerScheduledTrack track);
     int scheduleTracks(const QList<AnalyzerScheduledTrack>& tracks);
+
+    // Drops a single track from analysis: removes it from the pending queue if
+    // it has not started yet, and aborts the worker currently analyzing it (if
+    // any) without tearing the worker thread down. Used when a deck replaces a
+    // track whose analysis is still running so the new track can be analyzed
+    // immediately. No-op if the track is not scheduled or in progress.
+    void cancelTrack(TrackId trackId);
+
+    // Drops every scheduled or in-progress track whose file lives at or below
+    // the given filesystem path. Aborting the in-progress workers releases the
+    // open audio file descriptors so the volume can be unmounted. Called on the
+    // host thread while ejecting a USB drive.
+    void cancelTracksOnPath(const QString& path);
+
+    // Applies cancelTracksOnPath() to every live scheduler instance. Lets the
+    // eject path reach both the deck-load scheduler (PlayerManager) and the
+    // batch-analysis scheduler (AnalysisFeature) without plumbing pointers to
+    // either. Must be called on the host thread that owns the schedulers (the
+    // GUI thread).
+    static void cancelAnalysisUnderPath(const QString& path);
 
   public slots:
     void suspend();
@@ -105,6 +127,37 @@ class TrackAnalysisScheduler : public QObject {
             return m_thread->submitNextTrack(std::move(track));
         }
 
+        // Records what this worker is analyzing so the scheduler can target it
+        // for cancellation by track id or by file location. Called by the
+        // scheduler right after a successful submitNextTrack(), where the full
+        // Track type is available.
+        void recordSubmittedTrack(TrackId trackId, const QString& location) {
+            m_submittedTrackId = trackId;
+            m_submittedTrackLocation = location;
+        }
+
+        // The track currently submitted to this worker, or an invalid id/empty
+        // location when the worker is idle.
+        TrackId submittedTrackId() const {
+            return m_submittedTrackId;
+        }
+        const QString& submittedTrackLocation() const {
+            return m_submittedTrackLocation;
+        }
+
+        // Asks the worker thread to abort its current track (see
+        // AnalyzerThread::cancelTrack). No-op if the worker is idle.
+        void cancelSubmittedTrack() {
+            if (m_thread && m_submittedTrackId.isValid()) {
+                m_thread->cancelTrack(m_submittedTrackId);
+            }
+        }
+
+        void forgetSubmittedTrack() {
+            m_submittedTrackId = TrackId();
+            m_submittedTrackLocation.clear();
+        }
+
         void suspendThread() {
             if (m_thread) {
                 m_thread->suspend();
@@ -132,11 +185,14 @@ class TrackAnalysisScheduler : public QObject {
             DEBUG_ASSERT(m_thread);
             m_thread.reset();
             m_analyzerProgress = kAnalyzerProgressUnknown;
+            forgetSubmittedTrack();
         }
 
       private:
         AnalyzerThread::Pointer m_thread;
         AnalyzerProgress m_analyzerProgress;
+        TrackId m_submittedTrackId;
+        QString m_submittedTrackLocation;
     };
 
     bool submitNextTrack(Worker* worker);
@@ -165,4 +221,11 @@ class TrackAnalysisScheduler : public QObject {
 
     typedef std::chrono::steady_clock Clock;
     Clock::time_point m_lastProgressEmittedAt;
+
+    // Registry of all live scheduler instances, used by cancelAnalysisUnderPath.
+    // Every instance registers itself on construction and removes itself on
+    // destruction. The schedulers all live on the host (GUI) thread, so the
+    // mutex only guards the list bookkeeping.
+    static QMutex s_instancesMutex;
+    static QList<TrackAnalysisScheduler*> s_instances;
 };

@@ -5,6 +5,7 @@
 
 #include "analyzer/analyzer.h"
 #include "library/dao/analysisdao.h"
+#include "library/dao/fsanalysiscache.h"
 #include "util/performancetimer.h"
 #include "waveform/waveform.h"
 
@@ -170,6 +171,7 @@ class AnalyzerWaveform : public Analyzer {
     void storeIfGreater(float* pDest, float source);
 
     mutable AnalysisDao m_analysisDao;
+    mutable FsAnalysisCache m_fsAnalysisCache;
 
     WaveformPointer m_waveform;
     WaveformPointer m_waveformSummary;

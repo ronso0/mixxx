@@ -204,7 +204,11 @@ TEST_F(SoundSourceProxyTest, openEmptyFile) {
     const QStringList fileNameSuffixes = getFileNameSuffixes();
 
     for (const auto& fileNameSuffix : fileNameSuffixes) {
-        QTemporaryFile tmpFile("emptyXXXXXX" + fileNameSuffix);
+        // The template must be absolute. A relative one would create the file
+        // in the current working directory and yield a relative file name,
+        // which mixxx::FileInfo rejects (see FileInfo::hasLocation()).
+        QTemporaryFile tmpFile(getTestDataDir().filePath(
+                QStringLiteral("emptyXXXXXX") + fileNameSuffix));
         ASSERT_FALSE(QFile::exists(tmpFile.fileName()));
         ASSERT_TRUE(tmpFile.open());
 

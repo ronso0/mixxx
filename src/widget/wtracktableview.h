@@ -149,11 +149,6 @@ class WTrackTableView : public WLibraryTableView {
     void selectionChanged(const QItemSelection &selected,
                           const QItemSelection &deselected) override;
 
-    void mousePressEvent(QMouseEvent* pEvent) override;
-    // Mouse move event, implemented to hide the text and show an icon instead
-    // when dragging.
-    void mouseMoveEvent(QMouseEvent *pEvent) override;
-
     // Returns the list of selected row indices, or an empty list if none are selected.
     QModelIndexList getSelectedRows() const;
     // Returns the list of selected row numbers, or an empty list if none are selected.

@@ -1,5 +1,6 @@
 #include "library/tabledelegates/stardelegate.h"
 
+#include <QMouseEvent>
 #include <QTableView>
 
 #include "library/starrating.h"
@@ -70,6 +71,42 @@ void StarDelegate::setModelData(QWidget* editor, QAbstractItemModel* model,
                                 const QModelIndex& index) const {
     StarEditor* starEditor = qobject_cast<StarEditor*>(editor);
     model->setData(index, QVariant::fromValue(starEditor->starRating()));
+}
+
+bool StarDelegate::editorEvent(QEvent* pEvent,
+        QAbstractItemModel* pModel,
+        const QStyleOptionViewItem& option,
+        const QModelIndex& index) {
+    // Reached for a click or tap on the cell while no editor covers it, which
+    // on the touchscreen is every time: the hover that opens one never happens.
+    // The star under the release is the rating, the same one a click on an open
+    // editor commits. A press that turns into a row drag releases outside the
+    // cell and is left alone.
+    if (pEvent->type() == QEvent::MouseButtonRelease &&
+            index.flags().testFlag(Qt::ItemIsEditable)) {
+        const auto* pMouseEvent = static_cast<QMouseEvent*>(pEvent);
+        if (pMouseEvent->button() == Qt::LeftButton) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            const QPoint position = pMouseEvent->position().toPoint();
+#else
+            const QPoint position = pMouseEvent->pos();
+#endif
+            StarRating starRating = index.data().value<StarRating>();
+            // starAtPosition() centres the stars in `rect` by its width alone
+            // and takes x from that same left edge, so the viewport position
+            // has to come back to cell-local first.
+            const int star = starRating.starAtPosition(
+                    position.x() - option.rect.x(), option.rect);
+            if (option.rect.contains(position) &&
+                    star > StarRating::kInvalidStarCount &&
+                    star != starRating.starCount()) {
+                starRating.setStarCount(star);
+                return pModel->setData(
+                        index, QVariant::fromValue(starRating), Qt::EditRole);
+            }
+        }
+    }
+    return TableItemDelegate::editorEvent(pEvent, pModel, option, index);
 }
 
 void StarDelegate::commitAndCloseEditor() {

@@ -1,10 +1,14 @@
 #pragma once
 
 #include "preferences/dialog/ui_dlgprefsounditem.h"
-#include "soundio/soundmanagerutil.h"
 #include "soundio/sounddevice.h"
-
-class SoundManagerConfig;
+// SoundManagerConfig must be a complete type here: the loadPath()/writePath()
+// slots below take it as a parameter, so moc registers it as a metatype.
+// Completing the type before moc runs avoids GCC's -Wsfinae-incomplete (a hard
+// error under -Werror), which fires when the type is only forward-declared at
+// the metatype check but completed later in the same TU.
+#include "soundio/soundmanagerconfig.h"
+#include "soundio/soundmanagerutil.h"
 
 /**
  * Class representing an input or output selection widget in DlgPrefSound.

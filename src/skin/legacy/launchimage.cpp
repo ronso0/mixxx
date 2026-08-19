@@ -10,39 +10,9 @@
 
 #include "moc_launchimage.cpp"
 
-namespace {
-bool isIn2024ChristmasHolidays() {
-    auto currentDate = QDate::currentDate();
-    return (currentDate.month() == 12 && currentDate.day() >= 24) ||
-            (currentDate.month() == 1 && currentDate.day() <= 6);
-}
-} // namespace
-
 LaunchImage::LaunchImage(QWidget* pParent, const QString& styleSheet)
         : QWidget(pParent) {
-    if (isIn2024ChristmasHolidays()) {
-        setStyleSheet(
-                "LaunchImage { background-color: #202020; }"
-                "QLabel { "
-                "image: url(:/images/mixxx-icon-logo-christmas.svg);"
-                "padding:0;"
-                "margin:0;"
-                "border:none;"
-                "min-width: 236px;"
-                "min-height: 48px;"
-                "max-width: 236px;"
-                "max-height: 48px;"
-                "}"
-                "QProgressBar {"
-                "background-color: #202020; "
-                "border:none;"
-                "min-width: 236px;"
-                "min-height: 3px;"
-                "max-width: 236px;"
-                "max-height: 3px;"
-                "}"
-                "QProgressBar::chunk { background-color: #f3efed; }");
-    } else if (styleSheet.isEmpty()) {
+    if (styleSheet.isEmpty()) {
         setStyleSheet(
                 "LaunchImage { background-color: #202020; }"
                 "QLabel { "

@@ -46,7 +46,9 @@ void TrackExportDlg::showEvent(QShowEvent* event) {
         qDebug() << "Programming error: did not initialize m_exporter, about to crash";
         return;
     }
-    m_worker->start();
+    // Explicit priority so the worker doesn't inherit the main thread's
+    // SCHED_FIFO policy (see main.cpp).
+    m_worker->start(QThread::LowPriority);
 }
 
 void TrackExportDlg::slotProgress(const QString& filename, int progress, int count) {

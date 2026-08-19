@@ -3,6 +3,7 @@
 #include <QDebug>
 
 #include "control/controlencoder.h"
+#include "control/controlproxy.h"
 #include "control/controlpushbutton.h"
 #include "effects/backends/effectmanifest.h"
 #include "effects/defs.h"
@@ -130,6 +131,32 @@ EffectSlot::EffectSlot(const QString& group,
             [=, this](double value) { slotEffectMetaParameter(value); });
     m_pControlMetaParameter->set(0.0);
     m_pControlMetaParameter->setDefaultValue(0.0);
+
+    // Bite DJ fork: stable per-slot quantize/triplet COs. Skin binds
+    // here; we forward to whichever button parameter has manifest id
+    // "quantize" / "triplet" once an effect loads. Stays at 0 with
+    // _loaded=0 when no effect (or no quantize) is active.
+    m_pControlQuantize = std::make_unique<ControlPushButton>(
+            ConfigKey(m_group, "quantize"));
+    m_pControlQuantize->setButtonMode(ControlPushButton::TOGGLE);
+    connect(m_pControlQuantize.get(),
+            &ControlObject::valueChanged,
+            this,
+            &EffectSlot::slotQuantizeChanged);
+    m_pControlQuantizeLoaded = std::make_unique<ControlObject>(
+            ConfigKey(m_group, "quantize_loaded"));
+    m_pControlQuantizeLoaded->setReadOnly();
+
+    m_pControlTriplet = std::make_unique<ControlPushButton>(
+            ConfigKey(m_group, "triplet"));
+    m_pControlTriplet->setButtonMode(ControlPushButton::TOGGLE);
+    connect(m_pControlTriplet.get(),
+            &ControlObject::valueChanged,
+            this,
+            &EffectSlot::slotTripletChanged);
+    m_pControlTripletLoaded = std::make_unique<ControlObject>(
+            ConfigKey(m_group, "triplet_loaded"));
+    m_pControlTripletLoaded->setReadOnly();
 
     m_pControlLoaded->forceSet(0.0);
 }
@@ -263,6 +290,37 @@ void EffectSlot::loadEffectWithDefaults(const EffectManifestPointer pManifest) {
     loadEffectInner(pManifest, pPreset, false);
 }
 
+void EffectSlot::switchEffectRemembering(const EffectManifestPointer pManifest) {
+    // Chains that don't opt in (EQ, QuickEffect, Output) keep stock behavior.
+    if (!m_pChain || !m_pChain->remembersUserParameters()) {
+        loadEffectWithDefaults(pManifest);
+        return;
+    }
+
+    // Snapshot the outgoing effect before unloadEffect() tears its
+    // parameters down. We pass includeRememberedPresets=false so the
+    // cache entry only carries this effect's parameter state.
+    if (m_pManifest) {
+        m_rememberedPresets.insert(m_pManifest->id(),
+                EffectPresetPointer::create(this, false));
+    }
+
+    EffectPresetPointer pPreset;
+    if (pManifest) {
+        auto it = m_rememberedPresets.constFind(pManifest->id());
+        if (it != m_rememberedPresets.constEnd() && *it && !(*it)->isEmpty()) {
+            pPreset = *it;
+        }
+    }
+    if (pPreset) {
+        // adoptMetaknobFromPreset=true so the saved metaknob position
+        // is restored along with the parameter values.
+        loadEffectInner(pManifest, pPreset, true);
+    } else {
+        loadEffectWithDefaults(pManifest);
+    }
+}
+
 void EffectSlot::loadEffectInner(const EffectManifestPointer pManifest,
         EffectPresetPointer pEffectPreset,
         bool adoptMetaknobFromPreset) {
@@ -345,6 +403,10 @@ void EffectSlot::loadEffectInner(const EffectManifestPointer pManifest,
 
     loadParameters();
 
+    // Bite DJ fork: bind quantize/triplet proxies to whichever loaded
+    // button parameter (if any) has the matching manifest id.
+    rebindModifierProxies();
+
     m_pControlMetaParameter->setDefaultValue(pManifest->metaknobDefault());
 
     m_pControlLoaded->forceSet(1.0);
@@ -380,6 +442,10 @@ void EffectSlot::unloadEffect() {
     for (const auto& pControlNumParameters : std::as_const(m_pControlNumParameters)) {
         pControlNumParameters->forceSet(0.0);
     }
+
+    // Bite DJ fork: drop quantize/triplet proxy bindings before the
+    // underlying button parameter slots are cleared below.
+    clearModifierProxies();
 
     for (const auto& slotList : std::as_const(m_parameterSlots)) {
         // Do not delete the slots; clear the parameters from the slots
@@ -501,13 +567,13 @@ void EffectSlot::swapParameters(EffectParameterType type, int index1, int index2
 
 void EffectSlot::slotPrevEffect(double v) {
     if (v > 0) {
-        loadEffectWithDefaults(m_pVisibleEffects->previous(m_pManifest));
+        switchEffectRemembering(m_pVisibleEffects->previous(m_pManifest));
     }
 }
 
 void EffectSlot::slotNextEffect(double v) {
     if (v > 0) {
-        loadEffectWithDefaults(m_pVisibleEffects->next(m_pManifest));
+        switchEffectRemembering(m_pVisibleEffects->next(m_pManifest));
     }
 }
 
@@ -518,7 +584,7 @@ void EffectSlot::slotLoadedEffectRequest(double value) {
         return;
     }
     // loadEffectInner calls setAndConfirm
-    loadEffectWithDefaults(m_pVisibleEffects->at(index));
+    switchEffectRemembering(m_pVisibleEffects->at(index));
 }
 
 void EffectSlot::visibleEffectsListChanged() {
@@ -531,9 +597,9 @@ void EffectSlot::visibleEffectsListChanged() {
 
 void EffectSlot::slotEffectSelector(double v) {
     if (v > 0) {
-        loadEffectWithDefaults(m_pVisibleEffects->next(m_pManifest));
+        switchEffectRemembering(m_pVisibleEffects->next(m_pManifest));
     } else if (v < 0) {
-        loadEffectWithDefaults(m_pVisibleEffects->previous(m_pManifest));
+        switchEffectRemembering(m_pVisibleEffects->previous(m_pManifest));
     }
 }
 
@@ -586,4 +652,98 @@ void EffectSlot::slotEffectMetaParameter(double v, bool force) {
             pParameterSlot->onEffectMetaParameterChanged(v, force);
         }
     }
+}
+
+namespace {
+// Find the slot index in the loaded parameter list for the parameter whose
+// manifest id matches `id`. Returns -1 if no such parameter is loaded.
+// Mirrors how EffectSlot::loadParameters maps loaded EffectParameters to
+// EffectParameterSlotBase slots in order.
+int findLoadedParameterSlotByManifestId(
+        const ParameterMap& loadedParameters,
+        EffectParameterType type,
+        const QString& id) {
+    const auto& list = loadedParameters.value(type);
+    for (int i = 0; i < list.size(); ++i) {
+        if (list.at(i)->manifest()->id() == id) {
+            return i;
+        }
+    }
+    return -1;
+}
+} // namespace
+
+void EffectSlot::rebindModifierProxies() {
+    clearModifierProxies();
+
+    // quantize and triplet are declared with ValueScaler::Toggle in built-in
+    // effect manifests, which routes them to the Button parameter type and
+    // exposes their values at `[group],button_parameter{N+1}`.
+    const int quantizeSlot = findLoadedParameterSlotByManifestId(
+            m_loadedParameters, EffectParameterType::Button, QStringLiteral("quantize"));
+    if (quantizeSlot >= 0) {
+        const QString itemKey =
+                QStringLiteral("button_parameter%1").arg(quantizeSlot + 1);
+        m_pQuantizeParameterProxy = std::make_unique<ControlProxy>(
+                ConfigKey(m_group, itemKey), this);
+        m_pQuantizeParameterProxy->connectValueChanged(
+                this, &EffectSlot::slotQuantizeParameterChanged);
+        // Sync our stable CO to the current parameter value without
+        // triggering the forwarding path.
+        m_pControlQuantize->setAndConfirm(m_pQuantizeParameterProxy->get());
+        m_pControlQuantizeLoaded->forceSet(1.0);
+    } else {
+        m_pControlQuantize->setAndConfirm(0.0);
+        m_pControlQuantizeLoaded->forceSet(0.0);
+    }
+
+    const int tripletSlot = findLoadedParameterSlotByManifestId(
+            m_loadedParameters, EffectParameterType::Button, QStringLiteral("triplet"));
+    if (tripletSlot >= 0) {
+        const QString itemKey =
+                QStringLiteral("button_parameter%1").arg(tripletSlot + 1);
+        m_pTripletParameterProxy = std::make_unique<ControlProxy>(
+                ConfigKey(m_group, itemKey), this);
+        m_pTripletParameterProxy->connectValueChanged(
+                this, &EffectSlot::slotTripletParameterChanged);
+        m_pControlTriplet->setAndConfirm(m_pTripletParameterProxy->get());
+        m_pControlTripletLoaded->forceSet(1.0);
+    } else {
+        m_pControlTriplet->setAndConfirm(0.0);
+        m_pControlTripletLoaded->forceSet(0.0);
+    }
+}
+
+void EffectSlot::clearModifierProxies() {
+    m_pQuantizeParameterProxy.reset();
+    m_pTripletParameterProxy.reset();
+    m_pControlQuantize->setAndConfirm(0.0);
+    m_pControlTriplet->setAndConfirm(0.0);
+    m_pControlQuantizeLoaded->forceSet(0.0);
+    m_pControlTripletLoaded->forceSet(0.0);
+}
+
+void EffectSlot::slotQuantizeChanged(double v) {
+    if (m_pQuantizeParameterProxy) {
+        // ControlProxy::set passes itself as sender so the
+        // slotQuantizeParameterChanged path filters this echo back out.
+        m_pQuantizeParameterProxy->set(v);
+    }
+}
+
+void EffectSlot::slotTripletChanged(double v) {
+    if (m_pTripletParameterProxy) {
+        m_pTripletParameterProxy->set(v);
+    }
+}
+
+void EffectSlot::slotQuantizeParameterChanged(double v) {
+    // setAndConfirm + the proxy's self-send filtering keeps writes from
+    // re-entering slotQuantizeChanged when this update was triggered by our
+    // own forward path.
+    m_pControlQuantize->setAndConfirm(v);
+}
+
+void EffectSlot::slotTripletParameterChanged(double v) {
+    m_pControlTriplet->setAndConfirm(v);
 }

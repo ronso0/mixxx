@@ -16,13 +16,13 @@
                 BROWSER Section START
             -->
             <control>
-                <description>BROWSE - rotate - Scroll tracklist/tree view</description>
+                <description>BROWSE - rotate - Zoom waveform on play screen, scroll tracklist/tree view elsewhere</description>
                 <group>[Library]</group>
-                <key>MoveVertical</key>
+                <key>PioneerDDJ400.browseRotate</key>
                 <status>0xB6</status>
                 <midino>0x40</midino>
                 <options>
-                    <SelectKnob/>
+                    <Script-Binding/>
                 </options>
             </control>
             <control>
@@ -650,6 +650,7 @@
                 <midino>0x33</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -660,6 +661,7 @@
                 <midino>0x13</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -670,6 +672,7 @@
                 <midino>0x33</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -680,6 +683,7 @@
                 <midino>0x13</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
 
@@ -712,6 +716,7 @@
                 <midino>0x24</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -722,6 +727,7 @@
                 <midino>0x04</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -732,6 +738,7 @@
                 <midino>0x24</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -742,6 +749,7 @@
                 <midino>0x04</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
 
@@ -754,6 +762,7 @@
                 <midino>0x27</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -764,6 +773,7 @@
                 <midino>0x2B</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -774,6 +784,7 @@
                 <midino>0x2F</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -784,6 +795,7 @@
                 <midino>0x07</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -794,6 +806,7 @@
                 <midino>0x0B</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -804,6 +817,7 @@
                 <midino>0x0F</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
 
@@ -815,6 +829,7 @@
                 <midino>0x27</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -825,6 +840,7 @@
                 <midino>0x2B</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -835,6 +851,7 @@
                 <midino>0x2F</midino>
                 <options>
                     <fourteen-bit-lsb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -845,6 +862,7 @@
                 <midino>0x07</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -855,6 +873,7 @@
                 <midino>0x0B</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
             <control>
@@ -865,6 +884,7 @@
                 <midino>0x0F</midino>
                 <options>
                     <fourteen-bit-msb/>
+                    <soft-takeover/>
                 </options>
             </control>
 
@@ -977,7 +997,7 @@
             <!-- BEAT FX SECTION START -->
 
             <control>
-                <description>BEAT LEFT - press - toggle focused Effect leftward</description>
+                <description>BEAT LEFT - press - step beat-quantized parameter to the previous bucket</description>
                 <group>[EffectRack1_EffectUnit1]</group>
                 <key>PioneerDDJ400.beatFxLeftPressed</key>
                 <status>0x94</status>
@@ -988,7 +1008,7 @@
             </control>
 
             <control>
-                <description>BEAT RIGHT - press - toggle focused Effect rightward</description>
+                <description>BEAT RIGHT - press - step beat-quantized parameter to the next bucket</description>
                 <group>[EffectRack1_EffectUnit1]</group>
                 <key>PioneerDDJ400.beatFxRightPressed</key>
                 <status>0x94</status>
@@ -1413,9 +1433,9 @@
             <!-- BEAT LOOP MODE START -->
 
             <control>
-                <description>PAD 1 (DECK1) BEAT LOOP MODE - press - 1/4 Beatloop</description>
+                <description>PAD 1 (DECK1) BEAT LOOP MODE - hold - 1/4 Beatloop Roll (momentary, slip)</description>
                 <group>[Channel1]</group>
-                <key>beatloop_0.25_toggle</key>
+                <key>beatlooproll_0.25_activate</key>
                 <status>0x97</status>
                 <midino>0x60</midino>
                 <options>
@@ -1423,9 +1443,9 @@
                 </options>
             </control>
             <control>
-                <description>PAD 1 (DECK2) BEAT LOOP MODE - press - 1/4 Beatloop</description>
+                <description>PAD 1 (DECK2) BEAT LOOP MODE - hold - 1/4 Beatloop Roll (momentary, slip)</description>
                 <group>[Channel2]</group>
-                <key>beatloop_0.25_toggle</key>
+                <key>beatlooproll_0.25_activate</key>
                 <status>0x99</status>
                 <midino>0x60</midino>
                 <options>
@@ -1433,9 +1453,9 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK1) BEAT LOOP MODE - press - 1/2 Beatloop</description>
+                <description>PAD 2 (DECK1) BEAT LOOP MODE - hold - 1/2 Beatloop Roll (momentary, slip)</description>
                 <group>[Channel1]</group>
-                <key>beatloop_0.5_toggle</key>
+                <key>beatlooproll_0.5_activate</key>
                 <status>0x97</status>
                 <midino>0x61</midino>
                 <options>
@@ -1443,9 +1463,9 @@
                 </options>
             </control>
             <control>
-                <description>PAD 2 (DECK2) BEAT LOOP MODE - press - 1/2 Beatloop</description>
+                <description>PAD 2 (DECK2) BEAT LOOP MODE - hold - 1/2 Beatloop Roll (momentary, slip)</description>
                 <group>[Channel2]</group>
-                <key>beatloop_0.5_toggle</key>
+                <key>beatlooproll_0.5_activate</key>
                 <status>0x99</status>
                 <midino>0x61</midino>
                 <options>
@@ -1453,9 +1473,9 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK1) BEAT LOOP MODE - press - 1/1 Beatloop</description>
+                <description>PAD 3 (DECK1) BEAT LOOP MODE - hold - 1/1 Beatloop Roll (momentary, slip)</description>
                 <group>[Channel1]</group>
-                <key>beatloop_1_toggle</key>
+                <key>beatlooproll_1_activate</key>
                 <status>0x97</status>
                 <midino>0x62</midino>
                 <options>
@@ -1463,9 +1483,9 @@
                 </options>
             </control>
             <control>
-                <description>PAD 3 (DECK2) BEAT LOOP MODE - press - 1/1 Beatloop</description>
+                <description>PAD 3 (DECK2) BEAT LOOP MODE - hold - 1/1 Beatloop Roll (momentary, slip)</description>
                 <group>[Channel2]</group>
-                <key>beatloop_1_toggle</key>
+                <key>beatlooproll_1_activate</key>
                 <status>0x99</status>
                 <midino>0x62</midino>
                 <options>
@@ -1473,9 +1493,9 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK1) BEAT LOOP MODE - press - 2 Beatloop</description>
+                <description>PAD 4 (DECK1) BEAT LOOP MODE - hold - 2 Beatloop Roll (momentary, slip)</description>
                 <group>[Channel1]</group>
-                <key>beatloop_2_toggle</key>
+                <key>beatlooproll_2_activate</key>
                 <status>0x97</status>
                 <midino>0x63</midino>
                 <options>
@@ -1483,9 +1503,9 @@
                 </options>
             </control>
             <control>
-                <description>PAD 4 (DECK2) BEAT LOOP MODE - press - 2 Beatloop</description>
+                <description>PAD 4 (DECK2) BEAT LOOP MODE - hold - 2 Beatloop Roll (momentary, slip)</description>
                 <group>[Channel2]</group>
-                <key>beatloop_2_toggle</key>
+                <key>beatlooproll_2_activate</key>
                 <status>0x99</status>
                 <midino>0x63</midino>
                 <options>

@@ -41,6 +41,8 @@ ControlPotmeter::ControlPotmeter(const ConfigKey& key,
     m_controls.setIsDefault(get() == default_value);
 }
 
+ControlPotmeter::~ControlPotmeter() = default;
+
 void ControlPotmeter::setStepCount(int count) {
     m_controls.setStepCount(count);
 }

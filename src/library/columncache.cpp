@@ -74,7 +74,7 @@ constexpr ColumnProperties kColumnPropertiesByEnum[] = {
                 QT_TRANSLATE_NOOP("BaseTrackTableModel", "Comment"),
                 kDefaultColumnWidth * 6},
         DI(ColumnCache::COLUMN_LIBRARYTABLE_DURATION){&LIBRARYTABLE_DURATION,
-                QT_TRANSLATE_NOOP("BaseTrackTableModel", "Duration"),
+                QT_TRANSLATE_NOOP("BaseTrackTableModel", "Time"),
                 kDefaultColumnWidth},
         DI(ColumnCache::COLUMN_LIBRARYTABLE_BITRATE){&LIBRARYTABLE_BITRATE,
                 QT_TRANSLATE_NOOP("BaseTrackTableModel", "Bitrate"),
@@ -255,6 +255,24 @@ void ColumnCache::slotSetKeySortOrder(double notationValue) {
     // https://github.com/mixxxdj/mixxx/pull/649#discussion_r34863809
     const auto notation =
             KeyUtils::keyNotationFromNumericValue(notationValue);
+
+    // Bite DJ: external library track caches (Rekordbox, Serato, iTunes,
+    // …) expose only a `key` text column; their tables have no `key_id`.
+    // The stock chromatic CASE below would reference a non-existent column
+    // and BaseTrackCache::filterAndSort would fail the query — emptying
+    // m_trackOrder and hiding every row in the view. Route through the
+    // Bite DJ `key_text_sort_order(key, notation)` SQLite function
+    // (registered in DbConnection::initDatabase) which wraps
+    // KeyUtils::guessKeyFromText so Lancelot/Traditional/OpenKey all sort
+    // in circle-of-fifths order; e.g. "9A" lands between "8B" and "9B"
+    // rather than between "89B" and "9B".
+    if (m_columnIndexByEnum[COLUMN_LIBRARYTABLE_KEY_ID] < 0) {
+        m_columnSortByIndex[keyColumnIndex] =
+                QStringLiteral("key_text_sort_order(%1, ") +
+                QString::number(static_cast<int>(notation)) +
+                QStringLiteral(")");
+        return;
+    }
     // The placeholder %1 will be replaced by the "key" column. The actual
     // key code needed for sorting is stored in the column "key_id".
     DEBUG_ASSERT(LIBRARYTABLE_KEY_ID == LIBRARYTABLE_KEY + QStringLiteral("_id"));

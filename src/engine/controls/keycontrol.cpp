@@ -10,6 +10,7 @@
 #include "engine/enginebuffer.h"
 #include "moc_keycontrol.cpp"
 #include "track/keyutils.h"
+#include "util/math.h"
 
 constexpr bool kEnableDebugOutput = false;
 
@@ -32,12 +33,20 @@ KeyControl::KeyControl(const QString& group,
                   ConfigKey(group, "sync_key"))),
           m_pButtonResetKey(std::make_unique<ControlPushButton>(
                   ConfigKey(group, "reset_key"))),
+          // Coarse 2-semitone nudge, distinct from the 1-semitone
+          // pitch_up/pitch_down steppers PotmeterControls exposes.
+          m_pButtonPitchUp2(std::make_unique<ControlPushButton>(
+                  ConfigKey(group, "pitch_up_2"))),
+          m_pButtonPitchDown2(std::make_unique<ControlPushButton>(
+                  ConfigKey(group, "pitch_down_2"))),
           m_keylockMode(std::make_unique<ControlPushButton>(ConfigKey(group, "keylockMode"))),
           m_keyunlockMode(std::make_unique<ControlPushButton>(ConfigKey(group, "keyunlockMode"))),
           m_pFileKey(std::make_unique<ControlObject>(ConfigKey(group, "file_key"))),
           m_pEngineKey(std::make_unique<ControlObject>(ConfigKey(group, "key"))),
           m_pEngineKeyDistance(std::make_unique<ControlPotmeter>(
-                  ConfigKey(group, "visual_key_distance"), -0.5, 0.5)) {
+                  ConfigKey(group, "visual_key_distance"), -0.5, 0.5)),
+          m_pKeyShifted(std::make_unique<ControlObject>(
+                  ConfigKey(group, "key_shifted"))) {
     m_pitchRateInfo.pitchRatio = 1.0;
     m_pitchRateInfo.tempoRatio = 1.0;
     m_pitchRateInfo.pitchTweakRatio = 1.0;
@@ -79,6 +88,18 @@ KeyControl::KeyControl(const QString& group,
             &ControlObject::valueChanged,
             this,
             &KeyControl::slotResetKey,
+            Qt::DirectConnection);
+
+    connect(m_pButtonPitchUp2.get(),
+            &ControlObject::valueChanged,
+            this,
+            &KeyControl::slotPitchUp2,
+            Qt::DirectConnection);
+
+    connect(m_pButtonPitchDown2.get(),
+            &ControlObject::valueChanged,
+            this,
+            &KeyControl::slotPitchDown2,
             Qt::DirectConnection);
 
     connect(m_pFileKey.get(),
@@ -312,6 +333,13 @@ void KeyControl::updateKeyCOs(double fileKeyNumeric, double pitchOctaves) {
     double diff_to_nearest_full_key = adjusted.second;
     m_pEngineKeyDistance->set(diff_to_nearest_full_key);
     m_pPitch->set(pitchOctaves * 12);
+    // Skin flag: the displayed key no longer matches the file's key. Compares
+    // the rounded keys rather than the raw pitch so a sub-semitone offset that
+    // still renders as the same key doesn't light up the badge.
+    m_pKeyShifted->set(fileKey != mixxx::track::io::key::INVALID &&
+                            adjusted.first != fileKey
+                    ? 1.0
+                    : 0.0);
     if constexpr (kEnableDebugOutput) {
         qDebug() << "       .";
         qDebug() << "       KeyControl::updateKeyCOs";
@@ -445,6 +473,22 @@ void KeyControl::slotResetKey(double v) {
         }
         m_pPitch->set(0);
         slotPitchChanged(0);
+    }
+}
+
+void KeyControl::slotPitchUp2(double v) {
+    if (v > 0) {
+        double newPitch = math_clamp(m_pPitch->get() + 2.0, -6.0, 6.0);
+        m_pPitch->set(newPitch);
+        slotPitchChanged(newPitch);
+    }
+}
+
+void KeyControl::slotPitchDown2(double v) {
+    if (v > 0) {
+        double newPitch = math_clamp(m_pPitch->get() - 2.0, -6.0, 6.0);
+        m_pPitch->set(newPitch);
+        slotPitchChanged(newPitch);
     }
 }
 

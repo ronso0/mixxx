@@ -55,6 +55,10 @@ QUrl ProxyTrackModel::getTrackUrl(const QModelIndex& index) const {
     return m_pTrackModel->getTrackUrl(mapToSource(index));
 }
 
+QString ProxyTrackModel::backingLocation() const {
+    return m_pTrackModel ? m_pTrackModel->backingLocation() : QString();
+}
+
 CoverInfo ProxyTrackModel::getCoverInfo(const QModelIndex& index) const {
     QModelIndex indexSource = mapToSource(index);
     return m_pTrackModel ? m_pTrackModel->getCoverInfo(indexSource) : CoverInfo();
@@ -76,6 +80,16 @@ TrackPointer ProxyTrackModel::getTrackByRef(const TrackRef& trackRef) const {
 QString ProxyTrackModel::getTrackLocation(const QModelIndex& index) const {
     QModelIndex indexSource = mapToSource(index);
     return m_pTrackModel ? m_pTrackModel->getTrackLocation(indexSource) : QString();
+}
+
+bool ProxyTrackModel::verifyTrackFileExists(const QModelIndex& index) {
+    // Must be forwarded: the Computer/USB browser is a BrowseTableModel behind
+    // this proxy, and it is the only thing that knows how to check the file and
+    // flag the row in the missing colour. Without this the base TrackModel's
+    // "always loadable" default answered for it, so a pulled drive's dead rows
+    // stayed white and every re-tap re-attempted the load.
+    QModelIndex indexSource = mapToSource(index);
+    return m_pTrackModel ? m_pTrackModel->verifyTrackFileExists(indexSource) : true;
 }
 
 void ProxyTrackModel::search(const QString& searchText) {

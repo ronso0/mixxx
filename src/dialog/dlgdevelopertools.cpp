@@ -32,7 +32,12 @@ DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
     m_statProxyModel.setSourceModel(&m_statModel);
     statsTable->setModel(&m_statProxyModel);
 
-    QString logFileName = QDir(pConfig->getSettingsPath()).filePath("mixxx.log");
+    // Wherever [Logging],Path pointed the log at, rather than assuming the
+    // settings directory it only defaults to.
+    QString logFileName = mixxx::Logging::logFilePath();
+    if (logFileName.isEmpty()) {
+        logFileName = QDir(pConfig->getSettingsPath()).filePath("mixxx.log");
+    }
     m_logFile.setFileName(logFileName);
     if (!m_logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << "ERROR: Could not open log file:" << logFileName;

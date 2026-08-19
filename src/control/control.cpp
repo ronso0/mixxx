@@ -297,6 +297,17 @@ void ControlDoublePrivate::setInner(double value, QObject* pSender) {
     m_value.setValue(value);
     emit valueChanged(value, pSender);
 
+    // Bite DJ: mirror persistent COs into the config on every change, not
+    // only in the destructor — the appliance may never shut down cleanly, so
+    // values that only materialize at exit are lost on power-off. The
+    // destructor mirror stays as a no-op safety net.
+    if (m_bPersistInConfiguration) {
+        UserSettingsPointer pConfig = s_pUserConfig;
+        if (pConfig) {
+            pConfig->set(m_key, QString::number(value));
+        }
+    }
+
     if (m_bTrack) {
         Stat::track(m_trackKey, static_cast<Stat::StatType>(m_trackType),
                     static_cast<Stat::ComputeFlags>(m_trackFlags), value);

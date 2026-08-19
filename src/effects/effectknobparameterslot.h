@@ -44,6 +44,10 @@ class EffectKnobParameterSlot : public EffectParameterSlotBase {
     void slotLinkTypeChanging(double v);
     void slotLinkInverseChanged(double v);
 
+    // Bite DJ fork additions: raw-value alias mirror.
+    void slotKnobValueMirror(double v);
+    void slotValueAliasFromSkin(double v);
+
   private:
     QString debugString() const {
         return QString("EffectKnobParameterSlot(%1,%2)").arg(m_group).arg(m_iParameterSlotNumber);
@@ -55,6 +59,25 @@ class EffectKnobParameterSlot : public EffectParameterSlotBase {
     ControlEffectKnob* m_pControlValue;
     ControlPushButton* m_pControlLinkType;
     ControlPushButton* m_pControlLinkInverse;
+
+    // Bite DJ fork additions: expose manifest metadata so the skin can
+    // pick the right widget per parameter (bucket selector for Beats,
+    // ms slider for Time, plain slider otherwise) and render real units.
+    ControlObject* m_pControlUnits;
+    ControlObject* m_pControlMin;
+    ControlObject* m_pControlMax;
+    ControlObject* m_pControlDefault;
+
+    // Bite DJ fork addition: raw-value alias of m_pControlValue. The
+    // existing parameterN CO is normalized [0,1] (parameter, not value),
+    // so connections from skin XML can't write specific raw values for
+    // log-scaled parameters like Tremolo's `rate` [0.25, 8]. This alias
+    // is a plain ControlObject (no behaviour) so its parameter equals
+    // its value, and a connection's <IsEqual>X</IsEqual> writes raw
+    // value X to the underlying knob (clamped by behaviour). Used by
+    // the BeatFX bucket picker.
+    ControlObject* m_pControlValueAlias;
+    bool m_bMirroringValueAlias;
 
     DISALLOW_COPY_AND_ASSIGN(EffectKnobParameterSlot);
 };

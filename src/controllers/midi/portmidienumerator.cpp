@@ -3,6 +3,7 @@
 #include <portmidi.h>
 
 #include <QRegularExpression>
+#include <QSet>
 
 #include "controllers/midi/portmidicontroller.h"
 #include "moc_portmidienumerator.cpp"
@@ -100,11 +101,15 @@ bool namesMatchAllowableEdgeCases(const QString& input_name,
 } // namespace
 
 PortMidiEnumerator::PortMidiEnumerator() {
-    PmError err = Pm_Initialize();
-    // Based on reading the source, it's not possible for this to fail.
-    if (err != pmNoError) {
-        qWarning() << "PortMidi error:" << Pm_GetErrorText(err);
-    }
+    // Bite DJ: defer Pm_Initialize to the first queryDevices() call.
+    // ControllerManager is constructed on the GUI thread and then
+    // moveToThread'd to its own thread; queryDevices() runs on that
+    // controller thread. PortMIDI on Linux uses ALSA sequencer clients
+    // that bind to the calling thread, so initializing here (GUI thread)
+    // and tearing down or re-initializing in queryDevices (controller
+    // thread) crosses thread affinity and can crash ALSA sequencer state
+    // when a MIDI device is opened later. Doing Pm_Initialize on first
+    // queryDevices keeps every PortMIDI call on the same thread.
 }
 
 PortMidiEnumerator::~PortMidiEnumerator() {
@@ -180,14 +185,32 @@ bool shouldLinkInputToOutput(const QString& input_name,
 QList<Controller*> PortMidiEnumerator::queryDevices() {
     qDebug() << "Scanning PortMIDI devices:";
 
-    int iNumDevices = Pm_CountDevices();
-
+    // Tear down existing PortMidiController instances first. Their
+    // destructors close any open Pm_OpenInput / Pm_OpenOutput handles, which
+    // is required before Pm_Terminate is safe to invoke below.
     QListIterator<Controller*> dev_it(m_devices);
     while (dev_it.hasNext()) {
         delete dev_it.next();
     }
-
     m_devices.clear();
+
+    // Bite DJ: PortMIDI snapshots the system device list at Pm_Initialize
+    // and Pm_CountDevices keeps returning that cached count regardless of
+    // USB hot-plug events. Cycle Pm_Terminate + Pm_Initialize so a Rescan
+    // tap (which routes here via ControllerManager::setUpDevices →
+    // updateControllerList) actually picks up devices plugged in after
+    // startup. On the first invocation Pm_Terminate is a no-op (PortMIDI's
+    // pm_initialized starts false now that we defer init to here).
+    if (PmError termErr = Pm_Terminate(); termErr != pmNoError) {
+        qWarning() << "PortMidi error during rescan terminate:"
+                   << Pm_GetErrorText(termErr);
+    }
+    if (PmError initErr = Pm_Initialize(); initErr != pmNoError) {
+        qWarning() << "PortMidi error during rescan initialize:"
+                   << Pm_GetErrorText(initErr);
+    }
+
+    int iNumDevices = Pm_CountDevices();
 
     const PmDeviceInfo* inputDeviceInfo = nullptr;
     const PmDeviceInfo* outputDeviceInfo = nullptr;
@@ -210,6 +233,15 @@ QList<Controller*> PortMidiEnumerator::queryDevices() {
         unassignedOutputDevices[i] = deviceName;
     }
 
+    // Bite DJ: dedupe input devices by name. On Linux PortMIDI cycles
+    // Pm_Terminate + Pm_Initialize between scans, but the ALSA sequencer
+    // can leave the previous client lingering and re-register the same
+    // ports under fresh indices on the new init. Without this, every
+    // Rescan grows the consumer-visible controller list by one copy.
+    // Identical names from genuinely separate hardware (rare in DJ rigs)
+    // would also collapse to one row — acceptable given the alternative.
+    QSet<QString> seenInputNames;
+
     // Search for input devices and pair them with output devices if applicable
     for (int i = 0; i < iNumDevices; i++) {
         const PmDeviceInfo* pDeviceInfo = Pm_GetDeviceInfo(i);
@@ -222,6 +254,14 @@ QList<Controller*> PortMidiEnumerator::queryDevices() {
             // deviceInfo->output also needs to be checked and handled.
             continue;
         }
+
+        const QString inputName(pDeviceInfo->name);
+        if (seenInputNames.contains(inputName)) {
+            qDebug() << " Skipping duplicate input device"
+                     << "#" << i << pDeviceInfo->name;
+            continue;
+        }
+        seenInputNames.insert(inputName);
 
         qDebug() << " Found input device"
                  << "#" << i << pDeviceInfo->name;

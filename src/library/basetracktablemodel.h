@@ -3,10 +3,12 @@
 #include <QAbstractTableModel>
 #include <QList>
 #include <QPointer>
+#include <QSet>
 
 #include "library/columncache.h"
 #include "library/trackmodel.h"
 #include "track/track_decl.h"
+#include "track/trackid.h"
 
 class TrackCollectionManager;
 
@@ -67,10 +69,15 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
     QVariant data(
             const QModelIndex& index,
             int role = Qt::DisplayRole) const final;
+    // Bite DJ: not `final` (as data() above still is) so that a model backed by
+    // something other than the track itself can take an edit before this
+    // reaches for the Track — RekordboxPlaylistModel stores a rating on the
+    // drive, and its getTrack() is a full import of the track's ANLZ file,
+    // far too much work to hang off editing one cell.
     bool setData(
             const QModelIndex& index,
             const QVariant& value,
-            int role = Qt::EditRole) final;
+            int role = Qt::EditRole) override;
 
     // Calculate the number of columns from all valid
     // column headers.
@@ -107,6 +114,15 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
 
     TrackPointer getTrackByRef(
             const TrackRef& trackRef) const override;
+
+    /// Check that the file backing the track at `index` still exists before a
+    /// load is attempted.
+    bool verifyTrackFileExists(const QModelIndex& index) override;
+
+    /// Drop the in-memory "missing file" flags raised by verifyTrackFileExists().
+    /// Subclasses call this when the row set is rebuilt (e.g. after a rescan)
+    /// so a re-inserted drive re-enables loading instead of staying blocked.
+    void clearMissingTrackFlags();
 
     bool updateTrackGenre(
             Track* pTrack,
@@ -243,17 +259,13 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
             TrackPointer pNewTrack,
             TrackPointer pOldTrack);
 
-    void slotRefreshCoverRows(
-            const QList<int>& rows);
-
     void slotRefreshAllRows();
 
     void slotTracksRemoved(const QSet<TrackId>& trackIds);
 
-    void slotCoverFound(
-            const QObject* pRequester,
-            const CoverInfo& coverInfo,
-            const QPixmap& pixmap);
+    /// Repaint every row's text colour after the set of tracks played this
+    /// session changed (a track started playing, or the session was reset).
+    void slotPlayedTracksChanged();
 
   private:
     QVariant rawSiblingValue(
@@ -265,9 +277,6 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
     // the internal database.
     virtual TrackId doGetTrackId(
             const TrackPointer& pTrack) const;
-
-    QVariant composeCoverArtToolTipHtml(
-            const QModelIndex& index) const;
 
     Qt::ItemFlags defaultItemFlags(
             const QModelIndex& index) const;
@@ -281,6 +290,16 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
     QColor m_trackPlayedColor;
     QColor m_trackMissingColor;
 
+    // File locations found missing when the DJ tried to load them (e.g. the USB
+    // drive was pulled). Drives the 'missing' text colour in data() and blocks
+    // re-loading in verifyTrackFileExists() even when the database's fs_deleted
+    // flag hasn't caught up yet. Keyed by location (cheap to read straight from
+    // the row cache) rather than TrackId on purpose: getTrackId() is overridden
+    // by the external-library models (Rekordbox/iTunes/...) to call getTrack(),
+    // which imports and saves the track — calling it per-cell from data() would
+    // be ruinously expensive and self-feeding.
+    QSet<QString> m_missingTrackLocations;
+
     ColumnCache m_columnCache;
 
     struct ColumnHeader {
@@ -290,8 +309,6 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
     QVector<ColumnHeader> m_columnHeaders;
 
     TrackId m_previewDeckTrackId;
-
-    mutable QModelIndex m_toolTipIndex;
 
     static int s_bpmColumnPrecision;
 

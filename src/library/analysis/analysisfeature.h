@@ -24,6 +24,15 @@ class AnalysisFeature : public LibraryFeature {
         return m_title;
     }
 
+    // Bite DJ: the batch analyzer has no sidebar entry. It is still built and
+    // still runs — the "Analyze" actions in the library and playlist context
+    // menus feed it, and the analysis progress reaches the skin through
+    // Library::onTrackAnalyzerProgress — but a DJ has no reason to browse a
+    // queue of tracks being analyzed on a two-deck appliance.
+    bool isSidebarVisibleByDefault() const override {
+        return false;
+    }
+
     bool dropAccept(const QList<QUrl>& urls, QObject* pSource) override;
     bool dragMoveAccept(const QUrl& url) override;
     void bindLibraryWidget(WLibrary* libraryWidget,

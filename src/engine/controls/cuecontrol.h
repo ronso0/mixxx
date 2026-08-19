@@ -202,6 +202,11 @@ class CueControl : public EngineControl {
     bool isPlayingByPlayButton();
     bool getPlayFlashingAtPause();
     SeekOnLoadMode getSeekOnLoadPreference();
+    /// When true (the default), pressing a hotcue on a paused deck jumps to
+    /// the cue and keeps playing, the way rekordbox and the CDJs behave.
+    /// When false, stock Mixxx behaviour applies: the deck previews the cue
+    /// for as long as the button is held, then seeks back and stops.
+    bool getHotcueActivatePlaysPreference();
     void trackLoaded(TrackPointer pNewTrack) override;
     void trackBeatsUpdated(mixxx::BeatsPointer pBeats) override;
 
@@ -285,6 +290,11 @@ class CueControl : public EngineControl {
     mixxx::audio::FramePos quantizeCuePoint(mixxx::audio::FramePos position);
     mixxx::audio::FramePos getQuantizedCurrentPosition();
     TrackAt getTrackAt() const;
+    /// Takes the deck off any scratch that is still driving it, so a cue press
+    /// plays from the cue at the track's own rate rather than at whatever rate
+    /// the platter happened to be left at. Bite DJ's vinyl brake makes that
+    /// rate audible for seconds after the wheel is released.
+    void endScratching();
     void seekOnLoad(mixxx::audio::FramePos seekOnLoadPosition);
     void setHotcueFocusIndex(int hotcueIndex);
     int getHotcueFocusIndex() const;
@@ -353,6 +363,11 @@ class CueControl : public EngineControl {
 
     std::unique_ptr<ControlProxy> m_pVinylControlEnabled;
     std::unique_ptr<ControlProxy> m_pVinylControlMode;
+
+    // RateControl's scratch controls, so a cue press can end a scratch that is
+    // still running - see endScratching().
+    std::unique_ptr<ControlProxy> m_pScratch2;
+    std::unique_ptr<ControlProxy> m_pScratch2Enable;
 
     std::unique_ptr<ControlObject> m_pHotcueFocus;
     std::unique_ptr<ControlPushButton> m_pHotcueFocusColorNext;

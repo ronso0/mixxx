@@ -11,8 +11,10 @@ WAnalysisLibraryTableView::WAnalysisLibraryTableView(
                   pConfig,
                   pLibrary,
                   trackTableBackgroundColorOpacity) {
-    setDragDropMode(QAbstractItemView::DragOnly);
-    setDragEnabled(true); //Always enable drag for now (until we have a model that doesn't support this.)
+    // Tracks can't be dragged out of the analysis table either, a press and
+    // drag scrolls the list instead.
+    setDragDropMode(QAbstractItemView::NoDragDrop);
+    setDragEnabled(false);
 }
 
 void WAnalysisLibraryTableView::onSearch(const QString& text) {

@@ -231,6 +231,44 @@ TEST_F(EngineBufferTest, ResetPitchAdjustUsesLinear) {
     EXPECT_EQ(m_pMockScaleVinyl1, m_pChannel1->getEngineBuffer()->m_pScale);
 }
 
+TEST_F(EngineBufferTest, PlayAndPauseTakeTheDeckOffAScratch) {
+    // Bite DJ: with the vinyl brake set, a released jog wheel goes on scratching
+    // the deck for as long as the configured run-out lasts (and a script brake or
+    // spinback for as long as its ramp does). Play and pause are instructions to
+    // be playing - or stopped - now, so pressing either hands the rate straight
+    // back to the deck instead of sounding out the rest of the coast.
+    const auto scratch2 = ConfigKey(m_sGroup1, "scratch2");
+    const auto scratch2Enable = ConfigKey(m_sGroup1, "scratch2_enable");
+    const auto play = ConfigKey(m_sGroup1, "play");
+
+    // Play, on a deck coasting backwards to a standstill after a backspin.
+    ControlObject::set(scratch2Enable, 1.0);
+    ControlObject::set(scratch2, -2.0);
+    ControlObject::set(play, 1.0);
+    EXPECT_DOUBLE_EQ(0.0, ControlObject::get(scratch2Enable));
+    EXPECT_DOUBLE_EQ(0.0, ControlObject::get(scratch2));
+    EXPECT_DOUBLE_EQ(1.0, ControlObject::get(play));
+
+    // Pause, on a run-out the DJ has decided they have heard enough of.
+    ControlObject::set(scratch2Enable, 1.0);
+    ControlObject::set(scratch2, -2.0);
+    ControlObject::set(play, 0.0);
+    EXPECT_DOUBLE_EQ(0.0, ControlObject::get(scratch2Enable));
+    EXPECT_DOUBLE_EQ(0.0, ControlObject::get(scratch2));
+    EXPECT_DOUBLE_EQ(0.0, ControlObject::get(play));
+
+    // A request that doesn't change the play state cancels too: a controller
+    // with a dedicated play button pressed during an engine.brake() never
+    // stopped playing, so there is no transition to watch for.
+    ControlObject::set(play, 1.0);
+    ControlObject::set(scratch2Enable, 1.0);
+    ControlObject::set(scratch2, 0.4);
+    ControlObject::set(play, 1.0);
+    EXPECT_DOUBLE_EQ(0.0, ControlObject::get(scratch2Enable));
+    EXPECT_DOUBLE_EQ(0.0, ControlObject::get(scratch2));
+    EXPECT_DOUBLE_EQ(1.0, ControlObject::get(play));
+}
+
 TEST_F(EngineBufferE2ETest, SoundTouchCrashTest) {
     // Soundtouch has a bug where a pitch value of zero causes an infinite loop
     // and crash.

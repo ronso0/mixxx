@@ -23,9 +23,15 @@ message Bpm {
 
 message BeatMap {
   repeated Beat beat = 1;
+  // Frame positions of detected drops. Renderer anchors bar counts on the
+  // most-recent anchor <= the visible/play position. Empty = fall back to
+  // the analyzer's natural beat-1 anchor.
+  repeated int32 downbeat_anchor_frame_position = 2;
 }
 
 message BeatGrid {
   optional Bpm bpm = 1;
   optional Beat first_beat = 2;
+  // See BeatMap.downbeat_anchor_frame_position.
+  repeated int32 downbeat_anchor_frame_position = 3;
 }

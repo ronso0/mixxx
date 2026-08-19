@@ -5,12 +5,14 @@
 
 #include "controllers/controller.h"
 #include "controllers/controllerlearningeventfilter.h"
+#include "controllers/softtakeoverindicator.h"
 #include "controllers/controllermappinginfoenumerator.h"
 #include "controllers/defs_controllers.h"
 #include "moc_controllermanager.cpp"
 #include "util/cmdlineargs.h"
 #include "util/compatibility/qmutex.h"
 #include "util/duration.h"
+#include "util/rtscheduling.h"
 #include "util/thread_affinity.h"
 #include "util/time.h"
 
@@ -93,6 +95,10 @@ ControllerManager::ControllerManager(UserSettingsPointer pConfig)
           // ControllerManager because the CM is moved to its own thread and runs
           // its own event loop.
           m_pControllerLearningEventFilter(new ControllerLearningEventFilter()),
+          // Same for the soft-takeover indicator: it must live on the GUI
+          // thread (its QTimer needs an event loop, and ControllerManager
+          // moves to its own thread below).
+          m_pSoftTakeoverIndicator(std::make_unique<SoftTakeoverIndicator>()),
           m_pollTimer(this),
           m_skipPoll(false) {
     qRegisterMetaType<std::shared_ptr<LegacyControllerMapping>>(
@@ -143,6 +149,15 @@ ControllerLearningEventFilter* ControllerManager::getControllerLearningEventFilt
 
 void ControllerManager::slotInitialize() {
     qDebug() << "ControllerManager:slotInitialize";
+
+    // First slot to run on the Controller thread's event loop. The
+    // QThread::HighPriority passed to start() is a no-op under SCHED_OTHER
+    // on Linux, so promote the thread to its slot in the real-time priority
+    // ladder (below the audio engine, above the GUI — see
+    // util/rtscheduling.h): jog/scratch input must not wait behind waveform
+    // rendering for a scheduler timeslice.
+    mixxx::promoteCurrentThreadToRealtime(
+            mixxx::kRtPrioControllerInput, "Controller");
 
     // Initialize mapping info parsers. This object is only for use in the main
     // thread. Do not touch it from within ControllerManager.

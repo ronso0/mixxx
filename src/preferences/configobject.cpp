@@ -6,8 +6,19 @@
 #include <QTextStream>
 #include <QtDebug>
 
+#if defined(Q_OS_WIN)
+#include <io.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <cerrno>
+#include <cstring>
+#endif
+
 #include "util/cmdlineargs.h"
 #include "util/color/rgbcolor.h"
+#include "util/logging.h"
 #include "util/xml.h"
 #include "widget/wwidget.h"
 
@@ -16,6 +27,74 @@ namespace {
 const QString kTempFilenameExtension = QStringLiteral(".tmp");
 const QString kCMakeCacheFile = QStringLiteral("CMakeCache.txt");
 const QLatin1String kSourceDirLine = QLatin1String("mixxx_SOURCE_DIR:STATIC=");
+
+// The fork's own config/control group.
+const QString kBiteDjGroup = QStringLiteral("[BiteDJ]");
+
+// [BiteDJ],usb_drive_path_<N> maps a drive number to the sysfs topology
+// name of a physical USB port ("1-1.5"). It is hardware provisioning, not a
+// user preference: the image build writes it into mixxx.cfg and the MIDI
+// eject daemon's GPIO buttons are keyed to it, so Mixxx only ever *reads* it
+// (see SystemSettings::ejectDrive). Losing an entry silently un-provisions an
+// eject button, and every save() rewrites the whole file from the in-memory
+// map, which means anything not in that map at save time is erased from disk —
+// a key added to the file after we parsed it, or dropped by a partial parse of
+// a file that was being written concurrently, disappears on the next autosave.
+//
+// So these keys are file-authoritative: set()/remove() refuse to touch them,
+// and save() re-reads them off disk first so a rewrite can only ever preserve
+// them. The file wins, always.
+const QLatin1String kUsbPortItemPrefix = QLatin1String("usb_drive_path_");
+
+// [Logging],Path and [Logging],KeepFiles are the same kind of key: read once
+// at startup (before the message handler even exists), hand-edited into
+// mixxx.cfg because there is no UI for them, and never written by Mixxx. An
+// edit made while Mixxx is running would otherwise be erased by the next
+// autosave, so the operator's change would silently not survive the restart
+// that is supposed to apply it.
+bool isLoggingKey(const ConfigKey& key) {
+    return key.group == QLatin1String(mixxx::kLogConfigGroup) &&
+            (key.item == QLatin1String(mixxx::kLogPathConfigItem) ||
+                    key.item == QLatin1String(mixxx::kLogKeepFilesConfigItem));
+}
+
+bool isFileAuthoritativeKey(const ConfigKey& key) {
+    return (key.group == kBiteDjGroup && key.item.startsWith(kUsbPortItemPrefix)) ||
+            isLoggingKey(key);
+}
+
+// Push a file's contents all the way to the storage device. QFile::flush()
+// only moves Qt's own buffers into the kernel, which is not enough here: the
+// rename that publishes the temp file is a journalled *metadata* operation and
+// can therefore commit while the new file's data blocks are still sitting
+// dirty in the page cache. The appliance is routinely switched off at the
+// mains, and after such an unclean power-off that combination leaves a
+// mixxx.cfg that exists but is empty — which parses as "first run", so Mixxx
+// rewrites every key it owns and the only entries gone for good are the ones
+// it never writes: the [BiteDJ],usb_drive_path_<N> provisioning.
+bool fsyncFile(QFile* pFile) {
+#if defined(Q_OS_WIN)
+    return _commit(pFile->handle()) == 0;
+#else
+    return ::fsync(pFile->handle()) == 0;
+#endif
+}
+
+// The rename itself only becomes durable once the *directory* is synced.
+// Best effort: a failure here costs durability, not correctness, and there is
+// nothing useful to do about it at this point in a save.
+void fsyncDirectory(const QString& dirPath) {
+#if !defined(Q_OS_WIN)
+    const int fd = ::open(QFile::encodeName(dirPath).constData(), O_RDONLY);
+    if (fd < 0) {
+        return;
+    }
+    ::fsync(fd);
+    ::close(fd);
+#else
+    Q_UNUSED(dirPath);
+#endif
+}
 
 QString computeResourcePathImpl() {
     // Try to read in the resource directory from the command line
@@ -159,8 +238,25 @@ template <class ValueType> ConfigObject<ValueType>::~ConfigObject() {
 
 template <class ValueType>
 void ConfigObject<ValueType>::set(const ConfigKey& k, const ValueType& v) {
+    if (isFileAuthoritativeKey(k)) {
+        qWarning() << "ConfigObject: refusing to modify read-only key" << k
+                   << "- the config file is the authority for it";
+        return;
+    }
+    setUnchecked(k, v);
+}
+
+template <class ValueType>
+void ConfigObject<ValueType>::setUnchecked(const ConfigKey& k, const ValueType& v) {
     QWriteLocker lock(&m_valuesLock);
+    // Exact (case-sensitive) comparison on purpose: ValueType::operator==
+    // is case-insensitive, which would swallow e.g. path case changes.
+    const auto it = m_values.constFind(k);
+    if (it != m_values.constEnd() && it.value().value == v.value) {
+        return;
+    }
     m_values.insert(k, v);
+    markDirtyLocked();
 }
 
 template <class ValueType>
@@ -177,8 +273,17 @@ bool ConfigObject<ValueType>::exists(const ConfigKey& k) const {
 
 template <class ValueType>
 bool ConfigObject<ValueType>::remove(const ConfigKey& k) {
+    if (isFileAuthoritativeKey(k)) {
+        qWarning() << "ConfigObject: refusing to remove read-only key" << k
+                   << "- the config file is the authority for it";
+        return false;
+    }
     QWriteLocker lock(&m_valuesLock);
-    return m_values.remove(k) > 0;
+    if (m_values.remove(k) > 0) {
+        markDirtyLocked();
+        return true;
+    }
+    return false;
 }
 
 template <class ValueType>
@@ -220,7 +325,9 @@ template <class ValueType> bool ConfigObject<ValueType>::parse() {
                     //qDebug() << "control:" << key << "value:" << val;
                     ConfigKey k(groupStr, key);
                     ValueType m(val);
-                    set(k, m);
+                    // Unchecked: reading the file is exactly how the
+                    // file-authoritative keys are meant to get in.
+                    setUnchecked(k, m);
                 }
             }
         }
@@ -229,10 +336,64 @@ template <class ValueType> bool ConfigObject<ValueType>::parse() {
     return true;
 }
 
+template<class ValueType>
+QMap<ConfigKey, ValueType> ConfigObject<ValueType>::parseFileAuthoritativeKeys() const {
+    QMap<ConfigKey, ValueType> values;
+    if (m_filename.isEmpty()) {
+        return values;
+    }
+    QFile configfile(m_filename);
+    if (!configfile.open(QIODevice::ReadOnly)) {
+        // No file yet (first run) — nothing to preserve.
+        return values;
+    }
+    QTextStream text(&configfile);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    DEBUG_ASSERT(text.encoding() == QStringConverter::Utf8);
+#else
+    text.setCodec("UTF-8");
+#endif
+    QString groupStr;
+    while (!text.atEnd()) {
+        QString line = text.readLine().trimmed();
+        if (line.isEmpty()) {
+            continue;
+        }
+        if (line.startsWith("[") && line.endsWith("]")) {
+            groupStr = line;
+            continue;
+        }
+        if (groupStr.isEmpty()) {
+            continue;
+        }
+        QString key;
+        QTextStream(&line) >> key;
+        const ConfigKey k(groupStr, key);
+        if (!isFileAuthoritativeKey(k)) {
+            continue;
+        }
+        values.insert(k, ValueType(line.right(line.length() - key.length()).trimmed()));
+    }
+    return values;
+}
+
 template <class ValueType> void ConfigObject<ValueType>::reopen(const QString& file) {
     m_filename = file;
     if (!m_filename.isEmpty()) {
         parse();
+    }
+    // Values loaded from the file are in sync with the file.
+    m_dirty.store(false);
+}
+
+template<class ValueType>
+void ConfigObject<ValueType>::setDirtyCallback(std::function<void()> callback) {
+    QWriteLocker lock(&m_valuesLock);
+    m_dirtyCallback = std::move(callback);
+    // Don't lose changes made before the callback was installed (e.g. the
+    // version upgrade rewriting config values).
+    if (m_dirty.load() && m_dirtyCallback) {
+        m_dirtyCallback();
     }
 }
 
@@ -240,7 +401,30 @@ template <class ValueType> void ConfigObject<ValueType>::reopen(const QString& f
 /// Returns true on success
 template<class ValueType>
 bool ConfigObject<ValueType>::save() {
-    QReadLocker lock(&m_valuesLock); // we only read the m_values here.
+    // Snapshot the values instead of holding the lock across the file I/O
+    // below: writers (including the audio and controller threads via
+    // persistent COs) must never block on a disk write. If a change slips
+    // in after the snapshot it re-dirties and the next save picks it up.
+    //
+    // Re-read the file-authoritative keys (see isFileAuthoritativeKey) straight
+    // off disk, outside the lock, and fold them back into the map before the
+    // snapshot. This rewrite then carries whatever the file currently says —
+    // including entries added or edited since we parsed it — so a save can
+    // never drop or stale them. Inserted without markDirty(): the file already
+    // holds these values, and re-dirtying here would loop the autosave timer.
+    const QMap<ConfigKey, ValueType> fileAuthoritativeValues = parseFileAuthoritativeKeys();
+
+    QMap<ConfigKey, ValueType> values;
+    {
+        QWriteLocker lock(&m_valuesLock);
+        for (auto i = fileAuthoritativeValues.constBegin();
+                i != fileAuthoritativeValues.constEnd();
+                ++i) {
+            m_values.insert(i.key(), i.value());
+        }
+        values = m_values;
+        m_dirty.store(false);
+    }
     QFile tmpFile(m_filename + kTempFilenameExtension);
     if (!QDir(QFileInfo(tmpFile).absolutePath()).exists()) {
         QDir().mkpath(QFileInfo(tmpFile).absolutePath());
@@ -263,7 +447,7 @@ bool ConfigObject<ValueType>::save() {
     // the stream.pos alone will yield wrong warnings. We therefore estimate
     // a minimum length as an additional safety check.
     qint64 minLength = 0;
-    for (auto i = m_values.constBegin(); i != m_values.constEnd(); ++i) {
+    for (auto i = values.constBegin(); i != values.constEnd(); ++i) {
         //qDebug() << "group:" << it.key().group << "item" << it.key().item << "val" << it.value()->value;
         if (i.key().group != group) {
             group = i.key().group;
@@ -282,6 +466,14 @@ bool ConfigObject<ValueType>::save() {
         return false;
     }
 
+    // Durability before visibility: the temp file's contents must be on the
+    // device before the rename can publish it. See fsyncFile().
+    if (!fsyncFile(&tmpFile)) {
+        qWarning().nospace() << "Could not flush configuration file to disk: "
+                             << tmpFile.fileName();
+        return false;
+    }
+
     tmpFile.close();
     if (tmpFile.error() !=
             QFile::NoError) { //could be better... should actually say what the error was..
@@ -290,6 +482,24 @@ bool ConfigObject<ValueType>::save() {
         return false;
     }
 
+    // Publish the new config by replacing the old one in a single step.
+    //
+    // This used to unlink m_filename first, because QFile::rename() refuses to
+    // overwrite an existing destination. That was doing real damage on the
+    // appliance: it opens a window in which *no* config file exists at all
+    // (fatal if we are killed there — the shutdown handler SIGKILLs holdouts),
+    // and it also defeats ext4's auto_da_alloc heuristic, which only forces
+    // delayed-allocated data out ahead of a rename when the target already
+    // exists. Either way the file that comes back after a power cut is missing
+    // or empty, and the usb_drive_path_<N> provisioning is the one thing
+    // nothing regenerates.
+    //
+    // rename(2) replaces the destination atomically, so a reader either sees
+    // the whole old file or the whole new one.
+    const QString tmpFileName = tmpFile.fileName();
+#if defined(Q_OS_WIN)
+    // No atomic replacing rename via QFile on Windows; keep the old two-step
+    // dance there. Windows is not a target for the appliance.
     QFile oldConfig(m_filename);
     // Trying to remove a file that does not exist would fail
     if (oldConfig.exists()) {
@@ -301,9 +511,20 @@ bool ConfigObject<ValueType>::save() {
     }
     if (!tmpFile.rename(m_filename)) {
         qWarning().nospace() << "Could not rename tmp file to config file: "
-                             << tmpFile.fileName() << ": " << tmpFile.errorString();
+                             << tmpFileName << ": " << tmpFile.errorString();
         return false;
     }
+#else
+    if (::rename(QFile::encodeName(tmpFileName).constData(),
+                QFile::encodeName(m_filename).constData()) != 0) {
+        qWarning().nospace() << "Could not rename tmp file to config file: "
+                             << tmpFileName << ": " << strerror(errno);
+        return false;
+    }
+#endif
+
+    // ... and make the rename itself survive a power cut.
+    fsyncDirectory(QFileInfo(m_filename).absolutePath());
 
     return true;
 }

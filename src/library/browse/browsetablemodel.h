@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QSet>
 #include <QStandardItemModel>
 
 #include "library/trackmodel.h"
@@ -70,6 +71,11 @@ class BrowseTableModel final : public QStandardItemModel, public virtual TrackMo
 
     QString getTrackLocation(const QModelIndex& index) const override;
     TrackId getTrackId(const QModelIndex& index) const override;
+    QString backingLocation() const override {
+        return m_currentDirectory;
+    }
+    bool verifyTrackFileExists(const QModelIndex& index) override;
+    QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
     QUrl getTrackUrl(const QModelIndex& index) const final;
     CoverInfo getCoverInfo(const QModelIndex& index) const override;
     const QVector<int> getTrackRows(TrackId trackId) const override;
@@ -109,6 +115,11 @@ class BrowseTableModel final : public QStandardItemModel, public virtual TrackMo
   public slots:
     void slotClear(BrowseTableModel*);
     void slotInsert(const QList<QList<QStandardItem*>>&, BrowseTableModel*);
+
+  private slots:
+    /// Repaint the rows after the set of tracks played this session changed
+    /// (a track started playing, or the session was reset).
+    void slotPlayedTracksChanged();
     void trackChanged(const QString& group, TrackPointer pNewTrack, TrackPointer pOldTrack);
 
   private:
@@ -119,6 +130,10 @@ class BrowseTableModel final : public QStandardItemModel, public virtual TrackMo
     BrowseThreadPointer m_pBrowseThread;
     QString m_currentDirectory;
     QString m_previewDeckGroup;
+    // Locations whose file was found to be missing when the DJ tried to load
+    // them. Drives the red row colour (see data()) and blocks re-loading.
+    // Cleared whenever the directory listing is rebuilt (slotClear).
+    QSet<QString> m_missingLocations;
     int m_columnIndexBySortColumnId[static_cast<int>(TrackModel::SortColumnId::IdMax)];
     QMap<int, TrackModel::SortColumnId> m_sortColumnIdByColumnIndex;
 

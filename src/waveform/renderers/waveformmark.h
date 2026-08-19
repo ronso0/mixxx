@@ -152,8 +152,18 @@ class WaveformMark {
 
     QImage generateImage(float devicePixelRatio);
 
+    /// The name a hotcue mark is labelled with, ahead of the cue's own label.
+    /// Skins set it via <Text> on a mark that declares a <Hotcue> index; when
+    /// left empty the hotcue number is used, as in stock Mixxx.
+    QString hotcueLabelPrefix() const {
+        return m_hotcuePrefix.isEmpty()
+                ? QString::number(getHotCue() + 1)
+                : m_hotcuePrefix;
+    }
+
     QColor m_textColor;
     QString m_text;
+    QString m_hotcuePrefix;
     Qt::Alignment m_align;
     QString m_pixmapPath;
     QString m_iconPath;

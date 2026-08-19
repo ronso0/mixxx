@@ -57,6 +57,9 @@ class LibraryControl : public QObject {
     void slotLoadSelectedTrackToGroup(const QString& group, bool play);
     void slotUpdateTrackMenuControl(bool visible);
 
+  protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
   private slots:
     void libraryWidgetDeleted();
     void sidebarWidgetDeleted();

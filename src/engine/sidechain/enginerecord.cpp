@@ -1,5 +1,7 @@
 #include "engine/sidechain/enginerecord.h"
 
+#include <QStorageInfo>
+
 #include "control/controlproxy.h"
 #include "encoder/encoder.h"
 #include "mixer/playerinfo.h"
@@ -11,8 +13,17 @@
 
 constexpr int kMetaDataLifeTimeout = 16;
 
+namespace {
+// How much is written between two free-space probes. Each one is a blocking
+// stat of the recording volume, so it is kept well clear of the write path's
+// own cadence; at 1 MiB it is a handful of probes an hour for a compressed
+// recording and one every few seconds for an uncompressed one.
+constexpr qint64 kFreeSpaceProbeIntervalBytes = 1024 * 1024;
+} // namespace
+
 EngineRecord::EngineRecord(UserSettingsPointer pConfig)
         : m_pConfig(pConfig),
+          m_freeSpaceProbeCountdown(kFreeSpaceProbeIntervalBytes),
           m_sampleRateControl(QStringLiteral("[App]"), QStringLiteral("samplerate")),
           m_frames(0),
           m_recordedDuration(0),
@@ -273,6 +284,25 @@ void EngineRecord::write(const unsigned char *header, const unsigned char *body,
     m_dataStream.writeRawData((const char*) body, bodyLen);
     emit bytesRecorded((headerLen+bodyLen));
 
+    // Push what has accumulated towards the device and let go of what is
+    // already there, so the file's footprint in the page cache stays flat
+    // however long the recording runs.
+    m_pageCache.onWritten(m_file.handle(), m_dataStream.device()->pos());
+    probeFreeSpace(headerLen + bodyLen);
+}
+
+void EngineRecord::probeFreeSpace(int bytesWritten) {
+    m_freeSpaceProbeCountdown -= bytesWritten;
+    if (m_freeSpaceProbeCountdown > 0) {
+        return;
+    }
+    m_freeSpaceProbeCountdown = kFreeSpaceProbeIntervalBytes;
+
+    const QStorageInfo storage(m_fileName);
+    if (!storage.isValid()) {
+        return;
+    }
+    emit freeSpaceAvailable(storage.bytesAvailable());
 }
 // Encoder calls this method to write compressed audio
 int EngineRecord::tell() {
@@ -313,6 +343,10 @@ bool EngineRecord::openFile() {
         if (m_file.handle() != -1) {
             m_dataStream.setDevice(&m_file);
         }
+        // A recording that splits opens one file per part; each starts with an
+        // empty cache of its own.
+        m_pageCache.reset();
+        m_freeSpaceProbeCountdown = kFreeSpaceProbeIntervalBytes;
     } else {
         return false;
     }
@@ -372,6 +406,9 @@ void EngineRecord::closeFile() {
             m_pEncoder->flush();
             m_pEncoder.reset();
         }
+        // Nothing is going to be written behind the tail of this file, so the
+        // limiter's rolling window would leave it cached for good.
+        mixxx::PageCacheLimiter::dropAll(m_file.handle());
         m_file.close();
     }
 }

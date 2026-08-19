@@ -893,8 +893,13 @@ void EngineMixer::addChannel(EngineChannel* pChannel) {
     pChannelInfo->m_handle = m_pChannelHandleFactory->getOrCreateHandle(group);
     pChannelInfo->m_pVolumeControl = new ControlAudioTaperPot(
             ConfigKey(group, "volume"), -20, 0, 1);
-    pChannelInfo->m_pVolumeControl->setDefaultValue(1.0);
-    pChannelInfo->m_pVolumeControl->set(1.0);
+    // Decks start with their level fader fully down so nothing plays out of the
+    // main mix until the DJ has beatmatched the track and deliberately brings
+    // the fader up. Samplers, preview decks, microphones and aux inputs keep
+    // their conventional full-volume default.
+    const double defaultVolume = PlayerManager::isDeckGroup(group) ? 0.0 : 1.0;
+    pChannelInfo->m_pVolumeControl->setDefaultValue(defaultVolume);
+    pChannelInfo->m_pVolumeControl->set(defaultVolume);
     pChannelInfo->m_pMuteControl = new ControlPushButton(
             ConfigKey(group, "mute"));
     pChannelInfo->m_pMuteControl->setButtonMode(ControlPushButton::POWERWINDOW);

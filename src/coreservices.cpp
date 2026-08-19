@@ -1,10 +1,8 @@
 #include "coreservices.h"
 
 #include <QApplication>
-#include <QFileDialog>
 #include <QProcess>
 #include <QProcessEnvironment>
-#include <QStandardPaths>
 #include <QtGlobal>
 
 #ifdef __BROADCAST__
@@ -15,20 +13,28 @@
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "database/mixxxdb.h"
 #include "effects/effectsmanager.h"
+#include "engine/controls/raterangecontrol.h"
 #include "engine/enginemixer.h"
 #include "library/coverartcache.h"
 #include "library/library.h"
 #include "library/library_prefs.h"
+#include "library/playedtracks.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
+#include "mixer/samplerdrive.h"
 #include "moc_coreservices.cpp"
+#include "notifications/notifications.h"
+#include "preferences/audiodevicesettings.h"
+#include "preferences/controllersettings.h"
+#include "preferences/systemsettings.h"
 #include "preferences/dialog/dlgpreferences.h"
 #include "preferences/settingsmanager.h"
 #ifdef __MODPLUG__
 #include "preferences/dialog/dlgprefmodplug.h"
 #endif
+#include "skin/highcontrast.h"
 #include "skin/skincontrols.h"
 #include "soundio/soundmanager.h"
 #include "sources/soundsourceproxy.h"
@@ -45,21 +51,6 @@
 
 #ifdef __APPLE__
 #include "util/sandbox.h"
-#endif
-
-#ifdef Q_OS_LINUX
-#include <X11/XKBlib.h>
-#endif
-
-#if defined(Q_OS_LINUX) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <X11/Xlibint.h>
-#include <QtX11Extras/QX11Info>
-
-#include "engine/channelhandle.h"
-// Xlibint.h predates C++ and defines macros which conflict
-// with references to std::max and std::min
-#undef max
-#undef min
 #endif
 
 namespace {
@@ -80,27 +71,6 @@ void clearHelper(std::shared_ptr<T>& ref_ptr, const char* name) {
     }
 }
 
-// hack around https://gitlab.freedesktop.org/xorg/lib/libx11/issues/25
-// https://github.com/mixxxdj/mixxx/issues/9533
-#if defined(Q_OS_LINUX) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-typedef Bool (*WireToErrorType)(Display*, XErrorEvent*, xError*);
-
-constexpr int NUM_HANDLERS = 256;
-WireToErrorType __oldHandlers[NUM_HANDLERS] = {nullptr};
-
-Bool __xErrorHandler(Display* display, XErrorEvent* event, xError* error) {
-    // Call any previous handler first in case it needs to do real work.
-    auto code = static_cast<int>(event->error_code);
-    if (__oldHandlers[code] != nullptr) {
-        __oldHandlers[code](display, event, error);
-    }
-
-    // Always return false so the error does not get passed to the normal
-    // application defined handler.
-    return False;
-}
-
-#endif
 
 #if defined(Q_OS_LINUX)
 QLocale localeFromXkbSymbol(const QString& xkbLayout) {
@@ -130,65 +100,6 @@ QLocale localeFromXkbSymbol(const QString& xkbLayout) {
     return xkbToLocaleMap.value(xkbLayout, QLocale(QLocale::English, QLocale::UnitedStates));
 }
 
-QLocale localeFromXkbName(const QString& xkbLayout) {
-    // This maps XKB layouts to locales of keyboard mappings that are shipped with Mixxx
-    static const QMap<QString, QLocale> xkbToLocaleMap = {
-            {"Czech",
-                    QLocale(QLocale::Czech,
-                            QLocale::CzechRepublic)}, // cs_CZ.kbd.cfg
-            {"German",
-                    QLocale(QLocale::German,
-                            QLocale::Germany)}, // de_DE.kbd.cfg
-            {"German (no dead keys)",
-                    QLocale(QLocale::German,
-                            QLocale::Germany)}, // de_DE.kbd.cfg
-            {"Spanish",
-                    QLocale(QLocale::Spanish, QLocale::Spain)}, // es_ES.kbd.cfg
-            {"Spanish (no dead keys)",
-                    QLocale(QLocale::Spanish, QLocale::Spain)}, // es_ES.kbd.cfg
-            {"French",
-                    QLocale(QLocale::French, QLocale::France)}, // fr_FR.kbd.cfg
-            {"French (no dead keys)",
-                    QLocale(QLocale::French, QLocale::France)}, // fr_FR.kbd.cfg
-            {"Danish",
-                    QLocale(QLocale::Danish,
-                            QLocale::Denmark)}, // da_DK.kbd.cfg
-            {"Danish (no dead keys)",
-                    QLocale(QLocale::Danish,
-                            QLocale::Denmark)}, // da_DK.kbd.cfg
-            {"Greek",
-                    QLocale(QLocale::Greek, QLocale::Greece)}, // el_GR.kbd.cfg
-            {"Greek (no dead keys)",
-                    QLocale(QLocale::Greek, QLocale::Greece)}, // el_GR.kbd.cfg
-            {"Finnish",
-                    QLocale(QLocale::Finnish,
-                            QLocale::Finland)}, // fi_FI.kbd.cfg
-            {"Italian",
-                    QLocale(QLocale::Italian, QLocale::Italy)}, // it_IT.kbd.cfg
-            {"Italian (no dead keys)",
-                    QLocale(QLocale::Italian, QLocale::Italy)}, // it_IT.kbd.cfg
-            {"English (US)",
-                    QLocale(QLocale::English,
-                            QLocale::UnitedStates)}, // en_US.kbd.cfg
-            {"Russian",
-                    QLocale(QLocale::Russian,
-                            QLocale::Russia)}, // ru_RU.kbd.cfg
-            {"German (Switzerland)",
-                    QLocale(QLocale::German,
-                            QLocale::Switzerland)}, // de_CH.kbd.cfg
-            {"German (Switzerland, no dead keys)",
-                    QLocale(QLocale::German,
-                            QLocale::Switzerland)}, // de_CH.kbd.cfg
-            {"French (Switzerland)",
-                    QLocale(QLocale::French,
-                            QLocale::Switzerland)}, // fr_CH.kbd.cfg
-            {"French (Switzerland, no dead keys)",
-                    QLocale(QLocale::French,
-                            QLocale::Switzerland)} // fr_CH.kbd.cfg
-    };
-    return xkbToLocaleMap.value(xkbLayout, QLocale(QLocale::English, QLocale::UnitedStates));
-}
-
 inline bool isGnomeSession() {
     const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     QString desktop = env.value("XDG_CURRENT_DESKTOP").toLower();
@@ -201,63 +112,16 @@ inline bool isXfceSession() {
     return desktop.contains("xfce");
 }
 
-QString getCurrentXkbLayoutName() {
-    XkbIgnoreExtension(False);
-    Display* pDisplay = XkbOpenDisplay(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
-    if (!pDisplay) {
-        // No X11 / XWayland running or no Xkb in use
-        return {};
-    }
-
-    XkbStateRec state;
-    if (XkbGetState(pDisplay, XkbUseCoreKbd, &state) != Success) {
-        qWarning() << "XkbGetState failed";
-        XCloseDisplay(pDisplay);
-        return {};
-    }
-
-    XkbDescPtr pDesc = XkbGetMap(pDisplay, 0, XkbUseCoreKbd);
-    if (!pDesc) {
-        qWarning() << "XkbGetMap failed";
-        XCloseDisplay(pDisplay);
-        return {};
-    }
-
-    XkbGetNames(pDisplay, XkbGroupNamesMask, pDesc);
-    if (!pDesc->names) {
-        qWarning() << "XkbGetNames failed";
-        XCloseDisplay(pDisplay);
-        return {};
-    }
-    char* pGroupName = XGetAtomName(pDisplay, pDesc->names->groups[state.group]);
-    if (!pGroupName) {
-        qWarning() << "XGetAtomName failed";
-        XkbFreeNames(pDesc, XkbGroupNamesMask, True);
-        XCloseDisplay(pDisplay);
-        return {};
-    }
-    QString layoutName = QString(pGroupName);
-    XFree(pGroupName);
-    XkbFreeNames(pDesc, XkbKeyNamesMask, True);
-    XCloseDisplay(pDisplay);
-    return layoutName;
-}
 #endif
 
 // Returns the locale of the current keyboard layout
 // On macOS and Windows QGuiApplication::inputMethod() is used straight away.
-// On Linux it first tries to via X11/XWayland. That works even if Mixxx itself
-// is running with Wayland. If XWayland is not installed it falls back to
-// dconf/xfconf-query and than QGuiApplication::inputMethod() which is equivalent
-// to "ibus engine". QGuiApplication::inputMethod() does not work with GNOME and XFCE
+// On Linux it tries dconf/xfconf-query first, then falls back to
+// QGuiApplication::inputMethod() which is equivalent to "ibus engine".
+// QGuiApplication::inputMethod() does not work with GNOME and XFCE
 // https://bugreports.qt.io/browse/QTBUG-137302
 inline QLocale inputLocale() {
 #if defined(Q_OS_LINUX)
-    QString layoutName = getCurrentXkbLayoutName();
-    if (!layoutName.isEmpty()) {
-        qDebug() << "Keyboard Layout from XKB:" << layoutName;
-        return localeFromXkbName(layoutName);
-    }
     if (isGnomeSession()) {
         // In a Gnome session QGuiApplication::inputMethod() is not necessarily correct
         // https://github.com/mixxxdj/mixxx/issues/14838
@@ -428,8 +292,39 @@ void CoreServices::initializeLogging() {
     if (m_cmdlineArgs.getDebugAssertBreak()) {
         logFlags.setFlag(mixxx::LogFlag::DebugAssertBreak);
     }
+
+    // Both knobs come from mixxx.cfg, which initializeSettings() has already
+    // parsed by the time we get here. The settings directory is the fallback
+    // for a log path that cannot be written, since that is where the log
+    // always used to go and it is writable by definition.
+    UserSettingsPointer pConfig = m_pSettingsManager->settings();
+    const QString settingsPath = pConfig->getSettingsPath();
+
+    QString logDirPath = pConfig->getValue(
+            ConfigKey(QString::fromLatin1(mixxx::kLogConfigGroup),
+                    QString::fromLatin1(mixxx::kLogPathConfigItem)),
+            QString::fromLatin1(mixxx::kLogDirPathDefault));
+    if (logDirPath.isEmpty()) {
+        logDirPath = settingsPath;
+    }
+
+    int logFileKeepCount = pConfig->getValue(
+            ConfigKey(QString::fromLatin1(mixxx::kLogConfigGroup),
+                    QString::fromLatin1(mixxx::kLogKeepFilesConfigItem)),
+            mixxx::kLogFileKeepCountDefault);
+    if (logFileKeepCount < 1) {
+        // Cannot use qWarning() yet, the message handler is not installed.
+        fprintf(stderr,
+                "Invalid log file keep count %d, using %d\n",
+                logFileKeepCount,
+                mixxx::kLogFileKeepCountDefault);
+        logFileKeepCount = mixxx::kLogFileKeepCountDefault;
+    }
+
     mixxx::Logging::initialize(
-            m_pSettingsManager->settings()->getSettingsPath(),
+            logDirPath,
+            settingsPath,
+            logFileKeepCount,
             m_cmdlineArgs.getLogLevel(),
             m_cmdlineArgs.getLogFlushLevel(),
             logFlags);
@@ -449,16 +344,7 @@ void CoreServices::initialize(QApplication* pApp) {
 
     VersionStore::logBuildDetails();
 
-#if defined(Q_OS_LINUX) && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // XESetWireToError will segfault if running as a Wayland client
-    if (pApp->platformName() == QLatin1String("xcb")) {
-        for (auto i = 0; i < NUM_HANDLERS; ++i) {
-            XESetWireToError(QX11Info::display(), i, &__xErrorHandler);
-        }
-    }
-#else
     Q_UNUSED(pApp);
-#endif
 
     UserSettingsPointer pConfig = m_pSettingsManager->settings();
 
@@ -524,6 +410,10 @@ void CoreServices::initialize(QApplication* pApp) {
             m_pEngine.get());
     // TODO: connect input not configured error dialog slots
     PlayerInfo::create();
+    // Bite DJ: start recording which tracks get played this session (tints
+    // their library rows). Touched here so it is constructed on the GUI thread,
+    // listening to PlayerInfo, before any deck can start.
+    PlayedTracks::instance();
 
     for (int i = 0; i < kMicrophoneCount; ++i) {
         m_pPlayerManager->addMicrophone();
@@ -584,25 +474,12 @@ void CoreServices::initialize(QApplication* pApp) {
     // the uninitialized singleton instance!
     m_pPlayerManager->bindToLibrary(m_pLibrary.get());
 
-    bool musicDirAdded = false;
-
-    if (m_pTrackCollectionManager->internalCollection()->loadRootDirs().isEmpty()) {
-        // TODO(XXX) this needs to be smarter, we can't distinguish between an empty
-        // path return value (not sure if this is normally possible, but it is
-        // possible with the Windows 7 "Music" library, which is what
-        // QStandardPaths::writableLocation(QStandardPaths::MusicLocation)
-        // resolves to) and a user hitting 'cancel'. If we get a blank return
-        // but the user didn't hit cancel, we need to know this and let the
-        // user take some course of action -- bkgood
-        QString fd = QFileDialog::getExistingDirectory(nullptr,
-                tr("Choose music library directory"),
-                QStandardPaths::writableLocation(
-                        QStandardPaths::MusicLocation));
-        // request to add directory to database.
-        if (!fd.isEmpty() && m_pLibrary->requestAddDir(fd)) {
-            musicDirAdded = true;
-        }
-    }
+    // Bite DJ: never pop the native "Choose music library directory" dialog
+    // on first launch. The unit is touch-only with no keyboard, and the
+    // intended workflow is plugging in USB drives (Rekordbox / browse), not
+    // managing a local library. If a future in-skin settings page wants to
+    // expose root-dir picking, it can call Library::requestAddDir directly.
+    const bool musicDirAdded = false;
 
     emit initializationProgressUpdate(60, tr("controllers"));
     // Initialize controller sub-system,
@@ -618,32 +495,12 @@ void CoreServices::initialize(QApplication* pApp) {
     QList<QString> prev_plugins_list =
             pConfig->getValueString(
                            ConfigKey("[Library]", "SupportedFileExtensions"))
-                    .split(',',
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-                            Qt::SkipEmptyParts);
-#else
-                            QString::SkipEmptyParts);
-#endif
+                    .split(',', Qt::SkipEmptyParts);
 
-    // TODO: QSet<T>::fromList(const QList<T>&) is deprecated and should be
-    // replaced with QSet<T>(list.begin(), list.end()).
-    // However, the proposed alternative has just been introduced in Qt
-    // 5.14. Until the minimum required Qt version of Mixxx is increased,
-    // we need a version check here
-    QSet<QString> prev_plugins =
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-            QSet<QString>(prev_plugins_list.begin(), prev_plugins_list.end());
-#else
-            QSet<QString>::fromList(prev_plugins_list);
-#endif
+    QSet<QString> prev_plugins(prev_plugins_list.begin(), prev_plugins_list.end());
 
     const QList<QString> supportedFileSuffixes = SoundSourceProxy::getSupportedFileSuffixes();
-    auto curr_plugins =
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
-            QSet<QString>(supportedFileSuffixes.begin(), supportedFileSuffixes.end());
-#else
-            QSet<QString>::fromList(supportedFileSuffixes);
-#endif
+    auto curr_plugins = QSet<QString>(supportedFileSuffixes.begin(), supportedFileSuffixes.end());
 
     rescan = rescan || (prev_plugins != curr_plugins);
     pConfig->set(ConfigKey("[Library]", "SupportedFileExtensions"),
@@ -655,11 +512,64 @@ void CoreServices::initialize(QApplication* pApp) {
         m_pTrackCollectionManager->startLibraryScan();
     }
 
-    // This has to be done before m_pSoundManager->setupDevices()
-    // https://github.com/mixxxdj/mixxx/issues/9188
-    m_pPlayerManager->loadSamplers();
+    // Bite DJ: stock Mixxx restores the sampler grid here from the samplers.xml
+    // it wrote at exit (m_pPlayerManager->loadSamplers()). Deliberately not
+    // called: the samplers are filled from the USB drive the DJ picked on the
+    // Samplers tab and from nowhere else, so a second, invisible source of
+    // slots on the boot volume is exactly the ambiguity SamplerDrive exists to
+    // remove. The grid is restored below instead, once that drive is resolved.
 
     m_pTouchShift = std::make_unique<ControlPushButton>(ConfigKey("[Controls]", "touch_shift"));
+
+    m_pRateRangeControl = std::make_unique<RateRangeControl>(pConfig);
+
+    // Singleton inline-notification publisher. Must exist before the skin
+    // parses so WNotificationStrip can subscribe at construction time.
+    m_pNotifications = std::make_unique<Notifications>();
+
+    // Bite DJ: daylight (high-contrast) mode. Must exist before the skin
+    // parses — LegacySkinParser routes every stylesheet it applies through
+    // HighContrast::styleSheetFor(), which both inverts the sheet when the
+    // mode is already on and records the widget so a later toggle can
+    // re-apply without rebooting the skin view.
+    m_pHighContrast = std::make_unique<HighContrast>(pConfig);
+
+    // Bite DJ: in-skin audio device picker singleton. Constructed after
+    // Notifications (it publishes status via Notifications::publish) and
+    // before the skin parses (WAudioDeviceList subscribes at construction).
+    m_pAudioDeviceSettings = std::make_unique<AudioDeviceSettings>(
+            pConfig, m_pSoundManager);
+
+    // Bite DJ: in-skin MIDI controller picker singleton. Subscribes to
+    // ControllerManager::devicesChanged for hot-plug updates and routes
+    // mapping applies back through slotApplyMapping with a blocking-queued
+    // connection (controller mutation must run on the controller thread).
+    m_pControllerSettings = std::make_unique<ControllerSettings>(
+            pConfig, m_pControllerManager);
+
+    // Bite DJ: backs the in-skin Settings -> System sub-page (USB eject,
+    // per-drive recording + safe shutdown). Holds a shared_ptr to PlayerManager
+    // so it can unload tracks loaded from a drive before unmounting it, and one
+    // to RecordingManager so a USB row can record the main output onto its
+    // drive; both dropped in finalize() before those two are destroyed.
+    m_pSystemSettings = std::make_unique<SystemSettings>(
+            pConfig, m_pPlayerManager, m_pRecordingManager);
+
+    // Bite DJ: the samplers are filled from one USB drive the DJ picks on the
+    // Samplers tab. Constructed after SystemSettings (which enumerates the
+    // drives and reports every plug and unplug) and before the skin parses, so
+    // that the [Samplers] controls the grid binds to already exist and
+    // WSamplerDrive can subscribe at construction. Resolving the stored
+    // selection here is also what restores the grid at startup.
+    m_pSamplerDrive = std::make_unique<SamplerDrive>(pConfig, m_pPlayerManager.get());
+
+    // Bite DJ: forward drive-removal events into the library so removable-media
+    // features (Rekordbox) can drop an unmounted device from the browser sidebar
+    // immediately, instead of waiting on their own slow background poll.
+    connect(m_pSystemSettings.get(),
+            &SystemSettings::mountEjected,
+            m_pLibrary.get(),
+            &Library::mountEjected);
 
     // The UI controls must be created here so that controllers can bind to
     // them on startup.
@@ -792,6 +702,20 @@ void CoreServices::finalize() {
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "saving configuration";
     m_pSettingsManager->save();
 
+    // Bite DJ fork: AudioDeviceSettings / ControllerSettings each hold a
+    // shared_ptr to their manager and would otherwise keep it alive past the
+    // CLEAR_AND_CHECK_DELETED below, leaving the SoundDeviceNetwork audio
+    // thread running while EngineMixer/EngineSync is torn down (crash) and
+    // preventing EffectsManager::~EffectsManager() from running
+    // saveEffectsXml(). Drop our refs first so the manager destructors
+    // actually run here.
+    m_pAudioDeviceSettings.reset();
+    m_pControllerSettings.reset();
+    // Holds shared_ptrs to PlayerManager and RecordingManager (both deleted
+    // further below); drop it here. Its destructor also stops a per-drive
+    // recording, which needs both of them alive.
+    m_pSystemSettings.reset();
+
     // SoundManager depend on Engine and Config
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting SoundManager";
     CLEAR_AND_CHECK_DELETED(m_pSoundManager);
@@ -811,6 +735,9 @@ void CoreServices::finalize() {
     CoverArtCache::destroy();
 
     Clipboard::destroy();
+
+    // Watches the decks and samplers it is about to outlive, so it goes first.
+    m_pSamplerDrive.reset();
 
     // PlayerManager depends on Engine, SoundManager, VinylControlManager, and Config
     // The player manager has to be deleted before the library to ensure
@@ -844,6 +771,7 @@ void CoreServices::finalize() {
     // Do this after deleting EngineMixer which makes use of
     // PlayerInfo in EngineRecord.
     PlayerInfo::destroy();
+    PlayedTracks::destroy();
 
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting EffectsManager";
     CLEAR_AND_CHECK_DELETED(m_pEffectsManager);
@@ -859,6 +787,10 @@ void CoreServices::finalize() {
     m_pDbConnectionPool.reset(); // should drop the last reference
 
     m_pTouchShift.reset();
+
+    m_pRateRangeControl.reset();
+
+    m_pNotifications.reset();
 
     m_pSkinControls.reset();
 
