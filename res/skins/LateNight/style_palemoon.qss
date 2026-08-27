@@ -295,15 +295,21 @@ WSearchLineEdit {
 }
 
 #SearchLineBox {
+  margin-top: 1px;
   padding-right: 2px;
+  border-left: 0px;
+  border-top-left-radius: 0px;
 }
 
 #LibExpandBox {
   border-right: 0px;
+  border-left: 0px;
+  border-radius: 0px;
   border-top-right-radius: 0px;
   border-bottom-right-radius: 0px;
   padding: 0px 2px 2px 0px;
-  margin-left: 4px;
+  margin-top: 1px;
+  /*margin-left: 4px;*/
 }
 
 #SidebarBox {

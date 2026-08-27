@@ -34,41 +34,6 @@
 
                   <Template src="skins:LateNight/decks/preview_deck.xml"/>
 
-                  <WidgetGroup><!--SearchBox + Library expand toggle -->
-                    <Layout>horizontal</Layout>
-                    <SizePolicy>min,max</SizePolicy>
-                    <Children>
-
-                      <WidgetGroup>
-                        <ObjectName>SearchLineBox</ObjectName>
-                        <Layout>horizontal</Layout>
-                        <SizePolicy>min,max</SizePolicy>
-                        <Children>
-                          <SearchBox></SearchBox>
-                        </Children>
-                      </WidgetGroup>
-
-                      <WidgetGroup>
-                        <ObjectName>LibExpandBox</ObjectName>
-                        <Layout>vertical</Layout>
-                        <Children>
-                          <Template src="skins:LateNight/controls/button_2state.xml">
-                            <SetVariable name="TooltipId">maximize_library</SetVariable>
-                            <SetVariable name="ObjectName">LibExpand</SetVariable>
-                            <SetVariable name="Size">18f,18me</SetVariable>
-                            <SetVariable name="ConfigKey">[Skin],show_maximized_library</SetVariable>
-                          </Template>
-                        </Children>
-                      </WidgetGroup><!-- LibExpandBox -->
-                    </Children>
-                  </WidgetGroup><!--SearchBox + Library expand toggle -->
-
-                  <WidgetGroup>
-                    <ObjectName>SearchTreeSpacer</ObjectName>
-                    <Layout>horizontal</Layout>
-                    <Children/>
-                  </WidgetGroup>
-
                   <Splitter>
                     <ObjectName>SidebarCoverSplitter</ObjectName>
                     <Size>me,me</Size>
@@ -110,6 +75,36 @@
               <WidgetGroup>
                 <Layout>vertical</Layout>
                 <Children>
+
+                  <WidgetGroup><!--SearchBox + Library expand toggle -->
+                    <Layout>horizontal</Layout>
+                    <SizePolicy>min,max</SizePolicy>
+                    <Children>
+
+                      <WidgetGroup>
+                        <ObjectName>LibExpandBox</ObjectName>
+                        <Layout>vertical</Layout>
+                        <Children>
+                          <Template src="skins:LateNight/controls/button_2state.xml">
+                            <SetVariable name="TooltipId">maximize_library</SetVariable>
+                            <SetVariable name="ObjectName">LibExpand</SetVariable>
+                            <SetVariable name="Size">18f,18me</SetVariable>
+                            <SetVariable name="ConfigKey">[Skin],show_maximized_library</SetVariable>
+                          </Template>
+                        </Children>
+                      </WidgetGroup><!-- LibExpandBox -->
+
+                      <WidgetGroup>
+                        <ObjectName>SearchLineBox</ObjectName>
+                        <Layout>horizontal</Layout>
+                        <SizePolicy>min,max</SizePolicy>
+                        <Children>
+                          <SearchBox></SearchBox>
+                        </Children>
+                      </WidgetGroup>
+                    </Children>
+                  </WidgetGroup><!--SearchBox + Library expand toggle -->
+
                   <!-- 'Pinned Track' controls -->
                   <WidgetGroup>
                     <ObjectName>PinnedTrackControls</ObjectName>
