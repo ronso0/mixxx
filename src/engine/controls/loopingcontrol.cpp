@@ -841,7 +841,13 @@ void LoopingControl::setLoopInToCurrentPosition() {
 
     // start looping
     if (loopInfo.startPosition.isValid() && loopInfo.endPosition.isValid()) {
-        setLoopingEnabled(true);
+        // ronso0: fixing https://github.com/mixxxdj/mixxx/issues/9501
+        // Don't start looping right away. This would reuse the existing loop_out
+        // which may be entirely unrelated and looping may not be desired until
+        // loop_out is set.
+        // Though if this is indeed for adjusting an existing but inactive loop
+        // it can be reactivated with `reloop_toggle`
+        // setLoopingEnabled(true);
         loopInfo.seekMode = LoopSeekMode::Changed;
     } else {
         loopInfo.seekMode = LoopSeekMode::MovedOut;
