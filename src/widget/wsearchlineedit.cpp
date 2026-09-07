@@ -11,6 +11,7 @@
 #include <QStringLiteral>
 #include <QToolButton>
 
+#include "controllers/keyboard/keyboardeventfilter.h"
 #include "moc_wsearchlineedit.cpp"
 #include "preferences/configobject.h"
 #include "skin/legacy/skincontext.h"
@@ -97,6 +98,7 @@ WSearchLineEdit::WSearchLineEdit(QWidget* pParent, UserSettingsPointer pConfig)
     setInsertPolicy(QComboBox::InsertAtTop);
     setMinimumSize(0, 0);
     setSizeAdjustPolicy(QComboBox::SizeAdjustPolicy::AdjustToMinimumContentsLengthWithIcon);
+    setMaxVisibleItems(50);
 
     //: Shown in the library search bar when it is empty.
     lineEdit()->setPlaceholderText(tr("Search..."));
@@ -117,6 +119,7 @@ WSearchLineEdit::WSearchLineEdit(QWidget* pParent, UserSettingsPointer pConfig)
     m_clearButton->setObjectName(QStringLiteral("SearchClearButton"));
 
     m_clearButton->hide();
+    m_clearButton->setFocusPolicy(Qt::NoFocus);
     connect(m_clearButton,
             &QAbstractButton::clicked,
             this,
@@ -330,13 +333,21 @@ QString WSearchLineEdit::getSearchText() const {
 bool WSearchLineEdit::eventFilter(QObject* obj, QEvent* event) {
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+        // KeyboardEventFilter::getKeySeq(keyEvent); // logs keypress
         const int key = keyEvent->key();
         // Esc has already closed the popup by now and we don't want to process it.
-        // We don't need to handle Up/Down in the popup either.
+        // We don't need to handle nav keys Up/Down/PageUp/PageDown/End/Home
+        // in the popup either.
         // Any other keypress is forwarded.
         if (key != Qt::Key_Escape &&
                 key != Qt::Key_Down &&
-                key != Qt::Key_Up) {
+                key != Qt::Key_Up &&
+                key != Qt::Key_Return &&
+                key != Qt::Key_Enter &&
+                key != Qt::Key_PageUp &&
+                key != Qt::Key_PageDown &&
+                key != Qt::Key_Home &&
+                key == Qt::Key_End) {
             keyPressEvent(keyEvent);
             return true;
         }
@@ -346,6 +357,16 @@ bool WSearchLineEdit::eventFilter(QObject* obj, QEvent* event) {
 
 void WSearchLineEdit::keyPressEvent(QKeyEvent* keyEvent) {
     int currentTextIndex = 0;
+    // Alt combos that are not global combos (eg. Alt+Tab) don't have any effect
+    // here, so we can safely ignore and forward to the parent so it gets pickd
+    // up by KeyboardEventFilter.
+    // Specific purpose: make Alt+1/2 work while searchbar is focused
+    if (keyEvent->modifiers().testFlag(Qt::AltModifier)) {
+        if (parent()) {
+            parent()->event(keyEvent);
+            return;
+        }
+    }
     switch (keyEvent->key()) {
     // Ctrl + F is handled in slotSetShortcutFocus()
     case Qt::Key_Backspace:
@@ -384,6 +405,12 @@ void WSearchLineEdit::keyPressEvent(QKeyEvent* keyEvent) {
         // then selects the previous query
         if (findCurrentTextIndex() == -1) {
             slotSaveSearch();
+        }
+        // Immediately show the popup to see all saved queries.
+        // For quick apply, we need to catch Enter and trigger the search.
+        if (!view()->isVisible()) {
+            showPopup();
+            return;
         }
         break;
     case Qt::Key_Left:

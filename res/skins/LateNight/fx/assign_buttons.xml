@@ -14,6 +14,7 @@ Variables:
 -->
 <Template>
   <SetVariable name="BtnType"></SetVariable>
+  <SetVariable name="Height">20</SetVariable>
 
   <WidgetGroup>
     <ObjectName>AlignLeft</ObjectName>
@@ -27,12 +28,12 @@ Variables:
         <Children>
           <Template src="skins:LateNight/fx/assign_button.xml">
             <SetVariable name="FxUnit">1</SetVariable>
-            <SetVariable name="Width">26</SetVariable>
+            <SetVariable name="Width">26f</SetVariable>
             <SetVariable name="Text">&#8202;FX</SetVariable>
           </Template>
           <Template src="skins:LateNight/fx/assign_button.xml">
             <SetVariable name="FxUnit">2</SetVariable>
-            <SetVariable name="Width">26</SetVariable>
+            <SetVariable name="Width">26f</SetVariable>
             <SetVariable name="Text">&#8202;FX</SetVariable>
           </Template>
         </Children>
@@ -50,20 +51,20 @@ Variables:
         <Children>
           <Template src="skins:LateNight/fx/assign_button.xml">
             <SetVariable name="FxUnit">1</SetVariable>
-            <SetVariable name="Width">26</SetVariable>
+            <SetVariable name="Width">26f</SetVariable>
             <SetVariable name="Text">&#8202;FX&#8202;</SetVariable>
           </Template>
           <Template src="skins:LateNight/fx/assign_button.xml">
             <SetVariable name="FxUnit">2</SetVariable>
-            <SetVariable name="Width">20</SetVariable>
+            <SetVariable name="Width">20f</SetVariable>
           </Template>
           <Template src="skins:LateNight/fx/assign_button.xml">
             <SetVariable name="FxUnit">3</SetVariable>
-            <SetVariable name="Width">20</SetVariable>
+            <SetVariable name="Width">20f</SetVariable>
           </Template>
           <Template src="skins:LateNight/fx/assign_button.xml">
             <SetVariable name="FxUnit">4</SetVariable>
-            <SetVariable name="Width">20</SetVariable>
+            <SetVariable name="Width">20f</SetVariable>
           </Template>
         </Children>
         <Connection>

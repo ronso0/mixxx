@@ -9,7 +9,7 @@ Description:
     <Layout>vertical</Layout>
     <Children>
 
-      <WidgetGroup><Size>0me,18f</Size></WidgetGroup>
+      <!-- <WidgetGroup><Size>0me,18f</Size></WidgetGroup> -->
 
       <!-- Loop Controls in compact decks -->
       <Template src="skins:LateNight/helpers/skin_settings_button_2state.xml">
@@ -71,6 +71,12 @@ Description:
         <SetVariable name="TooltipId">show_vinylcontrol</SetVariable>
         <SetVariable name="Text">VU meters</SetVariable>
         <SetVariable name="Setting">[Skin],show_vumeters_compact</SetVariable>
+      </Template>
+
+      <Template src="skins:LateNight/helpers/skin_settings_button_2state.xml">
+        <!-- <SetVariable name="TooltipId">show_vinylcontrol</SetVariable> -->
+        <SetVariable name="Text">Cue Button</SetVariable>
+        <SetVariable name="Setting">[Skin],show_cue_button</SetVariable>
       </Template>
 
       <WidgetGroup><Size>0me,5f</Size></WidgetGroup>
