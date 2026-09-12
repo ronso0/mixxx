@@ -599,7 +599,12 @@ void WTrackTableViewHeader::setFont(const QFont& font) {
     //   text-transform: none;
     //   but not font-size; }
     // setFont() does only set font-size.
-    QHeaderView::setFont(font);
+    // ronso0 / test: make the header slightly smaller
+    auto fontSizeF = font.pointSizeF();
+    fontSizeF *= 0.95;
+    QFont fontCopy = font;
+    fontCopy.setPointSizeF(fontSizeF);
+    QHeaderView::setFont(fontCopy);
 
     // When we set a new font, QHeaderView's QStyle kind of adopts the stylesheet
     // we applied (border and padding are intact), but apparently adds some content
