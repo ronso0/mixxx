@@ -96,8 +96,8 @@
   Do not edit it manually.
   -->
   <releases>
-    <release version="2.7.0" type="development" date="2026-09-06" timestamp="1788699229"/>
-    <release version="2.6.0" type="development" date="2026-09-06" timestamp="1788699229">
+    <release version="2.7.0" type="development" date="2026-10-23" timestamp="1792779898"/>
+    <release version="2.6.0" type="development" date="2026-10-23" timestamp="1792779898">
       <description>
  <p>
   STEM file support
@@ -1744,7 +1744,7 @@
  </ul>
 </description>
     </release>
-    <release version="2.5.7" type="development" date="2026-10-22" timestamp="1792663166">
+    <release version="2.5.7" type="development" date="2026-10-23" timestamp="1792779898">
       <description>
  <p>
   Controller Mappings
@@ -2280,7 +2280,7 @@
  </ul>
 </description>
     </release>
-    <release version="2.5.5" type="development" date="2026-10-22" timestamp="1792663166">
+    <release version="2.5.5" type="development" date="2026-10-23" timestamp="1792779898">
       <description>
  <p>
   Note: Version 2.5.5 has been skipped following an issue in the release workflow.
