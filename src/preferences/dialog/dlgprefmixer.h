@@ -47,6 +47,9 @@ class DlgPrefMixer : public DlgPreferencePage, public Ui::DlgPrefMixerDlg {
 
     QUrl helpUrl() const override;
 
+  signals:
+    void eqCrossoversChanged();
+
   public slots:
     void slotApply() override;
     /// Update the widgets with values from config / EffectsManager
