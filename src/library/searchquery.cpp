@@ -973,7 +973,6 @@ QDateTime DateAddedFilterNode::parseDate(const QString& dateStr) const {
 #endif
     }
     if (!date.isValid()) {
-        qWarning() << "--> invalid date, return";
         return {};
     }
 
