@@ -269,7 +269,7 @@ WSearchLineEdit {
   border-bottom: 1px solid #0c0c0c;
 }
 
-#BeatgridControls,
+/*#BeatgridControls,
 #StemControls {
   border-top: 1px solid #1c1c1c;
   border-left: 1px solid #1c1c1c;
@@ -277,7 +277,7 @@ WSearchLineEdit {
   border-right: 1px solid #111;
   border-radius: 1px;
   background-color: #151517;
-  }
+  }*/
 
 
 #FxParametersFocusBg {
