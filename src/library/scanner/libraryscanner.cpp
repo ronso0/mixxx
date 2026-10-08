@@ -636,6 +636,7 @@ void LibraryScanner::slotTrackExists(const QString& trackPath) {
     if (m_scannerGlobal) {
         m_scannerGlobal->addVerifiedTrack(trackPath);
     }
+    emit progressLoading(trackPath);
 }
 
 // triggered by ScannerTask::addNewTrack / in ImportFilesTask::run()
