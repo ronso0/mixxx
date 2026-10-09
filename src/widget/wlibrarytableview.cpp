@@ -320,6 +320,33 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
         Qt::KeyboardModifiers modifiers) {
     QAbstractItemModel* pModel = model();
     if (pModel) {
+        const QModelIndex current = currentIndex();
+        // If we have only one row enforce selection.
+        // Works around a QTaleView limitation: it skips selection when
+        // newIndex == currentIndex(), which would leave us with no selected row
+        // and thereby prevent us calling several actions, eg. Load to deck,
+        // open track menu etc.
+        switch (cursorAction) {
+        case QAbstractItemView::MoveUp:
+        case QAbstractItemView::MoveDown:
+        case QAbstractItemView::MovePageUp:
+        case QAbstractItemView::MovePageDown:
+        case QAbstractItemView::MoveHome:
+        case QAbstractItemView::MoveEnd:
+            if (current.isValid() &&
+                    pModel->rowCount() == 1 &&
+                    selectionModel() &&
+                    !selectionModel()->isSelected(current)) {
+                selectionModel()->select(
+                        current,
+                        QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+                return current;
+            }
+            break;
+        default:
+            break;
+        }
+
         switch (cursorAction) {
         // The up and down cursor keys should wrap the list around. This
         // behavior also applies to the `[Library],MoveVertical` action that is
@@ -335,15 +362,15 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
         // Note: Shift modifier prevents wrap-around.
         case QAbstractItemView::MoveUp:
         case QAbstractItemView::MoveDown: {
-            // Provide more context when browsing, i.e. show surrounding rows when
-            // the cursor moves vertically in the track view.
-            // That way, it's easier to notice if the next cursor move would wrap
-            // around to the opposite end of the list.
-            int n = 3; // number of extra rows to show
-            const QModelIndex current = currentIndex();
             if (current.isValid()) {
-                const int row = currentIndex().row();
-                const int column = currentIndex().column();
+                // Provide more context when browsing, i.e. show surrounding rows when
+                // the cursor moves vertically in the track view.
+                // That way, it's easier to notice if the next cursor move would wrap
+                // around to the opposite end of the list.
+                static constexpr int n = 3; // number of extra rows to show
+
+                const int row = current.row();
+                const int column = current.column();
                 if (cursorAction == QAbstractItemView::MoveDown) {
                     int nextRow = row + 1;
                     if (nextRow < pModel->rowCount()) { // move down one row
@@ -450,15 +477,13 @@ QModelIndex WLibraryTableView::moveCursor(CursorAction cursorAction,
         // the first and last column (QAbstractItemView default)
         case QAbstractItemView::MoveHome:
         case QAbstractItemView::MoveEnd: {
-            const QModelIndex current = currentIndex();
-
             // We don't want to change the selected column if a column has
             // already been selected
             int column = current.column();
             if (!current.isValid()) {
                 // Selecting a hidden column doesn't work, so we'll need to find
                 // the first non-hidden column here
-                int column = 0;
+                column = 0;
                 while (isColumnHidden(column) && column < pModel->columnCount()) {
                     column++;
                 }
