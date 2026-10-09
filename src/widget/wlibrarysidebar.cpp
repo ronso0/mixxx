@@ -468,16 +468,22 @@ void WLibrarySidebar::keyPressEvent(QKeyEvent* pEvent) {
         // If an expanded item is selected let QTreeView collapse it
         QModelIndex selIndex = selectedIndex();
         if (!selIndex.isValid()) {
+            qWarning() << "Sidebar keypress: Left, selIndex invalid, ignore";
             return;
         }
         // collapse knot
         if (isExpanded(selIndex)) {
+            qWarning() << "Sidebar keypress: Left, selIndex is expanded -> "
+                          "pass to QTreeView, return";
             QTreeView::keyPressEvent(pEvent);
             return;
         }
         // Else jump to its parent and activate it
         QModelIndex parentIndex = selIndex.parent();
+        qWarning() << "Sidebar keypress: Left, selIndex is NOT expanded -> parent:"
+                   << parentIndex;
         if (parentIndex.isValid()) {
+            qWarning() << "  --> valid, select + emit pressed";
             selectIndex(parentIndex);
             emit pressed(parentIndex);
         }
