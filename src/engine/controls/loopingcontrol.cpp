@@ -106,6 +106,10 @@ LoopingControl::LoopingControl(const QString& group,
             &LoopingControl::slotLoopEnabledValueChangeRequest,
             Qt::DirectConnection);
 
+    m_pCOLoopRollEnabled = new ControlObject(ConfigKey(group, "looproll_enabled"));
+    m_pCOLoopRollEnabled->setReadOnly();
+    m_pCOLoopRollEnabled->setAndConfirm(0);
+
     m_pCOLoopStartPosition =
             new ControlObject(ConfigKey(group, "loop_start_position"));
     m_pCOLoopStartPosition->set(kNoTrigger);
@@ -288,6 +292,7 @@ LoopingControl::~LoopingControl() {
     delete m_pReloopToggleButton;
     delete m_pReloopAndStopButton;
     delete m_pCOLoopEnabled;
+    delete m_pCOLoopRollEnabled;
     delete m_pCOLoopStartPosition;
     delete m_pCOLoopEndPosition;
     delete m_pCOLoopScale;
@@ -1289,6 +1294,8 @@ void LoopingControl::setLoopingEnabled(bool enabled) {
 
     m_bLoopingEnabled = enabled;
     m_pCOLoopEnabled->setAndConfirm(enabled ? 1.0 : 0.0);
+    m_pCOLoopRollEnabled->setAndConfirm(
+            enabled && m_pSlipEnabled->toBool() ? 1.0 : 0.0);
     BeatLoopingControl* pActiveBeatLoop = atomicLoadRelaxed(m_pActiveBeatLoop);
     if (pActiveBeatLoop != nullptr) {
         if (enabled) {
@@ -1406,6 +1413,12 @@ void LoopingControl::slotBeatLoopActivate(
         return;
     }
 
+    if (m_bLoopRollActive) {
+        m_bLoopRollActive = false;
+        m_activeLoopRolls.clear();
+        getEngineBuffer()->slipQuitAndAdopt();
+        return;
+    }
     // Maintain the current start point if there is an active loop currently
     // looping. slotBeatLoop will update m_pActiveBeatLoop if applicable. Note,
     // this used to only maintain the current start point if a beatloop was
