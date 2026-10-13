@@ -245,6 +245,8 @@ void CueControl::createControls() {
             ConfigKey(m_group, "intro_start_enabled"));
     m_pIntroStartEnabled->setReadOnly();
     m_pIntroStartSet = std::make_unique<ControlPushButton>(ConfigKey(m_group, "intro_start_set"));
+    m_pIntroStartSetQuantized = std::make_unique<ControlPushButton>(
+            ConfigKey(m_group, "intro_start_set_quantized"));
     m_pIntroStartClear = std::make_unique<ControlPushButton>(
             ConfigKey(m_group, "intro_start_clear"));
     m_pIntroStartActivate = std::make_unique<ControlPushButton>(
@@ -355,7 +357,12 @@ void CueControl::connectControls() {
     connect(m_pIntroStartSet.get(),
             &ControlObject::valueChanged,
             this,
-            &CueControl::introStartSet,
+            [this](double v) { introStartSet(v); },
+            Qt::DirectConnection);
+    connect(m_pIntroStartSetQuantized.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this](double v) { introStartSet(v, true); },
             Qt::DirectConnection);
     connect(m_pIntroStartClear.get(),
             &ControlObject::valueChanged,
@@ -1748,14 +1755,14 @@ void CueControl::playStutter(double v) {
     }
 }
 
-void CueControl::introStartSet(double value) {
+void CueControl::introStartSet(double value, bool quantize) {
     if (value <= 0) {
         return;
     }
 
     auto lock = lockMutex(&m_trackMutex);
 
-    const mixxx::audio::FramePos position = getQuantizedCurrentPosition();
+    const mixxx::audio::FramePos position = getQuantizedCurrentPosition(quantize);
     if (!position.isValid()) {
         return;
     }
@@ -2370,7 +2377,7 @@ CueControl::TrackAt CueControl::getTrackAt() const {
     return TrackAt::ElseWhere;
 }
 
-mixxx::audio::FramePos CueControl::getQuantizedCurrentPosition() {
+mixxx::audio::FramePos CueControl::getQuantizedCurrentPosition(bool enforceQuantize) {
     FrameInfo info = frameInfo();
 
     // Note: currentPos can be past the end of the track, in the padded
@@ -2378,7 +2385,7 @@ mixxx::audio::FramePos CueControl::getQuantizedCurrentPosition() {
     // a future runs, depending on the buffering.
 
     // Don't quantize if quantization is disabled.
-    if (!m_pQuantizeEnabled->toBool()) {
+    if (!enforceQuantize && !m_pQuantizeEnabled->toBool()) {
         return info.currentPosition;
     }
 
