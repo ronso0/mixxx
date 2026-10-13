@@ -565,6 +565,10 @@ void LibraryScanner::queueTask(ScannerTask* pTask) {
             this,
             &LibraryScanner::slotDirectoryUnchanged);
     connect(pTask,
+            &ScannerTask::trackMissing,
+            this,
+            &LibraryScanner::slotTrackMissing);
+    connect(pTask,
             &ScannerTask::trackExists,
             this,
             &LibraryScanner::slotTrackExists);
@@ -630,8 +634,13 @@ void LibraryScanner::slotDirectoryUnchanged(const QString& directoryPath,
     emit progressHashing(directoryPath);
 }
 
+void LibraryScanner::slotTrackMissing(const QString& trackPath) {
+    // kLogger.debug() << "slotTrackExists" << trackPath;
+    emit progressLoading(trackPath);
+}
+
 void LibraryScanner::slotTrackExists(const QString& trackPath) {
-    //kLogger.debug() << "slotTrackExists" << trackPath;
+    // kLogger.debug() << "slotTrackExists" << trackPath;
     ScopedTimer timer(QStringLiteral("LibraryScanner::slotTrackExists"));
     if (m_scannerGlobal) {
         m_scannerGlobal->addVerifiedTrack(trackPath);
