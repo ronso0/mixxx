@@ -33,6 +33,8 @@ class WBeatSpinBox : public QDoubleSpinBox, public WBaseWidget {
     void slotSpinboxValueChanged(double newValue);
     void slotControlValueChanged(double newValue);
     void slotSetValueChangedHighlight(bool changed);
+    void slotDebounceTimeout();
+    void slotLineTextChanged(const QString&);
 
   private:
     QString textFromValue(double value) const override;
@@ -51,6 +53,8 @@ class WBeatSpinBox : public QDoubleSpinBox, public WBaseWidget {
 
     QTimer m_valueChangedResetTimer;
     bool m_valueChangedHighlight;
+
+    QTimer m_debouncingTimer;
 };
 
 // This is an inherited class that supports font scaling
