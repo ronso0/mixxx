@@ -19,6 +19,15 @@ QIcon toQIcon(const QColor& color) {
 }
 
 HotcueIndexListItem* toHotcueIndexListItem(QStandardItem* pFrom) {
+    // QStandardItem::item() returns nullptr for empty cells and
+    // QStandardItem::type() is a virtual function, i.e. it dereferences the
+    // (null) pointer before the assertion could be evaluated.
+    if (!pFrom) {
+        qWarning() << ".";
+        qWarning() << "toHotcueIndexListItem == NULL, ignore";
+        qWarning() << ".";
+        return nullptr;
+    }
     VERIFY_OR_DEBUG_ASSERT(pFrom->type() == QStandardItem::UserType) {
         return nullptr;
     }
@@ -40,6 +49,7 @@ ColorPaletteEditorModel::ColorPaletteEditorModel(QObject* parent)
                     emit emptyChanged(true);
                 }
                 setDirty(true);
+                inspectItems();
             });
     connect(this,
             &ColorPaletteEditorModel::rowsInserted,
@@ -50,13 +60,28 @@ ColorPaletteEditorModel::ColorPaletteEditorModel(QObject* parent)
                     emit emptyChanged(true);
                 }
                 setDirty(true);
+                inspectItems();
             });
     connect(this,
             &ColorPaletteEditorModel::rowsMoved,
             this,
             [this] {
                 setDirty(true);
+                inspectItems();
             });
+}
+
+void ColorPaletteEditorModel::inspectItems() const {
+    qWarning() << ".";
+    qWarning() << ".";
+    qWarning() << "inspectItems";
+    for (int i = 0; i < rowCount(); i++) {
+        for (int j = 0; j < columnCount(); j++) {
+            qWarning() << " -item" << i << j << item(i, j);
+        }
+    }
+    qWarning() << ".";
+    qWarning() << ".";
 }
 
 bool ColorPaletteEditorModel::dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) {
