@@ -66,13 +66,24 @@ class BaseTrackCache : public QObject {
     QString columnTitle(ColumnCache::Column column) const;
     int fieldIndex(ColumnCache::Column column) const;
     int endFieldIndex() const;
+    /// Collect the rows matching the current search query from the database
+    /// and rebuild the row cache.
+    ///
+    /// If `sortOnly` is true the current result set is not re-evaluated
+    /// against the search query but only re-ordered, i.e. neither tracks
+    /// that no longer match the search are removed from the table, nor are
+    /// tracks added that now match the search.
+    /// This is used by sort() to prevent tracks from (dis-)appearing when only
+    /// the sort column or order has changed, e.g. after a track has been rated
+    /// while the table is filtered by rating.
     virtual void filterAndSort(const QSet<TrackId>& trackIds,
-                               const QString& query,
-                               const QString& extraFilter,
-                               const QString& orderByClause,
-                               const QList<SortColumn>& sortColumns,
-                               const int columnOffset,
-                               QHash<TrackId, int>* trackToIndex);
+            const QString& query,
+            const QString& extraFilter,
+            const QString& orderByClause,
+            const QList<SortColumn>& sortColumns,
+            const int columnOffset,
+            bool sortOnly,
+            QHash<TrackId, int>* trackToIndex);
     virtual bool isCached(TrackId trackId) const;
     virtual void ensureCached(TrackId trackId);
 
