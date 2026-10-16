@@ -577,19 +577,37 @@ void SoundManagerConfig::loadDefaults(SoundManager* soundManager, unsigned int f
         clearInputs();
         const QList<SoundDevicePointer> outputDevices =
                 soundManager->getDeviceList(m_api, true, false);
-        if (!outputDevices.isEmpty()) {
-            for (const auto& pDevice : outputDevices) {
-                if (pDevice->getNumOutputChannels() < 2) {
-                    continue;
-                }
-                AudioOutput mainOut(AudioPathType::Main,
-                        0,
-                        mixxx::audio::ChannelCount::stereo(),
-                        0);
-                addOutput(pDevice->getDeviceId(), mainOut);
-                defaultSampleRate = pDevice->getDefaultSampleRate();
+        SoundDevicePointer pMainDevice;
+#ifdef __WINDOWS__
+        // Unlike DirectSound, WASAPI does not list the system's default
+        // output first, so pick it explicitly.
+        const int defaultOutputIndex =
+                soundManager->getDefaultOutputDeviceIndex(m_api);
+#endif
+        for (const auto& pDevice : outputDevices) {
+            if (pDevice->getNumOutputChannels() < 2) {
+                continue;
+            }
+            if (!pMainDevice) {
+                pMainDevice = pDevice;
+            }
+#ifdef __WINDOWS__
+            if (defaultOutputIndex >= 0 &&
+                    pDevice->getDeviceId().portAudioIndex == defaultOutputIndex) {
+                pMainDevice = pDevice;
                 break;
             }
+#else
+            break;
+#endif
+        }
+        if (pMainDevice) {
+            AudioOutput mainOut(AudioPathType::Main,
+                    0,
+                    mixxx::audio::ChannelCount::stereo(),
+                    0);
+            addOutput(pMainDevice->getDeviceId(), mainOut);
+            defaultSampleRate = pMainDevice->getDefaultSampleRate();
         }
     }
     if (flags & SoundManagerConfig::OTHER) {
