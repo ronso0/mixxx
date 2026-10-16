@@ -64,11 +64,9 @@
         <MaximumSize>,18</MaximumSize>
         <Layout>vertical</Layout>
         <Children>
-          <EffectChainPresetSelector>
-            <ObjectName>QuickEffectSelectorLeft</ObjectName>
-            <Size>40min,18f</Size>
-            <EffectUnitGroup>[QuickEffectRack1_<Variable name="Group"/>]</EffectUnitGroup>
-          </EffectChainPresetSelector>
+          <SingletonContainer>
+            <ObjectName>QuickEffectSelector<Variable name="ChanNum"/></ObjectName>
+          </SingletonContainer>
         </Children>
         <Connection>
           <ConfigKey persist="true">[Skin],show_eq_knobs</ConfigKey>

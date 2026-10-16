@@ -378,6 +378,13 @@ void WMainMenuBar::initialize() {
             pViewMaximizeLibrary,
             ConfigKey(kKbdShortcutsGroup, QStringLiteral("ViewMenu_MaximizeLibrary")),
             QStringLiteral("Space"));
+    // Works around issue with Space (via [Library],GoToItem) where
+    // it would not send Space to the focused widget (QPushButton) in
+    // QDialog like DlgTrackInfo --> but forward it to MixxxMainWindow
+    // which would trigger the default shortcut mapped to [Skin],show_maximized_library
+    // TODO test again, previously this broke the maximize shortcut when
+    // the main window had focus (tracks table)
+    pViewMaximizeLibrary->setShortcutContext(Qt::WindowShortcut);
     pViewMaximizeLibrary->setStatusTip(maximizeLibraryText);
     pViewMaximizeLibrary->setWhatsThis(buildWhatsThis(maximizeLibraryTitle, maximizeLibraryText));
     createVisibilityControl(pViewMaximizeLibrary,
@@ -398,6 +405,21 @@ void WMainMenuBar::initialize() {
     pViewAutoDJ->setCheckable(false);
     connect(pViewAutoDJ, &QAction::triggered, this, &WMainMenuBar::showAutoDJ);
     pViewMenu->addAction(pViewAutoDJ);
+
+    pViewMenu->addSeparator();
+
+    QString reloadSkinTitle = tr("&Reload Skin");
+    QString reloadSkinText = tr("Reload the skin");
+    auto* pDeveloperReloadSkin = new QAction(reloadSkinTitle, this);
+    m_pKeyboard->registerMenuBarActionSetShortcut(
+            pDeveloperReloadSkin,
+            ConfigKey(kKbdShortcutsGroup, QStringLiteral("OptionsMenu_ReloadSkin")),
+            QStringLiteral("Ctrl+Shift+R"));
+    pDeveloperReloadSkin->setShortcutContext(Qt::ApplicationShortcut);
+    pDeveloperReloadSkin->setStatusTip(reloadSkinText);
+    pDeveloperReloadSkin->setWhatsThis(buildWhatsThis(reloadSkinTitle, reloadSkinText));
+    connect(pDeveloperReloadSkin, &QAction::triggered, this, &WMainMenuBar::reloadSkin);
+    pViewMenu->addAction(pDeveloperReloadSkin);
 
     pViewMenu->addSeparator();
 
@@ -534,9 +556,8 @@ void WMainMenuBar::initialize() {
     pOptionsKeyboard->setWhatsThis(buildWhatsThis(keyboardShortcutTitle, keyboardShortcutText));
     connect(pOptionsKeyboard,
             &QAction::triggered,
-            m_pKeyboard.get(),
-            &KeyboardEventFilter::setEnabled);
-
+            this,
+            &WMainMenuBar::toggleKeyboardShortcuts);
     pOptionsMenu->addAction(pOptionsKeyboard);
 
     pOptionsMenu->addSeparator();
@@ -557,42 +578,35 @@ void WMainMenuBar::initialize() {
     addMenu(pOptionsMenu);
 
     // DEVELOPER MENU
-    if (CmdlineArgs::Instance().getDeveloper()) {
+    // In dev mode we add "Developer &Tools" to the Developer menu,
+    // else we append it to Options menu.
+    const QString developerToolsTitle = tr("Developer &Tools");
+    const QString developerToolsText = tr("Opens the developer tools dialog");
+    auto* pDeveloperTools = new QAction(developerToolsTitle, this);
+    m_pKeyboard->registerMenuBarActionSetShortcut(
+            pDeveloperTools,
+            ConfigKey(kKbdShortcutsGroup, QStringLiteral("OptionsMenu_DeveloperTools")),
+            QStringLiteral("Ctrl+Shift+T"));
+    pDeveloperTools->setShortcutContext(Qt::ApplicationShortcut);
+    pDeveloperTools->setCheckable(true);
+    pDeveloperTools->setChecked(false);
+    pDeveloperTools->setStatusTip(developerToolsText);
+    pDeveloperTools->setWhatsThis(buildWhatsThis(developerToolsTitle, developerToolsText));
+    connect(pDeveloperTools, &QAction::triggered, this, &WMainMenuBar::toggleDeveloperTools);
+    connect(this,
+            &WMainMenuBar::internalDeveloperToolsStateChange,
+            pDeveloperTools,
+            &QAction::setChecked);
+
+    if (!CmdlineArgs::Instance().getDeveloper()) {
+        pOptionsMenu->addSeparator();
+        pOptionsMenu->addAction(pDeveloperTools);
+    } else {
         QMenu* pDeveloperMenu = new QMenu(tr("&Developer"), this);
 #ifndef __APPLE__
         connectMenuToSlotShowMenuBar(pDeveloperMenu);
 #endif
 
-        QString reloadSkinTitle = tr("&Reload Skin");
-        QString reloadSkinText = tr("Reload the skin");
-        auto* pDeveloperReloadSkin = new QAction(reloadSkinTitle, this);
-        m_pKeyboard->registerMenuBarActionSetShortcut(
-                pDeveloperReloadSkin,
-                ConfigKey(kKbdShortcutsGroup, QStringLiteral("OptionsMenu_ReloadSkin")),
-                QStringLiteral("Ctrl+Shift+R"));
-        pDeveloperReloadSkin->setShortcutContext(Qt::ApplicationShortcut);
-        pDeveloperReloadSkin->setStatusTip(reloadSkinText);
-        pDeveloperReloadSkin->setWhatsThis(buildWhatsThis(reloadSkinTitle, reloadSkinText));
-        connect(pDeveloperReloadSkin, &QAction::triggered, this, &WMainMenuBar::reloadSkin);
-        pDeveloperMenu->addAction(pDeveloperReloadSkin);
-
-        QString developerToolsTitle = tr("Developer &Tools");
-        QString developerToolsText = tr("Opens the developer tools dialog");
-        auto* pDeveloperTools = new QAction(developerToolsTitle, this);
-        m_pKeyboard->registerMenuBarActionSetShortcut(
-                pDeveloperTools,
-                ConfigKey(kKbdShortcutsGroup, QStringLiteral("OptionsMenu_DeveloperTools")),
-                QStringLiteral("Ctrl+Shift+T"));
-        pDeveloperTools->setShortcutContext(Qt::ApplicationShortcut);
-        pDeveloperTools->setCheckable(true);
-        pDeveloperTools->setChecked(false);
-        pDeveloperTools->setStatusTip(developerToolsText);
-        pDeveloperTools->setWhatsThis(buildWhatsThis(developerToolsTitle, developerToolsText));
-        connect(pDeveloperTools, &QAction::triggered, this, &WMainMenuBar::toggleDeveloperTools);
-        connect(this,
-                &WMainMenuBar::internalDeveloperToolsStateChange,
-                pDeveloperTools,
-                &QAction::setChecked);
         pDeveloperMenu->addAction(pDeveloperTools);
 
         QString enableExperimentTitle = tr("Stats: &Experiment Bucket");

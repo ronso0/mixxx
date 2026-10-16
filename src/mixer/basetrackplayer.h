@@ -8,6 +8,7 @@
 #ifdef __STEM__
 #include "engine/engine.h"
 #endif
+#include "control/pollingcontrolproxy.h"
 #include "engine/channels/enginechannel.h"
 #include "mixer/baseplayer.h"
 #include "preferences/colorpalettesettings.h"
@@ -38,7 +39,9 @@ class BaseTrackPlayer : public BasePlayer {
         RESET_NONE,
         RESET_PITCH,
         RESET_PITCH_AND_SPEED,
-        RESET_SPEED
+        RESET_SPEED,
+        RESET_ULTRASPEED,
+        RESET_PITCH_AND_ULTRASPEED
     };
     Q_ENUM(TrackLoadReset);
 
@@ -48,6 +51,12 @@ class BaseTrackPlayer : public BasePlayer {
     virtual TrackPointer getLoadedTrack() const = 0;
     virtual void setupEqControls() = 0;
     virtual bool isTrackMenuControlAvailable() {
+        return false;
+    };
+    virtual bool isTrackCommentEditControlAvailable() {
+        return false;
+    };
+    virtual bool isTrackFileRemoveControlAvailable() {
         return false;
     };
 
@@ -77,6 +86,8 @@ class BaseTrackPlayer : public BasePlayer {
     void noVinylControlInputConfigured();
     void trackRatingChanged(int rating);
     void trackMenuChangeRequest(bool show);
+    void trackCommentEditRequest();
+    void trackFileRemoveRequest();
 };
 
 class BaseTrackPlayerImpl : public BaseTrackPlayer {
@@ -106,6 +117,10 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     /// PushButtons persist skin reload, connected widgets don't, i.e. the
     /// connection is removed on skin reload and available again afterwards.
     bool isTrackMenuControlAvailable() final;
+    /// Same for the 'edit track comment' control
+    bool isTrackCommentEditControlAvailable() final;
+    /// Same for the 'remove_track_file' control
+    bool isTrackFileRemoveControlAvailable() final;
     /// For testing, loads a fake track.
     TrackPointer loadFakeTrack(bool bPlay, double filebpm);
 
@@ -153,6 +168,8 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     void slotWaveformZoomSetDefault(double pressed);
     void slotShiftCuesMillis(double milliseconds);
     void slotShiftCuesMillisButton(double value, double milliseconds);
+    void slotShiftFocusedHotcueMillis(double milliseconds);
+    void slotShiftFocusedHotcueMillisButton(double value, double milliseconds);
     void slotUpdateReplayGainFromPregain(double pressed);
 
   private:
@@ -203,15 +220,15 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     std::unique_ptr<ControlPushButton> m_pWaveformZoomDown;
     std::unique_ptr<ControlPushButton> m_pWaveformZoomSetDefault;
 
-    parented_ptr<ControlProxy> m_pLoopInPoint;
-    parented_ptr<ControlProxy> m_pLoopOutPoint;
+    PollingControlProxy m_loopInPoint;
+    PollingControlProxy m_loopOutPoint;
     std::unique_ptr<ControlObject> m_pDuration;
 
     // TODO() these COs are reconnected during runtime
     // This may lock the engine
     std::unique_ptr<ControlObject> m_pFileBPM;
     std::unique_ptr<ControlObject> m_pVisualBpm;
-    parented_ptr<ControlProxy> m_pKey;
+    PollingControlProxy m_key;
     std::unique_ptr<ControlObject> m_pVisualKey;
 
     std::unique_ptr<ControlObject> m_pTimeElapsed;
@@ -224,7 +241,18 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
     std::unique_ptr<ControlPushButton> m_pShiftCuesLaterSmall;
     std::unique_ptr<ControlObject> m_pShiftCues;
 
+    std::unique_ptr<ControlPushButton> m_pShiftFocusedHotcueEarlier;
+    std::unique_ptr<ControlPushButton> m_pShiftFocusedHotcueEarlierSmall;
+    std::unique_ptr<ControlPushButton> m_pShiftFocusedHotcueLater;
+    std::unique_ptr<ControlPushButton> m_pShiftFocusedHotcueLaterSmall;
+    std::unique_ptr<ControlObject> m_pShiftFocusedHotcue;
+
+    PollingControlProxy m_focusedHotcueIndexCO;
+    PollingControlProxy m_quantizeEnabled;
+
     std::unique_ptr<ControlPushButton> m_pShowTrackMenuControl;
+    std::unique_ptr<ControlPushButton> m_pTrackCommentEditControl;
+    std::unique_ptr<ControlPushButton> m_pTrackFileRemoveControl;
 
     std::unique_ptr<ControlPushButton> m_pStarsUp;
     std::unique_ptr<ControlPushButton> m_pStarsDown;
@@ -237,18 +265,18 @@ class BaseTrackPlayerImpl : public BaseTrackPlayer {
 
     std::unique_ptr<ControlObject> m_pUpdateReplayGainFromPregain;
 
-    parented_ptr<ControlProxy> m_pReplayGain;
     parented_ptr<ControlProxy> m_pPlay;
-    parented_ptr<ControlProxy> m_pLowFilter;
-    parented_ptr<ControlProxy> m_pMidFilter;
-    parented_ptr<ControlProxy> m_pHighFilter;
-    parented_ptr<ControlProxy> m_pLowFilterKill;
-    parented_ptr<ControlProxy> m_pMidFilterKill;
-    parented_ptr<ControlProxy> m_pHighFilterKill;
-    parented_ptr<ControlProxy> m_pPreGain;
-    parented_ptr<ControlProxy> m_pRateRatio;
-    parented_ptr<ControlProxy> m_pPitch;
-    parented_ptr<ControlProxy> m_pPitchAdjust;
-    parented_ptr<ControlProxy> m_pKeylock;
-    parented_ptr<ControlProxy> m_pKeylockMode;
+    PollingControlProxy m_replayGain;
+    PollingControlProxy m_lowFilter;
+    PollingControlProxy m_midFilter;
+    PollingControlProxy m_highFilter;
+    PollingControlProxy m_lowFilterKill;
+    PollingControlProxy m_midFilterKill;
+    PollingControlProxy m_highFilterKill;
+    PollingControlProxy m_preGain;
+    PollingControlProxy m_rateRatio;
+    PollingControlProxy m_pitch;
+    PollingControlProxy m_pitchAdjust;
+    PollingControlProxy m_keylock;
+    PollingControlProxy m_keylockMode;
 };

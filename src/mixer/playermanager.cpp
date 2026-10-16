@@ -1,6 +1,7 @@
 #include "mixer/playermanager.h"
 
 #include <QRegularExpression>
+#include <QSet>
 
 #include "audio/types.h"
 #include "control/controlobject.h"
@@ -66,7 +67,7 @@ bool extractIntFromRegex(const QRegularExpression& regex, const QString& group, 
 /// Returns the first object from a list of `BaseTrackPlayer` instances where
 /// the corresponding `play` CO is set to 0.
 template<class T>
-T* findFirstStoppedPlayerInList(const QList<T*>& players) {
+T* findFirstStoppedPlayerInList(const QList<T*>& players, bool skipPassthrough = false) {
     for (T* pPlayer : players) {
         VERIFY_OR_DEBUG_ASSERT(pPlayer != nullptr) {
             continue;
@@ -74,10 +75,17 @@ T* findFirstStoppedPlayerInList(const QList<T*>& players) {
 
         ControlObject* pPlayControl = ControlObject::getControl(
                 ConfigKey(pPlayer->getGroup(), "play"));
-        VERIFY_OR_DEBUG_ASSERT(pPlayControl != nullptr) {
+        VERIFY_OR_DEBUG_ASSERT(pPlayControl) {
             continue;
         }
 
+        if (skipPassthrough) {
+            ControlObject* pPassthroughControl = ControlObject::getControl(
+                    ConfigKey(pPlayer->getGroup(), "passthrough"));
+            if (pPassthroughControl && pPassthroughControl->toBool()) {
+                continue;
+            }
+        }
         if (!pPlayControl->toBool()) {
             return pPlayer;
         }
@@ -731,7 +739,8 @@ void PlayerManager::slotLoadToSampler(const QString& location, int sampler) {
 
 void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     auto locker = lockMutex(&m_mutex);
-    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks);
+    // Don't load into active Passthrough decks
+    BaseTrackPlayer* pDeck = findFirstStoppedPlayerInList(m_decks, true /* skip passthrough */);
     if (pDeck == nullptr) {
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
@@ -751,6 +760,24 @@ void PlayerManager::slotLoadTrackIntoNextAvailableDeck(TrackPointer pTrack) {
     }
 #endif
 
+    // Don't load into invisible decks 3/4
+    int deckNum = -1;
+    VERIFY_OR_DEBUG_ASSERT(extractIntFromRegex(kDeckRegex, pDeck->getGroup(), &deckNum)) {
+        qWarning() << "PlayerManager: couldn't extract number from deck group" << pDeck->getGroup();
+        return;
+    }
+    if (deckNum > 2) {
+        // Don't care if we have a skin that didn't create the [Skin],show_4decks control.
+        ControlObject* pSkinShowDeck34Control = ControlObject::getControl(
+                // TODO Move ConfigKey to some defs.h file, it's also used by
+                // AutoDJProcessor and listed in ControlPickerMenu
+                ConfigKey(QStringLiteral("[Skin]"), QStringLiteral("show_4decks")));
+        if (pSkinShowDeck34Control != nullptr && !pSkinShowDeck34Control->toBool()) {
+            qDebug() << "PlayerManager: don't load into invisible deck" << deckNum;
+            return;
+        }
+    }
+
     pDeck->slotLoadTrack(pTrack,
 #ifdef __STEM__
             mixxx::StemChannelSelection(),
@@ -765,7 +792,7 @@ void PlayerManager::slotLoadLocationIntoNextAvailableDeck(const QString& locatio
         qDebug() << "PlayerManager: No stopped deck found, not loading track!";
         return;
     }
-
+    // Do we need a the decks 3/4 check here, too?
     slotLoadLocationToPlayer(location, pDeck->getGroup(), play);
 }
 
@@ -797,6 +824,33 @@ void PlayerManager::slotAnalyzeTrack(TrackPointer track) {
         // until all loaded tracks have been analyzed. Emit it once just now
         // before any signals from the analyzer queue arrive.
         emit trackAnalyzerProgress(track->getId(), kAnalyzerProgressUnknown);
+    }
+}
+
+void PlayerManager::reanalyzeLoadedWaveforms() {
+    QSet<TrackId> scheduledTrackIds;
+    QList<TrackPointer> loadedTracks;
+    const auto collectPlayerTrack = [&scheduledTrackIds, &loadedTracks](BaseTrackPlayer* pPlayer) {
+        const TrackPointer pTrack = pPlayer->getLoadedTrack();
+        if (pTrack && !scheduledTrackIds.contains(pTrack->getId())) {
+            scheduledTrackIds.insert(pTrack->getId());
+            loadedTracks.append(pTrack);
+        }
+    };
+    {
+        const auto locker = lockMutex(&m_mutex);
+        for (Deck* pDeck : std::as_const(m_decks)) {
+            collectPlayerTrack(pDeck);
+        }
+        for (PreviewDeck* pPreviewDeck : std::as_const(m_previewDecks)) {
+            collectPlayerTrack(pPreviewDeck);
+        }
+        for (Sampler* pSampler : std::as_const(m_samplers)) {
+            collectPlayerTrack(pSampler);
+        }
+    }
+    for (const TrackPointer& pTrack : std::as_const(loadedTracks)) {
+        slotAnalyzeTrack(pTrack);
     }
 }
 

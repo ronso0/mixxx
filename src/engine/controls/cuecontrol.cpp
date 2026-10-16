@@ -245,6 +245,8 @@ void CueControl::createControls() {
             ConfigKey(m_group, "intro_start_enabled"));
     m_pIntroStartEnabled->setReadOnly();
     m_pIntroStartSet = std::make_unique<ControlPushButton>(ConfigKey(m_group, "intro_start_set"));
+    m_pIntroStartSetQuantized = std::make_unique<ControlPushButton>(
+            ConfigKey(m_group, "intro_start_set_quantized"));
     m_pIntroStartClear = std::make_unique<ControlPushButton>(
             ConfigKey(m_group, "intro_start_clear"));
     m_pIntroStartActivate = std::make_unique<ControlPushButton>(
@@ -355,7 +357,12 @@ void CueControl::connectControls() {
     connect(m_pIntroStartSet.get(),
             &ControlObject::valueChanged,
             this,
-            &CueControl::introStartSet,
+            [this](double v) { introStartSet(v); },
+            Qt::DirectConnection);
+    connect(m_pIntroStartSetQuantized.get(),
+            &ControlObject::valueChanged,
+            this,
+            [this](double v) { introStartSet(v, true); },
             Qt::DirectConnection);
     connect(m_pIntroStartClear.get(),
             &ControlObject::valueChanged,
@@ -856,8 +863,9 @@ void CueControl::loadCuesFromTrack() {
     }
 
     DEBUG_ASSERT(mainCuePosition.isValid());
-    const auto quantizedMainCuePosition = quantizeCuePoint(mainCuePosition);
-    m_pCuePoint->set(quantizedMainCuePosition.toEngineSamplePosMaybeInvalid());
+    // Like hotcues, the main cue is only quantized when it is set. Quantizing
+    // it here would move an existing cue whenever quantize is toggled.
+    m_pCuePoint->set(mainCuePosition.toEngineSamplePosMaybeInvalid());
 }
 
 void CueControl::trackAnalyzed() {
@@ -906,8 +914,7 @@ void CueControl::trackBeatsUpdated(mixxx::BeatsPointer pBeats) {
 void CueControl::quantizeChanged(double v) {
     Q_UNUSED(v);
 
-    // check if we were at the cue point before
-    bool wasTrackAtCue = getTrackAt() == TrackAt::Cue;
+    // check if we were at the intro start before
     bool wasTrackAtIntro = isTrackAtIntroCue();
 
     loadCuesFromTrack();
@@ -917,13 +924,6 @@ void CueControl::quantizeChanged(double v) {
         return;
     }
 
-    // Retrieve new cue pos and follow
-    const auto cuePosition =
-            mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
-                    m_pCuePoint->get());
-    if (wasTrackAtCue && cuePosition.isValid()) {
-        seekExact(cuePosition);
-    }
     // Retrieve new intro start pos and follow
     const auto introPosition =
             mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
@@ -1755,14 +1755,14 @@ void CueControl::playStutter(double v) {
     }
 }
 
-void CueControl::introStartSet(double value) {
+void CueControl::introStartSet(double value, bool quantize) {
     if (value <= 0) {
         return;
     }
 
     auto lock = lockMutex(&m_trackMutex);
 
-    const mixxx::audio::FramePos position = getQuantizedCurrentPosition();
+    const mixxx::audio::FramePos position = getQuantizedCurrentPosition(quantize);
     if (!position.isValid()) {
         return;
     }
@@ -2377,7 +2377,7 @@ CueControl::TrackAt CueControl::getTrackAt() const {
     return TrackAt::ElseWhere;
 }
 
-mixxx::audio::FramePos CueControl::getQuantizedCurrentPosition() {
+mixxx::audio::FramePos CueControl::getQuantizedCurrentPosition(bool enforceQuantize) {
     FrameInfo info = frameInfo();
 
     // Note: currentPos can be past the end of the track, in the padded
@@ -2385,7 +2385,7 @@ mixxx::audio::FramePos CueControl::getQuantizedCurrentPosition() {
     // a future runs, depending on the buffering.
 
     // Don't quantize if quantization is disabled.
-    if (!m_pQuantizeEnabled->toBool()) {
+    if (!enforceQuantize && !m_pQuantizeEnabled->toBool()) {
         return info.currentPosition;
     }
 
@@ -2533,10 +2533,13 @@ void CueControl::setCurrentSavedLoopControlAndActivate(HotcueControl* pControl) 
     mixxx::CueType type = pCue->getType();
     Cue::StartAndEndPositions pos = pCue->getStartAndEndPosition();
 
-    VERIFY_OR_DEBUG_ASSERT(
-            type == mixxx::CueType::Loop &&
-            pos.startPosition.isValid() &&
-            pos.endPosition.isValid()) {
+    VERIFY_OR_DEBUG_ASSERT(type == mixxx::CueType::Loop) {
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(pos.startPosition.isValid()) {
+        return;
+    }
+    VERIFY_OR_DEBUG_ASSERT(pos.endPosition.isValid()) {
         return;
     }
 
@@ -2562,14 +2565,15 @@ void CueControl::slotLoopEnabledChanged(bool enabled) {
     }
 
     DEBUG_ASSERT(pSavedLoopControl->getStatus() != HotcueControl::Status::Empty);
-    DEBUG_ASSERT(pSavedLoopControl->getCue() &&
-            pSavedLoopControl->getCue()->getPosition() ==
-                    mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
-                            m_pLoopStartPosition->get()));
-    DEBUG_ASSERT(pSavedLoopControl->getCue() &&
-            pSavedLoopControl->getCue()->getEndPosition() ==
-                    mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
-                            m_pLoopEndPosition->get()));
+    DEBUG_ASSERT(pSavedLoopControl->getCue());
+    // Don't compare with == because there might be a tiny round-trip offset
+    // because LoopingControl::slotBeatLoop() uses beats to set the loop_in/_out COs
+    DEBUG_ASSERT(pSavedLoopControl->getCue()->getPosition().isNear(
+            mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
+                    m_pLoopStartPosition->get())));
+    DEBUG_ASSERT(pSavedLoopControl->getCue()->getEndPosition().isNear(
+            mixxx::audio::FramePos::fromEngineSamplePosMaybeInvalid(
+                    m_pLoopEndPosition->get())));
 
     if (enabled) {
         pSavedLoopControl->setStatus(HotcueControl::Status::Active);

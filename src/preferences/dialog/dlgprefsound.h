@@ -36,6 +36,8 @@ class DlgPrefSound : public DlgPreferencePage, public Ui::DlgPrefSoundDlg  {
     QUrl helpUrl() const override;
     bool okayToClose() const override;
 
+    void updateColoredLinkTexts() override;
+
   signals:
     void loadPaths(const SoundManagerConfig &config);
     void writePath(const AudioPath* pPath, SoundManagerConfig* config);
@@ -138,4 +140,10 @@ class DlgPrefSound : public DlgPreferencePage, public Ui::DlgPrefSoundDlg  {
     parented_ptr<ControlProxy> m_cpLatencyParamsMismatch;
     QLabel* m_latencyParamsMismatchText;
 #endif
+
+    // some tr strings for labels where we dynamically append (?) links
+    QString m_apiLabelText;
+    QString m_micMonitorModeLabelText;
+    QString m_micLatencyLabelText;
+    QString m_deckBusHintSText;
 };

@@ -28,7 +28,7 @@
                 <Children>
 
                   <WidgetGroup>
-                    <ObjectName>PreviewDeckTextBoxBox</ObjectName>
+                    <ObjectName>PreviewDeckTextBox</ObjectName>
                     <Layout>stacked</Layout>
                     <SizePolicy>i,min</SizePolicy>
                     <Children>
@@ -38,7 +38,8 @@
                         <Children>
                           <TrackProperty>
                             <ObjectName>PreviewTitle</ObjectName>
-                            <TooltipId>text</TooltipId>
+                            <TooltipId>track_title</TooltipId>
+                            <Property>titleInfo</Property>
                             <Size>0me,20f</Size>
                             <Elide>right</Elide>
                             <Group><Variable name="Group"/></Group>
@@ -54,13 +55,20 @@
                             <Connection>
                               <ConfigKey><Variable name="Group"/>,visual_bpm</ConfigKey>
                             </Connection>
-                            <Connection>
-                              <ConfigKey><Variable name="Group"/>,track_loaded</ConfigKey>
-                              <BindProperty>visible</BindProperty>
-                            </Connection>
                           </Number>
                         </Children>
+                        <Connection>
+                          <ConfigKey><Variable name="Group"/>,track_loaded</ConfigKey>
+                          <BindProperty>visible</BindProperty>
+                        </Connection>
                       </WidgetGroup>
+
+                      <TrackWidgetGroup>
+                        <Size>0me,20f</Size>
+                        <Group><Variable name="Group"/></Group>
+                        <TrackColorAlpha>0</TrackColorAlpha>
+                      </TrackWidgetGroup>
+
                       <!-- "Preview" label when preview deck is empty.
                         It's underneath so the empty title is still drag'n'drop target -->
                       <Label>

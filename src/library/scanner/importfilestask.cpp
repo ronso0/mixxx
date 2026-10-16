@@ -45,6 +45,7 @@ void ImportFilesTask::run() {
             if (!fileInfo.exists()) {
                 qWarning() << "ImportFilesTask: Skipping inaccessible file"
                         << trackLocation;
+                emit trackMissing(trackLocation);
                 continue;
             }
             qDebug() << "Importing track" << trackLocation;
