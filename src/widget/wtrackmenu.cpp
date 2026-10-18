@@ -61,6 +61,8 @@ constexpr WTrackMenu::Features WTrackMenu::kDeckTrackMenuFeatures;
 namespace {
 const QString kAppGroup = QStringLiteral("[App]");
 
+constexpr char kCrateIdProp[] = "crateId";
+
 const QString samplerTrString(int i) {
     return QObject::tr("Sampler %1").arg(i);
 }
@@ -1658,7 +1660,7 @@ void WTrackMenu::slotPopulateCrateMenu() {
         auto pCheckBox = make_parented<WMenuCheckBox>(
                 mixxx::escapeTextPropertyWithoutShortcuts(crate.getName()),
                 m_pCrateMenu);
-        pCheckBox->setProperty("crateId", QVariant::fromValue(crate.getId()));
+        pCheckBox->setProperty(kCrateIdProp, QVariant::fromValue(crate.getId()));
         pCheckBox->setEnabled(!crate.isLocked());
         // Strangely, the normal styling of QActions does not automatically
         // apply to QWidgetActions. The :selected pseudo-state unfortunately
@@ -1713,7 +1715,7 @@ void WTrackMenu::updateSelectionCrates(QWidget* pWidget) {
         qWarning() << "crateId is not of CrateId type";
         return;
     }
-    CrateId crateId = pCheckBox->property("crateId").value<CrateId>();
+    CrateId crateId = pCheckBox->property(kCrateIdProp).value<CrateId>();
 
     const TrackIdList trackIds = getTrackIds();
 
