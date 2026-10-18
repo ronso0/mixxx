@@ -61,6 +61,7 @@ EngineMixer::EngineMixer(UserSettingsPointer pConfig,
           m_talkover(kMaxEngineSamples),
           m_talkoverHeadphones(kMaxEngineSamples),
           m_sidechainMix(kMaxEngineSamples),
+          m_channelMixerTempBuffer(2 * kMaxEngineSamples),
           m_pWorkerScheduler(make_parented<EngineWorkerScheduler>(this)),
           m_pEngineSync(std::make_unique<EngineSync>(pConfig)),
           m_pMainGain(std::make_unique<ControlAudioTaperPot>(
@@ -412,7 +413,8 @@ void EngineMixer::process(const std::size_t bufferSize) {
                 m_headphoneHandle.handle(),
                 bufferSize,
                 m_sampleRate,
-                m_pEngineEffectsManager);
+                m_pEngineEffectsManager,
+                m_channelMixerTempBuffer.data());
 
         // Process headphone channel effects
         if (m_pEngineEffectsManager) {
@@ -446,7 +448,8 @@ void EngineMixer::process(const std::size_t bufferSize) {
             m_mainHandle.handle(),
             bufferSize,
             m_sampleRate,
-            m_pEngineEffectsManager);
+            m_pEngineEffectsManager,
+            m_channelMixerTempBuffer.data());
 
     // Process effects on all microphones mixed together
     // We have no metadata for mixed effect buses, so use an empty GroupFeatureState.
@@ -501,7 +504,8 @@ void EngineMixer::process(const std::size_t bufferSize) {
                 m_mainHandle.handle(),
                 bufferSize,
                 m_sampleRate,
-                m_pEngineEffectsManager);
+                m_pEngineEffectsManager,
+                m_channelMixerTempBuffer.data());
     }
 
     // Process crossfader orientation bus channel effects
@@ -875,7 +879,7 @@ void EngineMixer::addChannel(std::unique_ptr<EngineChannel> pChannel) {
     m_channelTalkoverGainCache.append(gainCacheDefault);
     m_channelMainGainCache.append(gainCacheDefault);
 
-    // Pre-allocate scratch buffers to avoid memory allocation in the
+    // Pre-allocate these buffers to avoid memory allocation in the
     // callback. QVarLengthArray does nothing if reserve is called with a size
     // smaller than its pre-allocation.
     m_activeChannels.reserve(m_channels.size());
