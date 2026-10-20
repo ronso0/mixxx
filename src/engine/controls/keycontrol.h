@@ -70,6 +70,9 @@ class KeyControl : public EngineControl {
     std::unique_ptr<ControlObject> m_pEngineKey;
     std::unique_ptr<ControlPotmeter> m_pEngineKeyDistance;
 
+    // for debugging
+    std::unique_ptr<ControlPushButton> m_pDebugControl;
+
     struct PitchTempoRatio m_pitchRateInfo;
     QAtomicInt m_updatePitchRequest;
     QAtomicInt m_updatePitchAdjustRequest;

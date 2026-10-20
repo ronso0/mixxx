@@ -23,6 +23,7 @@ class ScannerTask : public QObject, public QRunnable {
                                    bool newDirectory, mixxx::cache_key_t hash);
     void directoryUnchanged(const QString& directoryPath,
             const QStringList& presentTrackLocations);
+    void trackMissing(const QString& filePath);
     void trackExists(const QString& filePath);
     void addNewTrack(const QString& filePath);
 

@@ -1,7 +1,9 @@
 <svg width="32" height="32" version="1.1" viewBox="0 0 8.4667 8.4667" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(-43.382 -122.5)" fill="none" stroke="#fff">
-    <circle cx="47.672" cy="126.78" r="3.4077" stroke-width=".8"/>
+  <g transform="translate(-53.965374,-122.5)" fill="#c2b3a5" stroke="#fff">
+    <circle cx="47.672001" cy="126.78" r="3.4077001" stroke-width=".8"/>
     <path d="m46.233 125.37 2.8732 2.7719"/>
     <path d="m46.293 128.21 2.7539-2.8906"/>
   </g>
+  <path d="m1.7304306 1.7175888 5.0058388 5.0033054" stroke="#c2b3a5" stroke-width=".92604531"/>
+  <path d="m1.7477241 6.7533716 4.9719449-5.0372365" stroke="#c2b3a5" stroke-width=".92604531"/>
 </svg>

@@ -23,6 +23,7 @@
 #include "util/assert.h"
 #include "util/defs.h"
 #include "util/file.h"
+#include "util/widgethelper.h"
 #include "widget/wlibrary.h"
 #include "widget/wlibrarysidebar.h"
 #include "widget/wlibrarytextbrowser.h"
@@ -444,7 +445,8 @@ void BasePlaylistFeature::slotDeletePlaylist() {
         return;
     }
 
-    QMessageBox::StandardButton btn = QMessageBox::question(nullptr,
+    QMessageBox::StandardButton btn = QMessageBox::question(
+            mixxx::widgethelper::getSkinWidget(), // parent to apply skin styles,
             tr("Confirm Deletion"),
             tr("Do you really want to delete playlist <b>%1</b>?")
                     .arg(m_playlistDao.getPlaylistName(playlistId)),
@@ -647,11 +649,11 @@ void BasePlaylistFeature::slotExportPlaylist() {
     pPlaylistTableModel->select();
 
     // check config if relative paths are desired
-    bool useRelativePath = m_pConfig->getValue<bool>(
+    PlaylistExportFilePathMode filePathMode = m_pConfig->getValue<PlaylistExportFilePathMode>(
             kUseRelativePathOnExportConfigKey);
 
     if (fileLocation.endsWith(".csv", Qt::CaseInsensitive)) {
-        ParserCsv::writeCSVFile(fileLocation, pPlaylistTableModel.get(), useRelativePath);
+        ParserCsv::writeCSVFile(fileLocation, pPlaylistTableModel.get(), filePathMode);
     } else if (fileLocation.endsWith(".txt", Qt::CaseInsensitive)) {
         if (m_playlistDao.getHiddenType(pPlaylistTableModel->getPlaylist()) ==
                 PlaylistDAO::PLHT_SET_LOG) {
@@ -670,7 +672,7 @@ void BasePlaylistFeature::slotExportPlaylist() {
         exportPlaylistItemsIntoFile(
                 fileLocation,
                 playlistItems,
-                useRelativePath);
+                filePathMode);
     }
 }
 
@@ -706,7 +708,7 @@ void BasePlaylistFeature::slotExportTrackFiles() {
         return;
     }
 
-    TrackExportWizard track_export(nullptr, m_pConfig, tracks);
+    TrackExportWizard track_export(m_pConfig, tracks);
     track_export.exportTracks();
 }
 
@@ -823,8 +825,8 @@ QString BasePlaylistFeature::fetchPlaylistLabel(int playlistId) {
 }
 
 void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
-    // qDebug() << "BasePlaylistFeature::updateChildModel() for"
-    //          << playlistIds.count() << "playlist(s)";
+    qWarning() << "BasePlaylistFeature::updateChildModel() for"
+               << playlistIds.count() << "playlist(s)";
     if (playlistIds.isEmpty()) {
         return;
     }
@@ -842,6 +844,7 @@ void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
                 id = pChild->getData().toInt(&ok);
                 if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
                     label = fetchPlaylistLabel(id);
+                    qWarning() << "--> update playlist" << label;
                     pChild->setLabel(label);
                     decorateChild(pChild, id);
                     markTreeItem(pChild);
@@ -851,6 +854,7 @@ void BasePlaylistFeature::updateChildModel(const QSet<int>& playlistIds) {
             id = pTreeItem->getData().toInt(&ok);
             if (ok && id != kInvalidPlaylistId && playlistIds.contains(id)) {
                 label = fetchPlaylistLabel(id);
+                qWarning() << "--> update playlist" << label;
                 pTreeItem->setLabel(label);
                 decorateChild(pTreeItem, id);
                 markTreeItem(pTreeItem);

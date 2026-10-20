@@ -27,9 +27,10 @@ LibraryFeature::LibraryFeature(
           m_pLibrary(pLibrary),
           m_pConfig(pConfig),
           m_iconName(iconName) {
-    if (!m_iconName.isEmpty()) {
-        m_icon = QIcon(kIconPath.arg(m_iconName));
+    VERIFY_OR_DEBUG_ASSERT(!m_iconName.isEmpty()) {
+        return;
     }
+    m_icon = QIcon(kIconPath.arg(m_iconName));
 }
 
 void LibraryFeature::selectAndActivate(const QModelIndex& index) {
@@ -66,21 +67,21 @@ QStringList LibraryFeature::getPlaylistFiles(QFileDialog::FileMode mode) const {
 bool LibraryFeature::exportPlaylistItemsIntoFile(
         QString playlistFilePath,
         const QList<QString>& playlistItemLocations,
-        bool useRelativePath)    {
+        PlaylistExportFilePathMode filePathMode) {
     if (playlistFilePath.endsWith(
             QStringLiteral(".pls"),
             Qt::CaseInsensitive)) {
         return ParserPls::writePLSFile(
                 playlistFilePath,
                 playlistItemLocations,
-                useRelativePath);
+                filePathMode);
     } else if (playlistFilePath.endsWith(
             QStringLiteral(".m3u8"),
             Qt::CaseInsensitive)) {
         return ParserM3u::writeM3U8File(
                 playlistFilePath,
                 playlistItemLocations,
-                useRelativePath);
+                filePathMode);
     } else {
         //default export to M3U if file extension is missing
         if (!playlistFilePath.endsWith(
@@ -106,6 +107,6 @@ bool LibraryFeature::exportPlaylistItemsIntoFile(
         return ParserM3u::writeM3UFile(
                 playlistFilePath,
                 playlistItemLocations,
-                useRelativePath);
+                filePathMode);
     }
 }

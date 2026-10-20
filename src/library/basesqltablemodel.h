@@ -32,6 +32,10 @@ class BaseSqlTableModel : public BaseTrackTableModel {
     void setSearch(const QString& searchText);
     void setSort(int column, Qt::SortOrder order);
 
+    const QList<SortColumn>& getSortColumns() const {
+        return m_sortColumns;
+    }
+
     ///////////////////////////////////////////////////////////////////////////
     // Inherited from QAbstractItemModel
     ///////////////////////////////////////////////////////////////////////////
@@ -119,6 +123,11 @@ class BaseSqlTableModel : public BaseTrackTableModel {
     void tracksChanged(const QSet<TrackId>& trackIds);
 
   private:
+    // Implementation of select(). If `sortOnly` is true the current result
+    // set is only re-ordered instead of being re-collected from the
+    // database, see BaseTrackCache::filterAndSort()
+    void doSelect(bool sortOnly);
+
     void setTrackValueForColumn(
             TrackPointer pTrack, int column, QVariant value);
 

@@ -141,10 +141,10 @@ QList<SoundDevicePointer> SoundManager::getDeviceList(
         // make sure to include any devices that have >0 channels.
         const bool hasOutputs = pDevice->getNumOutputChannels().isValid();
         const bool hasInputs = pDevice->getNumInputChannels().isValid();
-        qDebug() << "SoundManager::getDeviceList" << pDevice->getHostAPI()
-                 << pDevice->getDeviceId().debugName() << filterAPI
-                 << pDevice->getNumOutputChannels()
-                 << pDevice->getNumInputChannels();
+        // qDebug() << "SoundManager::getDeviceList" << pDevice->getHostAPI()
+        //         << pDevice->getDeviceId().debugName() << filterAPI
+        //         << pDevice->getNumOutputChannels()
+        //         << pDevice->getNumInputChannels();
         if (pDevice->getHostAPI() != filterAPI ||
                 (bOutputDevices && !bInputDevices && !hasOutputs) ||
                 (bInputDevices && !bOutputDevices && !hasInputs) ||
@@ -199,7 +199,14 @@ void SoundManager::closeDevices(
             return;
         }
         // Sync mode, legacy - we sleep the current thread for 5 seconds
-        QThread::sleep(kSleepSecondsAfterClosingDevice);
+        // NOTE(ronso0) Is apparently only required for Pulse.
+        // See discussion in https://github.com/mixxxdj/mixxx/issues/14290
+        // And original Pulse bugs
+        // https://github.com/mixxxdj/mixxx/issues/770
+        // https://github.com/mixxxdj/mixxx/issues/8284
+        if (m_config.getAPI() == "Pulse") {
+            QThread::sleep(kSleepSecondsAfterClosingDevice);
+        }
     } else if (!closed)
 #endif
     {

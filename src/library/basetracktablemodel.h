@@ -147,6 +147,7 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
     static QString dateFormat() {
         return s_dateFormat;
     }
+    static void setDimColumns(const QList<ColumnCache::Column>& columns);
 
   protected:
     // Build a map from the column names to their indices
@@ -330,4 +331,5 @@ class BaseTrackTableModel : public QAbstractTableModel, public TrackModel {
 
     static bool s_bApplyPlayedTrackColor;
     static QString s_dateFormat;
+    static QList<ColumnCache::Column> s_dimColumns;
 };

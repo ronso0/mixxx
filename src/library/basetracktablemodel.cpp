@@ -117,6 +117,9 @@ void BaseTrackTableModel::setApplyPlayedTrackColor(bool apply) {
     s_bApplyPlayedTrackColor = apply;
 }
 
+QList<ColumnCache::Column> BaseTrackTableModel::s_dimColumns =
+        QList<ColumnCache::Column>{};
+
 const QString BaseTrackTableModel::kDateFormatDefault = QString();
 QString BaseTrackTableModel::s_dateFormat = BaseTrackTableModel::kDateFormatDefault;
 
@@ -149,6 +152,11 @@ void BaseTrackTableModel::slotEmitDataChangedForDateColumns() {
         emit dataChanged(topLeft, bottomRight, roles);
     }
 }
+
+// static
+void BaseTrackTableModel::setDimColumns(const QList<ColumnCache::Column>& columns) {
+    s_dimColumns = columns;
+};
 
 BaseTrackTableModel::BaseTrackTableModel(
         QObject* parent,
@@ -409,7 +417,7 @@ QAbstractItemDelegate* BaseTrackTableModel::delegateForColumn(
     } else if (index == fieldIndex(ColumnCache::COLUMN_TRACKLOCATIONSTABLE_LOCATION)) {
         return new LocationDelegate(pTableView);
     } else if (index == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR)) {
-        return new ColorDelegate(pTableView);
+        return new ColorDelegate(pTableView, index);
     } else if (index == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART)) {
         auto* pCoverArtDelegate =
                 new CoverArtDelegate(pTableView);
@@ -478,6 +486,14 @@ QVariant BaseTrackTableModel::data(
                 missingRaw.toBool()) {
             return QVariant::fromValue(m_trackMissingColor);
         }
+
+        // Also use the 'played' color to grey out the columns selected in
+        // Library preferences, regardless the track's 'played' state
+        const auto field = mapColumn(index.column());
+        if (s_dimColumns.contains(field)) {
+            return QVariant::fromValue(m_trackPlayedColor);
+        }
+
         if (s_bApplyPlayedTrackColor) {
             // Custom text color for played tracks
             auto playedRaw = rawSiblingValue(
@@ -941,6 +957,7 @@ QVariant BaseTrackTableModel::roleValue(
         case ColumnCache::COLUMN_LIBRARYTABLE_BITRATE:
         case ColumnCache::COLUMN_LIBRARYTABLE_TRACKNUMBER:
         case ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_POSITION:
+        case ColumnCache::COLUMN_LIBRARYTABLE_TIMESPLAYED:
         case ColumnCache::COLUMN_LIBRARYTABLE_REPLAYGAIN:
         case ColumnCache::COLUMN_LIBRARYTABLE_TUNING_FREQUENCY: {
             // We need to cast to int due to a bug similar to

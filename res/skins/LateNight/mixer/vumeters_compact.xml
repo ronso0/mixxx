@@ -65,7 +65,7 @@
           <WidgetGroup>
             <ObjectName>VuMeterMain_Compact</ObjectName>
             <Layout>horizontal</Layout>
-            <SizePolicy>min,me</SizePolicy>
+            <SizePolicy>me,me</SizePolicy>
             <Children>
               <WidgetGroup>
                 <Layout>stacked</Layout>
@@ -77,7 +77,7 @@
                   </WidgetGroup>
                   <!-- Unfortnately we can load a Singleton only once,
                       so we need a separate vu meter instance -->
-                  <Template src="skins:LateNight/mixer/vumeter_main.xml"/>
+                  <!-- <Template src="skins:LateNight/mixer/vumeter_main.xml"/> -->
                 </Children>
               </WidgetGroup>
             </Children>

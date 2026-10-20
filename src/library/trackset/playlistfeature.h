@@ -27,19 +27,21 @@ class PlaylistFeature : public BasePlaylistFeature {
             const QList<QUrl>& urls,
             QObject* pSource) override;
     bool dragMoveAcceptChild(const QModelIndex& index, const QList<QUrl>& urls) override;
+    void bindSidebarWidget(WLibrarySidebar* pSidebarWidget) override;
 
   public slots:
     void onRightClick(const QPoint& globalPos) override;
     void onRightClickChild(const QPoint& globalPos, const QModelIndex& index) override;
 
   private slots:
-    void slotPlaylistTableChanged(int playlistId) override;
+    void slotPlaylistTableChanged(int playlistId, PlaylistDAO::HiddenType type) override;
     void slotPlaylistContentOrLockChanged(const QSet<int>& playlistIds) override;
     void slotPlaylistTableRenamed(int playlistId, const QString& newName) override;
     void slotShufflePlaylist();
     void slotOrderTracksByCurrentPosition();
     void slotUnlockAllPlaylists();
     void slotDeleteAllUnlockedPlaylists();
+    void slotTogglePrepPlaylist();
 
   protected:
     void decorateChild(TreeItem* pChild, int playlistId) override;
@@ -53,4 +55,5 @@ class PlaylistFeature : public BasePlaylistFeature {
     parented_ptr<QAction> m_pOrderByCurrentPosAction;
     parented_ptr<QAction> m_pUnlockPlaylistsAction;
     parented_ptr<QAction> m_pDeleteAllUnlockedPlaylistsAction;
+    parented_ptr<QAction> m_pTogglePrepPlaylistAction;
 };

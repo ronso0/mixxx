@@ -267,7 +267,7 @@ class CueControl : public EngineControl {
     void pause(double v);
     void playStutter(double v);
 
-    void introStartSet(double v);
+    void introStartSet(double v, bool quantize = false);
     void introStartClear(double v);
     void introStartActivate(double v);
     void introEndSet(double v);
@@ -297,7 +297,7 @@ class CueControl : public EngineControl {
     void setCurrentSavedLoopControlAndActivate(HotcueControl* pControl);
     void loadCuesFromTrack();
     mixxx::audio::FramePos quantizeCuePoint(mixxx::audio::FramePos position);
-    mixxx::audio::FramePos getQuantizedCurrentPosition();
+    mixxx::audio::FramePos getQuantizedCurrentPosition(bool enforceQuantize = false);
     TrackAt getTrackAt() const;
     void seekOnLoad(mixxx::audio::FramePos seekOnLoadPosition);
     void setHotcueFocusIndex(int hotcueIndex);
@@ -345,6 +345,7 @@ class CueControl : public EngineControl {
     std::unique_ptr<ControlObject> m_pIntroStartPosition;
     std::unique_ptr<ControlObject> m_pIntroStartEnabled;
     std::unique_ptr<ControlPushButton> m_pIntroStartSet;
+    std::unique_ptr<ControlPushButton> m_pIntroStartSetQuantized;
     std::unique_ptr<ControlPushButton> m_pIntroStartClear;
     std::unique_ptr<ControlPushButton> m_pIntroStartActivate;
 

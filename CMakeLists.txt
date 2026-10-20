@@ -1,5 +1,6 @@
 # Qt 6.10 requires minimum CMake 3.22: https://doc.qt.io/qt-6.10/cmake-supported-cmake-versions.html
-cmake_minimum_required(VERSION 3.22)
+# CMake 3.24 is required for SignalSmith ??
+cmake_minimum_required(VERSION 3.24)
 # lint_cmake: -readability/wonkycase
 
 message(STATUS "CMAKE_VERSION: ${CMAKE_VERSION}")
@@ -1182,6 +1183,15 @@ if(NOT MSVC)
       endif()
     endif()
   endif()
+  # cpu pinning / isolate support
+  find_program(CPUSET_EXECUTABLE "cset")
+  if(CPUSET_EXECUTABLE)
+    message(STATUS "Found cpuset: ${CPUSET_EXECUTABLE}")
+    set(CPUSET_FOUND TRUE)
+  else()
+    message(STATUS "Could NOT find cpuset (missing executable)")
+  endif()
+  message(STATUS "Support for cpu pinning / isolate: ${CPUSET_FOUND}")
 endif()
 
 if(CMAKE_VERSION VERSION_LESS "3.7.0")
@@ -1425,6 +1435,7 @@ add_library(
   src/library/basetrackcache.cpp
   src/library/basetracktablemodel.cpp
   src/library/browse/browsefeature.cpp
+  src/library/browse/browselibrarytablemodel.cpp
   src/library/browse/browsetablemodel.cpp
   src/library/browse/browsethread.cpp
   src/library/browse/foldertreemodel.cpp
@@ -1497,6 +1508,7 @@ add_library(
   src/library/searchqueryparser.cpp
   src/library/serato/seratofeature.cpp
   src/library/serato/seratoplaylistmodel.cpp
+  src/library/sidebaritemdelegate.cpp
   src/library/sidebarmodel.cpp
   src/library/starrating.cpp
   src/library/tabledelegates/bpmdelegate.cpp
@@ -1677,6 +1689,7 @@ add_library(
   src/util/color/predefinedcolorpalettes.cpp
   src/util/colorcomponents.cpp
   src/util/console.cpp
+  src/util/cpupinning.cpp
   src/util/db/dbconnection.cpp
   src/util/db/dbconnectionpool.cpp
   src/util/db/dbconnectionpooled.cpp
@@ -2602,6 +2615,13 @@ if(NOT ANDROID)
     DESTINATION "${MIXXX_INSTALL_DATADIR}"
   )
 
+  # Script for cpu pinning of the engine thread
+  install(
+    FILES tools/mixxx-isolate.py
+    DESTINATION "${MIXXX_INSTALL_BINDIR}"
+    RENAME "mixxx-isolate"
+  )
+
   # Controller mappings
   install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/controllers"
@@ -2928,6 +2948,7 @@ if(BUILD_TESTING)
     src/test/analyzersilence_test.cpp
     src/test/audiotaperpot_test.cpp
     src/test/autodjprocessor_test.cpp
+    src/test/basetrackcache_test.cpp
     src/test/beatgridtest.cpp
     src/test/beatmaptest.cpp
     src/test/beatstest.cpp
@@ -2943,6 +2964,7 @@ if(BUILD_TESTING)
     src/test/colorconfig_test.cpp
     src/test/colormapperjsproxy_test.cpp
     src/test/colorpalette_test.cpp
+    src/test/colorpaletteeditormodel_test.cpp
     src/test/configobject_test.cpp
     src/test/controller_mapping_validation_test.cpp
     src/test/controller_mapping_settings_test.cpp
@@ -3465,6 +3487,7 @@ if(ENGINEPRIME)
       BUILD_COMMAND ${CMAKE_COMMAND} --build . --target DjInterop
       BUILD_BYPRODUCTS <INSTALL_DIR>/${DJINTEROP_LIBRARY}
       EXCLUDE_FROM_ALL TRUE
+      BUILD_JOB_SERVER_AWARE TRUE
     )
 
     # Since we have built libdjinterop from sources as a static library, its
@@ -3619,6 +3642,7 @@ if(KEYFINDER)
       BUILD_COMMAND ${CMAKE_COMMAND} --build .
       BUILD_BYPRODUCTS <INSTALL_DIR>/${KeyFinder_LIBRARY}
       EXCLUDE_FROM_ALL TRUE
+      BUILD_JOB_SERVER_AWARE TRUE
     )
 
     # This is a bit of a hack to make sure that the include directory actually
@@ -3661,6 +3685,56 @@ if(KEYFINDER)
 
   target_sources(mixxx-lib PRIVATE src/analyzer/plugins/analyzerkeyfinder.cpp)
   target_compile_definitions(mixxx-lib PUBLIC __KEYFINDER__)
+endif()
+
+# SignalSmith
+option(
+  SIGNALSMITH
+  "Enable the SignalSmith Stretch engine for pitch-bending (experimental)"
+  OFF
+)
+if(SIGNALSMITH)
+  set(
+    SIGNALSMITH_INSTALL_DIR
+    "${CMAKE_CURRENT_BINARY_DIR}/lib/signalsmith-install"
+  )
+  ExternalProject_Add(
+    signalsmith-stretch
+    GIT_REPOSITORY
+      "https://github.com/Signalsmith-Audio/signalsmith-stretch.git"
+    GIT_TAG "57b93f4e9206a089a45387eaa39bdc9f310d3308"
+    PREFIX "signalsmith-stretch"
+    INSTALL_DIR "${SIGNALSMITH_INSTALL_DIR}"
+    LIST_SEPARATOR "|"
+    CMAKE_ARGS
+      -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON
+      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+      -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+      -DCMAKE_PREFIX_PATH=${PIPE_DELIMITED_CMAKE_PREFIX_PATH}
+      -$<IF:$<BOOL:${CMAKE_TOOLCHAIN_FILE}>,D,U>CMAKE_TOOLCHAIN_FILE:PATH=${CMAKE_TOOLCHAIN_FILE}
+      -$<IF:$<BOOL:${CMAKE_OSX_DEPLOYMENT_TARGET}>,D,U>CMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}
+      -$<IF:$<BOOL:${CMAKE_OSX_ARCHITECTURES}>,D,U>CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}
+      -DCMAKE_SYSTEM_PROCESSOR=${CMAKE_SYSTEM_PROCESSOR}
+      -DCMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAME}
+    BUILD_COMMAND ${CMAKE_COMMAND} --build .
+    INSTALL_COMMAND true
+    EXCLUDE_FROM_ALL TRUE
+    BUILD_JOB_SERVER_AWARE TRUE
+  )
+
+  add_dependencies(mixxx-lib signalsmith-stretch)
+  target_include_directories(
+    mixxx-lib
+    SYSTEM
+    PUBLIC
+      "${CMAKE_CURRENT_BINARY_DIR}/signalsmith-stretch/src/signalsmith-stretch-build/_deps/signalsmith-linear-src/include/"
+      "${CMAKE_CURRENT_BINARY_DIR}/signalsmith-stretch/src/signalsmith-stretch/"
+  )
+  target_sources(
+    mixxx-lib
+    PRIVATE src/engine/bufferscalers/enginebufferscalesignalsmith.cpp
+  )
+  target_compile_definitions(mixxx-lib PUBLIC __SIGNALSMITH__)
 endif()
 
 # FLAC
@@ -5497,6 +5571,13 @@ if(QML)
   target_compile_definitions(mixxx-qml-lib PRIVATE rendergraph=rendergraph_sg)
   target_compile_definitions(mixxx-qml-lib PRIVATE __SCENEGRAPH__)
   target_compile_definitions(mixxx-qml-lib PRIVATE allshader=allshader_sg)
+  target_include_directories(
+    mixxx-qml-lib
+    SYSTEM
+    PUBLIC
+      "${CMAKE_CURRENT_BINARY_DIR}/signalsmith-stretch/src/signalsmith-stretch-build/_deps/signalsmith-linear-src/include/"
+      "${CMAKE_CURRENT_BINARY_DIR}/signalsmith-stretch/src/signalsmith-stretch/"
+  )
 endif()
 
 # WavPack audio file support
