@@ -10,6 +10,7 @@
 
 #include "library/coverartcache.h"
 #include "library/dao/trackdao.h"
+#include "library/library_decl.h"
 #include "library/treeitemmodel.h"
 #include "track/track_decl.h"
 #ifdef __STEM__
@@ -130,9 +131,13 @@ class LibraryFeature : public QObject {
         Q_UNUSED(index);
     }
     // Only implement this, if using incremental or lazy childmodels, see BrowseFeature.
-    // This method is executed whenever you **double** click child items
-    virtual void onLazyChildExpandation(const QModelIndex& index) {
+    // This is called whenever you manually expand the subtree (double click on item
+    // or click on the triangle icon) and after programmatic expandation with QTreeView's
+    // expand() or scrollTo() (with EnsureVisible hint the latter auto-expands all
+    // of the index' parents).
+    virtual void onLazyChildExpandation(const QModelIndex& index, bool enforceRebuild = false) {
         Q_UNUSED(index);
+        Q_UNUSED(enforceRebuild);
     }
   signals:
     void showTrackModel(QAbstractItemModel* model, bool restoreState = true);
@@ -172,7 +177,7 @@ class LibraryFeature : public QObject {
     static bool exportPlaylistItemsIntoFile(
             QString playlistFilePath,
             const QList<QString>& playlistItemLocations,
-            bool useRelativePath);
+            PlaylistExportFilePathMode filePathMode);
 
   private:
     QStringList getPlaylistFiles(QFileDialog::FileMode mode) const;

@@ -80,6 +80,14 @@ SoundManager::SoundManager(UserSettingsPointer pConfig,
         m_config.loadDefaults(this, SoundManagerConfig::ALL);
     }
     checkConfig();
+
+    // Initialize the engine sample rate from the validated, persisted sound
+    // configuration before VinylControlXwax instances are constructed. Audio
+    // devices update this control with their actual sample rate when opened,
+    // but vinyl control inputs are configured before that happens.
+    ControlObject::set(ConfigKey(kAppGroup, QStringLiteral("samplerate")),
+            m_config.getSampleRate());
+
     // Don't write config to disk, yet -- it may be reset to defaults in case
     // previously configured devices were not found.
     // Write new config after MixxxMainWindow::noOutputDlg where the user has
@@ -145,6 +153,16 @@ QList<QString> SoundManager::getHostAPIList() const {
     return apiList;
 }
 
+int SoundManager::getDefaultOutputDeviceIndex(const QString& api) const {
+    for (PaHostApiIndex i = 0; i < Pa_GetHostApiCount(); i++) {
+        const PaHostApiInfo* pApiInfo = Pa_GetHostApiInfo(i);
+        if (pApiInfo && api == pApiInfo->name) {
+            return pApiInfo->defaultOutputDevice;
+        }
+    }
+    return paNoDevice;
+}
+
 void SoundManager::closeDevices(bool sleepAfterClosing) {
     //qDebug() << "SoundManager::closeDevices()";
 
@@ -162,7 +180,14 @@ void SoundManager::closeDevices(bool sleepAfterClosing) {
 #ifdef __LINUX__
         // Sleep for 5 sec to allow asynchronously sound APIs like "pulse" to free
         // its resources as well
-        QThread::sleep(kSleepSecondsAfterClosingDevice);
+        // NOTE(ronso0) Is apparently only required for Pulse.
+        // See discussion in https://github.com/mixxxdj/mixxx/issues/14290
+        // And original Pulse bugs
+        // https://github.com/mixxxdj/mixxx/issues/770
+        // https://github.com/mixxxdj/mixxx/issues/8284
+        if (m_config.getAPI() == "Pulse") {
+            QThread::sleep(kSleepSecondsAfterClosingDevice);
+        }
 #endif
     }
 

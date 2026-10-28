@@ -15,126 +15,218 @@
       <WidgetGroup>
         <ObjectName>FxSlotsCollapsed</ObjectName>
         <SizePolicy>me,min</SizePolicy>
-        <Layout>horizontal</Layout>
+        <Layout>vertical</Layout>
         <Children>
-
-          <!-- TODO ronso0 make this work without compressing fx slots -->
-          <!-- Separator shown when it makes sense (gap is > 60px) -->
-          <!-- <WidgetGroup>
+          <WidgetGroup>
+            <!-- <ObjectName>FxSlotsCollapsed</ObjectName> -->
+            <SizePolicy>me,me</SizePolicy>
             <Layout>horizontal</Layout>
-            <SizePolicy>max,min</SizePolicy>
             <Children>
-              <SizeAwareStack>
-                <SizePolicy>i,min</SizePolicy>
+
+              <!-- TODO ronso0 make this work without compressing fx slots -->
+              <!-- Separator shown when it makes sense (gap is > 60px) -->
+              <!-- <WidgetGroup>
+                <Layout>horizontal</Layout>
+                <SizePolicy>max,min</SizePolicy>
                 <Children>
-                  <WidgetGroup>
-                    <Layout>horizontal</Layout>
+                  <SizeAwareStack>
                     <SizePolicy>i,min</SizePolicy>
-                    <MinimumSize>60,0</MinimumSize>
                     <Children>
-                      <WidgetGroup><SizePolicy>me,me</SizePolicy></WidgetGroup>
                       <WidgetGroup>
-                        <ObjectName>FxMixerSeparatorCollapsed</ObjectName>
                         <Layout>horizontal</Layout>
-                        <Children/>
+                        <SizePolicy>i,min</SizePolicy>
+                        <MinimumSize>60,0</MinimumSize>
+                        <Children>
+                          <WidgetGroup><SizePolicy>me,me</SizePolicy></WidgetGroup>
+                          <WidgetGroup>
+                            <ObjectName>FxMixerSeparatorCollapsed</ObjectName>
+                            <Layout>horizontal</Layout>
+                            <Children/>
+                          </WidgetGroup>
+                        </Children>
                       </WidgetGroup>
                     </Children>
-                  </WidgetGroup>
+                  </SizeAwareStack>
                 </Children>
-              </SizeAwareStack>
+              </WidgetGroup> -->
+
+              <!-- <WidgetGroup><SizePolicy>min,me</SizePolicy></WidgetGroup> -->
+
+              <!-- Fx Slot 1 -->
+              <WidgetGroup>
+                <Layout>horizontal</Layout>
+                <SizePolicy>me,min</SizePolicy>
+                <!-- On FullHD no max is okay; on wider screens we may need to set it. -->
+                <!-- When fixing this, also take care of WEffectSelector and #FxSlotCotnrols -->
+                <!-- <MaximumSize>190,</MaximumSize> -->
+                <Children>
+                  <SingletonContainer>
+                    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotControls1</ObjectName>
+                  </SingletonContainer>
+                </Children>
+              </WidgetGroup>
+
+              <Template src="skins:LateNight/fx/flow_indicator.xml">
+                <SetVariable name="Left">1</SetVariable>
+                <SetVariable name="Right">2</SetVariable>
+              </Template>
+
+              <!-- Fx Slot 2 -->
+              <WidgetGroup>
+                <Layout>horizontal</Layout>
+                <SizePolicy>me,min</SizePolicy>
+                <!-- <MaximumSize>190,</MaximumSize> -->
+                <Children>
+                  <SingletonContainer>
+                    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotControls2</ObjectName>
+                  </SingletonContainer>
+                </Children>
+              </WidgetGroup>
+
+              <Template src="skins:LateNight/fx/flow_indicator.xml">
+                <SetVariable name="Left">2</SetVariable>
+                <SetVariable name="Right">3</SetVariable>
+              </Template>
+
+              <!-- Fx Slot 3 -->
+              <WidgetGroup>
+                <Layout>horizontal</Layout>
+                <SizePolicy>me,min</SizePolicy>
+                <!-- <MaximumSize>190,</MaximumSize> -->
+                <Children>
+                  <SingletonContainer>
+                    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotControls3</ObjectName>
+                  </SingletonContainer>
+                </Children>
+              </WidgetGroup>
+
+              <Template src="skins:LateNight/fx/flow_indicator_border.xml">
+                <SetVariable name="Left">3</SetVariable>
+              </Template>
             </Children>
-          </WidgetGroup> -->
+          </WidgetGroup>
 
-          <WidgetGroup><SizePolicy>min,me</SizePolicy></WidgetGroup>
-
-          <!-- Fx Slot 1 -->
-          <WidgetGroup>
+          <WidgetGroup><!-- Parameters of focused effect -->
             <Layout>horizontal</Layout>
             <SizePolicy>me,min</SizePolicy>
-            <MaximumSize>190,</MaximumSize>
             <Children>
-              <SingletonContainer>
-                <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotControls1</ObjectName>
-              </SingletonContainer>
+
+              <WidgetGroup><SizePolicy>min,min</SizePolicy></WidgetGroup>
+
+              <WidgetGroup>
+                <ObjectName>FxSlotParameterHolder</ObjectName>
+                <Layout>horizontal</Layout>
+                <SizePolicy>me,min</SizePolicy>
+                <Children>
+                  <SingletonContainer>
+                    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotParameters1</ObjectName>
+                  </SingletonContainer>
+                  <WidgetGroup><Size>0me,0min</Size></WidgetGroup>
+                </Children>
+                <Connection>
+                  <ConfigKey persist="true">[EffectRack1_EffectUnit<Variable name="FxUnit"/>],focused_effect</ConfigKey>
+                  <Transform><IsEqual>1</IsEqual></Transform>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
+              </WidgetGroup>
+
+              <WidgetGroup>
+                <ObjectName>FxSlotParameterHolder</ObjectName>
+                <Layout>horizontal</Layout>
+                <SizePolicy>me,min</SizePolicy>
+                <Children>
+                  <WidgetGroup><Size>0me,0min</Size></WidgetGroup>
+                  <SingletonContainer>
+                    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotParameters2</ObjectName>
+                  </SingletonContainer>
+                  <WidgetGroup><Size>0me,0min</Size></WidgetGroup>
+                </Children>
+                <Connection>
+                  <ConfigKey persist="true">[EffectRack1_EffectUnit<Variable name="FxUnit"/>],focused_effect</ConfigKey>
+                  <Transform><IsEqual>2</IsEqual></Transform>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
+              </WidgetGroup>
+
+              <WidgetGroup>
+                <ObjectName>FxSlotParameterHolder</ObjectName>
+                <Layout>horizontal</Layout>
+                <SizePolicy>me,min</SizePolicy>
+                <Children>
+                  <WidgetGroup><Size>0me,0min</Size></WidgetGroup>
+                  <SingletonContainer>
+                    <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotParameters3</ObjectName>
+                  </SingletonContainer>
+                </Children>
+                <Connection>
+                  <ConfigKey persist="true">[EffectRack1_EffectUnit<Variable name="FxUnit"/>],focused_effect</ConfigKey>
+                  <Transform><IsEqual>3</IsEqual></Transform>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
+              </WidgetGroup>
+
+              <WidgetGroup>
+                <ObjectName>FxParamsToHeaderSpacer</ObjectName>
+              </WidgetGroup>
+
             </Children>
-          </WidgetGroup>
-
-          <WidgetGroup>
-            <ObjectName>FxFlowIndicatorCollapsed</ObjectName>
-            <Layout>horizontal</Layout>
-            <SizePolicy>min,me</SizePolicy>
-            <Children/>
-          </WidgetGroup>
-
-          <!-- Fx Slot 2 -->
-          <WidgetGroup>
-            <Layout>horizontal</Layout>
-            <SizePolicy>me,min</SizePolicy>
-            <MaximumSize>190,</MaximumSize>
-            <Children>
-              <SingletonContainer>
-                <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotControls2</ObjectName>
-              </SingletonContainer>
-            </Children>
-          </WidgetGroup>
-
-          <WidgetGroup>
-            <ObjectName>FxFlowIndicatorCollapsed</ObjectName>
-            <Layout>horizontal</Layout>
-            <Children/>
-          </WidgetGroup>
-
-          <!-- Fx Slot 3 -->
-          <WidgetGroup>
-            <Layout>horizontal</Layout>
-            <SizePolicy>me,min</SizePolicy>
-            <MaximumSize>190,</MaximumSize>
-            <Children>
-              <SingletonContainer>
-                <ObjectName>FxUnit<Variable name="FxUnit"/>_FxSlotControls3</ObjectName>
-              </SingletonContainer>
-            </Children>
-          </WidgetGroup>
-
-          <WidgetGroup>
-            <ObjectName>FxMixerSeparatorCollapsed</ObjectName>
-            <Layout>horizontal</Layout>
-            <Children/>
-          </WidgetGroup>
+            <Connection>
+              <ConfigKey><Variable name="FxRack_FxUnit"/>,show_focus</ConfigKey>
+              <BindProperty>visible</BindProperty>
+            </Connection>
+          </WidgetGroup><!-- Parameters of focused effect -->
         </Children>
       </WidgetGroup><!-- FxSlotsCollapsed -->
 
       <WidgetGroup>
         <ObjectName>FxUnitControlsCollapsed</ObjectName>
-        <Layout>horizontal</Layout>
+        <Layout>vertical</Layout>
         <SizePolicy>max,min</SizePolicy>
         <Children>
+          <WidgetGroup>
+            <Layout>horizontal</Layout>
+            <SizePolicy>max,min</SizePolicy>
+            <Children>
+
+              <WidgetGroup><!-- Super knob, optional -->
+                <Layout>horizontal</Layout>
+                <SizePolicy>max,max</SizePolicy>
+                <Children>
+                  <SingletonContainer>
+                    <ObjectName>FxUnit<Variable name="FxUnit"/>_SuperKnob</ObjectName>
+                  </SingletonContainer>
+                </Children>
+                <Connection>
+                  <ConfigKey persist="true">[Skin],show_superknobs</ConfigKey>
+                  <BindProperty>visible</BindProperty>
+                </Connection>
+              </WidgetGroup>
+
+              <SingletonContainer>
+                <ObjectName>FxUnit<Variable name="FxUnit"/>_DryWetKnob</ObjectName>
+              </SingletonContainer>
+
+              <SingletonContainer>
+                <ObjectName>FxUnit<Variable name="FxUnit"/>_MixmodePfl</ObjectName>
+              </SingletonContainer>
+
+              <SingletonContainer>
+                <ObjectName>FxUnit<Variable name="FxUnit"/>_PresetButton</ObjectName>
+              </SingletonContainer>
+            </Children>
+          </WidgetGroup>
 
           <WidgetGroup><!-- Super knob, optional -->
             <Layout>horizontal</Layout>
-            <SizePolicy>max,max</SizePolicy>
+            <SizePolicy>max,me</SizePolicy>
             <Children>
-              <SingletonContainer>
-                <ObjectName>FxUnit<Variable name="FxUnit"/>_SuperKnob</ObjectName>
-              </SingletonContainer>
             </Children>
             <Connection>
-              <ConfigKey persist="true">[Skin],show_superknobs</ConfigKey>
+              <ConfigKey persist="true">[EffectRack1_EffectUnit<Variable name="FxUnit"/>],focused_effect</ConfigKey>
+              <Transform><IsEqual>0</IsEqual><Not/></Transform>
               <BindProperty>visible</BindProperty>
             </Connection>
           </WidgetGroup>
-
-          <SingletonContainer>
-            <ObjectName>FxUnit<Variable name="FxUnit"/>_DryWetKnob</ObjectName>
-          </SingletonContainer>
-
-          <SingletonContainer>
-            <ObjectName>FxUnit<Variable name="FxUnit"/>_PresetButton</ObjectName>
-          </SingletonContainer>
-
-          <SingletonContainer>
-            <ObjectName>FxUnit<Variable name="FxUnit"/>_MixmodePfl</ObjectName>
-          </SingletonContainer>
         </Children>
       </WidgetGroup><!-- FxUnitControlsCollapsed -->
 

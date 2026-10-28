@@ -62,6 +62,8 @@ jobs:
               -DMODPLUG=ON
               -DWAVPACK=ON
               -DINSTALL_USER_UDEV_RULES=OFF
+              -DTARGET_ARCH=core2
+              -DCMAKE_BUILD_TYPE=RelWithDebInfo
             ctest_args: []
             compiler_cache: ccache
             compiler_cache_path: /home/runner/.cache/ccache
@@ -652,7 +654,7 @@ jobs:
 
       - name: "Upload GitHub Actions artifacts"
         if: matrix.artifacts_path != null
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           archive: "false"
           path: ${{ matrix.artifacts_path }}
@@ -724,13 +726,13 @@ jobs:
             --runtime Mixxx-${GIT_DESC}-${{ matrix.variant.arch }}.Debug.flatpak org.mixxx.Mixxx.Debug
 
       - name: "Upload Flatpak bundle"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           archive: "false"
           path: Mixxx-${{ env.GIT_DESC }}-${{ matrix.variant.arch }}.flatpak
 
       - name: "Upload Debug extension"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           archive: "false"
           path: Mixxx-${{ env.GIT_DESC }}-${{ matrix.variant.arch }}.Debug.flatpak

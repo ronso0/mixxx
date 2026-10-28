@@ -110,8 +110,11 @@ class WTrackMenu : public QMenu {
     // WARNING: This function hides non-virtual QMenu::popup().
     // This has been done on purpose to ensure menu doesn't popup without loaded track(s).
     void popup(const QPoint& pos, QAction* at = nullptr);
-    void slotShowDlgTrackInfo();
+    void slotShowDlgTrackInfo(bool findReplaceMode = false);
     // Library management
+    void clearComments() {
+        slotClearComment();
+    }
     void slotRemoveFromDisk();
     const QString getDeckGroup() const;
 
@@ -143,6 +146,7 @@ class WTrackMenu : public QMenu {
 
     // Reset
     void slotClearBeats();
+    void slotResetPlayedState();
     void slotClearPlayCount();
     void slotClearRating();
     void slotClearComment();
@@ -360,6 +364,7 @@ class WTrackMenu : public QMenu {
 
     // Clear track metadata actions
     parented_ptr<QAction> m_pClearBeatsAction;
+    parented_ptr<QAction> m_pClearPlayedAction;
     parented_ptr<QAction> m_pClearPlayCountAction;
     parented_ptr<QAction> m_pClearRatingAction;
     parented_ptr<QAction> m_pClearMainCueAction;

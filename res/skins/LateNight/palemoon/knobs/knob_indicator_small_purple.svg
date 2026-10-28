@@ -1,0 +1,16 @@
+<svg width="35" height="30" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="a" cx="366.94" cy="355.35999" r="21.466" fr="0" gradientTransform="matrix(.07515518 0 0 .03626066 -10.077029 -6.8705452)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" offset="0"/>
+      <stop stop-color="#ef14ff" offset=".54692036"/>
+      <stop stop-color="#ef14ff" offset="1"/>
+    </radialGradient>
+  </defs>
+  <path d="m15.145991 6.2038575 0.01709 6.0344235c6.8e-4 0.603026 0.242246 1.032396 0.663824 1.374023 0.422001 0.341972 0.986838 0.47359 1.633789 0.47359 0.615239 0 1.179802-0.08046 1.625244-0.400103 0.445441-0.319645 0.705599-0.778129 0.764654-1.36377l0.0034-0.0376v-0.03588l0.0018-5.9951175c-2.207258-0.5754844-2.489077-0.5984668-4.709801-0.049566z" color="#000000" color-rendering="auto" dominant-baseline="auto" image-rendering="auto" shape-rendering="auto" solid-color="#000000" style="font-feature-settings:normal;font-variant-alternates:normal;font-variant-caps:normal;font-variant-ligatures:normal;font-variant-numeric:normal;font-variant-position:normal;isolation:auto;mix-blend-mode:normal;shape-padding:0;text-decoration-color:#000000;text-decoration-line:none;text-decoration-style:solid;text-indent:0;text-orientation:mixed;text-transform:none;white-space:normal"/>
+  <path d="m17.5 5.231337c0.9695 0 1.613281-0.025448 1.613281 0.944052v5.721417c0 0.9695-0.643781 1.488977-1.613281 1.488977s-1.613281-0.519477-1.613281-1.488977v-5.721417c0-0.9695 0.643781-0.944052 1.613281-0.944052z" fill="#ef14ff"/>
+  <path d="m19.113243 6.0149775a1.6132811 0.77835065 0 1 1-3.226487 0 1.6132811 0.77835065 0 1 1 3.226487 0z" fill="url(#a)" opacity=".369" stroke-width=".0664053"/>
+  <rect x="11.496153" y="-23.743334" width="4.5309639" height="2.7763605" fill="#8a1b92" stroke-linejoin="round" stroke-width="5" style="paint-order:fill markers stroke"/>
+  <rect x="16.027117" y="-23.743334" width="4.5309639" height="2.7763605" fill="#146674" stroke-linejoin="round" stroke-width="5" style="paint-order:fill markers stroke"/>
+  <rect x="11.496153" y="-26.519693" width="4.5309639" height="2.7763605" fill="#028392" stroke-linejoin="round" stroke-width="5" style="paint-order:fill markers stroke"/>
+  <rect x="16.027117" y="-26.519693" width="4.5309639" height="2.7763605" fill="#b802c5" stroke-linejoin="round" stroke-width="5" style="paint-order:fill markers stroke"/>
+</svg>
