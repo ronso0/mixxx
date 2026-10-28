@@ -184,7 +184,7 @@ if(
           )
           message(
             STATUS
-            "Retry downloading file ${BUILDENV_URL} to ${BUILDENV_BASEPATH} (attempt ${BUILDENV_DOWNLOAD_NEXT_ATTEMPT}/${BUILDENV_DOWNLOAD_MAX_ATTEMPTS}) ..."
+            "Retrying download of file ${BUILDENV_URL} to ${BUILDENV_BASEPATH} (attempt ${BUILDENV_DOWNLOAD_NEXT_ATTEMPT}/${BUILDENV_DOWNLOAD_MAX_ATTEMPTS}) ..."
           )
           execute_process(
             COMMAND ${CMAKE_COMMAND} -E sleep ${BUILDENV_DOWNLOAD_WAIT_SECONDS}
