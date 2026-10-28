@@ -36,8 +36,7 @@ class WSearchRelatedTracksMenu : public QMenu {
             QWidget* pParent = nullptr);
     ~WSearchRelatedTracksMenu() override = default;
 
-    void addActionsForTrack(
-            const Track& track);
+    void addActionsForTrack(const Track& track, bool singleTrack);
     bool eventFilter(QObject* pObj, QEvent* e) override;
 
     void setDeckGroup(const QString& deckGroup) {

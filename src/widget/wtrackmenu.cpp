@@ -250,12 +250,13 @@ void WTrackMenu::createMenus() {
                     m_pSearchRelatedMenu->clear();
                     m_pSearchRelatedMenu->setDeckGroup(m_deckGroup);
                     const auto pTrack = getFirstTrackPointer();
+                    const bool singleTrack = getTrackPointers().size() == 1;
                     if (pTrack) {
                         // Ensure it's enabled, else we can't add actions.
                         VERIFY_OR_DEBUG_ASSERT(m_pSearchRelatedMenu->isEnabled()) {
                             m_pSearchRelatedMenu->setEnabled(true);
                         }
-                        m_pSearchRelatedMenu->addActionsForTrack(*pTrack);
+                        m_pSearchRelatedMenu->addActionsForTrack(*pTrack, singleTrack);
                     }
                     m_pSearchRelatedMenu->setEnabled(
                             !m_pSearchRelatedMenu->isEmpty());

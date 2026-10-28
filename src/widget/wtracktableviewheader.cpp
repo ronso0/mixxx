@@ -313,7 +313,6 @@ void WTrackTableViewHeader::updateMenu() {
         m_pMenu->addAction(pAction);
     }
 
-<<<<<<< HEAD
     // Only show this if the track model allows.
     // TODO Make actions members and create in ctor.
     // Then enable/disable as require here.

@@ -138,7 +138,7 @@ QString WSearchRelatedTracksMenu::elideActionText(
 }
 
 void WSearchRelatedTracksMenu::addActionsForTrack(
-        const Track& track) {
+        const Track& track, bool singleTrack) {
     // NOTE: We have to explicitly use `QString` instead of `auto`
     // when composing search queries using `QStringBuilder`. Otherwise
     // string concatenation will fail at runtime!
@@ -185,6 +185,27 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
                     tr("%1 - %2")
                             .arg(QString::number(bpmLowerBound),
                                     QString::number(bpmUpperBound)));
+        }
+    }
+
+    // Rating actions
+    {
+        if (singleTrack) {
+            const QString ratingStr = QString::number(track.getRating());
+            // exact rating
+            QString searchQuery = QStringLiteral("r:") + ratingStr;
+            addTriggerSearchAction(
+                    &addSeparatorBeforeNextAction,
+                    searchQuery,
+                    tr("Rating"),
+                    ratingStr);
+            // rating++
+            searchQuery = QStringLiteral("r:") + ratingStr + QStringLiteral("+");
+            addTriggerSearchAction(
+                    &addSeparatorBeforeNextAction,
+                    searchQuery,
+                    tr("Rating++"),
+                    ratingStr);
         }
     }
 
