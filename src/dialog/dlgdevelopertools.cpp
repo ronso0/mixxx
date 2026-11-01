@@ -10,9 +10,11 @@
 #include "util/statsmanager.h"
 
 DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
-                                     UserSettingsPointer pConfig)
+        UserSettingsPointer pConfig,
+        bool devMode)
         : QDialog(pParent),
-          m_pConfig(pConfig) {
+          m_pConfig(pConfig),
+          m_fullDevMode(devMode) {
     setupUi(this);
 
     controlsTable->setModel(&m_controlProxyModel);
@@ -21,22 +23,27 @@ DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
     controlsTable->hideColumn(ControlModel::CONTROL_COLUMN_FILTER);
     m_controlProxyModel.sort(0, Qt::AscendingOrder);
 
-    StatsManager* pManager = StatsManager::instance();
-    if (pManager) {
-        connect(pManager,
-                &StatsManager::statUpdated,
-                &m_statModel,
-                &StatModel::statUpdated);
-        pManager->emitAllStats();
-    }
+    if (m_fullDevMode) {
+        StatsManager* pManager = StatsManager::instance();
+        if (pManager) {
+            connect(pManager,
+                    &StatsManager::statUpdated,
+                    &m_statModel,
+                    &StatModel::statUpdated);
+            pManager->emitAllStats();
+        }
 
-    m_statProxyModel.setSourceModel(&m_statModel);
-    statsTable->setModel(&m_statProxyModel);
+        m_statProxyModel.setSourceModel(&m_statModel);
+        statsTable->setModel(&m_statProxyModel);
 
-    QString logFileName = QDir(pConfig->getSettingsPath()).filePath("mixxx.log");
-    m_logFile.setFileName(logFileName);
-    if (!m_logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "ERROR: Could not open log file:" << logFileName;
+        QString logFileName = QDir(pConfig->getSettingsPath()).filePath("mixxx.log");
+        m_logFile.setFileName(logFileName);
+        if (!m_logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            qWarning() << "ERROR: Could not open log file:" << logFileName;
+        }
+    } else {
+        toolTabWidget->setTabVisible(1, false);
+        toolTabWidget->setTabVisible(2, false);
     }
 
     // Set up the control search
@@ -50,17 +57,19 @@ DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
             this,
             &DlgDeveloperTools::slotControlDump);
 
-    // Set up the log search box
-    connect(logSearch,
-            &QLineEdit::returnPressed,
-            this,
-            &DlgDeveloperTools::slotLogSearch);
-    connect(logSearchButton,
-            &QPushButton::clicked,
-            this,
-            &DlgDeveloperTools::slotLogSearch);
+    if (m_fullDevMode) {
+        // Set up the log search box
+        connect(logSearch,
+                &QLineEdit::returnPressed,
+                this,
+                &DlgDeveloperTools::slotLogSearch);
+        connect(logSearchButton,
+                &QPushButton::clicked,
+                this,
+                &DlgDeveloperTools::slotLogSearch);
 
-    m_logCursor = logTextView->textCursor();
+        m_logCursor = logTextView->textCursor();
+    }
 
     // Update at 2FPS.
     startTimer(500);
@@ -72,10 +81,14 @@ DlgDeveloperTools::DlgDeveloperTools(QWidget* pParent,
     installEventFilter(this);
 }
 
+void DlgDeveloperTools::showEvent(QShowEvent*) {
+    controlSearch->setFocus(Qt::ShortcutFocusReason);
+}
+
 void DlgDeveloperTools::timerEvent(QTimerEvent* pEvent) {
     Q_UNUSED(pEvent);
-    if (!isVisible()) {
-        // nothing to do if we are not visible
+    if (!isVisible() || !m_fullDevMode) {
+        // nothing to do if we are not visible or not in full dev mode
         return;
     }
 

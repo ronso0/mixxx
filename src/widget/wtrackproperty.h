@@ -56,6 +56,10 @@ class WTrackProperty : public WLabel, public TrackDropTarget {
 
     void setup(const QDomNode& node, const SkinContext& context) override;
 
+    bool isComment() {
+        return m_isComment;
+    }
+
   signals:
     void trackDropped(const QString& filename, const QString& group) override;
     void cloneDeck(const QString& sourceGroup, const QString& targetGroup) override;
@@ -67,7 +71,10 @@ class WTrackProperty : public WLabel, public TrackDropTarget {
   public slots:
     void slotTrackLoaded(TrackPointer pTrack);
     void slotLoadingTrack(TrackPointer pNewTrack, TrackPointer pOldTrack);
+    void slotPinnedTrackChanged(TrackPointer pTrack);
     void slotShowTrackMenuChangeRequest(bool show);
+    void slotEditTrackComment();
+    void slotRemoveTrackFileFromDisk();
 
   protected:
     void contextMenuEvent(QContextMenuEvent* event) override;
@@ -86,6 +93,7 @@ class WTrackProperty : public WLabel, public TrackDropTarget {
 
     void updateLabel();
     const QString getPropertyStringFromTrack(QString& property) const;
+    void openEditor();
     void restyleAndRepaint();
 
     void ensureTrackMenuIsCreated();
@@ -93,6 +101,7 @@ class WTrackProperty : public WLabel, public TrackDropTarget {
     const UserSettingsPointer m_pConfig;
     Library* m_pLibrary;
     const bool m_isMainDeck;
+    bool m_isComment;
     TrackPointer m_pCurrentTrack;
 
     QString m_displayProperty;

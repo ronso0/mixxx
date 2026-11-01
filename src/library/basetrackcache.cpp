@@ -1,5 +1,7 @@
 #include "library/basetrackcache.h"
 
+#include <algorithm>
+
 #include "library/queryutil.h"
 #include "library/searchquery.h"
 #include "library/searchqueryparser.h"
@@ -8,11 +10,17 @@
 #include "track/globaltrackcache.h"
 #include "track/keyutils.h"
 #include "track/track.h"
+#include "util/color/rgbcolor.h"
 #include "util/performancetimer.h"
 
 namespace {
 
 constexpr bool sDebug = false;
+
+// Denotes "no color". Unlike an invalid QVariant, which signals that
+// Track does not provide the requested column (see BaseTrackCache::data()),
+// this is a valid (typed) null that matches NULL values from the database.
+const QVariant kNullColorVariant = QVariant(QMetaType::fromType<mixxx::RgbColor::code_t>());
 
 }  // namespace
 
@@ -61,6 +69,10 @@ QString BaseTrackCache::columnNameForFieldIndex(int index) const {
 
 QString BaseTrackCache::columnSortForFieldIndex(int index) const {
     return m_columnCache.columnSortForFieldIndex(index);
+}
+
+QString BaseTrackCache::columnTitle(ColumnCache::Column column) const {
+    return m_columnCache.columnTitle(column);
 }
 
 void BaseTrackCache::slotTracksAddedOrChanged(const QSet<TrackId>& trackIds) {
@@ -381,7 +393,7 @@ QVariant BaseTrackCache::getTrackValueForColumn(TrackPointer pTrack,
         return QVariant{pTrack->isBpmLocked()};
     }
     if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR) == column) {
-        return mixxx::RgbColor::toQVariant(pTrack->getColor());
+        return mixxx::RgbColor::toQVariant(pTrack->getColor(), kNullColorVariant);
     }
     if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART_LOCATION) == column) {
         return QVariant{pTrack->getCoverInfo().coverLocation};
@@ -393,7 +405,7 @@ QVariant BaseTrackCache::getTrackValueForColumn(TrackPointer pTrack,
         return QVariant{pTrack->getCoverInfo().imageDigest()};
     }
     if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART_COLOR) == column) {
-        return mixxx::RgbColor::toQVariant(pTrack->getCoverInfo().color);
+        return mixxx::RgbColor::toQVariant(pTrack->getCoverInfo().color, kNullColorVariant);
     }
     if (fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART_DIGEST) == column) {
         return QVariant{pTrack->getCoverInfo().imageDigest()};
@@ -447,12 +459,13 @@ QVariant BaseTrackCache::data(TrackId trackId, int column) const {
 }
 
 void BaseTrackCache::filterAndSort(const QSet<TrackId>& trackIds,
-                                   const QString& searchQuery,
-                                   const QString& extraFilter,
-                                   const QString& orderByClause,
-                                   const QList<SortColumn>& sortColumns,
-                                   const int columnOffset,
-                                   QHash<TrackId, int>* trackToIndex) {
+        const QString& searchQuery,
+        const QString& extraFilter,
+        const QString& orderByClause,
+        const QList<SortColumn>& sortColumns,
+        const int columnOffset,
+        bool sortOnly,
+        QHash<TrackId, int>* trackToIndex) {
     // Skip processing if there are no tracks to filter or sort.
     if (trackIds.size() == 0) {
         return;
@@ -460,6 +473,70 @@ void BaseTrackCache::filterAndSort(const QSet<TrackId>& trackIds,
 
     if (!m_bIndexBuilt) {
         buildIndex();
+    }
+
+    if (sortOnly) {
+        // Only re-order the tracks of the current result set, whose members
+        // are the keys of *trackToIndex, without re-evaluating the search
+        // query. Tracks that have been edited to no longer match the search
+        // query stay in the table, and tracks that have been edited to match
+        // it are not added, i.e. the result set remains unchanged. This is
+        // used when only the sort column or order has changed, to prevent
+        // tracks from (dis-)appearing while the table is being re-sorted.
+        if (!orderByClause.isEmpty() && !sortColumns.isEmpty()) {
+            // The order of the result set is defined by the track source,
+            // re-sort it in memory with the same comparator that is used
+            // below for insertion-sorting dirty tracks. data() takes the
+            // values of cached tracks from the in-memory track objects,
+            // i.e. pending edits are taken into account.
+            m_trackOrder.resize(0); // keeps allocated memory
+            m_trackOrder.reserve(trackToIndex->size());
+            for (auto it = trackToIndex->constBegin();
+                    it != trackToIndex->constEnd();
+                    ++it) {
+                m_trackOrder.append(it.key());
+            }
+            // The keys of the hash are in an arbitrary order, restore the
+            // previous order of the result set first. Otherwise tracks with
+            // equal values in all sort columns would be shuffled around on
+            // every re-sorting.
+            std::sort(m_trackOrder.begin(),
+                    m_trackOrder.end(),
+                    [trackToIndex](const TrackId& trackId1, const TrackId& trackId2) {
+                        return trackToIndex->value(trackId1) <
+                                trackToIndex->value(trackId2);
+                    });
+            // Note: std::stable_sort() preserves the previous order of
+            // tracks with equal values in all sort columns.
+            std::stable_sort(m_trackOrder.begin(),
+                    m_trackOrder.end(),
+                    [this, &sortColumns, columnOffset](const TrackId& trackId1,
+                            const TrackId& trackId2) {
+                        for (const auto& sortColumn : sortColumns) {
+                            const int column = sortColumn.m_column - columnOffset;
+                            const int result = compareColumnValues(column,
+                                    sortColumn.m_order,
+                                    data(trackId1, column),
+                                    data(trackId2, column));
+                            if (result != 0) {
+                                return result < 0;
+                            }
+                        }
+                        // All sort columns are equal
+                        return false;
+                    });
+            trackToIndex->clear();
+            trackToIndex->reserve(m_trackOrder.size());
+            for (int i = 0; i < m_trackOrder.size(); ++i) {
+                (*trackToIndex)[m_trackOrder[i]] = i;
+            }
+        }
+        // If the order of the result set is defined by the ORDER BY clause of
+        // the table's own query (m_tableOrderBy, e.g. the playlist position
+        // or the random shuffle of the preview column) then the rows are
+        // already in the correct order and only the membership of the result
+        // set, which remains unchanged, has to be passed through.
+        return;
     }
 
     // The id string we need for our QSqlQuery
@@ -528,6 +605,9 @@ void BaseTrackCache::filterAndSort(const QSet<TrackId>& trackIds,
         m_trackOrder.reserve(rows);
     }
 
+    // Collect tracks in the order defined by `orderByClause`.
+    // Note that the `color` column is not sorted by its raw integer value,
+    // but by hue, using the `mixxx_hue()` SQL function (see ColumnCache).
     while (query.next()) {
         TrackId trackId(query.value(idColumn));
         (*trackToIndex)[trackId] = m_trackOrder.size();
@@ -690,7 +770,6 @@ int BaseTrackCache::compareColumnValues(int sortColumn,
             sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_CHANNELS) ||
             sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_TIMESPLAYED) ||
             sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING) ||
-            sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR) ||
             sortColumn == fieldIndex(ColumnCache::COLUMN_PLAYLISTTRACKSTABLE_POSITION)) {
         // Sort as floats.
         double delta = val1.toDouble() - val2.toDouble();
@@ -701,6 +780,26 @@ int BaseTrackCache::compareColumnValues(int sortColumn,
             result = 1;
         } else {
             result = -1;
+        }
+    } else if (sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR)) {
+        // Sort colors by hue, consistent with the `mixxx_hue()` SQL function
+        // used to build the "ORDER BY" clause for the initial result set
+        // (see ColumnCache). Both have to use the same ordering, otherwise
+        // rows re-sorted here would not match the order of the rows that
+        // were sorted by SQL.
+        //
+        // Note that the values are color codes, not QColors, hence
+        // RgbColor::fromQVariant() instead of QVariant::toColor().
+        const auto color1 = mixxx::RgbColor::fromQVariant(val1);
+        const auto color2 = mixxx::RgbColor::fromQVariant(val2);
+        const qint64 key1 = mixxx::RgbColor::sortKey(color1);
+        const qint64 key2 = mixxx::RgbColor::sortKey(color2);
+        if (key1 > key2) {
+            result = 1;
+        } else if (key1 < key2) {
+            result = -1;
+        } else {
+            result = 0;
         }
     } else if (sortColumn == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_KEY)) {
         KeyUtils::KeyNotation keyNotation = m_columnCache.keyNotation();

@@ -12,6 +12,28 @@
 namespace {
 
 bool isColumnExported(BaseSqlTableModel* pPlaylistTableModel, int column) {
+    // Skip columns that are useless.
+    // TODO reduce further for Mixxx playlist & track export
+    //
+    // if (pPlaylistTableModel->isColumnInternal(column) ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_PREVIEW) == column ||
+    //         // This is the bas64 encoded image which may hit the maximum line length of spreadsheet applications
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COVERART) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_DATETIMEADDED) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_GROUPING) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_BPM) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_KEY) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_TUNING_FREQUENCY) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_DURATION) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_REPLAYGAIN) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_FILETYPE) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COMMENT) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_WAVESUMMARYHEX) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_COLOR) == column ||
+    //         pPlaylistTableModel->fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING) == column) {
+    //     return false;
+    // }
+
     if (pPlaylistTableModel->isColumnInternal(column)) {
         return false;
     }
@@ -147,8 +169,9 @@ QList<QList<QString>> ParserCsv::tokenize(const QByteArray& str, char delimiter)
     return tokens;
 }
 
-bool ParserCsv::writeCSVFile(const QString &file_str, BaseSqlTableModel* pPlaylistTableModel, bool useRelativePath)
-{
+bool ParserCsv::writeCSVFile(const QString& file_str,
+        BaseSqlTableModel* pPlaylistTableModel,
+        PlaylistExportFilePathMode filePathMode) {
     /*
      * Important note:
      * On Windows \n will produce a <CR><CL> (=\r\n)
@@ -223,7 +246,11 @@ bool ParserCsv::writeCSVFile(const QString &file_str, BaseSqlTableModel* pPlayli
                                 ->data(pPlaylistTableModel->index(j, i),
                                         BaseTrackTableModel::kDataExportRole)
                                 .toString();
-                if (useRelativePath) {
+                // FIXME add helper functions for these three types
+                if (filePathMode == PlaylistExportFilePathMode::NoPaths) {
+                    mixxx::FileInfo file(field);
+                    field = file.fileName().prepend(QStringLiteral("./"));
+                } else if (filePathMode == PlaylistExportFilePathMode::RelativePaths) {
                     field = base_dir.relativeFilePath(field);
                 }
             } else {

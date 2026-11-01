@@ -16,10 +16,12 @@
 #include "util/parented_ptr.h"
 #include "util/thread_affinity.h"
 
-class LibraryScanner;
-class TrackCollection;
 class ExternalTrackCollection;
+class LibraryScanner;
+class LibraryScannerDlg;
+struct LibraryScanResultSummary;
 class RelocatedTrack;
+class TrackCollection;
 
 // Manages Mixxx's internal database of tracks as well as external track collections.
 //
@@ -110,6 +112,8 @@ class TrackCollectionManager : public QObject,
     }
     std::optional<LibraryScanResultSummary> takePendingLibraryScanSummary();
 
+    void createAndConnectScannerDlg();
+
   signals:
     void libraryScanStarted();
     void libraryScanFinished();
@@ -150,4 +154,5 @@ class TrackCollectionManager : public QObject,
     std::atomic_bool m_libraryScanActive{false};
     std::mutex m_libraryScanSummaryMutex;
     std::optional<LibraryScanResultSummary> m_pendingLibraryScanSummary;
+    parented_ptr<LibraryScannerDlg> m_pScannerProgressDlg;
 };

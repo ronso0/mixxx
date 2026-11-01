@@ -8,12 +8,26 @@
 #include "widget/wbasewidget.h"
 
 class LibraryFeature;
+class SidebarItemDelegate;
+class SidebarModel;
 class QPoint;
 
 class WLibrarySidebar : public QTreeView, public WBaseWidget {
     Q_OBJECT
   public:
     explicit WLibrarySidebar(QWidget* parent = nullptr);
+
+    Q_PROPERTY(QColor bookmarkColor
+                    MEMBER m_bookmarkColor
+                            NOTIFY bookmarkColorChanged
+                                    DESIGNABLE true);
+
+    Q_PROPERTY(QColor watchedPathColor
+                    MEMBER m_watchedPathColor
+                            NOTIFY watchedPathColorChanged
+                                    DESIGNABLE true);
+
+    void setModel(QAbstractItemModel* pModel) override;
 
     void contextMenuEvent(QContextMenuEvent* pEvent) override;
     void dragMoveEvent(QDragMoveEvent* pEvent) override;
@@ -27,34 +41,46 @@ class WLibrarySidebar : public QTreeView, public WBaseWidget {
     void toggleSelectedItem();
     void renameSelectedItem();
     bool isLeafNodeSelected();
+    QModelIndex selectedIndex() const;
     bool isChildIndexSelected(const QModelIndex& index);
     bool isFeatureRootIndexSelected(LibraryFeature* pFeature);
+    bool selectFocusedIndex();
+
+    void setBookmarkColor(const QColor& color);
 
   public slots:
     void selectIndex(const QModelIndex& index, bool scrollToIndex = true);
     void selectChildIndex(const QModelIndex&, bool selectItem = true);
     void slotSetFont(const QFont& font);
     void slotSetExpandOnHoverDelay(int delay);
+    void slotGoToNextPrevBookmark(int direction);
 
   signals:
     void rightClicked(const QPoint&, const QModelIndex&);
     void renameItem(const QModelIndex&);
     void deleteItem(const QModelIndex&);
+    void togglePrepPlaylist();
     FocusWidget setLibraryFocus(FocusWidget newFocus,
             Qt::FocusReason focusReason = Qt::OtherFocusReason);
+    void bookmarkColorChanged(QColor m_bookmarkColor);
+    void watchedPathColorChanged(QColor m_watchedPathColor);
 
   protected:
     bool event(QEvent* pEvent) override;
 
   private:
-    void focusSelectedIndex();
-    QModelIndex selectedIndex();
+    bool focusSelectedIndex();
 
     void toggleDragHoverPropertyAndUpdateStyle(bool enabled);
     void resetHoverIndexAndDragMoveResult();
+    void toggleBookmark();
 
+    SidebarModel* m_pSidebarModel;
+    SidebarItemDelegate* m_pItemDelegate;
     QBasicTimer m_expandTimer;
     int m_hoverExpandDelay;
     QModelIndex m_hoverIndex;
     bool m_lastDragMoveAccepted;
+    QColor m_bookmarkColor;
+    QColor m_watchedPathColor;
 };

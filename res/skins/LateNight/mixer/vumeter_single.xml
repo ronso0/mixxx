@@ -33,7 +33,7 @@
         <Horizontal>false</Horizontal>
         <PeakHoldSize>4</PeakHoldSize>
         <PeakHoldTime>500</PeakHoldTime>
-        <PeakFallTime>10</PeakFallTime>
+        <PeakFallTime>50</PeakFallTime>
         <PeakFallStep>2</PeakFallStep>
         <Connection>
           <ConfigKey><Variable name="Group"/>,vu_meter</ConfigKey>

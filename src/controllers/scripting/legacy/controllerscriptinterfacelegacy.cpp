@@ -1,11 +1,13 @@
 #include "controllerscriptinterfacelegacy.h"
 
 #include <QStringEncoder>
+#include <cmath>
 #include <gsl/pointers>
 
 #include "control/controlobject.h"
 #include "control/controlobjectscript.h"
 #include "control/controlpotmeter.h"
+#include "controllers/controllershareddata.h"
 #include "controllers/scripting/legacy/controllerscriptenginelegacy.h"
 #include "controllers/scripting/legacy/scriptconnectionjsproxy.h"
 #include "mixer/playermanager.h"
@@ -51,6 +53,13 @@ ControllerScriptInterfaceLegacy::ControllerScriptInterfaceLegacy(
         m_brakeActive[i] = false;
         m_spinbackActive[i] = false;
         m_softStartActive[i] = false;
+    }
+
+    if (m_pEngine->getSharedData()) {
+        connect(m_pEngine->getSharedData(),
+                &ControllerNamespacedSharedData::updated,
+                this,
+                &ControllerScriptInterfaceLegacy::onRuntimeDataUpdated);
     }
 }
 
@@ -169,6 +178,85 @@ void ControllerScriptInterfaceLegacy::setValue(
                 !m_st.ignore(
                         pControl, coScript->getParameterForValue(newValue))) {
             coScript->set(newValue);
+        }
+    }
+}
+
+QJSValue ControllerScriptInterfaceLegacy::getSharedData() {
+    auto pJsEngine = m_pScriptEngineLegacy->jsEngine();
+    VERIFY_OR_DEBUG_ASSERT(pJsEngine) {
+        return QJSValue();
+    }
+    auto* pRuntimeData = m_pScriptEngineLegacy->getSharedData();
+
+    if (!pRuntimeData) {
+        qWarning() << "No runtime data available. Make sure a valid namespace is defined.";
+        return QJSValue();
+    }
+
+    return pJsEngine->toScriptValue(pRuntimeData->get());
+}
+
+void ControllerScriptInterfaceLegacy::setSharedData(const QJSValue& value) {
+    auto pJsEngine = m_pScriptEngineLegacy->jsEngine();
+    VERIFY_OR_DEBUG_ASSERT(pJsEngine) {
+        return;
+    }
+    auto* pRuntimeData = m_pScriptEngineLegacy->getSharedData();
+
+    if (!pRuntimeData) {
+        qWarning() << "No runtime data available. Make sure a valid namespace is defined.";
+        return;
+    }
+
+    pRuntimeData->set(value.toVariant());
+    qDebug() << "runtime data set successfully";
+}
+
+QJSValue ControllerScriptInterfaceLegacy::makeSharedDataConnection(const QJSValue& callback) {
+    if (!callback.isCallable()) {
+        m_pScriptEngineLegacy->throwJSError(
+                "Tried to connect runtime data update handler"
+                " to an invalid callback. Make sure that your code contains no "
+                "syntax errors.");
+        return QJSValue();
+    }
+    auto pJsEngine = m_pScriptEngineLegacy->jsEngine();
+    VERIFY_OR_DEBUG_ASSERT(pJsEngine) {
+        return QJSValue();
+    }
+    auto* pRuntimeData = m_pScriptEngineLegacy->getSharedData();
+
+    if (!pRuntimeData) {
+        qWarning() << "No runtime data available. Make sure a valid namespace is defined.";
+        return QJSValue();
+    }
+
+    ScriptConnection connection;
+    connection.engineJSProxy = this;
+    connection.controllerEngine = m_pScriptEngineLegacy;
+    connection.callback = callback;
+    connection.id = QUuid::createUuid();
+
+    m_runtimeDataConnections.append(connection);
+
+    return pJsEngine->newQObject(
+            new ScriptRuntimeConnectionJSProxy(m_runtimeDataConnections.last()));
+}
+
+void ControllerScriptInterfaceLegacy::onRuntimeDataUpdated(const QVariant& value) {
+    auto pJsEngine = m_pScriptEngineLegacy->jsEngine();
+    const auto args = QJSValueList{
+            pJsEngine->toScriptValue(value),
+    };
+
+    for (auto& connection : m_runtimeDataConnections) {
+        QJSValue result = connection.callback.call(args);
+        if (result.isError()) {
+            m_pScriptEngineLegacy->logOrThrowError(
+                    QStringLiteral("Invocation of runtime data connection %1 "
+                                   "failed: %2")
+                            .arg(connection.id.toString(), result.toString()));
         }
     }
 }
@@ -327,10 +415,11 @@ bool ControllerScriptInterfaceLegacy::removeScriptConnection(
 
 void ControllerScriptInterfaceLegacy::triggerScriptConnection(
         const ScriptConnection& connection) {
-    VERIFY_OR_DEBUG_ASSERT(m_pScriptEngineLegacy->jsEngine()) {
+    VERIFY_OR_DEBUG_ASSERT(m_pScriptEngineLegacy->jsEngine() && connection.key.isValid()) {
         return;
     }
 
+    // TODO handle runtimeData connection
     ControlObjectScript* coScript =
             getControlObjectScript(connection.key.group, connection.key.item);
     if (coScript == nullptr) {
@@ -342,6 +431,35 @@ void ControllerScriptInterfaceLegacy::triggerScriptConnection(
     }
 
     connection.executeCallback(coScript->get());
+}
+
+bool ControllerScriptInterfaceLegacy::removeRuntimeDataConnection(
+        const ScriptConnection& connection) {
+    VERIFY_OR_DEBUG_ASSERT(m_pScriptEngineLegacy->jsEngine()) {
+        return false;
+    }
+    return m_runtimeDataConnections.removeAll(connection) > 0;
+}
+
+void ControllerScriptInterfaceLegacy::triggerRuntimeDataConnection(
+        const ScriptConnection& connection) {
+    VERIFY_OR_DEBUG_ASSERT(m_pScriptEngineLegacy->jsEngine() ||
+            !m_runtimeDataConnections.contains(connection)) {
+        return;
+    }
+    auto pJsEngine = m_pScriptEngineLegacy->jsEngine();
+
+    QJSValue func = connection.callback; // copy function because QJSValue::call is not const
+    auto args = QJSValueList{
+            pJsEngine->toScriptValue(m_pScriptEngineLegacy->getSharedData()->get()),
+    };
+    QJSValue result = func.call(args);
+    if (result.isError()) {
+        m_pScriptEngineLegacy->logOrThrowError(
+                QStringLiteral(
+                        "Invocation of runtime data connection %1 failed: %2")
+                        .arg(connection.id.toString(), result.toString()));
+    }
 }
 
 // This function is a legacy version of makeConnection with several alternate
@@ -829,7 +947,9 @@ void ControllerScriptInterfaceLegacy::scratchProcess(int timerId) {
     // End scratching if we're ramping and the current rate is really close to the rampTo value
     if ((m_ramp[deck] && fabs(m_rampTo[deck] - newRate) <= 0.00001) ||
             // or if we brake, spin back or softstart and have crossed over the desired value,
-            (m_brakeActive[deck] && newRate < m_rampTo[deck]) ||
+            (m_brakeActive[deck] &&
+                    (m_rampTo[deck] > 0 ? newRate < m_rampTo[deck]
+                                        : newRate > m_rampTo[deck])) ||
             ((m_spinbackActive[deck] || m_softStartActive[deck]) && newRate > m_rampTo[deck]) ||
             // or if the deck was stopped manually during brake or softStart
             ((m_brakeActive[deck] || m_softStartActive[deck]) && (!isDeckPlaying(group))) ||
@@ -944,7 +1064,6 @@ void ControllerScriptInterfaceLegacy::brake(int deck, bool activate, double fact
         }
         m_brakeActive[deck] = true;
         m_spinbackActive[deck] = false;
-        m_rampTo[deck] = kBrakeRampToRate;
         // Let's fetch the current rate to create a seamless brake process
         initRate = getDeckRate(group);
         // If we are currently softStart'ing adopt the current scratch rate
@@ -955,6 +1074,8 @@ void ControllerScriptInterfaceLegacy::brake(int deck, bool activate, double fact
                 initRate = filter->predictedVelocity();
             }
         }
+        // Brake towards zero from the current direction (negative in reverse)
+        m_rampTo[deck] = std::copysign(kBrakeRampToRate, initRate);
     } else { // -kBrakeRampToRate <= rate <= kBrakeRampToRate
         // This filters stopped deck and rare case of very low initial rates
         m_brakeActive[deck] = false;
@@ -1015,7 +1136,13 @@ void ControllerScriptInterfaceLegacy::softStart(int deck, bool activate, double 
 
     double initRate = 0.0;
     // acquire deck rate
-    m_rampTo[deck] = getDeckRate(group);
+    double targetRate = getDeckRate(group);
+    // TEST Try to ramp to reverse rate if reverse is pressed when we softStart
+    ControlObjectScript* pReverse = getControlObjectScript(group, "reverse");
+    if (pReverse != nullptr && pReverse->toBool()) {
+        targetRate = 0 - targetRate;
+    }
+    m_rampTo[deck] = targetRate;
 
     // if braking or spinning back, get current rate from filter
     if (m_brakeActive[deck] || m_spinbackActive[deck]) {

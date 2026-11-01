@@ -29,6 +29,10 @@ class WLibraryTableView : public QTableView, public virtual LibraryView {
             UserSettingsPointer pConfig);
     ~WLibraryTableView() override;
 
+    UserSettingsPointer getConfig() const {
+        return m_pConfig;
+    }
+
     /// @brief saveTrackModelState function saves current positions of scrollbars,
     /// current item selection and current index in a QCache using a unique
     /// string key - can be any value but should invariant for model
@@ -87,4 +91,8 @@ class WLibraryTableView : public QTableView, public virtual LibraryView {
   private:
     const UserSettingsPointer m_pConfig;
     QCache<QString, ModelState> m_modelStateCache;
+
+    // timers used for cursor move wrap-around delay
+    QTimer* m_pMoveUpTimer;
+    QTimer* m_pMoveDownTimer;
 };

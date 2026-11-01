@@ -81,8 +81,15 @@ class Beats : private std::enable_shared_from_this<Beats> {
                   m_beatOffset(beatOffset) {
             updateValue();
         }
+        ConstIterator() {
+        }
 
-        mixxx::audio::FrameDiff_t beatLengthFrames() const;
+        bool isValid() const {
+            return m_beats != nullptr && m_value != mixxx::audio::kInvalidFramePos;
+        };
+
+        mixxx::audio::FrameDiff_t
+        beatLengthFrames() const;
 
         // Iterator methods
 
@@ -351,6 +358,8 @@ class Beats : private std::enable_shared_from_this<Beats> {
     audio::FramePos snapPosToNearBeat(audio::FramePos position) const;
 
     int numBeatsInRange(audio::FramePos startPosition, audio::FramePos endPosition) const;
+    double numFractionalBeatsInRange(audio::FramePos startPosition,
+            audio::FramePos endPosition) const;
 
     /// Find the frame position N beats away from `position`. The number of beats may be
     /// negative and does not need to be an integer. In this case the returned position will
@@ -371,6 +380,26 @@ class Beats : private std::enable_shared_from_this<Beats> {
     /// frame position `position`. For example, n=4 results in an averaging of 8 beats.
     /// The returned Bpm value may be invalid.
     mixxx::Bpm getBpmAroundPosition(audio::FramePos position, int n) const;
+
+    // Calculates contextual information about beats: the previous beat, the
+    // next beat, the current beat length, and the beat ratio (how far position
+    // lies within the current beat). Returns false if a previous or next beat
+    // does not exist. NULL arguments are safe and ignored.
+    bool getContext(
+            mixxx::audio::FramePos position,
+            mixxx::audio::FramePos* pPrevBeatPosition,
+            mixxx::audio::FramePos* pNextBeatPosition,
+            mixxx::audio::FrameDiff_t* pBeatLengthFrames,
+            double* pBeatPercentage) const;
+
+    // Alternative version that works if the next and previous beat positions
+    // are already known.
+    static bool getContextNoLookup(
+            mixxx::audio::FramePos position,
+            mixxx::audio::FramePos prevBeatPosition,
+            mixxx::audio::FramePos nextBeatPosition,
+            mixxx::audio::FrameDiff_t* pBeatLengthFrames,
+            double* pBeatPercentage);
 
     audio::SampleRate getSampleRate() const {
         return m_sampleRate;
@@ -406,7 +435,11 @@ class Beats : private std::enable_shared_from_this<Beats> {
     /// failure.
     std::optional<BeatsPointer> tryTranslateBeats(double xBeats) const;
 
-    /// Scale the position of every beat in the song by `scale`.
+    /// Scale the BPM of the song by `scale`. The position of the first beat
+    /// is kept, all other beats are placed at the positions of the original
+    /// beats with a scaled beat index (interpolated between two original
+    /// beats if the scaled index is fractional, rounded to the frame
+    /// boundary).
     //
     /// Returns a pointer to the modified beats object, or `nullopt` on
     /// failure.

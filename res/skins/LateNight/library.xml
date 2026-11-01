@@ -34,41 +34,6 @@
 
                   <Template src="skins:LateNight/decks/preview_deck.xml"/>
 
-                  <WidgetGroup><!--SearchBox + Library expand toggle -->
-                    <Layout>horizontal</Layout>
-                    <SizePolicy>min,max</SizePolicy>
-                    <Children>
-
-                      <WidgetGroup>
-                        <ObjectName>SearchLineBox</ObjectName>
-                        <Layout>horizontal</Layout>
-                        <SizePolicy>min,max</SizePolicy>
-                        <Children>
-                          <SearchBox></SearchBox>
-                        </Children>
-                      </WidgetGroup>
-
-                      <WidgetGroup>
-                        <ObjectName>LibExpandBox</ObjectName>
-                        <Layout>vertical</Layout>
-                        <Children>
-                          <Template src="skins:LateNight/controls/button_2state.xml">
-                            <SetVariable name="TooltipId">maximize_library</SetVariable>
-                            <SetVariable name="ObjectName">LibExpand</SetVariable>
-                            <SetVariable name="Size">18f,18me</SetVariable>
-                            <SetVariable name="ConfigKey">[Skin],show_maximized_library</SetVariable>
-                          </Template>
-                        </Children>
-                      </WidgetGroup><!-- LibExpandBox -->
-                    </Children>
-                  </WidgetGroup><!--SearchBox + Library expand toggle -->
-
-                  <WidgetGroup>
-                    <ObjectName>SearchTreeSpacer</ObjectName>
-                    <Layout>horizontal</Layout>
-                    <Children/>
-                  </WidgetGroup>
-
                   <Splitter>
                     <ObjectName>SidebarCoverSplitter</ObjectName>
                     <Size>me,me</Size>
@@ -107,14 +72,137 @@
               </WidgetGroup><!-- LibSidebarContainer -->
 
               <!-- Library Table-->
-              <Library>
-                <ShowButtonText>false</ShowButtonText>
-                <TrackTableBackgroundColorOpacity>0.175</TrackTableBackgroundColorOpacity>
-                <!-- Colors for the render modes of the Overview column -->
-                <!-- For the overview column we only set the signal color,
-                     other colors are the defaults. -->
-                <SignalColor><Variable name="SignalColor_12"/></SignalColor>
-              </Library>
+              <WidgetGroup>
+                <Layout>vertical</Layout>
+                <Children>
+
+                  <WidgetGroup><!--SearchBox + Library expand toggle -->
+                    <Layout>horizontal</Layout>
+                    <SizePolicy>min,max</SizePolicy>
+                    <Children>
+
+                      <WidgetGroup>
+                        <ObjectName>LibExpandBox</ObjectName>
+                        <Layout>vertical</Layout>
+                        <Children>
+                          <Template src="skins:LateNight/controls/button_2state.xml">
+                            <SetVariable name="TooltipId">maximize_library</SetVariable>
+                            <SetVariable name="ObjectName">LibExpand</SetVariable>
+                            <SetVariable name="Size">18f,18me</SetVariable>
+                            <SetVariable name="ConfigKey">[Skin],show_maximized_library</SetVariable>
+                          </Template>
+                        </Children>
+                      </WidgetGroup><!-- LibExpandBox -->
+
+                      <WidgetGroup>
+                        <ObjectName>SearchLineBox</ObjectName>
+                        <Layout>horizontal</Layout>
+                        <SizePolicy>min,max</SizePolicy>
+                        <Children>
+                          <SearchBox></SearchBox>
+                        </Children>
+                      </WidgetGroup>
+                    </Children>
+                  </WidgetGroup><!--SearchBox + Library expand toggle -->
+
+                  <!-- 'Pinned Track' controls -->
+                  <WidgetGroup>
+                    <ObjectName>PinnedTrackControls</ObjectName>
+                    <Layout>horizontal</Layout>
+                    <Children>
+                      <PushButton>
+                        <ObjectName>PinnedTrackToggle</ObjectName>
+                        <Size>22f,22f</Size>
+                        <NumberStates>2</NumberStates>
+                        <State>
+                          <Number>0</Number>
+                          <Text>L</Text>
+                        </State>
+                        <State>
+                          <Number>1</Number>
+                          <Text>L</Text>
+                        </State>
+                        <Connection>
+                          <ConfigKey>[Library],pin_selected_track</ConfigKey>
+                        </Connection>
+                      </PushButton>
+                      <PushButton>
+                        <ObjectName>PinnedTrackToggle</ObjectName>
+                        <Size>22f,22f</Size>
+                        <NumberStates>2</NumberStates>
+                        <State>
+                          <Number>0</Number>
+                          <Text>1</Text>
+                        </State>
+                        <State>
+                          <Number>1</Number>
+                          <Text>1</Text>
+                        </State>
+                        <Connection>
+                          <ConfigKey>[Channel1],pin_loaded_track</ConfigKey>
+                        </Connection>
+                      </PushButton>
+                      <PushButton>
+                        <ObjectName>PinnedTrackToggle</ObjectName>
+                        <Size>22f,22f</Size>
+                        <NumberStates>2</NumberStates>
+                        <State>
+                          <Number>0</Number>
+                          <Text>2</Text>
+                        </State>
+                        <State>
+                          <Number>1</Number>
+                          <Text>2</Text>
+                        </State>
+                        <Connection>
+                          <ConfigKey>[Channel2],pin_loaded_track</ConfigKey>
+                        </Connection>
+                      </PushButton>
+
+                      <WidgetGroup>
+                        <Layout>horizontal</Layout>
+                        <SizePolicy>me,min</SizePolicy>
+                        <MaximumSize>500,</MaximumSize>
+                        <Children>
+                          <TrackProperty>
+                            <ObjectName>TitleTextSmall</ObjectName>
+                            <Size>0me,25f</Size>
+                            <TooltipId>track_artist</TooltipId>
+                            <Property>artist</Property>
+                            <Alignment>Left</Alignment>
+                            <Elide>right</Elide>
+                            <Group>[Library]</Group>
+                          </TrackProperty>
+
+                          <TrackProperty>
+                            <ObjectName>TitleTextSmall</ObjectName>
+                            <Size>0me,25f</Size>
+                            <TooltipId>track_title</TooltipId>
+                            <Property>titleInfo</Property>
+                            <Alignment>Left</Alignment>
+                            <Elide>right</Elide>
+                            <Group>[Library]</Group>
+                          </TrackProperty>
+                        </Children>
+                      </WidgetGroup>
+                      <WidgetGroup><SizePolicy>i,min</SizePolicy></WidgetGroup>
+                    </Children>
+                    <Connection>
+                      <ConfigKey>[Library],has_pinned_track</ConfigKey>
+                      <BindProperty>visible</BindProperty>
+                    </Connection>
+                  </WidgetGroup>
+
+                  <Library>
+                    <ShowButtonText>false</ShowButtonText>
+                    <TrackTableBackgroundColorOpacity>0.175</TrackTableBackgroundColorOpacity>
+                    <!-- Colors for the render modes of the Overview column -->
+                    <!-- For the overview column we only set the signal color,
+                         other colors are the defaults. -->
+                    <SignalColor><Variable name="SignalColor_12"/></SignalColor>
+                  </Library>
+                </Children>
+              </WidgetGroup>
 
             </Children>
           </Splitter><!-- LibrarySplitter -->

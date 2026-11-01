@@ -4,7 +4,6 @@
 #include "library/library_decl.h"
 #include "library/queryutil.h"
 #include "library/scanner/importfilestask.h"
-#include "library/scanner/libraryscannerdlg.h"
 #include "library/scanner/recursivescandirectorytask.h"
 #include "library/scanner/scannertask.h"
 #include "library/scanner/scannerutil.h"
@@ -94,6 +93,23 @@ void updateQueryPlannerStatisticsForDatabase(const QSqlDatabase& database) {
     }
 }
 
+// Committing the add-tracks transaction after every track is essential to
+// avoid a deadlock between the scanner thread and the GUI thread:
+// TrackDAO::addTracksAddFile() holds the GlobalTrackCache mutex for its
+// entire duration, including its database writes. If the scanner kept its
+// write transaction open across multiple tracks, the following deadlock
+// could occur:
+// 1. The GUI thread (drag & drop) acquires the GlobalTrackCache mutex and
+//    then blocks, waiting for the write lock held by the scanner.
+// 2. The scanner, still inside its open transaction, processes the next
+//    track and blocks, waiting for the GlobalTrackCache mutex held by the
+//    GUI thread.
+// 3. Neither thread can proceed until the busy timeout expires, freezing
+//    the GUI and failing the query with SQLITE_BUSY.
+// By committing after every track, the scanner never waits for the cache
+// mutex while holding the write lock, so the lock ordering
+// (GlobalTrackCache -> database write lock) is consistent in all threads.
+
 } // anonymous namespace
 
 LibraryScanner::LibraryScanner(
@@ -105,7 +121,6 @@ LibraryScanner::LibraryScanner(
           m_stateSema(1), // only one transaction is possible at a time
           m_state(IDLE),
           m_numRelocatedTracks(0),
-          m_pProgressDlg(std::make_unique<LibraryScannerDlg>()),
           m_canceled(false),
           m_manualScan(true) {
     // Move LibraryScanner to its own thread so that our signals/slots will
@@ -121,45 +136,6 @@ LibraryScanner::LibraryScanner(
     // Listen to signals from our public methods (invoked by other threads) and
     // connect them to our slots to run the command on the scanner thread.
     connect(this, &LibraryScanner::startScan, this, &LibraryScanner::slotStartScan);
-
-#ifdef MIXXX_USE_QML
-    if (!CmdlineArgs::Instance().isQml())
-#endif
-    {
-        connect(this,
-                &LibraryScanner::progressLoading,
-                m_pProgressDlg.get(),
-                &LibraryScannerDlg::slotUpdate);
-        connect(this,
-                &LibraryScanner::progressHashing,
-                m_pProgressDlg.get(),
-                &LibraryScannerDlg::slotUpdate);
-        connect(this,
-                &LibraryScanner::scanStarted,
-                m_pProgressDlg.get(),
-                &LibraryScannerDlg::slotScanStarted);
-        connect(this,
-                &LibraryScanner::scanFinished,
-                m_pProgressDlg.get(),
-                &LibraryScannerDlg::slotScanFinished);
-        connect(m_pProgressDlg.get(),
-                &LibraryScannerDlg::scanCancelled,
-                this,
-                &LibraryScanner::slotCancel,
-                Qt::DirectConnection);
-        connect(&m_trackDao,
-                &TrackDAO::progressVerifyTracksOutside,
-                m_pProgressDlg.get(),
-                &LibraryScannerDlg::slotUpdate);
-        connect(&m_trackDao,
-                &TrackDAO::progressCoverArt,
-                m_pProgressDlg.get(),
-                &LibraryScannerDlg::slotUpdateCover);
-        connect(&m_trackDao,
-                &TrackDAO::progressLookingForSubstituteTracks,
-                m_pProgressDlg.get(),
-                &LibraryScannerDlg::slotUpdateSubstitute);
-    }
 }
 
 LibraryScanner::~LibraryScanner() {
@@ -586,10 +562,10 @@ void LibraryScanner::queueTask(ScannerTask* pTask) {
     if (pFileTask) {
         // Track and cover files
         int numFiles = pFileTask->numFilesToImport();
-        m_pProgressDlg->addQueuedTasks(numFiles);
+        emit addQueuedTasks(numFiles);
     } else {
         // RecursiveScanDirectoryTask, queues exactly one directory
-        m_pProgressDlg->addQueuedTasks(1);
+        emit addQueuedTasks(1);
     }
 
     m_scannerGlobal->getTaskWatcher().watchTask();
@@ -605,6 +581,10 @@ void LibraryScanner::queueTask(ScannerTask* pTask) {
             &ScannerTask::directoryUnchanged,
             this,
             &LibraryScanner::slotDirectoryUnchanged);
+    connect(pTask,
+            &ScannerTask::trackMissing,
+            this,
+            &LibraryScanner::slotTrackMissing);
     connect(pTask,
             &ScannerTask::trackExists,
             this,
@@ -649,6 +629,14 @@ void LibraryScanner::slotDirectoryHashedAndScanned(const QString& directoryPath,
     } else {
         m_libraryHashDao.updateDirectoryHash(directoryPath, hash, 0);
     }
+
+    // Commit the add-tracks transaction at directory boundaries. This
+    // bounds the lifetime of the open transaction when no tracks are
+    // added for a while (e.g. a phase with only unchanged directories),
+    // so that the write lock is never held unnecessarily. During active
+    // track imports, slotAddNewTrack already commits after every track.
+    m_trackDao.addTracksCommitAndRestart();
+
     emit progressHashing(directoryPath);
 }
 
@@ -671,12 +659,18 @@ void LibraryScanner::slotDirectoryUnchanged(const QString& directoryPath,
     emit progressHashing(directoryPath);
 }
 
+void LibraryScanner::slotTrackMissing(const QString& trackPath) {
+    // kLogger.debug() << "slotTrackExists" << trackPath;
+    emit progressLoading(trackPath);
+}
+
 void LibraryScanner::slotTrackExists(const QString& trackPath) {
-    //kLogger.debug() << "slotTrackExists" << trackPath;
+    // kLogger.debug() << "slotTrackExists" << trackPath;
     ScopedTimer timer(QStringLiteral("LibraryScanner::slotTrackExists"));
     if (m_scannerGlobal) {
         m_scannerGlobal->addVerifiedTrack(trackPath);
     }
+    emit progressLoading(trackPath);
 }
 
 // triggered by ScannerTask::addNewTrack / in ImportFilesTask::run()
@@ -701,6 +695,11 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
     if (!pTrack) {
         // This happens only when there is an issue with the database which
         // has been logged already. No need for yet another warning here.
+        // Still commit and restart the transaction so that the write lock
+        // is released before the next addTracksAddFile() call acquires the
+        // GlobalTrackCache mutex (see the comment on
+        // commit-after-every-track above).
+        m_trackDao.addTracksCommitAndRestart();
         return;
     }
 
@@ -716,6 +715,14 @@ void LibraryScanner::slotAddNewTrack(const QString& trackPath) {
     // a new track in the database.
     emit trackAdded(pTrack);
     emit progressLoading(trackLocation);
+
+    // Commit the add-tracks transaction after every track so that other
+    // threads (e.g. the GUI thread dropping tracks into the library) can
+    // acquire the write lock. This is critical for deadlock avoidance:
+    // the next addTracksAddFile() call will acquire the GlobalTrackCache
+    // mutex, and the scanner must not hold the write lock while waiting
+    // for that mutex (see the comment on commit-after-every-track above).
+    m_trackDao.addTracksCommitAndRestart();
 }
 
 bool LibraryScanner::changeScannerState(ScannerState newState) {

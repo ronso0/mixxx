@@ -8,6 +8,7 @@
 #include <QStylePainter>
 #include <QWidgetAction>
 
+#include "control/controlobject.h"
 #include "library/searchquery.h"
 #include "moc_wsearchrelatedtracksmenu.cpp"
 #include "track/track.h"
@@ -137,7 +138,7 @@ QString WSearchRelatedTracksMenu::elideActionText(
 }
 
 void WSearchRelatedTracksMenu::addActionsForTrack(
-        const Track& track) {
+        const Track& track, bool singleTrack) {
     // NOTE: We have to explicitly use `QString` instead of `auto`
     // when composing search queries using `QStringBuilder`. Otherwise
     // string concatenation will fail at runtime!
@@ -158,7 +159,14 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
         }
     }
     {
-        const auto bpm = track.getBpm();
+        double bpm = 0.0;
+        if (m_deckGroup.isEmpty()) {
+            // use the track's originl BPM
+            bpm = track.getBpm();
+        } else {
+            // use the deck's current BPM
+            bpm = ControlObject::get(ConfigKey(m_deckGroup, "bpm"));
+        }
         if (bpm > 0) {
             QString bpmStr = QString::number(bpm);
             // BpmFilterNode has the user value for the fuzzy range, set in DlgPrefLibrary
@@ -177,6 +185,27 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
                     tr("%1 - %2")
                             .arg(QString::number(bpmLowerBound),
                                     QString::number(bpmUpperBound)));
+        }
+    }
+
+    // Rating actions
+    {
+        if (singleTrack) {
+            const QString ratingStr = QString::number(track.getRating());
+            // exact rating
+            QString searchQuery = QStringLiteral("r:") + ratingStr;
+            addTriggerSearchAction(
+                    &addSeparatorBeforeNextAction,
+                    searchQuery,
+                    tr("Rating"),
+                    ratingStr);
+            // rating++
+            searchQuery = QStringLiteral("r:") + ratingStr + QStringLiteral("+");
+            addTriggerSearchAction(
+                    &addSeparatorBeforeNextAction,
+                    searchQuery,
+                    tr("Rating++"),
+                    ratingStr);
         }
     }
 
@@ -207,22 +236,16 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
                 const auto actionTextPrefix = tr("Artist");
                 const auto searchQueryPrefix = QStringLiteral("a:");
                 {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(primaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            primaryArtist,
                             actionTextPrefix,
                             primaryArtist);
                 }
                 if (!secondaryArtist.isEmpty()) {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(secondaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            secondaryArtist,
                             actionTextPrefix,
                             secondaryArtist);
                 }
@@ -231,22 +254,16 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
                 const auto actionTextPrefix = tr("Album Artist");
                 const auto searchQueryPrefix = QStringLiteral("aa:");
                 {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(primaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            primaryArtist,
                             actionTextPrefix,
                             primaryArtist);
                 }
                 if (!secondaryArtist.isEmpty()) {
-                    const QString searchQuery =
-                            searchQueryPrefix +
-                            quoteSearchQueryText(secondaryArtist);
                     addTriggerSearchAction(
                             &addSeparatorBeforeNextAction,
-                            searchQuery,
+                            secondaryArtist,
                             actionTextPrefix,
                             secondaryArtist);
                 }
@@ -256,12 +273,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto composer = track.getComposer();
         if (!composer.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("cp:") +
-                    quoteSearchQueryText(composer);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    composer,
                     tr("Composer"),
                     composer);
         }
@@ -272,12 +286,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto title = track.getTitle();
         if (!title.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("t:") +
-                    quoteSearchQueryText(title);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    title,
                     tr("Title"),
                     title);
         }
@@ -285,12 +296,9 @@ void WSearchRelatedTracksMenu::addActionsForTrack(
     {
         const auto album = track.getAlbum();
         if (!album.isEmpty()) {
-            const QString searchQuery =
-                    QStringLiteral("al:") +
-                    quoteSearchQueryText(album);
             addTriggerSearchAction(
                     &addSeparatorBeforeNextAction,
-                    searchQuery,
+                    album,
                     tr("Album"),
                     album);
         }

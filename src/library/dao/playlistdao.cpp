@@ -14,7 +14,8 @@
 
 PlaylistDAO::PlaylistDAO()
         : m_currentHistoryPlaylist(kInvalidPlaylistId),
-          m_pAutoDJProcessor(nullptr) {
+          m_pAutoDJProcessor(nullptr),
+          m_prepPlaylistId(kInvalidPlaylistId) {
 }
 
 void PlaylistDAO::initialize(const QSqlDatabase& database) {
@@ -89,7 +90,7 @@ int PlaylistDAO::createPlaylist(const QString& name, const HiddenType hidden) {
     int playlistId = query.lastInsertId().toInt();
     // Commit the transaction
     transaction.commit();
-    emit added(playlistId);
+    emit added(playlistId, hidden);
     return playlistId;
 }
 
@@ -198,7 +199,8 @@ void PlaylistDAO::deletePlaylist(const int playlistId) {
     ScopedTransaction transaction(m_database);
 
     QSet<TrackId> playedTrackIds;
-    if (getHiddenType(playlistId) == PLHT_SET_LOG) {
+    PlaylistDAO::HiddenType type = getHiddenType(playlistId);
+    if (type == PLHT_SET_LOG) {
         const QList<TrackId> trackIds = getTrackIds(playlistId);
 
         // TODO: QSet<T>::fromList(const QList<T>&) is deprecated and should be
@@ -246,7 +248,7 @@ void PlaylistDAO::deletePlaylist(const int playlistId) {
         }
     }
 
-    emit deleted(playlistId);
+    emit deleted(playlistId, type);
     if (!playedTrackIds.isEmpty()) {
         emit tracksRemovedFromPlayedHistory(playedTrackIds);
     }
@@ -260,6 +262,14 @@ bool PlaylistDAO::deletePlaylists(const QStringList& idStringList) {
 
     qInfo() << "Deleting" << idStringList.size() << "playlists";
 
+    PlaylistDAO::HiddenType type = PlaylistDAO::HiddenType::PLHT_UNKNOWN;
+    // Get playlist type. Assumes playlist batch deletion was invoked
+    // by the same library feature, ie. all are of same type.
+    bool ok = false;
+    int firstId = idStringList.first().toInt(&ok);
+    if (ok) {
+        type = getHiddenType(firstId);
+    }
     // delete tracks assigned to these playlists
     auto deleteTracks = FwdSqlQuery(m_database,
             QString("DELETE FROM PlaylistTracks WHERE playlist_id IN (%1)")
@@ -275,7 +285,7 @@ bool PlaylistDAO::deletePlaylists(const QStringList& idStringList) {
         return false;
     }
 
-    emit deleted(kInvalidPlaylistId);
+    emit deleted(kInvalidPlaylistId, type);
     return true;
 }
 
@@ -873,6 +883,63 @@ bool PlaylistDAO::insertTrackIntoPlaylist(TrackId trackId, const int playlistId,
     query.prepare(QStringLiteral(
             "INSERT INTO PlaylistTracks (playlist_id, track_id, position, pl_datetime_added)"
             "VALUES (:playlist_id, :track_id, :position, CURRENT_TIMESTAMP)"));
+    query.bindValue(":playlist_id", playlistId);
+    query.bindValue(":track_id", trackId.toVariant());
+    query.bindValue(":position", position);
+
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query);
+        return false;
+    }
+    transaction.commit();
+
+    m_playlistsTrackIsIn.insert(trackId, playlistId);
+    emit trackAdded(playlistId, trackId, position);
+    emit tracksAdded(QSet<int>{playlistId});
+    emit playlistContentChanged(QSet<int>{playlistId});
+    return true;
+}
+
+bool PlaylistDAO::insertTrackIntoPlaylistSetTimestamp(
+        TrackId trackId,
+        const int playlistId,
+        int position,
+        const QString& timePlayedStrUtc) {
+    if (playlistId < 0 || !trackId.isValid() || position < 0) {
+        return false;
+    }
+    // Verify timestamp is UTC 2026-07-06T23:23:13,000
+    QDateTime timestampDt = mixxx::convertVariantToDateTime(timePlayedStrUtc);
+    VERIFY_OR_DEBUG_ASSERT(timestampDt.isValid()) {
+        return false;
+    }
+
+    ScopedTransaction transaction(m_database);
+
+    int max_position = getMaxPosition(playlistId) + 1;
+
+    if (position > max_position) {
+        position = max_position;
+    }
+
+    // Move all the tracks in the playlist up by one
+    QSqlQuery query(m_database);
+    query.prepare(QStringLiteral(
+            "UPDATE PlaylistTracks SET position=position+1 "
+            "WHERE position>=:position AND playlist_id=:id"));
+    query.bindValue(":id", playlistId);
+    query.bindValue(":position", position);
+
+    if (!query.exec()) {
+        LOG_FAILED_QUERY(query);
+        return false;
+    }
+
+    // Insert the song into the PlaylistTracks table
+    query.prepare(QStringLiteral(
+            "INSERT INTO PlaylistTracks (playlist_id, track_id, position, pl_datetime_added)"
+            "VALUES (:playlist_id, :track_id, :position, %1)")
+                    .arg(timePlayedStrUtc));
     query.bindValue(":playlist_id", playlistId);
     query.bindValue(":track_id", trackId.toVariant());
     query.bindValue(":position", position);
@@ -1525,4 +1592,58 @@ void PlaylistDAO::addTracksToAutoDJQueue(const QList<TrackId>& trackIds, AutoDJS
         }
         break;
     }
+}
+
+bool PlaylistDAO::isTrackInPrepPlaylist(TrackId id) {
+    if (!id.isValid()) {
+        return false;
+    }
+    if (m_prepPlaylistId == kInvalidPlaylistId) {
+        return false;
+    }
+    return isTrackInPlaylist(id, m_prepPlaylistId);
+}
+
+bool PlaylistDAO::appendTrackToPrepPlaylist(TrackId id) {
+    if (!id.isValid()) {
+        return false;
+    }
+    if (m_prepPlaylistId == kInvalidPlaylistId) {
+        return false;
+    }
+    if (isPlaylistLocked(m_prepPlaylistId)) {
+        return false;
+    }
+    if (isTrackInPlaylist(id, m_prepPlaylistId)) {
+        return false;
+    }
+    return appendTracksToPlaylist(QList<TrackId>{id}, m_prepPlaylistId);
+}
+
+bool PlaylistDAO::removeTrackFromPrepPlaylist(TrackId id) {
+    if (!id.isValid()) {
+        return false;
+    }
+    if (m_prepPlaylistId == kInvalidPlaylistId) {
+        return false;
+    }
+    if (isPlaylistLocked(m_prepPlaylistId)) {
+        return false;
+    }
+    if (!isTrackInPlaylist(id, m_prepPlaylistId)) {
+        return false;
+    }
+    removeTracksFromPlaylistById(m_prepPlaylistId, id);
+    return true;
+}
+
+/// Set/unset the given playlist as Quick Prep playlist.
+/// Use kInvalidPlaylistId to unset.
+int PlaylistDAO::togglePrepPlaylist(int playlistId) {
+    if (m_prepPlaylistId == playlistId) {
+        m_prepPlaylistId = kInvalidPlaylistId;
+    } else {
+        m_prepPlaylistId = playlistId;
+    }
+    return m_prepPlaylistId;
 }

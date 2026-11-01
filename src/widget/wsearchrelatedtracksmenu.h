@@ -36,9 +36,12 @@ class WSearchRelatedTracksMenu : public QMenu {
             QWidget* pParent = nullptr);
     ~WSearchRelatedTracksMenu() override = default;
 
-    void addActionsForTrack(
-            const Track& track);
+    void addActionsForTrack(const Track& track, bool singleTrack);
     bool eventFilter(QObject* pObj, QEvent* e) override;
+
+    void setDeckGroup(const QString& deckGroup) {
+        m_deckGroup = deckGroup;
+    }
 
   signals:
     void triggerSearch(
@@ -59,4 +62,5 @@ class WSearchRelatedTracksMenu : public QMenu {
             const QString& elidableTextSuffix) const;
 
     parented_ptr<QWidgetAction> m_pSearchAction;
+    QString m_deckGroup;
 };

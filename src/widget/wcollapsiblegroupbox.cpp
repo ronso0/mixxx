@@ -43,6 +43,8 @@ WCollapsibleGroupBox::WCollapsibleGroupBox(QWidget* pParent)
             &WCollapsibleGroupBox::slotToggled);
     // Set the custom style for the expand/collapse icons and other tweaks
     setStyle(new CollapsibleGroupBoxStyle(style()));
+    // Collapse by default
+    setChecked(false);
 }
 
 WCollapsibleGroupBox::WCollapsibleGroupBox(const QString& title, QWidget* pParent)

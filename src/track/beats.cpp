@@ -620,6 +620,59 @@ mixxx::Bpm Beats::getBpmAroundPosition(audio::FramePos position, int n) const {
     return BeatUtils::calculateAverageBpm(2 * n, m_sampleRate, startPosition, endPosition);
 }
 
+bool Beats::getContext(
+        mixxx::audio::FramePos position,
+        mixxx::audio::FramePos* pPrevBeatPosition,
+        mixxx::audio::FramePos* pNextBeatPosition,
+        mixxx::audio::FrameDiff_t* pBeatLengthFrames,
+        double* pBeatPercentage) const {
+    mixxx::audio::FramePos prevBeatPosition;
+    mixxx::audio::FramePos nextBeatPosition;
+    if (!findPrevNextBeats(position, &prevBeatPosition, &nextBeatPosition, false)) {
+        return false;
+    }
+
+    if (pPrevBeatPosition != nullptr) {
+        *pPrevBeatPosition = prevBeatPosition;
+    }
+
+    if (pNextBeatPosition != nullptr) {
+        *pNextBeatPosition = nextBeatPosition;
+    }
+
+    return getContextNoLookup(
+            position,
+            prevBeatPosition,
+            nextBeatPosition,
+            pBeatLengthFrames,
+            pBeatPercentage);
+}
+
+// static
+bool Beats::getContextNoLookup(
+        mixxx::audio::FramePos position,
+        mixxx::audio::FramePos prevBeatPosition,
+        mixxx::audio::FramePos nextBeatPosition,
+        mixxx::audio::FrameDiff_t* pBeatLengthFrames,
+        double* pBeatPercentage) {
+    if (!prevBeatPosition.isValid() || !nextBeatPosition.isValid()) {
+        return false;
+    }
+
+    const mixxx::audio::FrameDiff_t beatLengthFrames = nextBeatPosition - prevBeatPosition;
+    if (pBeatLengthFrames != nullptr) {
+        *pBeatLengthFrames = beatLengthFrames;
+    }
+
+    if (pBeatPercentage != nullptr) {
+        *pBeatPercentage = (beatLengthFrames == 0.0)
+                ? 0.0
+                : (position - prevBeatPosition) / beatLengthFrames;
+    }
+
+    return true;
+}
+
 std::optional<BeatsPointer> Beats::tryTranslate(audio::FrameDiff_t offsetFrames) const {
     std::vector<BeatMarker> markers;
     std::transform(m_markers.cbegin(),
@@ -685,28 +738,64 @@ std::optional<BeatsPointer> Beats::tryScale(BpmScale scale) const {
         return nullptr;
     }
 
-    std::vector<BeatMarker> markers;
-    markers.reserve(m_markers.size());
-    for (const auto& marker : std::as_const(m_markers)) {
-        const double beatsTillNextMarkerFractional = marker.beatsTillNextMarker() * scaleFactor;
-        const int beatsTillNextMarker = static_cast<int>(std::trunc(beatsTillNextMarkerFractional));
-        if (beatsTillNextMarkerFractional != beatsTillNextMarker) {
-            qWarning() << "Marker with" << marker.beatsTillNextMarker()
-                       << "beats till next marker cannot be scaled by"
-                       << scaleFactor;
-            return std::nullopt;
-        }
-
-        markers.push_back({marker.position(), beatsTillNextMarker});
+    if (hasConstantTempo()) {
+        // Constant tempo: there are no markers, scale only the BPM and
+        // keep the position of the first beat.
+        return BeatsPointer(new Beats(m_markers,
+                m_lastMarkerPosition,
+                m_lastMarkerBpm * scaleFactor,
+                m_sampleRate,
+                m_subVersion));
     }
 
-    Bpm lastMarkerBpm = m_lastMarkerBpm * scaleFactor;
+    // Variable tempo: resample the beats by beat index instead of scaling
+    // the integer beat counts of the markers: beat m of the scaled beats is
+    // placed at the position of the original beat with the (fractional)
+    // index m / scaleFactor. This way the BPM curve of the track is scaled
+    // on the y-axis only, while the beat counts -- which have to be
+    // integers -- are chosen freely instead of having to satisfy
+    // beatsTillNextMarker * scaleFactor is an integer for every single
+    // marker.
+    const audio::FramePos anchor = *cfirstmarker();
+    int totalBeats = 0;
+    for (const auto& marker : std::as_const(m_markers)) {
+        totalBeats += marker.beatsTillNextMarker();
+    }
+    // Add an epsilon in case the product is an integer mathematically, but
+    // slightly below it due to floating point rounding.
+    const int lastBeatIndex =
+            static_cast<int>(std::floor(scaleFactor * totalBeats + 1e-9));
 
-    return BeatsPointer(new Beats(markers,
-            m_lastMarkerPosition,
-            lastMarkerBpm,
-            m_sampleRate,
-            m_subVersion));
+    QVector<audio::FramePos> positions;
+    positions.reserve(lastBeatIndex + 1);
+    for (int m = 0; m <= lastBeatIndex; ++m) {
+        const auto position =
+                findNBeatsFromPosition(anchor, m / scaleFactor)
+                        .toNearestFrameBoundary();
+        // Rounding to the frame boundary may let a beat collide with the
+        // previous beat if their distance is less than half a frame. Such
+        // beat positions cannot be represented.
+        if (!positions.isEmpty() && position <= positions.last()) {
+            qWarning() << "Can not scale BPM by" << scaleFactor << ", aborting."
+                       << "Beat" << m
+                       << "would overlap with the previous beat.";
+            return std::nullopt;
+        }
+        positions.append(position);
+    }
+
+    if (positions.size() < 2) {
+        qWarning() << "Scaling by" << scaleFactor << "results in less than two beats";
+        return std::nullopt;
+    }
+
+    // Rebuild the beats from the scaled beat positions, using the same code
+    // path as the deserialization of a beat map.
+    const auto pScaledBeats = fromBeatPositions(m_sampleRate, positions, m_subVersion);
+    if (!pScaledBeats) {
+        return std::nullopt;
+    }
+    return pScaledBeats;
 }
 
 std::optional<BeatsPointer> Beats::trySetBpm(mixxx::Bpm bpm) const {
@@ -764,6 +853,29 @@ int Beats::numBeatsInRange(audio::FramePos startPosition, audio::FramePos endPos
     }
     return i - 2;
 };
+
+double Beats::numFractionalBeatsInRange(audio::FramePos startPos, audio::FramePos endPos) const {
+    double pBeatPercentage;
+    // get the ratio of first beat / position:
+    // 1 - ((startPos - beat before range) / first beat length)
+    if (!getContext(startPos, nullptr, nullptr, nullptr, &pBeatPercentage)) {
+        return -1;
+    }
+    double numBeats = 1 - pBeatPercentage;
+
+    // get the last beat ratio:
+    // (endPos - last beat in range) / last beat length
+    if (!getContext(endPos, nullptr, nullptr, nullptr, &pBeatPercentage)) {
+        return -1;
+    }
+    numBeats += pBeatPercentage;
+
+    // get the beats inside the range
+    // subtract 1 because we already counted the first beat
+    numBeats += numBeatsInRange(findNextBeat(startPos), endPos) - 1;
+
+    return numBeats;
+}
 
 audio::FramePos Beats::findNextBeat(audio::FramePos position) const {
     return findNthBeat(position, 1);

@@ -5,12 +5,11 @@
 #include <sqlite3.h>
 #endif // __SQLITE3__
 
+#include "util/assert.h"
+#include "util/color/rgbcolor.h"
 #include "util/db/dbconnection.h"
-
 #include "util/db/sqllikewildcards.h"
 #include "util/logger.h"
-#include "util/assert.h"
-
 
 // Originally from public domain code:
 // http://www.archivum.info/qt-interest@trolltech.com/2008-12/00584/Re-%28Qt-interest%29-Qt-Sqlite-UserDefinedFunction.html
@@ -230,6 +229,43 @@ void sqliteLikeUtf8(sqlite3_context* context,
     return;
 }
 
+// Name of the SQL function that maps a color code column to a hue based
+// sort key. Referenced from ColumnCache to build the "ORDER BY" clause for
+// the track color column.
+const char kHueSortKeyFunc[] = "mixxx_hue";
+
+// Implements the mixxx_hue(color) SQL function. It converts a color code
+// stored in the database into the sort key defined by RgbColor::sortKey(),
+// so that SQL can order colors by hue instead of by their raw code.
+//
+// A NULL input (a track without a color) is mapped to the sort key of an
+// unset color, which sorts after all colored tracks. The function is
+// deterministic, which allows SQLite to use it in indexes and to evaluate
+// it only once per row.
+// static
+void sqliteHueSortKey(sqlite3_context* context,
+        int aArgc,
+        sqlite3_value** aArgv) {
+    VERIFY_OR_DEBUG_ASSERT(aArgc == 1) {
+        sqlite3_result_null(context);
+        return;
+    }
+
+    if (sqlite3_value_type(aArgv[0]) == SQLITE_NULL) {
+        // No color set on this track.
+        sqlite3_result_int64(
+                context,
+                mixxx::RgbColor::sortKey(mixxx::RgbColor::nullopt()));
+        return;
+    }
+
+    const auto colorCode = static_cast<mixxx::RgbColor::code_t>(
+            sqlite3_value_int64(aArgv[0]));
+    sqlite3_result_int64(context,
+            mixxx::RgbColor::sortKey(mixxx::RgbColor(colorCode)));
+    return;
+}
+
 #endif // __SQLITE3__
 
 bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator) {
@@ -302,6 +338,46 @@ bool initDatabase(const QSqlDatabase& database, mixxx::StringCollator* pCollator
     VERIFY_OR_DEBUG_ASSERT(result == SQLITE_OK) {
         kLogger.warning()
                 << "Failed to install custom 3-arg LIKE function for SQLite3:"
+                << result;
+    }
+
+    // Enable WAL (Write-Ahead Logging) journal mode and a busy timeout so
+    // that concurrent database access from multiple threads (e.g. the
+    // library scanner running in its own thread while the GUI thread is
+    // also writing) does not fail with SQLITE_BUSY:
+    // - WAL allows concurrent readers while a single writer is active.
+    //   This is a database-level, persistent setting: setting it once on
+    //   any connection persists it for all subsequent connections. The
+    //   PRAGMA is silently ignored for in-memory databases (as used in
+    //   tests).
+    // - The busy timeout makes SQLite wait and retry instead of failing
+    //   immediately when two connections compete for the write lock.
+    result = sqlite3_exec(handle, "PRAGMA journal_mode=WAL", nullptr, nullptr, nullptr);
+    if (result != SQLITE_OK) {
+        kLogger.warning()
+                << "Failed to enable WAL journal mode for SQLite3:"
+                << result;
+    }
+
+    result = sqlite3_busy_timeout(handle, 30000);
+    if (result != SQLITE_OK) {
+        kLogger.warning()
+                << "Failed to set busy timeout for SQLite3:"
+                << result;
+    }
+
+    result = sqlite3_create_function(
+            handle,
+            kHueSortKeyFunc,
+            1,
+            SQLITE_UTF8 | SQLITE_DETERMINISTIC,
+            nullptr,
+            sqliteHueSortKey,
+            nullptr,
+            nullptr);
+    VERIFY_OR_DEBUG_ASSERT(result == SQLITE_OK) {
+        kLogger.warning()
+                << "Failed to install custom hue sort key function for SQLite3:"
                 << result;
     }
 #else
@@ -378,6 +454,19 @@ QString DbConnection::collateLexicographically(const QString& orderByQuery) {
     return orderByQuery + QStringLiteral(" COLLATE ") + kLexicographicalCollationFunc;
 #else
         return orderByQuery;
+#endif //  __SQLITE3__
+}
+
+// static
+QString DbConnection::hueSortKey(const QString& column) {
+#ifdef __SQLITE3__
+    return QString::fromLatin1(kHueSortKeyFunc) +
+            QStringLiteral("(") + column + QStringLiteral(")");
+#else
+    // The function is not available, fall back to sorting by the raw
+    // color code. This is inconsistent with RgbColor::sortKey(), but
+    // Mixxx only supports SQLite3 for its library database.
+    return column;
 #endif //  __SQLITE3__
 }
 
