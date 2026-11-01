@@ -473,6 +473,7 @@
   [#16185](https://github.com/mixxxdj/mixxx/pull/16185)
   [#16183](https://github.com/mixxxdj/mixxx/issues/16183)
   [#16054](https://github.com/mixxxdj/mixxx/pull/16054)
+* Improve logging and file access during type probing [#16396](https://github.com/mixxxdj/mixxx/pull/16396)
 
 ### Preferences
 
@@ -579,6 +580,8 @@
 * Menubar: avoid crash with invalid keyboard shortcut strings
   [#16219](https://github.com/mixxxdj/mixxx/pull/16219)
   [#16216](https://github.com/mixxxdj/mixxx/issues/16216)
+* Tooltips: combine `latency_usage` and `latency_overload` for combo widgets [#17365](https://github.com/mixxxdj/mixxx/pull/17365)
+* Retry build-environment downloads, to prevent manual CI rebuilds if network transport issues occur [#17356](https://github.com/mixxxdj/mixxx/pull/17356)
 
 ### Experimental Features
 
@@ -869,6 +872,7 @@
 * Fix flaky unittests test
   [#16956](https://github.com/mixxxdj/mixxx/pull/16956)
   [#10516](https://github.com/mixxxdj/mixxx/issues/10516)
+* SoundSourceProxyTest: split file loops into per-file tests [#17198](https://github.com/mixxxdj/mixxx/pull/17198)
 
 ## [2.5.7](https://github.com/mixxxdj/mixxx/milestone/56) (unreleased)
 
@@ -994,6 +998,7 @@
 * FFmpeg: use the default AAC decoder and warn about known seeking issues. [#17218](https://github.com/mixxxdj/mixxx/pull/17218)
 * Fix flaky unittests test
   [#16275](https://github.com/mixxxdj/mixxx/pull/16275)
+  [#17375](https://github.com/mixxxdj/mixxx/pull/17375)
   [#12554](https://github.com/mixxxdj/mixxx/issues/12554)
   [#16332](https://github.com/mixxxdj/mixxx/pull/16332)
   [#16290](https://github.com/mixxxdj/mixxx/pull/16290)

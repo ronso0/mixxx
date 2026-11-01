@@ -96,8 +96,8 @@
   Do not edit it manually.
   -->
   <releases>
-    <release version="2.7.0" type="development" date="2026-10-30" timestamp="1793362955"/>
-    <release version="2.6.0" type="development" date="2026-10-30" timestamp="1793362955">
+    <release version="2.7.0" type="development" date="2026-11-01" timestamp="1793536813"/>
+    <release version="2.6.0" type="development" date="2026-11-01" timestamp="1793536813">
       <description>
  <p>
   STEM file support
@@ -1110,6 +1110,10 @@
    #16183
    #16054
   </li>
+  <li>
+   Improve logging and file access during type probing
+   #16396
+  </li>
  </ul>
  <p>
   Preferences
@@ -1343,6 +1347,18 @@
    Menubar: avoid crash with invalid keyboard shortcut strings
    #16219
    #16216
+  </li>
+  <li>
+   Tooltips: combine
+   latency_usage
+   and
+   latency_overload
+   for combo widgets
+   #17365
+  </li>
+  <li>
+   Retry build-environment downloads, to prevent manual CI rebuilds if network transport issues occur
+   #17356
   </li>
  </ul>
  <p>
@@ -2246,10 +2262,14 @@
    #16956
    #10516
   </li>
+  <li>
+   SoundSourceProxyTest: split file loops into per-file tests
+   #17198
+  </li>
  </ul>
 </description>
     </release>
-    <release version="2.5.7" type="development" date="2026-10-30" timestamp="1793362955">
+    <release version="2.5.7" type="development" date="2026-11-01" timestamp="1793536813">
       <description>
  <p>
   Controller Mappings
@@ -2519,6 +2539,7 @@
   <li>
    Fix flaky unittests test
    #16275
+   #17375
    #12554
    #16332
    #16290
@@ -2785,7 +2806,7 @@
  </ul>
 </description>
     </release>
-    <release version="2.5.5" type="development" date="2026-10-30" timestamp="1793362955">
+    <release version="2.5.5" type="development" date="2026-11-01" timestamp="1793536813">
       <description>
  <p>
   Note: Version 2.5.5 has been skipped following an issue in the release workflow.
