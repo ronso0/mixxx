@@ -96,8 +96,8 @@
   Do not edit it manually.
   -->
   <releases>
-    <release version="2.7.0" type="development" date="2026-11-01" timestamp="1793536813"/>
-    <release version="2.6.0" type="development" date="2026-11-01" timestamp="1793536813">
+    <release version="2.7.0" type="development" date="2026-11-03" timestamp="1793660838"/>
+    <release version="2.6.0" type="development" date="2026-11-03" timestamp="1793660838">
       <description>
  <p>
   STEM file support
@@ -2269,7 +2269,7 @@
  </ul>
 </description>
     </release>
-    <release version="2.5.7" type="development" date="2026-11-01" timestamp="1793536813">
+    <release version="2.5.7" type="development" date="2026-11-03" timestamp="1793660838">
       <description>
  <p>
   Controller Mappings
@@ -2280,6 +2280,10 @@
    #16453
    )
    #16496
+  </li>
+  <li>
+   Hercules DJControl Inpulse 500: fix Vinyl button, deck B Shift+Play and beat-align LED
+   #17082
   </li>
   <li>
    Numark DJ2GO2 Touch: fix bug with preview deck
@@ -2806,7 +2810,7 @@
  </ul>
 </description>
     </release>
-    <release version="2.5.5" type="development" date="2026-11-01" timestamp="1793536813">
+    <release version="2.5.5" type="development" date="2026-11-03" timestamp="1793660838">
       <description>
  <p>
   Note: Version 2.5.5 has been skipped following an issue in the release workflow.
