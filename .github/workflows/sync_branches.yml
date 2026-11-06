@@ -21,6 +21,8 @@ env:
 
 jobs:
   sync-branches:
+    # Disabled: only Windows CI builders are enabled.
+    if: false
     runs-on: ubuntu-slim
     permissions:
       contents: write

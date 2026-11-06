@@ -5,6 +5,8 @@ on:
 
 jobs:
   build:
+    # Disabled: only Windows CI builders are enabled.
+    if: false
     runs-on: ubuntu-22.04
 
     steps:

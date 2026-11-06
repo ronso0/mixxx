@@ -22,6 +22,8 @@ permissions:
 
 jobs:
   publish-appimage:
+    # Disabled: only Windows CI builders are enabled.
+    if: false
     name: Publish AppImage
     runs-on: ubuntu-24.04
     steps:

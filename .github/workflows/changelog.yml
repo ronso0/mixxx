@@ -11,6 +11,8 @@ on:
 permissions: {}
 jobs:
   trigger-changelog-update:
+    # Disabled: only Windows CI builders are enabled.
+    if: false
     name: Trigger Changelog update on manual repository
     runs-on: ubuntu-slim
     steps:
