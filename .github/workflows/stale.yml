@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   stale:
+    # Disabled: only Windows CI builders are enabled.
+    if: false
     permissions:
       issues: write # for actions/stale to close stale issues
       pull-requests: write # for actions/stale to close stale PRs

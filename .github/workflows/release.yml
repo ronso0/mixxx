@@ -18,14 +18,6 @@ permissions:
   checks: write #  to create new checks (coverallsapp/github-action)
 
 jobs:
-  checks:
-    uses: ./.github/workflows/checks.yml
-
-  changelog:
-    uses: ./.github/workflows/changelog.yml
-    secrets:
-      MIXXXBOT_CHANGELOG_AUTOUPDATER_PAT: ${{ secrets.MIXXXBOT_CHANGELOG_AUTOUPDATER_PAT }}
-
   build:
     permissions:
       contents: read #  to fetch code (actions/checkout)
@@ -49,40 +41,3 @@ jobs:
       NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
       DASCHUER_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY: ${{ secrets.DASCHUER_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY }}
       PPA_SSH_PRIVATE_KEY: ${{ secrets.PPA_SSH_PRIVATE_KEY }}
-
-  benchmark:
-    uses: ./.github/workflows/benchmark.yml
-    with:
-      branch: ${{ github.head_ref || github.ref_name }}
-
-  publish-flatpak:
-    needs:
-      - build
-    uses: ./.github/workflows/flatpak.yml
-    # Flatpak repo only support stable (non-beta tag release), beta and alpha release publication
-    if: ${{ (github.ref_type == 'tag' && !contains('-', github.ref_name)) || github.ref_name == '2.6' || github.ref_name == 'main' }}
-    with:
-      ref: ${{ github.ref }}
-      update_repo: ${{ github.ref_name == 'main' }}
-      run_id: ${{ github.run_id }}
-    secrets:
-      DOWNLOADS_HOSTGATOR_DOT_MIXXX_DOT_ORG_KEY: ${{ secrets.DOWNLOADS_HOSTGATOR_DOT_MIXXX_DOT_ORG_KEY }}
-      DASCHUER_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY: ${{ secrets.DASCHUER_AT_MIXXX_DOT_ORG_GPG_PRIVATE_KEY }}
-
-  publish-appimage:
-    needs:
-      - build
-    uses: ./.github/workflows/appimage.yml
-    if: ${{ (github.ref_type == 'tag' && !contains('-', github.ref_name)) || github.ref_name == 'main' }}
-    with:
-      ref: ${{ github.ref }}
-      run_id: ${{ github.run_id }}
-    secrets:
-      DOWNLOADS_HOSTGATOR_DOT_MIXXX_DOT_ORG_KEY: ${{ secrets.DOWNLOADS_HOSTGATOR_DOT_MIXXX_DOT_ORG_KEY }}
-      DOWNLOADS_HOSTGATOR_DOT_MIXXX_DOT_ORG_KEY_PASSWORD: ${{ secrets.DOWNLOADS_HOSTGATOR_DOT_MIXXX_DOT_ORG_KEY_PASSWORD }}
-
-  sync:
-    if: ${{ github.ref_type != 'tag' && github.ref != 'refs/heads/main' && github.repository == 'mixxxdj/mixxx' }}
-    uses: ./.github/workflows/sync_branches.yml
-    secrets:
-      MIXXX_BRANCH_SYNC_PAT: ${{ secrets.MIXXX_BRANCH_SYNC_PAT }}

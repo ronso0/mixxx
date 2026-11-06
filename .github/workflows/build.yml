@@ -54,74 +54,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Ubuntu 24.04
-            os: ubuntu-24.04
-            cmake_args: >-
-              -DQT6=ON
-              -DQML=ON
-              -DBULK=ON
-              -DFFMPEG=ON
-              -DLOCALECOMPARE=ON
-              -DMAD=ON
-              -DMODPLUG=ON
-              -DWAVPACK=ON
-              -DINSTALL_USER_UDEV_RULES=OFF
-            ctest_args: []
-            compiler_cache: ccache
-            compiler_cache_path: /home/runner/.cache/ccache
-            compiler_cache_id: qt6
-            cpack_generator: DEB
-            buildenv_basepath: /home/runner/buildenv
-            buildenv_script: tools/debian_buildenv.sh
-            artifacts_name: Ubuntu 24.04 Qt6 DEB
-            artifacts_path: build/*.deb
-            artifacts_slug: ubuntu-jammy
-          - name: macOS 15 x64
-            os: macos-15-intel
-            cmake_args: >-
-              -DBULK=ON
-              -DCOREAUDIO=ON
-              -DHSS1394=ON
-              -DMACOS_BUNDLE=ON
-              -DMODPLUG=ON
-              -DQT6=ON
-              -DQML=OFF
-              -DWAVPACK=ON
-              -DVCPKG_TARGET_TRIPLET=x64-osx-min1100-release
-            # TODO: Fix this broken test on macOS
-            ctest_args: []
-            cpack_generator: DragNDrop
-            compiler_cache: ccache
-            compiler_cache_path: /Users/runner/Library/Caches/ccache
-            compiler_cache_id: x64
-            buildenv_basepath: /Users/runner/buildenv
-            buildenv_script: tools/macos_release_buildenv.sh
-            artifacts_name: macOS Intel DMG
-            artifacts_path: build/*.dmg
-            artifacts_slug: macos-macosintel
-          - name: macOS 15 arm64
-            os: macos-15-intel
-            cmake_args: >-
-              -DBULK=ON
-              -DCOREAUDIO=ON
-              -DHSS1394=ON
-              -DMACOS_BUNDLE=ON
-              -DMODPLUG=ON
-              -DQT6=ON
-              -DQML=ON
-              -DWAVPACK=ON
-              -DVCPKG_TARGET_TRIPLET=arm64-osx-min1100-release
-            # TODO: Fix this broken test on macOS
-            crosscompile: true
-            cpack_generator: DragNDrop
-            compiler_cache: ccache
-            compiler_cache_path: /Users/runner/Library/Caches/ccache
-            compiler_cache_id: arm64
-            buildenv_basepath: /Users/runner/buildenv
-            buildenv_script: tools/macos_arm64-cross-release_buildenv.sh
-            artifacts_name: macOS ARM DMG
-            artifacts_path: build/*.dmg
-            artifacts_slug: macos-macosarm
           - name: Windows Server 2025 VS2026 x64
             os: windows-2025-vs2026
             # Attention: If you change the cmake_args for the Windows CI build,
@@ -177,58 +109,6 @@ jobs:
             artifacts_path: build/*.msi
             artifacts_slug: windows-winarm
             arch: arm64
-          - name: Android 15 arm64
-            os: ubuntu-24.04
-            # DBUILD_TESTING=OFF: error: OpenMP support and version of OpenMP (31, 40 or 45) differs
-            cmake_args: >-
-              -DBULK=ON
-              -DQT6=ON
-              -DQML=ON
-              -DHID=ON
-              -DVCPKG_TARGET_TRIPLET=arm64-android
-              -DVCPKG_DEFAULT_HOST_TRIPLET=x64-linux-release
-              -DCMAKE_SYSTEM_NAME=Android
-              -DBUILD_TESTING=OFF
-              -DBUILD_BENCH=OFF
-            buildenv_basepath: /home/runner/buildenv
-            buildenv_script: tools/android_buildenv.sh
-            artifacts_name: Android 15 APK
-            artifacts_path: build/android-build/build/outputs/apk/release/*.apk
-            artifacts_slug: android-15
-            compiler_cache: ccache
-            compiler_cache_path: /home/runner/.cache/ccache
-            crosscompile: true
-            arch: arm64
-          # Ubuntu 22.04 (glibc 2.35) is the lowest viable glibc baseline: the
-          # AppImage must run on as many distributions as possible. Qt 6.11
-          # requires glibc >= 2.34, and the buildenv itself is built on 22.04.
-          # CMake >= 4.2 is provided by the "[AppImage] Set up cmake" step below.
-          - name: AppImage Linux x86_64
-            os: ubuntu-22.04
-            cmake_args: >-
-              -DQT6=ON
-              -DQML=ON
-              -DMIXXX_APPIMAGE=ON
-              -DINSTALL_USER_UDEV_RULES=OFF
-              -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O2 -DNDEBUG"
-              -DCMAKE_INSTALL_PREFIX=/usr
-              -DCMAKE_INSTALL_LIBDIR=lib
-              -DCMAKE_EXE_LINKER_FLAGS="-Wl,--allow-shlib-undefined"
-            ctest_args: []
-            cpack_generator: AppImage
-            # Not a cross-compile: this is a native x86_64 build, so the
-            # shared Test step must run.  The PPA steps are excluded for the
-            # AppImage separately below.
-            crosscompile: false
-            compiler_cache: ccache
-            compiler_cache_path: /home/runner/.cache/ccache
-            compiler_cache_id: appimage-qt6
-            buildenv_basepath: /home/runner/buildenv
-            buildenv_script: tools/appimage_release_buildenv.sh
-            artifacts_name: AppImage Linux x86_64
-            artifacts_path: build/*.AppImage
-            artifacts_slug: linux-appimage
-            arch: x86_64
 
     env:
       # macOS codesigning
@@ -242,8 +122,6 @@ jobs:
     name: ${{ matrix.name }}
     container: ${{ matrix.container }}
     outputs:
-      artifact-macos-macosintel: ${{ steps.prepare_deploy.outputs.artifact-macos-macosintel }}
-      artifact-macos-macosarm: ${{ steps.prepare_deploy.outputs.artifact-macos-macosarm }}
       artifact-windows-win64: ${{ steps.prepare_deploy.outputs.artifact-windows-win64 }}
       artifact-windows-winarm: ${{ steps.prepare_deploy.outputs.artifact-windows-winarm }}
     steps:

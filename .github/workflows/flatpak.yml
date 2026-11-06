@@ -19,6 +19,8 @@ on:
 
 jobs:
   publish-flatpak:
+    # Disabled: only Windows CI builders are enabled.
+    if: false
     name: Publish Flatpak
     runs-on: ubuntu-slim
     steps:

@@ -5,6 +5,8 @@ on:
 
 jobs:
   block-fixup:
+    # Disabled: only Windows CI builders are enabled.
+    if: false
     runs-on: ubuntu-slim
 
     steps:
