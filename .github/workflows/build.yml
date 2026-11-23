@@ -199,35 +199,37 @@ jobs:
             compiler_cache_path: /home/runner/.cache/ccache
             crosscompile: true
             arch: arm64
-          # Ubuntu 22.04 (glibc 2.35) is the lowest viable glibc baseline: the
-          # AppImage must run on as many distributions as possible. Qt 6.11
-          # requires glibc >= 2.34, and the buildenv itself is built on 22.04.
-          # CMake >= 4.2 is provided by the "[AppImage] Set up cmake" step below.
           - name: AppImage Linux x86_64
-            os: ubuntu-22.04
+            # x86_64 counterpart of the aarch64 entry above; same Rocky 8
+            # (glibc 2.28) container and buildenv approach.
+            os: ubuntu-24.04
+            container: rockylinux:8
+            # -Wl,--allow-shlib-undefined permits a bundled shared library to
+            # reference a symbol that the host's system libraries do not
+            # provide at link time; the AppImage ships its own copy of that
+            # library, which satisfies the reference at runtime.
             cmake_args: >-
               -DQT6=ON
               -DQML=ON
               -DMIXXX_APPIMAGE=ON
               -DINSTALL_USER_UDEV_RULES=OFF
+              -DCMAKE_C_COMPILER=/opt/rh/gcc-toolset-12/root/usr/bin/cc
+              -DCMAKE_CXX_COMPILER=/opt/rh/gcc-toolset-12/root/usr/bin/c++
+              -DCMAKE_CXX_FLAGS=-Wno-error=array-bounds
               -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O2 -DNDEBUG"
               -DCMAKE_INSTALL_PREFIX=/usr
               -DCMAKE_INSTALL_LIBDIR=lib
               -DCMAKE_EXE_LINKER_FLAGS="-Wl,--allow-shlib-undefined"
             ctest_args: []
-            cpack_generator: AppImage
-            # Not a cross-compile: this is a native x86_64 build, so the
-            # shared Test step must run.  The PPA steps are excluded for the
-            # AppImage separately below.
-            crosscompile: false
             compiler_cache: ccache
             compiler_cache_path: /home/runner/.cache/ccache
             compiler_cache_id: appimage-qt6
+            cpack_generator: AppImage
             buildenv_basepath: /home/runner/buildenv
             buildenv_script: tools/appimage_release_buildenv.sh
             artifacts_name: AppImage Linux x86_64
             artifacts_path: build/*.AppImage
-            artifacts_slug: linux-appimage
+            artifacts_slug: linux-appimage-x86_64
             arch: x86_64
           - name: AppImage Linux aarch64
             # Build the 2.6 AppImage in a glibc-2.28 Rocky 8 container against
