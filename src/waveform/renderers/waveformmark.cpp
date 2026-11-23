@@ -690,7 +690,7 @@ QImage WaveformMark::generateImage(qreal devicePixelRatio) {
     return performImageGeneration(devicePixelRatio, m_pixmapPath, label, &m_label, m_iconPath);
 }
 
-QImage WaveformMark::generateEndImage(float devicePixelRatio) {
+QImage WaveformMark::generateEndImage(qreal devicePixelRatio) {
     assert(needsEndImageUpdate());
 
     QString direction = QStringLiteral("forward");

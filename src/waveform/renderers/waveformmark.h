@@ -226,7 +226,7 @@ class WaveformMark {
     bool contains(QPoint point, Qt::Orientation orientation) const;
 
     QImage generateImage(qreal devicePixelRatio);
-    QImage generateEndImage(float devicePixelRatio);
+    QImage generateEndImage(qreal devicePixelRatio);
 
     QColor m_textColor;
     QString m_text;
