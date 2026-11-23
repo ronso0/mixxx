@@ -76,7 +76,8 @@ void allshader::DigitsRenderNode::updateTexture(rendergraph::Context* pContext,
         float fontPointSize,
         float maxHeight,
         qreal devicePixelRatio) {
-    if (fontPointSize == m_fontPointSize && maxHeight == m_maxHeight) {
+    if (fontPointSize == m_fontPointSize && maxHeight == m_maxHeight &&
+            devicePixelRatio == m_devicePixelRatio) {
         return;
     }
     if (maxHeight != m_maxHeight) {
