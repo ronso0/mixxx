@@ -2480,30 +2480,20 @@ if(ANDROID)
     PROPERTIES
       QT_ANDROID_APPLICATION_ARGUMENTS "--qml --log-level debug --developer"
   )
-  qt_add_android_permission(mixxx
-  NAME android.permission.ACCESS_NETWORK_STATE
+  qt_add_android_permission(mixxx NAME android.permission.ACCESS_NETWORK_STATE)
+  qt_add_android_permission(mixxx NAME android.permission.INTERNET)
+  qt_add_android_permission(mixxx NAME android.permission.MODIFY_AUDIO_SETTINGS)
+  qt_add_android_permission(mixxx NAME android.permission.RECORD_AUDIO)
+  qt_add_android_permission(
+    mixxx
+    NAME android.permission.WRITE_EXTERNAL_STORAGE
   )
-  qt_add_android_permission(mixxx
-  NAME android.permission.INTERNET
+  qt_add_android_permission(
+    mixxx
+    NAME android.permission.MANAGE_EXTERNAL_STORAGE
   )
-  qt_add_android_permission(mixxx
-  NAME android.permission.MODIFY_AUDIO_SETTINGS
-  )
-  qt_add_android_permission(mixxx
-  NAME android.permission.RECORD_AUDIO
-  )
-  qt_add_android_permission(mixxx
-  NAME android.permission.WRITE_EXTERNAL_STORAGE
-  )
-  qt_add_android_permission(mixxx
-  NAME android.permission.MANAGE_EXTERNAL_STORAGE
-  )
-  qt_add_android_permission(mixxx
-  NAME android.permission.WAKE_LOCK
-  )
-  qt_add_android_permission(mixxx
-  NAME android.permission.USB_PERMISSION
-  )
+  qt_add_android_permission(mixxx NAME android.permission.WAKE_LOCK)
+  qt_add_android_permission(mixxx NAME android.permission.USB_PERMISSION)
   set(
     CMAKE_LINKER
     "${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${ANDROID_NDK_HOST_SYSTEM_NAME}/bin/ld"
