@@ -2727,11 +2727,6 @@ if(UNIX AND NOT APPLE)
     include("${CMAKE_CURRENT_SOURCE_DIR}/packaging/appimage/appimage.cmake")
   endif()
 
-  # AppImage-specific install rules (desktop file, shared libraries).
-  if(MIXXX_APPIMAGE)
-    include("${CMAKE_CURRENT_SOURCE_DIR}/packaging/appimage/appimage.cmake")
-  endif()
-
   # Icon files for menu entry
   install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/res/images/icons/"
