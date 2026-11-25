@@ -83,8 +83,6 @@ bool WaveformRenderBeat::preprocessInner() {
 
     const qreal devicePixelRatio = m_pWaveformRenderer->getDevicePixelRatio();
 
-    m_color.setAlphaF(alpha / 100.0f);
-
     const double trackSamples = m_pWaveformRenderer->getTrackSamples();
     if (trackSamples <= 0.0) {
         return false;

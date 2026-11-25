@@ -476,15 +476,15 @@ void allshader::WaveformRenderMark::update() {
                                             roundToPixel(markBreadth))),
                             numBoxes,
                             boxBreadth,
-                            static_cast<float>(roundToPixel(yOffset)),
+                            roundToFloatPixel(yOffset),
                             color);
                     pRangeChild = static_cast<GeometryNode*>(pRangeChild->nextSibling());
                 } else {
                     pMarkEndNodeGraphics->update(
-                            roundToPixel(currentMarkEndPos - markWidth / 2.f),
+                            roundToFloatPixel(currentMarkEndPos - markWidth / 2.f),
                             numBoxes,
                             boxBreadth,
-                            static_cast<float>(roundToPixel(yOffset)),
+                            roundToFloatPixel(yOffset),
                             labelBoxIdx,
                             devicePixelRatio);
                     pMarkEndNodeGraphics->setAlpha(static_cast<float>(pMark->opacity()));
