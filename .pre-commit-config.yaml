@@ -130,7 +130,7 @@ repos:
     hooks:
       - id: qml_formatter
   - repo: https://github.com/BlankSpruce/gersemi
-    rev: 0.17.1
+    rev: 0.29.2
     hooks:
       - id: gersemi
   - repo: https://github.com/cmake-lint/cmake-lint.git
